@@ -4,6 +4,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import * as db from "./db";
+import { fetchProviderPackages } from "./providerCatalog";
 import { uploadMarketplaceScreenshot } from "./uploads";
 
 const marketplaceType = z.enum(["sale", "swap", "wanted"]);
@@ -17,6 +18,9 @@ export const appRouter = router({
   catalog: router({
     games: publicProcedure.query(() => db.getGameCatalog()),
     smm: publicProcedure.query(() => db.getSmmCatalog()),
+  }),
+  provider: router({
+    packages: publicProcedure.input(z.object({ accountId: z.string().trim().min(3).max(128), accountName: z.string().trim().max(160).optional(), zoneId: z.string().trim().max(128).optional(), service: z.enum(["game", "diamond", "other"]) })).mutation(({ input }) => fetchProviderPackages(input)),
   }),
   marketplace: router({
     list: publicProcedure.input(z.object({ listingType: marketplaceType.optional(), game: z.string().max(120).optional(), search: z.string().max(120).optional() }).optional()).query(({ input }) => db.listMarketplace(input ?? {})),

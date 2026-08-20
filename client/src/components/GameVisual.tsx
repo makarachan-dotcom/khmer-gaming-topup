@@ -1,10 +1,10 @@
 import { cn } from "@/lib/utils";
 
 const gameArt: Record<string, string> = {
-  mlbb: "/manus-storage/mobile-legends-logo_6884c584.webp",
-  "free-fire": "/manus-storage/free-fire-art_c58846dc.jpg",
-  pubg: "/manus-storage/pubg-mobile-art_fb240ade.jpg",
-  blox: "/manus-storage/blox-fruits-art_b2f6c6e0.jpg",
+  mlbb: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/BNJqalnFtclRRCiT.webp",
+  "free-fire": "https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/fburUCTmIwlaMTcd.jpg",
+  pubg: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/pBboNKOCtOgaXMBf.jpg",
+  blox: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/zjTlHGZicKSaidSv.jpg",
 };
 
 export default function GameVisual({ slug, name, label, className }: { slug: string; name: string; label: string; className?: string }) {

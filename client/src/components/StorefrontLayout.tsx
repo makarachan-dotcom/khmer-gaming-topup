@@ -3,7 +3,7 @@ import { BarChart3, BadgeCheck, Gamepad2, House, LogIn, ShieldCheck, Store, User
 import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 
-const logoUrl = "/manus-storage/zurs-store-logo_f5574a1d.jpg";
+const logoUrl = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/kBXeVXEnNVEuNZKS.jpg";
 
 const navigation = [
   { href: "/topup", label: "បញ្ចូលលុយហ្គេម" },

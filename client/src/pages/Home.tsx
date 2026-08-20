@@ -4,9 +4,9 @@ import { ArrowRight, CircleDollarSign, Gamepad2, HeartHandshake, ShieldCheck, Sp
 import { Link } from "wouter";
 
 const emoji = {
-  gamepad: "/manus-storage/gamepad_5881ab3e.svg",
-  diamond: "/manus-storage/diamond_860b768b.svg",
-  sparkles: "/manus-storage/sparkles_49998449.svg",
+  gamepad: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/RDtUjAOwCGqQQWNR.svg",
+  diamond: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/DwbIkeuSyFFKbYEk.svg",
+  sparkles: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/kXzBrYNIYeExUoGY.svg",
 };
 
 const quickLinks = [
@@ -26,7 +26,7 @@ export default function Home() {
         <div className="glass-orb float-emoji float-emoji--slow bottom-[15%] right-[5%] grid h-8 w-8 place-items-center rounded-full sm:h-10 sm:w-10"><img src={emoji.sparkles} alt="" aria-hidden="true" className="emoji-asset h-5 w-5 sm:h-6 sm:w-6" /></div>
         <div className="relative grid items-end gap-5 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="max-w-2xl"><div className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[10px] font-semibold text-indigo-100"><Sparkles className="h-3.5 w-3.5 text-amber-300" />ZURS STORE • GAMING &amp; DIGITAL</div><h1 className="font-display text-[1.8rem] font-bold leading-[1.14] tracking-tight sm:text-5xl">លេងឱ្យសប្បាយ។<br /><span className="text-indigo-300">ទូទាត់ដោយ</span> ទំនុកចិត្ត។</h1><p className="mt-3 max-w-xl text-[13px] leading-6 text-slate-300 sm:mt-4 sm:text-base sm:leading-7">កន្លែងតែមួយសម្រាប់សេវាកម្មហ្គេម, Social Boost និងទីផ្សារគណនី ដែលរៀបចំឱ្យខ្លី ច្បាស់ និងងាយប្រើតាមទូរស័ព្ទ។</p><div className="mt-5 flex flex-wrap gap-2.5"><Link href="/topup" className="inline-flex h-10 items-center gap-2 rounded-xl bg-white px-3.5 text-xs font-bold text-slate-950 transition-transform hover:-translate-y-0.5 active:scale-[0.97]">សេវាហ្គេម <ArrowRight className="h-4 w-4" /></Link><Link href="/marketplace" className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-3.5 text-xs font-semibold text-white transition-colors hover:bg-white/10">ស្វែងរកទីផ្សារ</Link></div></div>
-          <div className="grid grid-cols-2 gap-2 sm:max-w-sm lg:ml-auto"><HeroMetric icon={ShieldCheck} label="ប្រើងាយ" value="រចនាសម្រាប់ Mobile" /><HeroMetric icon={CircleDollarSign} label="ទំនុកចិត្ត" value="ព័ត៌មានច្បាស់លាស់" /></div>
+          <div className="grid grid-cols-2 gap-2 sm:max-w-sm lg:ml-auto"><HeroMetric icon={ShieldCheck} label="ប្រើងាយ" value="សម្រាប់អ្នកលេង" /><HeroMetric icon={CircleDollarSign} label="ទំនុកចិត្ត" value="ព័ត៌មានច្បាស់លាស់" /></div>
         </div>
       </div>
     </section>

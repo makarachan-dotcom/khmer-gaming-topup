@@ -45,3 +45,12 @@
 - [x] Remove internal implementation and catalog-status copy from customer-facing service states while keeping simple customer-focused messaging.
 - [x] Review requested animated emoji libraries, select approved Noto assets for web use, and integrate them with performance and reduced-motion safeguards.
 - [x] Verify the connected GitHub main branch includes the current ZURS STORE branding and self-hosted animated emoji references; the latest checkpoint is already synchronized.
+- [x] Publish the ZURS STORE logo through a Vercel-reachable CDN URL and replace deployment-incompatible project-storage paths.
+- [x] Replace all animated emoji and game-art asset paths with Vercel-reachable CDN URLs and verify successful external URL responses.
+- [x] Remove the “mobile” wording and other internal-looking implementation copy from customer-facing surfaces.
+- [x] Build an adaptive provider-ready top-up flow: customer details first, provider package response next, then a liquid-glass summary with account, package, amount, price, and a right-aligned payment action.
+- [x] Replace remaining customer-page project-storage asset paths with Vercel-reachable CDN URLs and revalidate the external deployment.
+- [x] Replace remaining customer-page project-storage asset paths with Vercel-reachable CDN URLs and revalidate the production asset URLs.
+- [x] Replace remaining customer-visible payment setup messaging with neutral customer-safe wording.
+- [x] Implement provider-response state handling in the checkout interface, including package loading, empty, error, and selected-package summary states.
+- [ ] Synchronize the latest code to Vercel and verify the live site renders CDN logo, animated emoji, and game assets without broken project-storage paths.
