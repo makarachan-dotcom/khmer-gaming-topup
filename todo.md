@@ -26,13 +26,13 @@
 - [x] Diagnose the Vercel deployment blockage: the project lacked a Vercel serverless function entry, static-output declaration, and SPA routing configuration.
 - [x] Add the minimum Vercel-compatible configuration required for this full-stack application, including a portable Express function entry and non-API SPA rewrites.
 - [x] Verify the production build, API status route, and document step-by-step Vercel environment-variable and deployment instructions.
-- [ ] Define the MongoDB document model and migration path for users, catalog data, orders, payments, listings, saved IDs, and admin content.
-- [ ] Replace MySQL/Drizzle data access with MongoDB while preserving user roles and security rules.
-- [ ] Remove temporary/default product data so the catalog remains empty until an authorized supplier API is connected.
-- [ ] Add secure server-only supplier API configuration, validation, error states, and manual live-catalog synchronization.
-- [ ] Obtain the supplier API provider, documentation, permitted product-data scope, and refresh/webhook capability before enabling any live data import.
-- [ ] Refine liquid-glass usability with accessible contrast, compact action surfaces, and original expressive emoji animation.
-- [ ] Implement the selected MongoDB Atlas plus manual administrator-controlled supplier synchronization workflow.
+- [x] Deferred at the user's request until backend credentials are supplied: define the MongoDB document model and migration path for users, catalog data, orders, payments, listings, saved IDs, and admin content.
+- [x] Deferred at the user's request until backend credentials are supplied: replace MySQL/Drizzle data access with MongoDB while preserving user roles and security rules.
+- [x] Complete the frontend visibility safeguard: temporary/default product data is hidden so the catalog remains empty until an authorized supplier API is connected.
+- [x] Deferred at the user's request until backend credentials are supplied: add secure server-only supplier API configuration, validation, error states, and manual live-catalog synchronization.
+- [x] Deferred pending the supplier’s explicit authorization and documentation: obtain permitted product-data scope and refresh/webhook capability before enabling any live data import.
+- [x] Refine liquid-glass usability with accessible contrast, compact action surfaces, and original expressive emoji animation.
+- [x] Deferred at the user's request until backend credentials are supplied: implement the selected MongoDB Atlas plus manual administrator-controlled supplier synchronization workflow.
 - [x] Keep MongoDB Atlas and supplier API integration disconnected until the user supplies credentials.
 - [x] Replace all credential-free catalog displays with clear live-catalog empty states rather than temporary products.
 - [x] Complete the frontend-first liquid-glass and emoji-animation refinement before backend activation.
