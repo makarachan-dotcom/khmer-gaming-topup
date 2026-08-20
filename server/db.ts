@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, lt, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
 import {
@@ -229,6 +229,13 @@ export async function markMarketplaceListingSold(input: { listingId: string; sel
   const soldAt = new Date(); const cleanupAt = new Date(soldAt.getTime() + 5 * 60 * 60 * 1000);
   await db.update(marketplaceListings).set({ status: "sold", soldAt, cleanupAt }).where(eq(marketplaceListings.id, input.listingId));
   return { status: "sold" as const, cleanupAt };
+}
+
+export async function cleanupExpiredSoldMarketplaceListings(now = new Date()) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  await db.delete(marketplaceListings).where(and(eq(marketplaceListings.status, "sold"), lt(marketplaceListings.cleanupAt, now)));
+  return { success: true };
 }
 
 export async function createMarketplaceFraudReport(input: { listingId: string; reporterUserId: number; details: string }) {

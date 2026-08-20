@@ -10,6 +10,7 @@ import Smm from "./pages/Smm";
 import Marketplace from "./pages/Marketplace";
 import SellAccount from "@/pages/SellAccount";
 import MarketplaceVerify from "@/pages/MarketplaceVerify";
+import AdminMarketplaceSafety from "@/pages/AdminMarketplaceSafety";
 import Account from "./pages/Account";
 import Admin from "./pages/Admin";
 import Checkout from "./pages/Checkout";
@@ -27,7 +28,8 @@ function Router() {
       <Route path="/marketplace/sell" component={SellAccount} />
       <Route path="/marketplace/verify" component={MarketplaceVerify} />
       <Route path={"/account"} component={Account} />
-      <Route path={"/admin"} component={Admin} />
+      <Route path="/admin" component={Admin} />
+      <Route path="/admin/marketplace-safety" component={AdminMarketplaceSafety} />
       <Route path={"/checkout/:orderId"} component={Checkout} />
       <Route path={"/admin/media"} component={AdminMedia} />
       <Route path={"/google-sign-in"} component={GoogleSignIn} />

@@ -5,6 +5,8 @@ import { createContext } from "./_core/context";
 import { registerGoogleAuthRoutes } from "./googleAuth";
 import { registerOAuthRoutes } from "./_core/oauth";
 import { registerStorageProxy } from "./_core/storageProxy";
+import { sdk } from "./_core/sdk";
+import { cleanupExpiredSoldMarketplaceListings } from "./db";
 
 /**
  * Builds the shared Express application for the local long-running server and
@@ -23,6 +25,16 @@ export function createApp() {
     registerOAuthRoutes(app);
   }
   registerGoogleAuthRoutes(app);
+  app.post("/api/scheduled/cleanup-sold-listings", async (req, res) => {
+    try {
+      const user = await sdk.authenticateRequest(req);
+      if (!user.isCron) return res.status(403).json({ error: "cron-only" });
+      await cleanupExpiredSoldMarketplaceListings();
+      return res.json({ ok: true });
+    } catch (error) {
+      return res.status(500).json({ error: error instanceof Error ? error.message : "cleanup failed", timestamp: new Date().toISOString() });
+    }
+  });
   app.use(
     "/api/trpc",
     createExpressMiddleware({
