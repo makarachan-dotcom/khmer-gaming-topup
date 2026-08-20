@@ -40,3 +40,7 @@
 - [x] Refine the shared header and neutral logo-placeholder treatment without generating a logo, then rerun responsive visual validation.
 - [x] Add marketplace-specific liquid-glass hierarchy and original emoji interaction treatment, then rerun responsive validation.
 - [x] Validate the updated marketplace liquid-glass layout at a desktop or tablet breakpoint and correct any breakpoint issues found.
+- [x] Replace the neutral placeholder with the user-supplied ZURS STORE logo and shop name across responsive navigation and footer surfaces.
+- [x] Simplify the mobile three-dot navigation and rebuild the mobile tab bar as a compact liquid-glass control surface.
+- [x] Remove internal implementation and catalog-status copy from customer-facing service states while keeping simple customer-focused messaging.
+- [x] Review requested animated emoji libraries, select approved Noto assets for web use, and integrate them with performance and reduced-motion safeguards.
