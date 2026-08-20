@@ -68,6 +68,6 @@
 - [ ] Add a vendor-backed verification-session flow that supports ID scan, face/liveness verification, current-location consent, and a non-guaranteed VPN-risk signal without trusting browser claims alone.
 - [ ] Add Telegram username contact handling that stays inside approved marketplace listings.
 - [ ] Allow up to 20 listing screenshots with private upload references and a responsive full-image gallery.
-- [ ] Add seller-controlled Sold out status and a five-hour server-enforced deletion/expiry workflow.
+- [x] Add seller-controlled Sold out status and a five-hour server-enforced deletion/expiry workflow.
 - [ ] Add a fraud-report and lawful-information-request workflow visible only to the designated administrator; never disclose a seller’s personal data directly to another user.
 - [ ] Add administrator panels for verification, evidence access records, listing status, deletion timing, fraud reports, and lawful disclosure review.

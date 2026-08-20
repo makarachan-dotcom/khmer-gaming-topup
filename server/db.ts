@@ -231,6 +231,12 @@ export async function markMarketplaceListingSold(input: { listingId: string; sel
   return { status: "sold" as const, cleanupAt };
 }
 
+export async function getSellerMarketplaceListings(sellerUserId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(marketplaceListings).where(eq(marketplaceListings.sellerUserId, sellerUserId)).orderBy(desc(marketplaceListings.createdAt));
+}
+
 export async function cleanupExpiredSoldMarketplaceListings(now = new Date()) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");

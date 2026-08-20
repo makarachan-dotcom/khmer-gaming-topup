@@ -11,6 +11,7 @@ import Marketplace from "./pages/Marketplace";
 import SellAccount from "@/pages/SellAccount";
 import MarketplaceVerify from "@/pages/MarketplaceVerify";
 import AdminMarketplaceSafety from "@/pages/AdminMarketplaceSafety";
+import MyMarketplaceListings from "@/pages/MyMarketplaceListings";
 import Account from "./pages/Account";
 import Admin from "./pages/Admin";
 import Checkout from "./pages/Checkout";
@@ -27,6 +28,7 @@ function Router() {
       <Route path={"/marketplace"} component={Marketplace} />
       <Route path="/marketplace/sell" component={SellAccount} />
       <Route path="/marketplace/verify" component={MarketplaceVerify} />
+      <Route path="/marketplace/manage" component={MyMarketplaceListings} />
       <Route path={"/account"} component={Account} />
       <Route path="/admin" component={Admin} />
       <Route path="/admin/marketplace-safety" component={AdminMarketplaceSafety} />

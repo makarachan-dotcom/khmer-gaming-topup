@@ -44,6 +44,10 @@ The browser location request is used only with explicit consent, in HTTPS, to ob
 
 OWASP advises allowlisting needed file types, generating safe names, applying upload limits and authorization, storing files away from public delivery, and applying layered checks rather than trusting the submitted content type.[4]
 
+## Active marketplace cleanup schedule
+
+The project-level Heartbeat job `zurs-sold-listing-cleanup` uses task UID `JFEJY8beN6xJsQgKvaX4vG`. It calls `/api/scheduled/cleanup-sold-listings` every five minutes. The handler is idempotent and deletes only listings whose seller-selected `cleanupAt` timestamp is more than five hours after the Sold out action.
+
 ## References
 
 [1] [National Bank of Cambodia — Bakong and KHQR](https://bakong.nbc.gov.kh/en/)
