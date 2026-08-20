@@ -17,4 +17,8 @@ The frontend is intentionally in **live-catalog waiting mode**. It does not disp
 4. Import the catalog into MongoDB only after validating names, prices, availability, and currency.
 5. Enable the live catalog flag. The top-up and SMM cards will then appear only from validated supplier data.
 
+## Game artwork behavior
+
+Game artwork is intentionally not displayed as temporary catalog content. Once validated provider packages are available, the storefront uses the CDN-hosted game artwork associated with those live packages. Until then, the customer interface presents only the empty, provider-ready service flow.
+
 > No supplier token, MongoDB URI, payment credential, or private API response should be put in the browser bundle, a public page, a Git commit, or a client-side configuration file.

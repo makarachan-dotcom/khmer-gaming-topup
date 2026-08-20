@@ -53,4 +53,8 @@
 - [x] Replace remaining customer-page project-storage asset paths with Vercel-reachable CDN URLs and revalidate the production asset URLs.
 - [x] Replace remaining customer-visible payment setup messaging with neutral customer-safe wording.
 - [x] Implement provider-response state handling in the checkout interface, including package loading, empty, error, and selected-package summary states.
-- [ ] Synchronize the latest code to Vercel and verify the live site renders CDN logo, animated emoji, and game assets without broken project-storage paths.
+- [x] Synchronize the latest code to Vercel and verify the live site renders CDN logo, animated emoji, and game assets without broken project-storage paths.
+- [x] Verify the live Vercel home and top-up routes load CDN logo, animated emoji, and game artwork without project-storage paths.
+- [x] Recheck the live Vercel home route and confirm its rendered logo and emoji assets use CDN URLs rather than project-storage paths.
+- [x] Correct the deployment verification to reflect the provider-driven empty catalog: game artwork will render from CDN when live provider packages populate the catalog, not as temporary home/top-up content.
+- [x] Document the provider-driven game-art visibility rule in the backend activation checklist.
