@@ -2,7 +2,7 @@ import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
 import {
-  gamePackages, gameProducts, InsertUser, marketplaceContacts, marketplaceListings, orders, paymentTransactions, savedPlayerIds, siteContent, smmServices, smmTiers, users,
+  gamePackages, gameProducts, InsertUser, marketplaceContacts, marketplaceListings, marketplaceVerifications, orders, paymentTransactions, savedPlayerIds, siteContent, smmServices, smmTiers, users,
 } from "../drizzle/schema";
 import { defaultGamePackages, defaultGames, defaultSmmServices, defaultSmmTiers } from "./catalogDefaults";
 import { buildOrderNumber, isSingleAdminEmail } from "./storefrontDomain";
@@ -39,6 +39,13 @@ export async function getUserByOpenId(openId: string) {
   if (!db) return undefined;
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
   return result[0];
+}
+
+export async function updateUserDisplayName(input: { userId: number; displayName: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  await db.update(users).set({ displayName: input.displayName }).where(eq(users.id, input.userId));
+  return { displayName: input.displayName };
 }
 
 async function ensureDefaultCatalog() {
@@ -165,9 +172,20 @@ export async function listMarketplace(input: { listingType?: "sale" | "swap" | "
   return search ? results.filter((listing) => `${listing.title} ${listing.description}`.toLowerCase().includes(search)) : results;
 }
 
+export async function getMarketplaceEligibility(userId: number) {
+  const db = await getDb();
+  if (!db) return { status: "not_started" as const, locationCountry: null, verificationNote: null };
+  const result = await db.select().from(marketplaceVerifications).where(eq(marketplaceVerifications.userId, userId)).orderBy(desc(marketplaceVerifications.createdAt)).limit(1);
+  const verification = result[0];
+  if (!verification) return { status: "not_started" as const, locationCountry: null, verificationNote: null };
+  return { status: verification.status, locationCountry: verification.locationCountry, verificationNote: verification.verificationNote };
+}
+
 export async function submitMarketplaceListing(input: { sellerUserId: number; listingType: "sale" | "swap" | "wanted"; game: string; title: string; rankLevel: string; priceUsd?: string | null; description: string; contactMethod: string; screenshots?: string[] }) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
+  const verification = await db.select().from(marketplaceVerifications).where(eq(marketplaceVerifications.userId, input.sellerUserId)).orderBy(desc(marketplaceVerifications.createdAt)).limit(1);
+  if (verification[0]?.status !== "approved" || verification[0]?.locationCountry !== "KH") throw new Error("Marketplace verification with a Cambodia eligibility result is required before submitting a listing");
   const id = nanoid(); await db.insert(marketplaceListings).values({ id, sellerUserId: input.sellerUserId, listingType: input.listingType, status: "pending", game: input.game.trim(), title: input.title.trim(), rankLevel: input.rankLevel.trim(), priceUsd: input.priceUsd ?? null, description: input.description.trim(), contactMethod: input.contactMethod.trim(), screenshots: input.screenshots ?? [] });
   return { id, status: "pending" as const };
 }
@@ -219,6 +237,23 @@ export async function reviewMarketplaceListing(input: { listingId: string; statu
   return { success: true };
 }
 
+export async function getAdminMarketplaceVerifications(status?: "pending" | "approved" | "rejected") {
+  const db = await getDb();
+  if (!db) return [];
+  const query = db.select({ verification: marketplaceVerifications, user: { id: users.id, displayName: users.displayName, name: users.name, email: users.email } }).from(marketplaceVerifications).leftJoin(users, eq(marketplaceVerifications.userId, users.id));
+  return status ? query.where(eq(marketplaceVerifications.status, status)).orderBy(desc(marketplaceVerifications.createdAt)) : query.orderBy(desc(marketplaceVerifications.createdAt));
+}
+
+export async function reviewMarketplaceVerification(input: { verificationId: string; status: "approved" | "rejected"; verificationNote?: string | null; reviewerUserId: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const record = await db.select().from(marketplaceVerifications).where(eq(marketplaceVerifications.id, input.verificationId)).limit(1);
+  if (!record[0]) throw new Error("Verification not found");
+  if (input.status === "approved" && record[0].locationCountry !== "KH") throw new Error("Only Cambodia-eligible verification records can be approved");
+  await db.update(marketplaceVerifications).set({ status: input.status, verificationNote: input.verificationNote?.trim() ?? null, reviewedByUserId: input.reviewerUserId, reviewedAt: new Date() }).where(eq(marketplaceVerifications.id, input.verificationId));
+  return { success: true };
+}
+
 export async function updateGamePackage(input: { packageId: string; priceUsd: string; isActive: boolean; featured: boolean }) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
@@ -242,7 +277,7 @@ export async function getPaymentTransactions() {
 export async function getAdminUsers() {
   const db = await getDb();
   if (!db) return [];
-  return db.select({ id: users.id, name: users.name, email: users.email, role: users.role, createdAt: users.createdAt, lastSignedIn: users.lastSignedIn }).from(users).orderBy(desc(users.createdAt)).limit(100);
+  return db.select({ id: users.id, name: users.name, displayName: users.displayName, email: users.email, role: users.role, createdAt: users.createdAt, lastSignedIn: users.lastSignedIn }).from(users).orderBy(desc(users.createdAt)).limit(100);
 }
 
 export async function getSiteContent() {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildOrderNumber, isSingleAdminEmail, isTerminalOrderStatus } from "./storefrontDomain";
+import { buildOrderNumber, buildZursMemberDisplayName, isSingleAdminEmail, isTerminalOrderStatus } from "./storefrontDomain";
 
 describe("storefront domain rules", () => {
   it("only authorizes the designated administrator email", () => {
@@ -18,5 +18,11 @@ describe("storefront domain rules", () => {
     expect(isTerminalOrderStatus("expired")).toBe(true);
     expect(isTerminalOrderStatus("paid")).toBe(false);
     expect(isTerminalOrderStatus("pending")).toBe(false);
+  });
+
+  it("enforces a ZURS Member suffix and uses a generated member number when skipped", () => {
+    expect(buildZursMemberDisplayName("Makara")).toBe("Makara ZURS Member");
+    expect(buildZursMemberDisplayName("Makara zurs member")).toBe("Makara ZURS Member");
+    expect(buildZursMemberDisplayName(undefined, () => 0)).toBe("100000000 ZURS Member");
   });
 });

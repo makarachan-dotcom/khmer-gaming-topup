@@ -58,3 +58,9 @@
 - [x] Recheck the live Vercel home route and confirm its rendered logo and emoji assets use CDN URLs rather than project-storage paths.
 - [x] Correct the deployment verification to reflect the provider-driven empty catalog: game artwork will render from CDN when live provider packages populate the catalog, not as temporary home/top-up content.
 - [x] Document the provider-driven game-art visibility rule in the backend activation checklist.
+- [x] Design a game-first provider contract so game selection determines supported account fields, packages, and price data; do not display any preloaded package data.
+- [x] Add ZURS Member display-name onboarding with a required `ZURS Member` suffix and a generated 1–9 suffix when the customer skips naming.
+- [x] Add Cambodian payment-ready UI for KHQR and supported bank payment methods, staying inactive until verified merchant credentials are supplied.
+- [ ] Design marketplace eligibility verification that uses consent-based Cambodia location checks and third-party document verification, while storing only minimal verification outcomes for admin review.
+- [ ] Add administrator controls for marketplace eligibility review, verification status, and listing enforcement.
+- [x] Add the requested ZURS STORE footer attribution.

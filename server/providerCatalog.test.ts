@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { fetchProviderPackages } from "./providerCatalog";
+import { fetchProviderGames, fetchProviderPackages } from "./providerCatalog";
 
 const originalEndpoint = process.env.PROVIDER_CATALOG_URL;
 const originalApiKey = process.env.PROVIDER_CATALOG_API_KEY;
@@ -11,13 +11,12 @@ afterEach(() => {
   else process.env.PROVIDER_CATALOG_API_KEY = originalApiKey;
 });
 
-describe("fetchProviderPackages", () => {
-  it("keeps the catalog empty until authorized provider credentials are configured", async () => {
+describe("provider catalog", () => {
+  it("keeps games and packages empty until authorized provider credentials are configured", async () => {
     delete process.env.PROVIDER_CATALOG_URL;
     delete process.env.PROVIDER_CATALOG_API_KEY;
 
-    const result = await fetchProviderPackages({ accountId: "123456", service: "game" });
-
-    expect(result).toEqual({ status: "unavailable", packages: [] });
+    await expect(fetchProviderGames()).resolves.toEqual({ status: "unavailable", games: [] });
+    await expect(fetchProviderPackages({ gameId: "provider-game", fields: { playerId: "123456" } })).resolves.toEqual({ status: "unavailable", packages: [] });
   });
 });

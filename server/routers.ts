@@ -4,7 +4,8 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import * as db from "./db";
-import { fetchProviderPackages } from "./providerCatalog";
+import { fetchProviderGames, fetchProviderPackages } from "./providerCatalog";
+import { buildZursMemberDisplayName } from "./storefrontDomain";
 import { uploadMarketplaceScreenshot } from "./uploads";
 
 const marketplaceType = z.enum(["sale", "swap", "wanted"]);
@@ -13,6 +14,7 @@ export const appRouter = router({
   system: systemRouter,
   auth: router({
     me: publicProcedure.query((opts) => opts.ctx.user),
+    setMemberDisplayName: protectedProcedure.input(z.object({ name: z.string().trim().max(120).optional() })).mutation(({ ctx, input }) => db.updateUserDisplayName({ userId: ctx.user.id, displayName: buildZursMemberDisplayName(input.name) })),
     logout: publicProcedure.mutation(({ ctx }) => { const cookieOptions = getSessionCookieOptions(ctx.req); ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 }); return { success: true } as const; }),
   }),
   catalog: router({
@@ -20,10 +22,12 @@ export const appRouter = router({
     smm: publicProcedure.query(() => db.getSmmCatalog()),
   }),
   provider: router({
-    packages: publicProcedure.input(z.object({ accountId: z.string().trim().min(3).max(128), accountName: z.string().trim().max(160).optional(), zoneId: z.string().trim().max(128).optional(), service: z.enum(["game", "diamond", "other"]) })).mutation(({ input }) => fetchProviderPackages(input)),
+    games: publicProcedure.query(() => fetchProviderGames()),
+    packages: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120), fields: z.record(z.string().trim().max(64), z.string().trim().min(1).max(256)).refine((fields) => Object.keys(fields).length <= 12, "Too many provider fields") })).mutation(({ input }) => fetchProviderPackages(input)),
   }),
   marketplace: router({
     list: publicProcedure.input(z.object({ listingType: marketplaceType.optional(), game: z.string().max(120).optional(), search: z.string().max(120).optional() }).optional()).query(({ input }) => db.listMarketplace(input ?? {})),
+    eligibility: protectedProcedure.query(({ ctx }) => db.getMarketplaceEligibility(ctx.user.id)),
     submit: protectedProcedure.input(z.object({ listingType: marketplaceType, game: z.string().trim().min(2).max(120), title: z.string().trim().min(4).max(180), rankLevel: z.string().trim().min(2).max(180), priceUsd: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(), description: z.string().trim().min(20).max(5000), contactMethod: z.string().trim().min(3).max(180), screenshots: z.array(z.string().url()).max(8).optional() })).mutation(({ ctx, input }) => db.submitMarketplaceListing({ sellerUserId: ctx.user.id, ...input })),
     contact: protectedProcedure.input(z.object({ listingId: z.string().min(4).max(64), message: z.string().trim().min(4).max(1000) })).mutation(({ ctx, input }) => db.initiateMarketplaceContact({ initiatorUserId: ctx.user.id, ...input })),
   }),
@@ -47,6 +51,8 @@ export const appRouter = router({
     updateOrderStatus: adminProcedure.input(z.object({ orderId: z.string().min(4).max(64), status: z.enum(["pending", "awaiting_payment", "paid", "delivered", "failed", "expired", "refunded"]) })).mutation(({ input }) => db.updateOrderStatus(input)),
     listings: adminProcedure.input(z.object({ status: z.enum(["draft", "pending", "approved", "rejected", "closed"]).optional() }).optional()).query(({ input }) => db.getAdminMarketplaceListings(input?.status)),
     reviewListing: adminProcedure.input(z.object({ listingId: z.string().min(4).max(64), status: z.enum(["approved", "rejected", "closed"]), reviewNote: z.string().trim().max(1000).optional() })).mutation(({ ctx, input }) => db.reviewMarketplaceListing({ reviewerUserId: ctx.user.id, ...input })),
+    verifications: adminProcedure.input(z.object({ status: z.enum(["pending", "approved", "rejected"]).optional() }).optional()).query(({ input }) => db.getAdminMarketplaceVerifications(input?.status)),
+    reviewVerification: adminProcedure.input(z.object({ verificationId: z.string().min(4).max(64), status: z.enum(["approved", "rejected"]), verificationNote: z.string().trim().max(1000).optional() })).mutation(({ ctx, input }) => db.reviewMarketplaceVerification({ reviewerUserId: ctx.user.id, ...input })),
     catalog: adminProcedure.query(async () => ({ games: await db.getGameCatalog(), smm: await db.getSmmCatalog() })),
     updateGamePackage: adminProcedure.input(z.object({ packageId: z.string().min(4).max(64), priceUsd: z.string().regex(/^\d+(\.\d{1,2})?$/), isActive: z.boolean(), featured: z.boolean() })).mutation(({ input }) => db.updateGamePackage(input)),
     updateSmmTier: adminProcedure.input(z.object({ tierId: z.string().min(4).max(64), priceUsd: z.string().regex(/^\d+(\.\d{1,2})?$/), isActive: z.boolean() })).mutation(({ input }) => db.updateSmmTier(input)),

@@ -4,6 +4,7 @@ export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
+  displayName: varchar("displayName", { length: 140 }),
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
@@ -108,6 +109,20 @@ export const marketplaceListings = mysqlTable("marketplace_listings", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => [index("marketplace_status_idx").on(table.status), index("marketplace_game_idx").on(table.game), index("marketplace_seller_idx").on(table.sellerUserId)]);
+
+export const marketplaceVerifications = mysqlTable("marketplace_verifications", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  userId: int("userId").notNull(),
+  status: mysqlEnum("status", ["pending", "approved", "rejected"]).default("pending").notNull(),
+  providerSessionId: varchar("providerSessionId", { length: 180 }),
+  documentType: varchar("documentType", { length: 80 }),
+  locationCountry: varchar("locationCountry", { length: 2 }),
+  verificationNote: text("verificationNote"),
+  reviewedByUserId: int("reviewedByUserId"),
+  reviewedAt: timestamp("reviewedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [index("marketplace_verification_user_idx").on(table.userId), index("marketplace_verification_status_idx").on(table.status), uniqueIndex("marketplace_provider_session_unique").on(table.providerSessionId)]);
 
 export const marketplaceContacts = mysqlTable("marketplace_contacts", {
   id: varchar("id", { length: 64 }).primaryKey(),
