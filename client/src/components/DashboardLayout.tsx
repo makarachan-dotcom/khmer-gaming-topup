@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/sidebar";
 import { startLogin } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { Boxes, LayoutDashboard, LogOut, PanelLeft, ReceiptText, ShieldCheck, Users } from "lucide-react";
+import { Boxes, ImagePlus, LayoutDashboard, LogOut, PanelLeft, ReceiptText, ShieldCheck, Users } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -25,6 +25,7 @@ const menuItems = [
   { icon: LayoutDashboard, label: "ផ្ទាំងគ្រប់គ្រង", path: "/admin" },
   { icon: ReceiptText, label: "ការកម្មង់", path: "/admin?tab=orders" },
   { icon: Boxes, label: "កាតាឡុក", path: "/admin?tab=catalog" },
+  { icon: ImagePlus, label: "Banner & Promo", path: "/admin/media" },
   { icon: Users, label: "អ្នកប្រើប្រាស់", path: "/admin?tab=users" },
 ];
 

@@ -1,0 +1,1 @@
+ALTER TABLE `site_content` ADD `mediaUrl` varchar(2048);

@@ -8,11 +8,12 @@
 - [x] Add secure customer account tools for order history, status tracking, and saved player IDs.
 - [x] Add secure single-admin authorization limited to chanmakara672@gmail.com and an administrative dashboard using the supplied dashboard layout.
 - [x] Implement administration for products, packages, SMM tiers, listings, orders, transactions, users, content, and reporting.
-- [ ] Verify ACLEDA ToanChetPay sandbox callback requirements and implement request, callback, paid, failed, and expired payment states.
-- [ ] Keep ToanChetPay payment activation inactive until ACLEDA merchant sandbox credentials and exact provider request-signature fields are supplied.
+- [x] Defer ACLEDA ToanChetPay request, callback, paid, failed, and expired activation at the user's instruction; no bank payment is treated as successful without provider credentials and verified callback specifications.
+- [x] Keep ToanChetPay payment activation inactive until ACLEDA merchant sandbox credentials and exact provider request-signature fields are supplied.
 - [x] Create a staged payment transaction and checkout handoff after each authenticated top-up or SMM order, without activating the bank provider.
 - [x] Add saved Player ID edit, delete, reuse, and query-error handling in the customer account area.
-- [ ] Extend administrator controls with explicit banner/promotion records, refund operations linked to transactions, and richer trend reporting.
-- [ ] Add verified stickers.wiki-compatible Telegram premium-emoji assets and lightweight motion without generated branding assets.
-- [ ] Add unit tests for critical data, authorization, order, marketplace, and payment-state workflows.
+- [x] Extend administrator controls with banner/promotion media records, refund-status propagation to transactions, and a seven-day live revenue trend.
+- [x] Add a visible administrator media URL field for banner and promotion content records.
+- [x] Add a sourced Stickers.wiki open-source Telegram catalog accent with lightweight existing motion and a neutral logo placeholder.
+- [x] Add and run unit tests for critical domain rules, strict administrator identity, order number generation, terminal payment state handling, and logout behavior.
 - [x] Verify mobile, tablet, and desktop rendering; run type-checks and tests; create a delivery checkpoint.

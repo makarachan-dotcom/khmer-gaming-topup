@@ -49,7 +49,7 @@ export const appRouter = router({
     payments: adminProcedure.query(() => db.getPaymentTransactions()),
     users: adminProcedure.query(() => db.getAdminUsers()),
     content: adminProcedure.query(() => db.getSiteContent()),
-    saveContent: adminProcedure.input(z.object({ contentKey: z.string().trim().min(2).max(100), titleKh: z.string().trim().max(240).optional(), bodyKh: z.string().trim().max(5000).optional(), isActive: z.boolean() })).mutation(({ ctx, input }) => db.saveSiteContent({ updatedByUserId: ctx.user.id, ...input })),
+    saveContent: adminProcedure.input(z.object({ contentKey: z.string().trim().min(2).max(100), titleKh: z.string().trim().max(240).optional(), bodyKh: z.string().trim().max(5000).optional(), mediaUrl: z.string().url().max(2048).optional(), isActive: z.boolean() })).mutation(({ ctx, input }) => db.saveSiteContent({ updatedByUserId: ctx.user.id, ...input })),
   }),
 });
 

@@ -12,6 +12,7 @@ import SellAccount from "./pages/SellAccount";
 import Account from "./pages/Account";
 import Admin from "./pages/Admin";
 import Checkout from "./pages/Checkout";
+import AdminMedia from "./pages/AdminMedia";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -25,6 +26,7 @@ function Router() {
       <Route path={"/account"} component={Account} />
       <Route path={"/admin"} component={Admin} />
       <Route path={"/checkout/:orderId"} component={Checkout} />
+      <Route path={"/admin/media"} component={AdminMedia} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

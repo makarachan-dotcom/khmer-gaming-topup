@@ -141,6 +141,7 @@ export const siteContent = mysqlTable("site_content", {
   contentKey: varchar("contentKey", { length: 100 }).notNull().unique(),
   titleKh: varchar("titleKh", { length: 240 }),
   bodyKh: text("bodyKh"),
+  mediaUrl: varchar("mediaUrl", { length: 2048 }),
   isActive: boolean("isActive").default(true).notNull(),
   updatedByUserId: int("updatedByUserId"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

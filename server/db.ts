@@ -187,7 +187,8 @@ export async function getAdminOverview() {
   if (!db) return { orders: 0, pendingOrders: 0, paidOrders: 0, revenue: "0.00", pendingListings: 0, totalUsers: 0 };
   const [allOrders, listings, allUsers] = await Promise.all([db.select().from(orders), db.select().from(marketplaceListings), db.select({ count: sql<number>`count(*)` }).from(users)]);
   const paidOrders = allOrders.filter((order) => ["paid", "delivered"].includes(order.status));
-  return { orders: allOrders.length, pendingOrders: allOrders.filter((order) => ["pending", "awaiting_payment"].includes(order.status)).length, paidOrders: paidOrders.length, revenue: paidOrders.reduce((sum, order) => sum + Number(order.subtotal), 0).toFixed(2), pendingListings: listings.filter((listing) => listing.status === "pending").length, totalUsers: Number(allUsers[0]?.count ?? 0) };
+  const now = new Date(); const salesTrend = Array.from({ length: 7 }, (_, index) => { const date = new Date(now); date.setDate(now.getDate() - (6 - index)); const dayKey = date.toISOString().slice(0, 10); return { day: dayKey, revenue: paidOrders.filter((order) => order.createdAt.toISOString().slice(0, 10) === dayKey).reduce((sum, order) => sum + Number(order.subtotal), 0).toFixed(2), orders: paidOrders.filter((order) => order.createdAt.toISOString().slice(0, 10) === dayKey).length }; });
+  return { orders: allOrders.length, pendingOrders: allOrders.filter((order) => ["pending", "awaiting_payment"].includes(order.status)).length, paidOrders: paidOrders.length, revenue: paidOrders.reduce((sum, order) => sum + Number(order.subtotal), 0).toFixed(2), pendingListings: listings.filter((listing) => listing.status === "pending").length, totalUsers: Number(allUsers[0]?.count ?? 0), salesTrend };
 }
 
 export async function getAdminOrders() {
@@ -200,6 +201,7 @@ export async function updateOrderStatus(input: { orderId: string; status: "pendi
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
   await db.update(orders).set({ status: input.status }).where(eq(orders.id, input.orderId));
+  if (input.status === "refunded") await db.update(paymentTransactions).set({ status: "refunded" }).where(eq(paymentTransactions.orderId, input.orderId));
   return { success: true };
 }
 
@@ -249,11 +251,11 @@ export async function getSiteContent() {
   return db.select().from(siteContent).orderBy(asc(siteContent.contentKey));
 }
 
-export async function saveSiteContent(input: { contentKey: string; titleKh?: string | null; bodyKh?: string | null; isActive: boolean; updatedByUserId: number }) {
+export async function saveSiteContent(input: { contentKey: string; titleKh?: string | null; bodyKh?: string | null; mediaUrl?: string | null; isActive: boolean; updatedByUserId: number }) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
   const existing = await db.select({ id: siteContent.id }).from(siteContent).where(eq(siteContent.contentKey, input.contentKey)).limit(1);
-  const values = { titleKh: input.titleKh?.trim() || null, bodyKh: input.bodyKh?.trim() || null, isActive: input.isActive, updatedByUserId: input.updatedByUserId };
+  const values = { titleKh: input.titleKh?.trim() || null, bodyKh: input.bodyKh?.trim() || null, mediaUrl: input.mediaUrl?.trim() || null, isActive: input.isActive, updatedByUserId: input.updatedByUserId };
   if (existing[0]) await db.update(siteContent).set(values).where(eq(siteContent.id, existing[0].id));
   else await db.insert(siteContent).values({ id: nanoid(), contentKey: input.contentKey.trim(), ...values });
   return { success: true };

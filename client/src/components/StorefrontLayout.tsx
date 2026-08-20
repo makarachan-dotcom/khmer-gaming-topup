@@ -20,7 +20,7 @@ export default function StorefrontLayout({ children }: { children: ReactNode }) 
       <header className="sticky top-0 z-50 border-b border-white/70 bg-white/82 backdrop-blur-xl">
         <div className="container flex h-16 items-center justify-between gap-3">
           <Link href="/" className="flex shrink-0 items-center gap-2.5" aria-label="TopUp KH home">
-            <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-[#354fe6] to-[#9459e6] text-xs font-bold tracking-tight text-white shadow-lg shadow-indigo-300/50">TK</div>
+            <div className="grid h-9 w-9 place-items-center rounded-xl border border-dashed border-indigo-300 bg-indigo-50 text-[8px] font-bold tracking-wide text-indigo-700">LOGO</div>
             <div className="leading-none">
               <p className="font-display text-sm font-bold tracking-tight text-slate-900">TOPUP KH</p>
               <p className="mt-1 text-[9px] font-semibold tracking-[0.14em] text-indigo-600">GAME & DIGITAL</p>
@@ -45,7 +45,7 @@ export default function StorefrontLayout({ children }: { children: ReactNode }) 
       <footer className="mt-16 border-t border-slate-200 bg-white/75 py-8">
         <div className="container flex flex-col justify-between gap-5 text-xs text-slate-500 sm:flex-row sm:items-center">
           <div><p className="font-display font-bold text-slate-800">TOPUP KH</p><p className="mt-1 khmer-body">សេវាកម្មហ្គេម និងឌីជីថល សម្រាប់អ្នកលេងកម្ពុជា។</p></div>
-          <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-emerald-800"><ShieldCheck className="h-4 w-4" /><span className="khmer-tight">ការទូទាត់ប្រកបដោយសុវត្ថិភាព</span><BadgeCheck className="h-4 w-4" /></div>
+          <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-emerald-800"><ShieldCheck className="h-4 w-4" /><span className="khmer-tight">ការទូទាត់ប្រកបដោយសុវត្ថិភាព</span><img src="/manus-storage/telegram-open-source-emoji_62b099ce.webp" className="h-4 w-4 object-contain" alt="Open-source Telegram emoji" /><BadgeCheck className="h-4 w-4" /></div>
         </div>
       </footer>
       <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-slate-200 bg-white/95 px-2 py-1.5 backdrop-blur sm:hidden" aria-label="Mobile quick navigation">
