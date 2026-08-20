@@ -1,9 +1,7 @@
-import { startLogin } from "@/const";
 import { cn } from "@/lib/utils";
 import { BadgeCheck, ChevronRight, LogIn, Menu, ShieldCheck, UserRound } from "lucide-react";
 import { ReactNode, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Button } from "./ui/button";
 
 const navigation = [
   { href: "/topup", label: "បញ្ចូលលុយហ្គេម" },
@@ -34,12 +32,12 @@ export default function StorefrontLayout({ children }: { children: ReactNode }) 
           </nav>
 
           <div className="flex items-center gap-1.5 sm:gap-2">
-            <Link href="/account" className="hidden sm:block"><Button variant="ghost" size="sm" className="h-9 gap-1.5 text-slate-700"><UserRound className="h-4 w-4" />គណនីខ្ញុំ</Button></Link>
-            <Button onClick={() => startLogin()} size="sm" className="hidden h-9 gap-1.5 rounded-lg bg-slate-950 px-3.5 text-white hover:bg-slate-800 sm:inline-flex"><LogIn className="h-3.5 w-3.5" />ចូលគណនី</Button>
+            <Link href="/account" className="hidden sm:inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-slate-700 hover:bg-white/70"><UserRound className="h-4 w-4" />គណនីខ្ញុំ</Link>
+            <Link href="/google-sign-in" className="hidden h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-sm font-bold text-white hover:bg-slate-800 sm:inline-flex"><LogIn className="h-3.5 w-3.5" />ចូលគណនី</Link>
             <button onClick={() => setMenuOpen(!menuOpen)} className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 text-slate-700 lg:hidden" aria-expanded={menuOpen} aria-label="Open navigation"><Menu className="h-4 w-4" /></button>
           </div>
         </div>
-        {menuOpen && <div className="border-t border-slate-100 bg-white px-4 py-3 lg:hidden"><nav className="container grid gap-1" aria-label="Mobile navigation">{navigation.map((item) => <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)} className={cn("flex items-center justify-between rounded-xl px-3 py-3 text-sm font-semibold", location === item.href ? "bg-indigo-50 text-indigo-700" : "text-slate-700 hover:bg-slate-50")}>{item.label}<ChevronRight className="h-4 w-4" /></Link>)}<Link href="/account" onClick={() => setMenuOpen(false)} className="flex items-center justify-between rounded-xl px-3 py-3 text-sm font-semibold text-slate-700"><span>គណនីខ្ញុំ</span><ChevronRight className="h-4 w-4" /></Link><Button onClick={() => startLogin()} className="mt-2 bg-slate-950 text-white">ចូលគណនី</Button></nav></div>}
+        {menuOpen && <div className="border-t border-slate-100 bg-white px-4 py-3 lg:hidden"><nav className="container grid gap-1" aria-label="Mobile navigation">{navigation.map((item) => <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)} className={cn("flex items-center justify-between rounded-xl px-3 py-3 text-sm font-semibold", location === item.href ? "bg-indigo-50 text-indigo-700" : "text-slate-700 hover:bg-slate-50")}>{item.label}<ChevronRight className="h-4 w-4" /></Link>)}<Link href="/account" onClick={() => setMenuOpen(false)} className="flex items-center justify-between rounded-xl px-3 py-3 text-sm font-semibold text-slate-700"><span>គណនីខ្ញុំ</span><ChevronRight className="h-4 w-4" /></Link><Link href="/google-sign-in" onClick={() => setMenuOpen(false)} className="mt-2 flex h-10 items-center justify-center gap-2 rounded-xl bg-slate-950 text-sm font-bold text-white"><LogIn className="h-4 w-4" />ចូលដោយ Google</Link></nav></div>}
       </header>
       {children}
       <footer className="mt-16 border-t border-slate-200 bg-white/75 py-8">

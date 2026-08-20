@@ -13,6 +13,7 @@ import Account from "./pages/Account";
 import Admin from "./pages/Admin";
 import Checkout from "./pages/Checkout";
 import AdminMedia from "./pages/AdminMedia";
+import GoogleSignIn from "./pages/GoogleSignIn";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -27,6 +28,7 @@ function Router() {
       <Route path={"/admin"} component={Admin} />
       <Route path={"/checkout/:orderId"} component={Checkout} />
       <Route path={"/admin/media"} component={AdminMedia} />
+      <Route path={"/google-sign-in"} component={GoogleSignIn} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

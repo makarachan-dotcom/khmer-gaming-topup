@@ -17,3 +17,9 @@
 - [x] Add a sourced Stickers.wiki open-source Telegram catalog accent with lightweight existing motion and a neutral logo placeholder.
 - [x] Add and run unit tests for critical domain rules, strict administrator identity, order number generation, terminal payment state handling, and logout behavior.
 - [x] Verify mobile, tablet, and desktop rendering; run type-checks and tests; create a delivery checkpoint.
+- [x] Redesign mobile layouts to be more compact, scannable, and comfortable on phone screens.
+- [x] Introduce a refined liquid-glass visual system without reducing text contrast or performance.
+- [x] Replace generic game marks with sourced original game-brand artwork in the top-up storefront.
+- [x] Stage independent Google OAuth sign-in so customers do not use the existing Manus login redirect; live authorization remains disabled until the owner supplies Google Cloud credentials.
+- [x] Prepare the current test callback route and Google sign-in entry point while keeping credential-dependent authorization inactive.
+- [x] Add original high-energy liquid-glass transitions, emoji accents, and interaction feedback inspired by the supplied visual reference without copying it.
