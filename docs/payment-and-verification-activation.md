@@ -52,6 +52,8 @@ The project-level Heartbeat job `zurs-sold-listing-cleanup` uses task UID `JFEJY
 
 The marketplace uses a server-created Didit hosted session for customer-facing ID-document and face-liveness capture. Didit documents this as the recommended pattern for user-facing verification: the server creates `POST /v3/session/` with a published workflow ID and receives a hosted URL; the customer completes document capture and liveness in the provider’s interface, and the merchant receives a decision through retrieval or webhook.[6] The selected workflow must require a Cambodian National ID, a selfie/face match, and liveness. The storefront retains a private provider session reference and an outcome only; no user-facing route exposes the provider key or private evidence URL.
 
+The configured provider destination is `https://zurs.vercel.app/api/webhooks/didit` with the `status.updated` event. The handler rejects unsigned or stale requests and uses a constant-time HMAC comparison before accepting a provider decision.
+
 [6] [Didit — Create Session API Reference](https://docs.didit.me/sessions-api/create-session)
 
 ## References
