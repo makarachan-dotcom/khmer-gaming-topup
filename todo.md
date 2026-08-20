@@ -44,3 +44,4 @@
 - [x] Simplify the mobile three-dot navigation and rebuild the mobile tab bar as a compact liquid-glass control surface.
 - [x] Remove internal implementation and catalog-status copy from customer-facing service states while keeping simple customer-focused messaging.
 - [x] Review requested animated emoji libraries, select approved Noto assets for web use, and integrate them with performance and reduced-motion safeguards.
+- [x] Verify the connected GitHub main branch includes the current ZURS STORE branding and self-hosted animated emoji references; the latest checkpoint is already synchronized.
