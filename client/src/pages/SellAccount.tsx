@@ -5,13 +5,13 @@ import { CheckCircle2, ImagePlus, Info, Loader2, Send, ShieldCheck, X } from "lu
 import { ChangeEvent, FormEvent, useState } from "react";
 import { Link } from "wouter";
 
-type FormState = { listingType: "sale" | "swap" | "wanted"; game: string; title: string; rankLevel: string; priceUsd: string; contactMethod: string; description: string };
-const initialForm: FormState = { listingType: "sale", game: "Mobile Legends", title: "", rankLevel: "", priceUsd: "", contactMethod: "", description: "" };
+type FormState = { listingType: "sale" | "swap" | "wanted"; game: string; title: string; rankLevel: string; priceUsd: string; contactMethod: string; telegramUsername: string; description: string };
+const initialForm: FormState = { listingType: "sale", game: "Mobile Legends", title: "", rankLevel: "", priceUsd: "", contactMethod: "", telegramUsername: "", description: "" };
 export default function SellAccount() {
   const { isAuthenticated } = useAuth(); const [form, setForm] = useState<FormState>(initialForm); const [files, setFiles] = useState<File[]>([]); const [submitted, setSubmitted] = useState(false);
   const upload = trpc.uploads.marketplaceScreenshot.useMutation(); const submit = trpc.marketplace.submit.useMutation({ onSuccess: () => { setSubmitted(true); setForm(initialForm); setFiles([]); } });
   const update = (key: keyof FormState, value: string) => setForm((current) => ({ ...current, [key]: value }));
-  const addFiles = (event: ChangeEvent<HTMLInputElement>) => { const incoming = Array.from(event.target.files ?? []); setFiles((current) => [...current, ...incoming].slice(0, 8)); event.target.value = ""; };
+  const addFiles = (event: ChangeEvent<HTMLInputElement>) => { const incoming = Array.from(event.target.files ?? []); setFiles((current) => [...current, ...incoming].slice(0, 20)); event.target.value = ""; };
   const readAsDataUrl = (file: File) => new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onerror = () => reject(new Error("Unable to read image")); reader.onload = () => resolve(String(reader.result)); reader.readAsDataURL(file); });
   const handleSubmit = async (event: FormEvent) => { event.preventDefault(); if (!isAuthenticated) { window.location.assign("/google-sign-in"); return; } try { const screenshots = await Promise.all(files.map(async (file) => { const dataUrl = await readAsDataUrl(file); const result = await upload.mutateAsync({ fileName: file.name, contentType: file.type as "image/jpeg" | "image/png" | "image/webp", dataUrl }); return result.url; })); await submit.mutateAsync({ ...form, priceUsd: form.listingType === "sale" && form.priceUsd ? form.priceUsd : undefined, screenshots }); } catch { /* inline mutation errors are displayed below */ } };
   const busy = upload.isPending || submit.isPending;

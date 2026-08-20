@@ -6,7 +6,7 @@ import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_
 import * as db from "./db";
 import { fetchProviderGames, fetchProviderPackages } from "./providerCatalog";
 import { buildZursMemberDisplayName } from "./storefrontDomain";
-import { uploadMarketplaceScreenshot } from "./uploads";
+import { uploadMarketplaceScreenshot, uploadMarketplaceVerificationEvidence } from "./uploads";
 
 const marketplaceType = z.enum(["sale", "swap", "wanted"]);
 
@@ -28,8 +28,12 @@ export const appRouter = router({
   marketplace: router({
     list: publicProcedure.input(z.object({ listingType: marketplaceType.optional(), game: z.string().max(120).optional(), search: z.string().max(120).optional() }).optional()).query(({ input }) => db.listMarketplace(input ?? {})),
     eligibility: protectedProcedure.query(({ ctx }) => db.getMarketplaceEligibility(ctx.user.id)),
-    submit: protectedProcedure.input(z.object({ listingType: marketplaceType, game: z.string().trim().min(2).max(120), title: z.string().trim().min(4).max(180), rankLevel: z.string().trim().min(2).max(180), priceUsd: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(), description: z.string().trim().min(20).max(5000), contactMethod: z.string().trim().min(3).max(180), screenshots: z.array(z.string().url()).max(8).optional() })).mutation(({ ctx, input }) => db.submitMarketplaceListing({ sellerUserId: ctx.user.id, ...input })),
+    beginVerification: protectedProcedure.mutation(({ ctx }) => db.beginMarketplaceVerification(ctx.user.id)),
+    uploadVerificationEvidence: protectedProcedure.input(z.object({ verificationId: z.string().min(4).max(64), evidenceType: z.enum(["national_id_front", "national_id_back", "selfie_liveness"]), fileName: z.string().trim().min(1).max(180), contentType: z.enum(["image/jpeg", "image/png", "image/webp"]), dataUrl: z.string().min(50).max(7_000_000) })).mutation(async ({ ctx, input }) => { const upload = await uploadMarketplaceVerificationEvidence({ userId: ctx.user.id, ...input }); return db.addMarketplaceVerificationEvidence({ verificationId: input.verificationId, userId: ctx.user.id, evidenceType: input.evidenceType, storageKey: upload.key, mimeType: input.contentType, byteSize: upload.byteSize }); }),
+    submit: protectedProcedure.input(z.object({ listingType: marketplaceType, game: z.string().trim().min(2).max(120), title: z.string().trim().min(4).max(180), rankLevel: z.string().trim().min(2).max(180), priceUsd: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(), description: z.string().trim().min(20).max(5000), contactMethod: z.string().trim().min(3).max(180), telegramUsername: z.string().trim().regex(/^@?[a-zA-Z0-9_]{5,32}$/).optional(), screenshots: z.array(z.string().url()).max(20).optional() })).mutation(({ ctx, input }) => db.submitMarketplaceListing({ sellerUserId: ctx.user.id, ...input })),
     contact: protectedProcedure.input(z.object({ listingId: z.string().min(4).max(64), message: z.string().trim().min(4).max(1000) })).mutation(({ ctx, input }) => db.initiateMarketplaceContact({ initiatorUserId: ctx.user.id, ...input })),
+    markSold: protectedProcedure.input(z.object({ listingId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => db.markMarketplaceListingSold({ sellerUserId: ctx.user.id, ...input })),
+    reportFraud: protectedProcedure.input(z.object({ listingId: z.string().min(4).max(64), details: z.string().trim().min(20).max(5000) })).mutation(({ ctx, input }) => db.createMarketplaceFraudReport({ reporterUserId: ctx.user.id, ...input })),
   }),
   uploads: router({
     marketplaceScreenshot: protectedProcedure.input(z.object({ fileName: z.string().trim().min(1).max(180), contentType: z.enum(["image/jpeg", "image/png", "image/webp"]), dataUrl: z.string().min(50).max(7_000_000) })).mutation(({ ctx, input }) => uploadMarketplaceScreenshot({ userId: ctx.user.id, ...input })),
@@ -49,10 +53,11 @@ export const appRouter = router({
     overview: adminProcedure.query(() => db.getAdminOverview()),
     orders: adminProcedure.query(() => db.getAdminOrders()),
     updateOrderStatus: adminProcedure.input(z.object({ orderId: z.string().min(4).max(64), status: z.enum(["pending", "awaiting_payment", "paid", "delivered", "failed", "expired", "refunded"]) })).mutation(({ input }) => db.updateOrderStatus(input)),
-    listings: adminProcedure.input(z.object({ status: z.enum(["draft", "pending", "approved", "rejected", "closed"]).optional() }).optional()).query(({ input }) => db.getAdminMarketplaceListings(input?.status)),
+    listings: adminProcedure.input(z.object({ status: z.enum(["draft", "pending", "approved", "rejected", "closed", "sold"]).optional() }).optional()).query(({ input }) => db.getAdminMarketplaceListings(input?.status)),
     reviewListing: adminProcedure.input(z.object({ listingId: z.string().min(4).max(64), status: z.enum(["approved", "rejected", "closed"]), reviewNote: z.string().trim().max(1000).optional() })).mutation(({ ctx, input }) => db.reviewMarketplaceListing({ reviewerUserId: ctx.user.id, ...input })),
     verifications: adminProcedure.input(z.object({ status: z.enum(["pending", "approved", "rejected"]).optional() }).optional()).query(({ input }) => db.getAdminMarketplaceVerifications(input?.status)),
     reviewVerification: adminProcedure.input(z.object({ verificationId: z.string().min(4).max(64), status: z.enum(["approved", "rejected"]), verificationNote: z.string().trim().max(1000).optional() })).mutation(({ ctx, input }) => db.reviewMarketplaceVerification({ reviewerUserId: ctx.user.id, ...input })),
+    fraudReports: adminProcedure.query(() => db.getAdminMarketplaceFraudReports()),
     catalog: adminProcedure.query(async () => ({ games: await db.getGameCatalog(), smm: await db.getSmmCatalog() })),
     updateGamePackage: adminProcedure.input(z.object({ packageId: z.string().min(4).max(64), priceUsd: z.string().regex(/^\d+(\.\d{1,2})?$/), isActive: z.boolean(), featured: z.boolean() })).mutation(({ input }) => db.updateGamePackage(input)),
     updateSmmTier: adminProcedure.input(z.object({ tierId: z.string().min(4).max(64), priceUsd: z.string().regex(/^\d+(\.\d{1,2})?$/), isActive: z.boolean() })).mutation(({ input }) => db.updateSmmTier(input)),

@@ -2,7 +2,7 @@ import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
 import {
-  gamePackages, gameProducts, InsertUser, marketplaceContacts, marketplaceListings, marketplaceVerifications, orders, paymentTransactions, savedPlayerIds, siteContent, smmServices, smmTiers, users,
+  gamePackages, gameProducts, InsertUser, marketplaceContacts, marketplaceFraudReports, marketplaceListings, marketplaceVerificationEvidence, marketplaceVerifications, orders, paymentTransactions, savedPlayerIds, siteContent, smmServices, smmTiers, users,
 } from "../drizzle/schema";
 import { defaultGamePackages, defaultGames, defaultSmmServices, defaultSmmTiers } from "./catalogDefaults";
 import { buildOrderNumber, isSingleAdminEmail } from "./storefrontDomain";
@@ -181,13 +181,34 @@ export async function getMarketplaceEligibility(userId: number) {
   return { status: verification.status, locationCountry: verification.locationCountry, verificationNote: verification.verificationNote };
 }
 
-export async function submitMarketplaceListing(input: { sellerUserId: number; listingType: "sale" | "swap" | "wanted"; game: string; title: string; rankLevel: string; priceUsd?: string | null; description: string; contactMethod: string; screenshots?: string[] }) {
+export async function beginMarketplaceVerification(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const existing = await db.select().from(marketplaceVerifications).where(and(eq(marketplaceVerifications.userId, userId), eq(marketplaceVerifications.status, "pending"))).orderBy(desc(marketplaceVerifications.createdAt)).limit(1);
+  if (existing[0]) return existing[0];
+  const id = nanoid();
+  const values = { id, userId, status: "pending" as const, documentType: "Cambodian national ID", providerDecision: "review" as const, autoApprovalEligible: false, networkRisk: "unknown" as const };
+  await db.insert(marketplaceVerifications).values(values);
+  return { ...values, createdAt: new Date(), updatedAt: new Date(), providerSessionId: null, locationCountry: null, locationAccuracyMeters: null, verificationNote: null, reviewedByUserId: null, reviewedAt: null };
+}
+
+export async function addMarketplaceVerificationEvidence(input: { verificationId: string; userId: number; evidenceType: "national_id_front" | "national_id_back" | "selfie_liveness"; storageKey: string; mimeType: string; byteSize: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const verification = await db.select({ id: marketplaceVerifications.id }).from(marketplaceVerifications).where(and(eq(marketplaceVerifications.id, input.verificationId), eq(marketplaceVerifications.userId, input.userId))).limit(1);
+  if (!verification[0]) throw new Error("Verification session unavailable");
+  const id = nanoid(); await db.insert(marketplaceVerificationEvidence).values({ id, ...input });
+  return { id };
+}
+
+export async function submitMarketplaceListing(input: { sellerUserId: number; listingType: "sale" | "swap" | "wanted"; game: string; title: string; rankLevel: string; priceUsd?: string | null; description: string; contactMethod: string; telegramUsername?: string | null; screenshots?: string[] }) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
   const verification = await db.select().from(marketplaceVerifications).where(eq(marketplaceVerifications.userId, input.sellerUserId)).orderBy(desc(marketplaceVerifications.createdAt)).limit(1);
   if (verification[0]?.status !== "approved" || verification[0]?.locationCountry !== "KH") throw new Error("Marketplace verification with a Cambodia eligibility result is required before submitting a listing");
-  const id = nanoid(); await db.insert(marketplaceListings).values({ id, sellerUserId: input.sellerUserId, listingType: input.listingType, status: "pending", game: input.game.trim(), title: input.title.trim(), rankLevel: input.rankLevel.trim(), priceUsd: input.priceUsd ?? null, description: input.description.trim(), contactMethod: input.contactMethod.trim(), screenshots: input.screenshots ?? [] });
-  return { id, status: "pending" as const };
+  const autoPublish = verification[0].autoApprovalEligible && verification[0].providerDecision === "pass";
+  const id = nanoid(); await db.insert(marketplaceListings).values({ id, sellerUserId: input.sellerUserId, listingType: input.listingType, status: autoPublish ? "approved" : "pending", game: input.game.trim(), title: input.title.trim(), rankLevel: input.rankLevel.trim(), priceUsd: input.priceUsd ?? null, description: input.description.trim(), contactMethod: input.contactMethod.trim(), telegramUsername: input.telegramUsername?.trim().replace(/^@/, "") || null, screenshots: input.screenshots ?? [] });
+  return { id, status: autoPublish ? "approved" as const : "pending" as const };
 }
 
 export async function initiateMarketplaceContact(input: { listingId: string; initiatorUserId: number; message: string }) {
@@ -198,6 +219,25 @@ export async function initiateMarketplaceContact(input: { listingId: string; ini
   if (listing[0].sellerUserId === input.initiatorUserId) throw new Error("You cannot contact your own listing");
   const id = nanoid(); await db.insert(marketplaceContacts).values({ id, listingId: input.listingId, initiatorUserId: input.initiatorUserId, message: input.message.trim() });
   return { id, status: "requested" as const };
+}
+
+export async function markMarketplaceListingSold(input: { listingId: string; sellerUserId: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const listing = await db.select().from(marketplaceListings).where(and(eq(marketplaceListings.id, input.listingId), eq(marketplaceListings.sellerUserId, input.sellerUserId))).limit(1);
+  if (!listing[0] || !["approved", "pending"].includes(listing[0].status)) throw new Error("Listing cannot be marked sold");
+  const soldAt = new Date(); const cleanupAt = new Date(soldAt.getTime() + 5 * 60 * 60 * 1000);
+  await db.update(marketplaceListings).set({ status: "sold", soldAt, cleanupAt }).where(eq(marketplaceListings.id, input.listingId));
+  return { status: "sold" as const, cleanupAt };
+}
+
+export async function createMarketplaceFraudReport(input: { listingId: string; reporterUserId: number; details: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const listing = await db.select({ id: marketplaceListings.id }).from(marketplaceListings).where(eq(marketplaceListings.id, input.listingId)).limit(1);
+  if (!listing[0]) throw new Error("Listing not found");
+  const id = nanoid(); await db.insert(marketplaceFraudReports).values({ id, listingId: input.listingId, reporterUserId: input.reporterUserId, details: input.details.trim() });
+  return { id, status: "received" as const };
 }
 
 export async function getAdminOverview() {
@@ -223,7 +263,7 @@ export async function updateOrderStatus(input: { orderId: string; status: "pendi
   return { success: true };
 }
 
-export async function getAdminMarketplaceListings(status?: "draft" | "pending" | "approved" | "rejected" | "closed") {
+export async function getAdminMarketplaceListings(status?: "draft" | "pending" | "approved" | "rejected" | "closed" | "sold") {
   const db = await getDb();
   if (!db) return [];
   const query = db.select({ listing: marketplaceListings, seller: { id: users.id, name: users.name, email: users.email } }).from(marketplaceListings).leftJoin(users, eq(marketplaceListings.sellerUserId, users.id));
@@ -235,6 +275,12 @@ export async function reviewMarketplaceListing(input: { listingId: string; statu
   if (!db) throw new Error("Database unavailable");
   await db.update(marketplaceListings).set({ status: input.status, reviewNote: input.reviewNote?.trim() ?? null, reviewedByUserId: input.reviewerUserId, reviewedAt: new Date() }).where(eq(marketplaceListings.id, input.listingId));
   return { success: true };
+}
+
+export async function getAdminMarketplaceFraudReports() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({ report: marketplaceFraudReports, listing: { id: marketplaceListings.id, title: marketplaceListings.title, game: marketplaceListings.game }, reporter: { id: users.id, displayName: users.displayName, email: users.email } }).from(marketplaceFraudReports).leftJoin(marketplaceListings, eq(marketplaceFraudReports.listingId, marketplaceListings.id)).leftJoin(users, eq(marketplaceFraudReports.reporterUserId, users.id)).orderBy(desc(marketplaceFraudReports.createdAt));
 }
 
 export async function getAdminMarketplaceVerifications(status?: "pending" | "approved" | "rejected") {

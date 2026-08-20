@@ -8,7 +8,8 @@ import Home from "./pages/Home";
 import Topup from "./pages/Topup";
 import Smm from "./pages/Smm";
 import Marketplace from "./pages/Marketplace";
-import SellAccount from "./pages/SellAccount";
+import SellAccount from "@/pages/SellAccount";
+import MarketplaceVerify from "@/pages/MarketplaceVerify";
 import Account from "./pages/Account";
 import Admin from "./pages/Admin";
 import Checkout from "./pages/Checkout";
@@ -23,7 +24,8 @@ function Router() {
       <Route path={"/topup"} component={Topup} />
       <Route path={"/smm"} component={Smm} />
       <Route path={"/marketplace"} component={Marketplace} />
-      <Route path={"/marketplace/sell"} component={SellAccount} />
+      <Route path="/marketplace/sell" component={SellAccount} />
+      <Route path="/marketplace/verify" component={MarketplaceVerify} />
       <Route path={"/account"} component={Account} />
       <Route path={"/admin"} component={Admin} />
       <Route path={"/checkout/:orderId"} component={Checkout} />

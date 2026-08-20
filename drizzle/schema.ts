@@ -95,14 +95,17 @@ export const marketplaceListings = mysqlTable("marketplace_listings", {
   id: varchar("id", { length: 64 }).primaryKey(),
   sellerUserId: int("sellerUserId").notNull(),
   listingType: mysqlEnum("listingType", ["sale", "swap", "wanted"]).notNull(),
-  status: mysqlEnum("status", ["draft", "pending", "approved", "rejected", "closed"]).default("pending").notNull(),
+  status: mysqlEnum("status", ["draft", "pending", "approved", "rejected", "closed", "sold"]).default("pending").notNull(),
   game: varchar("game", { length: 120 }).notNull(),
   title: varchar("title", { length: 180 }).notNull(),
   rankLevel: varchar("rankLevel", { length: 180 }).notNull(),
   priceUsd: decimal("priceUsd", { precision: 10, scale: 2 }),
   description: text("description").notNull(),
   contactMethod: varchar("contactMethod", { length: 180 }).notNull(),
+  telegramUsername: varchar("telegramUsername", { length: 80 }),
   screenshots: json("screenshots").notNull(),
+  soldAt: timestamp("soldAt"),
+  cleanupAt: timestamp("cleanupAt"),
   reviewNote: text("reviewNote"),
   reviewedByUserId: int("reviewedByUserId"),
   reviewedAt: timestamp("reviewedAt"),
@@ -113,16 +116,63 @@ export const marketplaceListings = mysqlTable("marketplace_listings", {
 export const marketplaceVerifications = mysqlTable("marketplace_verifications", {
   id: varchar("id", { length: 64 }).primaryKey(),
   userId: int("userId").notNull(),
-  status: mysqlEnum("status", ["pending", "approved", "rejected"]).default("pending").notNull(),
+  status: mysqlEnum("status", ["pending", "approved", "rejected", "manual_review"]).default("pending").notNull(),
   providerSessionId: varchar("providerSessionId", { length: 180 }),
+  providerDecision: mysqlEnum("providerDecision", ["pending", "pass", "fail", "review"]).default("pending").notNull(),
+  autoApprovalEligible: boolean("autoApprovalEligible").default(false).notNull(),
   documentType: varchar("documentType", { length: 80 }),
   locationCountry: varchar("locationCountry", { length: 2 }),
+  locationAccuracyMeters: int("locationAccuracyMeters"),
+  networkRisk: mysqlEnum("networkRisk", ["unknown", "low", "medium", "high"]).default("unknown").notNull(),
   verificationNote: text("verificationNote"),
   reviewedByUserId: int("reviewedByUserId"),
   reviewedAt: timestamp("reviewedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => [index("marketplace_verification_user_idx").on(table.userId), index("marketplace_verification_status_idx").on(table.status), uniqueIndex("marketplace_provider_session_unique").on(table.providerSessionId)]);
+
+export const marketplaceVerificationEvidence = mysqlTable("marketplace_verification_evidence", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  verificationId: varchar("verificationId", { length: 64 }).notNull(),
+  userId: int("userId").notNull(),
+  evidenceType: mysqlEnum("evidenceType", ["national_id_front", "national_id_back", "selfie_liveness", "location_attestation"]).notNull(),
+  storageKey: varchar("storageKey", { length: 512 }).notNull(),
+  mimeType: varchar("mimeType", { length: 120 }).notNull(),
+  byteSize: int("byteSize").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [index("verification_evidence_verification_idx").on(table.verificationId), index("verification_evidence_user_idx").on(table.userId)]);
+
+export const marketplaceEvidenceAccessLogs = mysqlTable("marketplace_evidence_access_logs", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  evidenceId: varchar("evidenceId", { length: 64 }).notNull(),
+  adminUserId: int("adminUserId").notNull(),
+  action: mysqlEnum("action", ["view", "download_denied", "case_review"]).notNull(),
+  reason: varchar("reason", { length: 500 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [index("evidence_access_evidence_idx").on(table.evidenceId), index("evidence_access_admin_idx").on(table.adminUserId)]);
+
+export const marketplaceFraudReports = mysqlTable("marketplace_fraud_reports", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  listingId: varchar("listingId", { length: 64 }).notNull(),
+  reporterUserId: int("reporterUserId").notNull(),
+  details: text("details").notNull(),
+  status: mysqlEnum("status", ["received", "reviewing", "resolved", "closed"]).default("received").notNull(),
+  adminNote: text("adminNote"),
+  reviewedByUserId: int("reviewedByUserId"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [index("fraud_report_listing_idx").on(table.listingId), index("fraud_report_status_idx").on(table.status)]);
+
+export const marketplaceDisclosureRequests = mysqlTable("marketplace_disclosure_requests", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  fraudReportId: varchar("fraudReportId", { length: 64 }).notNull(),
+  requestBasis: varchar("requestBasis", { length: 500 }).notNull(),
+  status: mysqlEnum("status", ["submitted", "under_review", "approved", "rejected"]).default("submitted").notNull(),
+  reviewedByUserId: int("reviewedByUserId"),
+  reviewNote: text("reviewNote"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [index("disclosure_request_fraud_idx").on(table.fraudReportId), index("disclosure_request_status_idx").on(table.status)]);
 
 export const marketplaceContacts = mysqlTable("marketplace_contacts", {
   id: varchar("id", { length: 64 }).primaryKey(),

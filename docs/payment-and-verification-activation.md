@@ -23,8 +23,35 @@ For sell, buy, or swap listings, customers should consent to a verification sess
 
 Location checks should be an explicit, one-time consent request. A missing, denied, or non-Cambodia result must block marketplace listing submission rather than silently collecting location data.
 
+## Expanded marketplace evidence and fraud controls
+
+Identity-document images, selfie/face captures, and precise location are sensitive evidence. They must be stored as private object references, never as public listing media or database blobs. Only the designated administrator may open evidence through a logged access event, and ordinary users must never receive another person’s identity or location data. A fraud report can create an administrator case record, while a lawful-information request must remain administrator-only and require the appropriate legal basis before any disclosure decision.
+
+The verification vendor—not the storefront—should perform document authenticity checks, document-to-face comparison, liveness detection, and its own anti-spoofing controls. Automated vendor approval can publish a listing only when the configured policy explicitly permits it; inconclusive, risky, or failed results remain pending for the administrator. NIST notes that remote proofing requires document validation, a live facial capture, and liveness detection to mitigate presentation attacks.[3]
+
+The browser location request is used only with explicit consent, in HTTPS, to obtain a current device position and accuracy. The server should retain a coarse country result and verification timestamp by default; precise coordinates are evidence available only when a policy requires it. Browser location and IP/VPN signals are risk indicators, not proof: an actual VPN can alter IP-based location, while user-permitted device geolocation is separate. A mismatch, proxy/VPN indication, implausible location, or weak accuracy should require manual review rather than automatically accusing a customer.
+
+| Control | Implementation decision |
+|---|---|
+| National ID front/back | Private evidence objects with application-generated keys; no public URLs and no direct database image storage. |
+| Face verification | Vendor-hosted document-to-selfie/liveness session; store only result, score band, provider session ID, and timestamps. |
+| Current location | Explicit consent; derive Cambodia eligibility server-side and retain coarse result by default. |
+| VPN / proxy | A non-guaranteed risk signal combined with device-location and verification evidence; never a sole rejection or fraud finding. |
+| AI trust | Policy-driven automatic approval only from a verified vendor outcome; unclear or risky outcome requires administrator review. |
+| Fraud request | Administrator case workflow; no automatic sharing of personal evidence with a reporter. |
+| Listing media | Up to 20 separate public-safe account screenshots; identity evidence is never included. |
+| Sold out | Seller may mark the listing sold; server assigns an expiry timestamp five hours later and removes it from public results. |
+
+OWASP advises allowlisting needed file types, generating safe names, applying upload limits and authorization, storing files away from public delivery, and applying layered checks rather than trusting the submitted content type.[4]
+
 ## References
 
 [1] [National Bank of Cambodia — Bakong and KHQR](https://bakong.nbc.gov.kh/en/)
 
 [2] [PPCBank — Online Payment Gateway with KHQR](https://www.ppcbank.com.kh/online-payment-gateway/)
+
+[3] [NIST SP 800-63A — IAL2 Remote Identity Proofing](https://pages.nist.gov/800-63-3-Implementation-Resources/63A/ial2remote/)
+
+[4] [OWASP Cheat Sheet Series — File Upload](https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html)
+
+[5] [MDN Web Docs — Geolocation API](https://developer.mozilla.org/en-US/docs/Web/API/Geolocation_API)

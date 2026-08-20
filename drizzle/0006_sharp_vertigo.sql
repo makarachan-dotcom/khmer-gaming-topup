@@ -1,0 +1,1 @@
+ALTER TABLE `marketplace_listings` MODIFY COLUMN `status` enum('draft','pending','approved','rejected','closed','sold') NOT NULL DEFAULT 'pending';

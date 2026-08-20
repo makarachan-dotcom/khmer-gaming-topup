@@ -64,3 +64,10 @@
 - [ ] Design marketplace eligibility verification that uses consent-based Cambodia location checks and third-party document verification, while storing only minimal verification outcomes for admin review.
 - [ ] Add administrator controls for marketplace eligibility review, verification status, and listing enforcement.
 - [x] Add the requested ZURS STORE footer attribution.
+- [ ] Design an admin-only evidence vault for identity document front/back references, face-verification results, location eligibility, access logging, retention, and deletion controls.
+- [ ] Add a vendor-backed verification-session flow that supports ID scan, face/liveness verification, current-location consent, and a non-guaranteed VPN-risk signal without trusting browser claims alone.
+- [ ] Add Telegram username contact handling that stays inside approved marketplace listings.
+- [ ] Allow up to 20 listing screenshots with private upload references and a responsive full-image gallery.
+- [ ] Add seller-controlled Sold out status and a five-hour server-enforced deletion/expiry workflow.
+- [ ] Add a fraud-report and lawful-information-request workflow visible only to the designated administrator; never disclose a seller’s personal data directly to another user.
+- [ ] Add administrator panels for verification, evidence access records, listing status, deletion timing, fraud reports, and lawful disclosure review.

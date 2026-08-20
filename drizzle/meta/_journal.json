@@ -36,6 +36,20 @@
       "when": 1787260045764,
       "tag": "0004_wooden_darkhawk",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1787261029972,
+      "tag": "0005_tricky_trauma",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1787261228577,
+      "tag": "0006_sharp_vertigo",
+      "breakpoints": true
     }
   ]
 }
