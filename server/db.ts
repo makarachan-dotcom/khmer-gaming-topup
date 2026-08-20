@@ -1,92 +1,260 @@
-import { eq } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
-import { ENV } from './_core/env';
+import { nanoid } from "nanoid";
+import {
+  gamePackages, gameProducts, InsertUser, marketplaceContacts, marketplaceListings, orders, paymentTransactions, savedPlayerIds, siteContent, smmServices, smmTiers, users,
+} from "../drizzle/schema";
+import { defaultGamePackages, defaultGames, defaultSmmServices, defaultSmmTiers } from "./catalogDefaults";
+import { buildOrderNumber, isSingleAdminEmail } from "./storefrontDomain";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
-// Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
-    try {
-      _db = drizzle(process.env.DATABASE_URL);
-    } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
-      _db = null;
-    }
+    try { _db = drizzle(process.env.DATABASE_URL); } catch (error) { console.warn("[Database] Failed to connect:", error); _db = null; }
   }
   return _db;
 }
 
 export async function upsertUser(user: InsertUser): Promise<void> {
-  if (!user.openId) {
-    throw new Error("User openId is required for upsert");
-  }
-
+  if (!user.openId) throw new Error("User openId is required for upsert");
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot upsert user: database not available");
-    return;
+  if (!db) return;
+  const values: InsertUser = { openId: user.openId, lastSignedIn: user.lastSignedIn ?? new Date() };
+  const updateSet: Partial<InsertUser> = { lastSignedIn: values.lastSignedIn };
+  if (user.name !== undefined) { values.name = user.name; updateSet.name = user.name; }
+  if (user.loginMethod !== undefined) { values.loginMethod = user.loginMethod; updateSet.loginMethod = user.loginMethod; }
+  if (user.email !== undefined) {
+    values.email = user.email;
+    updateSet.email = user.email;
+    const role = isSingleAdminEmail(user.email) ? "admin" : "user";
+    values.role = role;
+    updateSet.role = role;
   }
-
-  try {
-    const values: InsertUser = {
-      openId: user.openId,
-    };
-    const updateSet: Record<string, unknown> = {};
-
-    const textFields = ["name", "email", "loginMethod"] as const;
-    type TextField = (typeof textFields)[number];
-
-    const assignNullable = (field: TextField) => {
-      const value = user[field];
-      if (value === undefined) return;
-      const normalized = value ?? null;
-      values[field] = normalized;
-      updateSet[field] = normalized;
-    };
-
-    textFields.forEach(assignNullable);
-
-    if (user.lastSignedIn !== undefined) {
-      values.lastSignedIn = user.lastSignedIn;
-      updateSet.lastSignedIn = user.lastSignedIn;
-    }
-    if (user.role !== undefined) {
-      values.role = user.role;
-      updateSet.role = user.role;
-    } else if (user.openId === ENV.ownerOpenId) {
-      values.role = 'admin';
-      updateSet.role = 'admin';
-    }
-
-    if (!values.lastSignedIn) {
-      values.lastSignedIn = new Date();
-    }
-
-    if (Object.keys(updateSet).length === 0) {
-      updateSet.lastSignedIn = new Date();
-    }
-
-    await db.insert(users).values(values).onDuplicateKeyUpdate({
-      set: updateSet,
-    });
-  } catch (error) {
-    console.error("[Database] Failed to upsert user:", error);
-    throw error;
-  }
+  await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
 }
 
 export async function getUserByOpenId(openId: string) {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get user: database not available");
-    return undefined;
-  }
-
+  if (!db) return undefined;
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
-
-  return result.length > 0 ? result[0] : undefined;
+  return result[0];
 }
 
-// TODO: add feature queries here as your schema grows.
+async function ensureDefaultCatalog() {
+  const db = await getDb();
+  if (!db) return null;
+  const existing = await db.select({ count: sql<number>`count(*)` }).from(gameProducts);
+  if (Number(existing[0]?.count ?? 0) === 0) {
+    await db.insert(gameProducts).values([...defaultGames]);
+    await db.insert(gamePackages).values([...defaultGamePackages]);
+  }
+  const services = await db.select({ count: sql<number>`count(*)` }).from(smmServices);
+  if (Number(services[0]?.count ?? 0) === 0) {
+    await db.insert(smmServices).values([...defaultSmmServices]);
+    await db.insert(smmTiers).values([...defaultSmmTiers]);
+  }
+  return db;
+}
+
+export async function getGameCatalog() {
+  const db = await ensureDefaultCatalog();
+  if (!db) return [];
+  const products = await db.select().from(gameProducts).where(eq(gameProducts.isActive, true)).orderBy(asc(gameProducts.sortOrder));
+  const packages = await db.select().from(gamePackages).where(eq(gamePackages.isActive, true)).orderBy(asc(gamePackages.sortOrder));
+  return products.map((product) => ({ ...product, packages: packages.filter((item) => item.productId === product.id) }));
+}
+
+export async function getSmmCatalog() {
+  const db = await ensureDefaultCatalog();
+  if (!db) return [];
+  const services = await db.select().from(smmServices).where(eq(smmServices.isActive, true)).orderBy(asc(smmServices.sortOrder));
+  const tiers = await db.select().from(smmTiers).where(eq(smmTiers.isActive, true)).orderBy(asc(smmTiers.sortOrder));
+  return services.map((service) => ({ ...service, tiers: tiers.filter((item) => item.serviceId === service.id) }));
+}
+
+export async function createTopupOrder(input: { userId: number; packageId: string; playerId: string; zoneId?: string | null; quantity: number }) {
+  const db = await ensureDefaultCatalog();
+  if (!db) throw new Error("Database unavailable");
+  const result = await db.select({ game: gameProducts, package: gamePackages }).from(gamePackages).innerJoin(gameProducts, eq(gamePackages.productId, gameProducts.id)).where(and(eq(gamePackages.id, input.packageId), eq(gamePackages.isActive, true), eq(gameProducts.isActive, true))).limit(1);
+  const item = result[0];
+  if (!item) throw new Error("Selected game package is unavailable");
+  if (item.game.requiresZone && !input.zoneId?.trim()) throw new Error("Server or zone ID is required for this game");
+  const subtotal = Number(item.package.priceUsd) * input.quantity;
+  const id = nanoid(); const orderNumber = buildOrderNumber();
+  await db.insert(orders).values({ id, orderNumber, userId: input.userId, orderType: "topup", status: "pending", subtotal: subtotal.toFixed(2), productName: `${item.game.titleEn} • ${item.package.amountLabel} ${item.game.currencyLabel}`, details: { packageId: item.package.id, gameProductId: item.game.id, playerId: input.playerId.trim(), zoneId: input.zoneId?.trim() ?? null, quantity: input.quantity } });
+  return { id, orderNumber, amount: subtotal.toFixed(2), status: "pending" as const };
+}
+
+export async function createSmmOrder(input: { userId: number; tierId: string; target: string }) {
+  const db = await ensureDefaultCatalog();
+  if (!db) throw new Error("Database unavailable");
+  const result = await db.select({ service: smmServices, tier: smmTiers }).from(smmTiers).innerJoin(smmServices, eq(smmTiers.serviceId, smmServices.id)).where(and(eq(smmTiers.id, input.tierId), eq(smmTiers.isActive, true), eq(smmServices.isActive, true))).limit(1);
+  const item = result[0];
+  if (!item) throw new Error("Selected SMM tier is unavailable");
+  const id = nanoid(); const orderNumber = buildOrderNumber();
+  await db.insert(orders).values({ id, orderNumber, userId: input.userId, orderType: "smm", status: "pending", subtotal: item.tier.priceUsd, productName: `${item.service.platform} • ${item.service.titleEn} (${item.tier.quantity.toLocaleString()})`, details: { serviceId: item.service.id, tierId: item.tier.id, target: input.target.trim(), quantity: item.tier.quantity } });
+  return { id, orderNumber, amount: item.tier.priceUsd, status: "pending" as const };
+}
+
+export async function getCustomerOrders(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(orders).where(eq(orders.userId, userId)).orderBy(desc(orders.createdAt));
+}
+
+export async function beginStagedPayment(input: { orderId: string; userId: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const order = await db.select().from(orders).where(and(eq(orders.id, input.orderId), eq(orders.userId, input.userId))).limit(1);
+  if (!order[0]) throw new Error("Order not found");
+  if (["paid", "delivered", "failed", "expired", "refunded"].includes(order[0].status)) throw new Error("This order cannot begin a payment session");
+  const existing = await db.select().from(paymentTransactions).where(eq(paymentTransactions.orderId, input.orderId)).limit(1);
+  const transaction = existing[0] ?? { id: nanoid(), orderId: input.orderId, provider: "toanchetpay_staged", status: "pending" as const, amount: order[0].subtotal, currency: order[0].currency, checkoutUrl: `/checkout/${input.orderId}` };
+  if (!existing[0]) await db.insert(paymentTransactions).values(transaction);
+  await db.update(orders).set({ status: "awaiting_payment" }).where(eq(orders.id, input.orderId));
+  return { order: { id: order[0].id, orderNumber: order[0].orderNumber, productName: order[0].productName, subtotal: order[0].subtotal, status: "awaiting_payment" as const }, payment: { id: transaction.id, provider: transaction.provider, status: transaction.status, checkoutUrl: transaction.checkoutUrl } };
+}
+
+export async function getCustomerPaymentSession(input: { orderId: string; userId: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const order = await db.select().from(orders).where(and(eq(orders.id, input.orderId), eq(orders.userId, input.userId))).limit(1);
+  if (!order[0]) throw new Error("Order not found");
+  const payment = await db.select().from(paymentTransactions).where(eq(paymentTransactions.orderId, input.orderId)).orderBy(desc(paymentTransactions.createdAt)).limit(1);
+  return { order: order[0], payment: payment[0] ?? null };
+}
+
+export async function getSavedPlayerIds(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({ saved: savedPlayerIds, game: gameProducts }).from(savedPlayerIds).innerJoin(gameProducts, eq(savedPlayerIds.gameProductId, gameProducts.id)).where(eq(savedPlayerIds.userId, userId)).orderBy(desc(savedPlayerIds.createdAt));
+}
+
+export async function savePlayerId(input: { userId: number; gameProductId: string; playerId: string; zoneId?: string | null; label?: string | null }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const product = await db.select({ id: gameProducts.id }).from(gameProducts).where(eq(gameProducts.id, input.gameProductId)).limit(1);
+  if (!product[0]) throw new Error("Game product not found");
+  const id = nanoid(); await db.insert(savedPlayerIds).values({ id, ...input, playerId: input.playerId.trim(), zoneId: input.zoneId?.trim() ?? null, label: input.label?.trim() ?? null });
+  return { id };
+}
+
+export async function updateSavedPlayerId(input: { id: string; userId: number; gameProductId: string; playerId: string; zoneId?: string | null; label?: string | null }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  await db.update(savedPlayerIds).set({ gameProductId: input.gameProductId, playerId: input.playerId.trim(), zoneId: input.zoneId?.trim() ?? null, label: input.label?.trim() ?? null }).where(and(eq(savedPlayerIds.id, input.id), eq(savedPlayerIds.userId, input.userId)));
+  return { success: true };
+}
+
+export async function deleteSavedPlayerId(input: { id: string; userId: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  await db.delete(savedPlayerIds).where(and(eq(savedPlayerIds.id, input.id), eq(savedPlayerIds.userId, input.userId)));
+  return { success: true };
+}
+
+export async function listMarketplace(input: { listingType?: "sale" | "swap" | "wanted"; game?: string; search?: string }) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [eq(marketplaceListings.status, "approved")];
+  if (input.listingType) conditions.push(eq(marketplaceListings.listingType, input.listingType));
+  if (input.game) conditions.push(eq(marketplaceListings.game, input.game));
+  const results = await db.select().from(marketplaceListings).where(and(...conditions)).orderBy(desc(marketplaceListings.createdAt));
+  const search = input.search?.trim().toLowerCase();
+  return search ? results.filter((listing) => `${listing.title} ${listing.description}`.toLowerCase().includes(search)) : results;
+}
+
+export async function submitMarketplaceListing(input: { sellerUserId: number; listingType: "sale" | "swap" | "wanted"; game: string; title: string; rankLevel: string; priceUsd?: string | null; description: string; contactMethod: string; screenshots?: string[] }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const id = nanoid(); await db.insert(marketplaceListings).values({ id, sellerUserId: input.sellerUserId, listingType: input.listingType, status: "pending", game: input.game.trim(), title: input.title.trim(), rankLevel: input.rankLevel.trim(), priceUsd: input.priceUsd ?? null, description: input.description.trim(), contactMethod: input.contactMethod.trim(), screenshots: input.screenshots ?? [] });
+  return { id, status: "pending" as const };
+}
+
+export async function initiateMarketplaceContact(input: { listingId: string; initiatorUserId: number; message: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const listing = await db.select().from(marketplaceListings).where(and(eq(marketplaceListings.id, input.listingId), eq(marketplaceListings.status, "approved"))).limit(1);
+  if (!listing[0]) throw new Error("This listing is unavailable");
+  if (listing[0].sellerUserId === input.initiatorUserId) throw new Error("You cannot contact your own listing");
+  const id = nanoid(); await db.insert(marketplaceContacts).values({ id, listingId: input.listingId, initiatorUserId: input.initiatorUserId, message: input.message.trim() });
+  return { id, status: "requested" as const };
+}
+
+export async function getAdminOverview() {
+  const db = await getDb();
+  if (!db) return { orders: 0, pendingOrders: 0, paidOrders: 0, revenue: "0.00", pendingListings: 0, totalUsers: 0 };
+  const [allOrders, listings, allUsers] = await Promise.all([db.select().from(orders), db.select().from(marketplaceListings), db.select({ count: sql<number>`count(*)` }).from(users)]);
+  const paidOrders = allOrders.filter((order) => ["paid", "delivered"].includes(order.status));
+  return { orders: allOrders.length, pendingOrders: allOrders.filter((order) => ["pending", "awaiting_payment"].includes(order.status)).length, paidOrders: paidOrders.length, revenue: paidOrders.reduce((sum, order) => sum + Number(order.subtotal), 0).toFixed(2), pendingListings: listings.filter((listing) => listing.status === "pending").length, totalUsers: Number(allUsers[0]?.count ?? 0) };
+}
+
+export async function getAdminOrders() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({ order: orders, user: { id: users.id, name: users.name, email: users.email } }).from(orders).leftJoin(users, eq(orders.userId, users.id)).orderBy(desc(orders.createdAt));
+}
+
+export async function updateOrderStatus(input: { orderId: string; status: "pending" | "awaiting_payment" | "paid" | "delivered" | "failed" | "expired" | "refunded" }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  await db.update(orders).set({ status: input.status }).where(eq(orders.id, input.orderId));
+  return { success: true };
+}
+
+export async function getAdminMarketplaceListings(status?: "draft" | "pending" | "approved" | "rejected" | "closed") {
+  const db = await getDb();
+  if (!db) return [];
+  const query = db.select({ listing: marketplaceListings, seller: { id: users.id, name: users.name, email: users.email } }).from(marketplaceListings).leftJoin(users, eq(marketplaceListings.sellerUserId, users.id));
+  return status ? query.where(eq(marketplaceListings.status, status)).orderBy(desc(marketplaceListings.createdAt)) : query.orderBy(desc(marketplaceListings.createdAt));
+}
+
+export async function reviewMarketplaceListing(input: { listingId: string; status: "approved" | "rejected" | "closed"; reviewNote?: string | null; reviewerUserId: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  await db.update(marketplaceListings).set({ status: input.status, reviewNote: input.reviewNote?.trim() ?? null, reviewedByUserId: input.reviewerUserId, reviewedAt: new Date() }).where(eq(marketplaceListings.id, input.listingId));
+  return { success: true };
+}
+
+export async function updateGamePackage(input: { packageId: string; priceUsd: string; isActive: boolean; featured: boolean }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  await db.update(gamePackages).set({ priceUsd: input.priceUsd, isActive: input.isActive, featured: input.featured }).where(eq(gamePackages.id, input.packageId));
+  return { success: true };
+}
+
+export async function updateSmmTier(input: { tierId: string; priceUsd: string; isActive: boolean }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  await db.update(smmTiers).set({ priceUsd: input.priceUsd, isActive: input.isActive }).where(eq(smmTiers.id, input.tierId));
+  return { success: true };
+}
+
+export async function getPaymentTransactions() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({ payment: paymentTransactions, order: orders }).from(paymentTransactions).leftJoin(orders, eq(paymentTransactions.orderId, orders.id)).orderBy(desc(paymentTransactions.createdAt));
+}
+
+export async function getAdminUsers() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({ id: users.id, name: users.name, email: users.email, role: users.role, createdAt: users.createdAt, lastSignedIn: users.lastSignedIn }).from(users).orderBy(desc(users.createdAt)).limit(100);
+}
+
+export async function getSiteContent() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(siteContent).orderBy(asc(siteContent.contentKey));
+}
+
+export async function saveSiteContent(input: { contentKey: string; titleKh?: string | null; bodyKh?: string | null; isActive: boolean; updatedByUserId: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const existing = await db.select({ id: siteContent.id }).from(siteContent).where(eq(siteContent.contentKey, input.contentKey)).limit(1);
+  const values = { titleKh: input.titleKh?.trim() || null, bodyKh: input.bodyKh?.trim() || null, isActive: input.isActive, updatedByUserId: input.updatedByUserId };
+  if (existing[0]) await db.update(siteContent).set(values).where(eq(siteContent.id, existing[0].id));
+  else await db.insert(siteContent).values({ id: nanoid(), contentKey: input.contentKey.trim(), ...values });
+  return { success: true };
+}

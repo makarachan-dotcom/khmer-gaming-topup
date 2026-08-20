@@ -5,12 +5,26 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
+import Topup from "./pages/Topup";
+import Smm from "./pages/Smm";
+import Marketplace from "./pages/Marketplace";
+import SellAccount from "./pages/SellAccount";
+import Account from "./pages/Account";
+import Admin from "./pages/Admin";
+import Checkout from "./pages/Checkout";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
       <Route path={"/"} component={Home} />
+      <Route path={"/topup"} component={Topup} />
+      <Route path={"/smm"} component={Smm} />
+      <Route path={"/marketplace"} component={Marketplace} />
+      <Route path={"/marketplace/sell"} component={SellAccount} />
+      <Route path={"/account"} component={Account} />
+      <Route path={"/admin"} component={Admin} />
+      <Route path={"/checkout/:orderId"} component={Checkout} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

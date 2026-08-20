@@ -1,33 +1,23 @@
-import { useAuth } from "@/_core/hooks/useAuth";
-import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
-import { Streamdown } from 'streamdown';
+import GameMark from "@/components/GameMark";
+import StorefrontLayout from "@/components/StorefrontLayout";
+import { getAccentGradient } from "@/lib/display";
+import { trpc } from "@/lib/trpc";
+import { ArrowRight, BadgeCheck, CircleDollarSign, Flame, Gamepad2, HeartHandshake, ShieldCheck, Sparkles, TrendingUp, UsersRound } from "lucide-react";
+import { Link } from "wouter";
 
-/**
- * All content in this page are only for example, replace with your own feature implementation
- * When building pages, remember your instructions in Frontend Workflow, Frontend Best Practices, Design Guide and Common Pitfalls
- */
+const quickLinks = [
+  { href: "/topup", icon: Gamepad2, label: "បញ្ចូលលុយហ្គេម", copy: "ពេជ្រ, UC និងកាក់ហ្គេម" },
+  { href: "/smm", icon: TrendingUp, label: "Social Boost", copy: "កែលម្អការចូលរួម" },
+  { href: "/marketplace", icon: UsersRound, label: "ទីផ្សារគណនី", copy: "ទិញ លក់ និងដូរ" },
+];
+
 export default function Home() {
-  // The useAuth hook provides authentication state.
-  // To implement login/logout, call logout(), or start login from an event
-  // handler: onClick={() => startLogin()} (imported from "@/const"). Never call
-  // startLogin() during render (no href={startLogin()}) — it mints a one-time
-  // nonce cookie and must run only at the moment of navigation.
-  let { user, loading, error, isAuthenticated, logout } = useAuth();
-
-  // If theme is switchable in App.tsx, we can implement theme toggling like this:
-  // const { theme, toggleTheme } = useTheme();
-
-  return (
-    <div className="min-h-screen flex flex-col">
-      <main>
-        {/* Example: lucide-react for icons */}
-        <Loader2 className="animate-spin" />
-        Example Page
-        {/* Example: Streamdown for markdown rendering */}
-        <Streamdown>Any **markdown** content</Streamdown>
-        <Button variant="default">Example Button</Button>
-      </main>
-    </div>
-  );
+  const games = trpc.catalog.games.useQuery(); const listings = trpc.marketplace.list.useQuery();
+  return <StorefrontLayout><main><section className="container pt-7 sm:pt-12"><div className="premium-shine relative overflow-hidden rounded-[1.5rem] bg-slate-950 px-5 py-8 text-white shadow-2xl shadow-indigo-900/20 sm:rounded-[2rem] sm:px-10 sm:py-12"><div className="absolute -right-16 -top-24 h-64 w-64 rounded-full bg-indigo-500/40 blur-3xl" /><div className="absolute bottom-0 left-1/4 h-32 w-40 rounded-full bg-fuchsia-500/20 blur-3xl" /><div className="relative grid items-end gap-8 lg:grid-cols-[1.2fr_0.8fr]"><div className="max-w-2xl"><div className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-semibold text-indigo-100"><Sparkles className="h-3.5 w-3.5 text-amber-300" />សេវាកម្មឌីជីថលសម្រាប់អ្នកលេងកម្ពុជា</div><h1 className="font-display text-3xl font-bold leading-[1.16] tracking-tight sm:text-5xl">Top-up លឿន។<br /><span className="text-indigo-300">ទូទាត់ងាយ។</span> លេងដោយទំនុកចិត្ត។</h1><p className="mt-4 max-w-xl text-sm leading-7 text-slate-300 sm:text-base">ជ្រើសរើសកញ្ចប់ហ្គេម, បង្កើនបណ្តាញសង្គម ឬស្វែងរកគណនីដែលសមរម្យសម្រាប់អ្នក។ អ្វីៗគ្រប់យ៉ាងត្រូវបានរៀបចំឱ្យខ្លី ច្បាស់ និងងាយប្រើតាមទូរស័ព្ទ។</p><div className="mt-6 flex flex-wrap gap-3"><Link href="/topup" className="inline-flex h-11 items-center gap-2 rounded-xl bg-white px-4 text-sm font-bold text-slate-950 transition-transform hover:-translate-y-0.5 active:scale-[0.97]">ចាប់ផ្តើម Top-up <ArrowRight className="h-4 w-4" /></Link><Link href="/marketplace" className="inline-flex h-11 items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-4 text-sm font-semibold text-white transition-colors hover:bg-white/10">ស្វែងរកទីផ្សារ</Link></div></div><div className="grid grid-cols-2 gap-3 sm:max-w-sm lg:ml-auto"><HeroMetric icon={BadgeCheck} label="ជ្រើសរើសកញ្ចប់" value="ក្នុងរយៈពេលខ្លី" /><HeroMetric icon={ShieldCheck} label="ការបង់ប្រាក់" value="មានសុវត្ថិភាព" /></div></div></div></section>
+  <section className="container mt-5 grid gap-3 sm:mt-7 sm:grid-cols-3">{quickLinks.map(({ href, icon: Icon, label, copy }) => <Link key={href} href={href} className="group surface flex items-center gap-3 rounded-2xl p-4 transition-all hover:-translate-y-0.5 hover:shadow-lg"><div className="grid h-10 w-10 place-items-center rounded-xl bg-indigo-50 text-indigo-700"><Icon className="h-5 w-5" /></div><div className="min-w-0 flex-1"><p className="text-sm font-bold text-slate-900">{label}</p><p className="mt-0.5 truncate text-xs text-slate-500">{copy}</p></div><ArrowRight className="h-4 w-4 text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-indigo-600" /></Link>)}</section>
+  <section className="container mt-12 sm:mt-16"><div className="flex items-end justify-between gap-4"><div><p className="text-xs font-bold tracking-[0.14em] text-indigo-700">GAME TOP-UP</p><h2 className="mt-1 font-display text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">ជ្រើសរើសហ្គេមរបស់អ្នក</h2><p className="mt-1.5 text-sm text-slate-500">ជ្រើសកញ្ចប់ដែលអ្នកត្រូវការ ហើយបញ្ចូល Player ID របស់អ្នក។</p></div><Link href="/topup" className="hidden items-center gap-1 text-sm font-bold text-indigo-700 sm:flex">មើលទាំងអស់ <ArrowRight className="h-4 w-4" /></Link></div><div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{games.isLoading ? [1,2,3,4].map((item) => <div key={item} className="h-48 animate-pulse rounded-2xl bg-slate-200" />) : games.data?.map((game) => <Link href={`/topup?game=${game.slug}`} key={game.id} className="group overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 transition-all hover:-translate-y-1 hover:shadow-xl"><div className={`h-24 bg-gradient-to-br ${getAccentGradient(game.accent)} p-4`}><GameMark label={game.iconLabel} /></div><div className="p-4"><div className="flex items-center justify-between"><h3 className="font-display font-bold text-slate-900">{game.titleKh}</h3><Flame className="h-4 w-4 text-orange-500" /></div><p className="mt-1 text-xs text-slate-500">{game.currencyLabel} • ចាប់ពី ${Number(game.packages[0]?.priceUsd ?? 0).toFixed(2)}</p><div className="mt-3 flex items-center gap-1 text-xs font-semibold text-indigo-700">ជ្រើសកញ្ចប់ <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" /></div></div></Link>)}</div></section>
+  <section className="container mt-12 grid gap-5 lg:mt-16 lg:grid-cols-[1.1fr_0.9fr]"><div className="rounded-[1.5rem] bg-gradient-to-br from-indigo-100 via-violet-50 to-white p-6 ring-1 ring-indigo-100 sm:p-8"><div className="flex items-center gap-2 text-indigo-700"><TrendingUp className="h-5 w-5" /><span className="text-xs font-bold tracking-[0.12em]">SOCIAL BOOST</span></div><h2 className="mt-4 font-display text-2xl font-bold tracking-tight text-slate-950">ធ្វើឱ្យ Channel និង Profile របស់អ្នកកាន់តែសកម្ម</h2><p className="mt-3 max-w-lg text-sm leading-7 text-slate-600">ជ្រើស Followers, Likes, Views ឬ Comments សម្រាប់ Instagram, TikTok, Facebook, YouTube និង Telegram។ តម្លៃត្រូវបង្ហាញច្បាស់ មុននឹងអ្នកបង្កើតការកម្មង់។</p><Link href="/smm" className="mt-6 inline-flex h-10 items-center gap-2 rounded-xl bg-indigo-700 px-4 text-sm font-bold text-white transition-transform hover:-translate-y-0.5 active:scale-[0.97]">មើលសេវា SMM <ArrowRight className="h-4 w-4" /></Link></div><div className="surface rounded-[1.5rem] p-6 sm:p-8"><div className="flex items-center gap-2 text-fuchsia-700"><HeartHandshake className="h-5 w-5" /><span className="text-xs font-bold tracking-[0.12em]">ACCOUNT MARKETPLACE</span></div><h2 className="mt-4 font-display text-2xl font-bold tracking-tight text-slate-950">លក់ ទិញ ឬដូរគណនី</h2><div className="mt-4 space-y-3">{listings.isLoading ? <><div className="h-14 animate-pulse rounded-xl bg-slate-100" /><div className="h-14 animate-pulse rounded-xl bg-slate-100" /></> : listings.data?.length ? listings.data.slice(0, 2).map((listing) => <div key={listing.id} className="rounded-xl border border-slate-100 bg-slate-50/70 p-3"><p className="text-sm font-bold text-slate-800">{listing.title}</p><p className="mt-0.5 text-xs text-slate-500">{listing.rankLevel}</p></div>) : <p className="rounded-xl bg-slate-50 p-4 text-xs leading-5 text-slate-500">ការផ្សាយដែលបានអនុម័តនឹងបង្ហាញនៅទីនេះ។</p>}</div><Link href="/marketplace" className="mt-5 inline-flex items-center gap-1 text-sm font-bold text-indigo-700">ចូលទៅកាន់ទីផ្សារ <ArrowRight className="h-4 w-4" /></Link></div></section>
+  <section className="container mt-12 grid gap-3 sm:mt-16 sm:grid-cols-3"><Trust icon={ShieldCheck} title="បង់ប្រាក់ដោយទំនុកចិត្ត" copy="ស្ថានភាពការកម្មង់ត្រូវបានរក្សាទុកឱ្យអ្នកតាមដានបាន។" /><Trust icon={CircleDollarSign} title="តម្លៃច្បាស់លាស់" copy="ជ្រើសកញ្ចប់ និងឃើញតម្លៃសរុប មុនបន្តការកម្មង់។" /><Trust icon={UsersRound} title="ទីផ្សារមានការគ្រប់គ្រង" copy="ការផ្សាយលក់ថ្មី ត្រូវឆ្លងកាត់ការពិនិត្យសិន។" /></section></main></StorefrontLayout>;
 }
+function HeroMetric({ icon: Icon, label, value }: { icon: typeof ShieldCheck; label: string; value: string }) { return <div className="rounded-2xl border border-white/10 bg-white/8 p-4 backdrop-blur"><Icon className="h-5 w-5 text-emerald-300" /><p className="mt-5 text-xs text-slate-300">{label}</p><p className="mt-1 font-display text-lg font-bold">{value}</p></div>; }
+function Trust({ icon: Icon, title, copy }: { icon: typeof ShieldCheck; title: string; copy: string }) { return <div className="flex gap-3 p-3"><div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-slate-100 text-slate-700"><Icon className="h-4 w-4" /></div><div><h3 className="text-sm font-bold text-slate-900">{title}</h3><p className="mt-1 text-xs leading-5 text-slate-500">{copy}</p></div></div>; }
