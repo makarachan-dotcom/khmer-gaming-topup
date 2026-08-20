@@ -80,8 +80,10 @@ button, input, textarea, select { font: inherit; }
 @media (min-width: 1024px) { .container { max-width: 1120px; padding-inline: 2rem; } }
 @media (min-width: 1280px) { .container { max-width: 1280px; } }
 
-.surface { background: linear-gradient(132deg, oklch(1 0 0 / 0.82), oklch(0.98 0.02 272 / 0.62)); border: 1px solid oklch(1 0 0 / 0.84); box-shadow: 0 18px 45px oklch(0.33 0.09 265 / 0.10), inset 0 1px 0 oklch(1 0 0 / 0.94); backdrop-filter: blur(20px) saturate(1.22); }
+.surface { background: linear-gradient(132deg, oklch(1 0 0 / 0.86), oklch(0.98 0.02 272 / 0.68)); border: 1px solid oklch(1 0 0 / 0.88); box-shadow: 0 18px 45px oklch(0.33 0.09 265 / 0.10), inset 0 1px 0 oklch(1 0 0 / 0.94); backdrop-filter: blur(20px) saturate(1.22); }
 .surface:hover { box-shadow: 0 22px 52px oklch(0.33 0.09 265 / 0.14), inset 0 1px 0 oklch(1 0 0 / 1); }
+.glass-panel { background: linear-gradient(132deg, oklch(1 0 0 / 0.74), oklch(0.95 0.06 270 / 0.42)); border: 1px solid oklch(1 0 0 / 0.92); box-shadow: 0 24px 60px oklch(0.33 0.11 268 / 0.11), inset 0 1px 0 oklch(1 0 0 / 0.96); backdrop-filter: blur(24px) saturate(1.35); }
+.brand-placeholder { border: 1px dashed oklch(0.61 0.15 273 / 0.55); background: radial-gradient(circle at 30% 20%, oklch(1 0 0 / 0.86), transparent 46%), linear-gradient(135deg, oklch(0.93 0.06 267 / 0.78), oklch(0.96 0.04 300 / 0.7)); box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.92), 0 5px 14px oklch(0.35 0.12 270 / 0.10); }
 .premium-shine { position: relative; overflow: hidden; }
 .premium-shine::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(110deg, transparent 25%, oklch(1 0 0 / 0.25) 45%, transparent 58%); transform: translateX(-100%); animation: premium-shine 5s ease-in-out infinite; }
 
@@ -94,10 +96,17 @@ button, input, textarea, select { font: inherit; }
 .game-visual-shine { position: absolute; z-index: 2; inset: 0; background: linear-gradient(115deg, transparent 25%, oklch(1 0 0 / 0.38) 45%, transparent 60%); transform: translateX(-110%); transition: transform 520ms cubic-bezier(0.23, 1, 0.32, 1); pointer-events: none; }
 .group:hover .game-visual img { transform: scale(1.08); filter: saturate(1.12); }
 .group:hover .game-visual-shine { transform: translateX(110%); }
-.float-emoji { animation: emoji-float 3.6s ease-in-out infinite; }
+.float-emoji { animation: emoji-float 3.6s cubic-bezier(0.23, 1, 0.32, 1) infinite; transform-origin: center; will-change: transform; }
 .float-emoji--slow { animation-delay: -1.6s; animation-duration: 4.8s; }
 .glass-orb { position: absolute; border: 1px solid oklch(1 0 0 / 0.24); background: linear-gradient(135deg, oklch(1 0 0 / 0.26), oklch(0.78 0.15 290 / 0.10)); box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.35), 0 14px 30px oklch(0.20 0.08 270 / 0.17); backdrop-filter: blur(8px); }
 @keyframes emoji-float { 0%,100% { transform: translate3d(0, 0, 0) rotate(-4deg); } 50% { transform: translate3d(0, -10px, 0) rotate(4deg); } }
+
+@media (prefers-reduced-motion: no-preference) {
+  a, button { transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 200ms cubic-bezier(0.23, 1, 0.32, 1), background-color 160ms cubic-bezier(0.23, 1, 0.32, 1); }
+  a:active, button:active { transform: scale(0.97); }
+  .glass-panel::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(122deg, transparent 34%, oklch(1 0 0 / 0.42) 48%, transparent 62%); transform: translateX(-115%); animation: glass-sweep 7.5s cubic-bezier(0.23, 1, 0.32, 1) infinite; }
+}
+@keyframes glass-sweep { 0%, 60% { transform: translateX(-115%); } 78%, 100% { transform: translateX(115%); } }
 
 @media (max-width: 639px) {
   .container { padding-inline: 0.75rem; }
