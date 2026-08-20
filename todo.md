@@ -23,3 +23,6 @@
 - [x] Stage independent Google OAuth sign-in so customers do not use the existing Manus login redirect; live authorization remains disabled until the owner supplies Google Cloud credentials.
 - [x] Prepare the current test callback route and Google sign-in entry point while keeping credential-dependent authorization inactive.
 - [x] Add original high-energy liquid-glass transitions, emoji accents, and interaction feedback inspired by the supplied visual reference without copying it.
+- [x] Diagnose the Vercel deployment blockage: the project lacked a Vercel serverless function entry, static-output declaration, and SPA routing configuration.
+- [x] Add the minimum Vercel-compatible configuration required for this full-stack application, including a portable Express function entry and non-API SPA rewrites.
+- [x] Verify the production build, API status route, and document step-by-step Vercel environment-variable and deployment instructions.
