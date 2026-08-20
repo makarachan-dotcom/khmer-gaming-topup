@@ -7,6 +7,7 @@ import { registerOAuthRoutes } from "./_core/oauth";
 import { registerStorageProxy } from "./_core/storageProxy";
 import { sdk } from "./_core/sdk";
 import { cleanupExpiredSoldMarketplaceListings } from "./db";
+import { deriveProviderNetworkRisk } from "./providerNetworkRisk";
 import crypto from "node:crypto";
 
 /**
@@ -23,7 +24,7 @@ export function createApp() {
       const expected = crypto.createHmac("sha256", secret).update(req.body).digest("hex");
       if (signature.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return res.status(401).json({ error: "invalid signature" });
       const event = JSON.parse(req.body.toString("utf8"));
-      if (event.webhook_type === "status.updated" && event.session_id) { const state = event.status === "Approved" ? { status: "approved" as const, decision: "pass" as const } : event.status === "Declined" ? { status: "rejected" as const, decision: "fail" as const } : { status: "manual_review" as const, decision: "review" as const }; await import("./db").then(({ updateMarketplaceVerificationDecision }) => updateMarketplaceVerificationDecision({ providerSessionId: event.session_id, ...state })); }
+      if (event.webhook_type === "status.updated" && event.session_id) { const state = event.status === "Approved" ? { status: "approved" as const, decision: "pass" as const } : event.status === "Declined" ? { status: "rejected" as const, decision: "fail" as const } : { status: "manual_review" as const, decision: "review" as const }; const networkRisk = deriveProviderNetworkRisk(event.decision); await import("./db").then(({ updateMarketplaceVerificationDecision }) => updateMarketplaceVerificationDecision({ providerSessionId: event.session_id, ...state, networkRisk })); }
       return res.json({ ok: true });
     } catch { return res.status(500).json({ error: "webhook processing failed" }); }
   });

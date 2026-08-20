@@ -2,10 +2,11 @@ import { and, asc, desc, eq, lt, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
 import {
-  gamePackages, gameProducts, InsertUser, marketplaceContacts, marketplaceEvidenceAccessLogs, marketplaceFraudReports, marketplaceListings, marketplaceVerificationEvidence, marketplaceVerifications, orders, paymentTransactions, savedPlayerIds, siteContent, smmServices, smmTiers, users,
+  gamePackages, gameProducts, InsertUser, marketplaceContacts, marketplaceDisclosureRequests, marketplaceEvidenceAccessLogs, marketplaceFraudReports, marketplaceListings, marketplaceVerificationEvidence, marketplaceVerifications, orders, paymentTransactions, savedPlayerIds, siteContent, smmServices, smmTiers, users,
 } from "../drizzle/schema";
 import { defaultGamePackages, defaultGames, defaultSmmServices, defaultSmmTiers } from "./catalogDefaults";
 import { buildOrderNumber, isSingleAdminEmail } from "./storefrontDomain";
+import { buildEvidenceRetentionAuditReason, canApproveMarketplaceVerification, hasOnlyOwnedMarketplaceScreenshotKeys, type DisclosureRequestStatus, type FraudReportStatus } from "./marketplaceSafety";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -174,11 +175,21 @@ export async function listMarketplace(input: { listingType?: "sale" | "swap" | "
 
 export async function getMarketplaceEligibility(userId: number) {
   const db = await getDb();
-  if (!db) return { status: "not_started" as const, locationCountry: null, verificationNote: null };
+  if (!db) return { id: null, status: "not_started" as const, locationCountry: null, locationAccuracyMeters: null, networkRisk: "unknown" as const, providerDecision: "pending" as const, verificationNote: null };
   const result = await db.select().from(marketplaceVerifications).where(eq(marketplaceVerifications.userId, userId)).orderBy(desc(marketplaceVerifications.createdAt)).limit(1);
   const verification = result[0];
-  if (!verification) return { status: "not_started" as const, locationCountry: null, verificationNote: null };
-  return { status: verification.status, locationCountry: verification.locationCountry, verificationNote: verification.verificationNote };
+  if (!verification) return { id: null, status: "not_started" as const, locationCountry: null, locationAccuracyMeters: null, networkRisk: "unknown" as const, providerDecision: "pending" as const, verificationNote: null };
+  return { id: verification.id, status: verification.status, locationCountry: verification.locationCountry, locationAccuracyMeters: verification.locationAccuracyMeters, networkRisk: verification.networkRisk, providerDecision: verification.providerDecision, verificationNote: verification.verificationNote };
+}
+
+export async function recordMarketplaceLocationAttestation(input: { userId: number; locationCountry: string; locationAccuracyMeters: number; networkRisk: "low" | "medium" | "high" }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const verification = await db.select({ id: marketplaceVerifications.id, status: marketplaceVerifications.status }).from(marketplaceVerifications).where(eq(marketplaceVerifications.userId, input.userId)).orderBy(desc(marketplaceVerifications.createdAt)).limit(1);
+  if (!verification[0]) throw new Error("Start identity verification before confirming location");
+  if (verification[0].status === "rejected") throw new Error("A rejected verification cannot be updated with a location attestation");
+  await db.update(marketplaceVerifications).set({ locationCountry: input.locationCountry, locationAccuracyMeters: Math.round(input.locationAccuracyMeters), networkRisk: input.networkRisk }).where(eq(marketplaceVerifications.id, verification[0].id));
+  return { verificationId: verification[0].id, locationCountry: input.locationCountry, networkRisk: input.networkRisk };
 }
 
 export async function beginMarketplaceVerification(userId: number) {
@@ -199,10 +210,10 @@ export async function linkMarketplaceVerificationProvider(input: { verificationI
   return { success: true };
 }
 
-export async function updateMarketplaceVerificationDecision(input: { providerSessionId: string; status: "approved" | "rejected" | "manual_review"; decision: "pass" | "fail" | "review" }) {
+export async function updateMarketplaceVerificationDecision(input: { providerSessionId: string; status: "approved" | "rejected" | "manual_review"; decision: "pass" | "fail" | "review"; networkRisk?: "low" | "medium" | "high" }) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
-  await db.update(marketplaceVerifications).set({ status: input.status, providerDecision: input.decision, autoApprovalEligible: input.status === "approved" && input.decision === "pass" }).where(eq(marketplaceVerifications.providerSessionId, input.providerSessionId));
+  await db.update(marketplaceVerifications).set({ status: input.status, providerDecision: input.decision, autoApprovalEligible: input.status === "approved" && input.decision === "pass", ...(input.networkRisk ? { networkRisk: input.networkRisk } : {}) }).where(eq(marketplaceVerifications.providerSessionId, input.providerSessionId));
 }
 
 export async function addMarketplaceVerificationEvidence(input: { verificationId: string; userId: number; evidenceType: "national_id_front" | "national_id_back" | "selfie_liveness"; storageKey: string; mimeType: string; byteSize: number }) {
@@ -217,6 +228,7 @@ export async function addMarketplaceVerificationEvidence(input: { verificationId
 export async function submitMarketplaceListing(input: { sellerUserId: number; listingType: "sale" | "swap" | "wanted"; game: string; title: string; rankLevel: string; priceUsd?: string | null; description: string; contactMethod: string; telegramUsername?: string | null; screenshots?: string[] }) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
+  if (!hasOnlyOwnedMarketplaceScreenshotKeys(input.screenshots, input.sellerUserId)) throw new Error("Marketplace screenshots must be your own uploaded private references");
   const verification = await db.select().from(marketplaceVerifications).where(eq(marketplaceVerifications.userId, input.sellerUserId)).orderBy(desc(marketplaceVerifications.createdAt)).limit(1);
   if (verification[0]?.status !== "approved" || verification[0]?.locationCountry !== "KH") throw new Error("Marketplace verification with a Cambodia eligibility result is required before submitting a listing");
   const autoPublish = verification[0].autoApprovalEligible && verification[0].providerDecision === "pass";
@@ -309,6 +321,36 @@ export async function getAdminMarketplaceFraudReports() {
   return db.select({ report: marketplaceFraudReports, listing: { id: marketplaceListings.id, title: marketplaceListings.title, game: marketplaceListings.game }, reporter: { id: users.id, displayName: users.displayName, email: users.email } }).from(marketplaceFraudReports).leftJoin(marketplaceListings, eq(marketplaceFraudReports.listingId, marketplaceListings.id)).leftJoin(users, eq(marketplaceFraudReports.reporterUserId, users.id)).orderBy(desc(marketplaceFraudReports.createdAt));
 }
 
+export async function updateMarketplaceFraudReport(input: { reportId: string; status: FraudReportStatus; adminNote?: string | null; reviewerUserId: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  await db.update(marketplaceFraudReports).set({ status: input.status, adminNote: input.adminNote?.trim() ?? null, reviewedByUserId: input.reviewerUserId }).where(eq(marketplaceFraudReports.id, input.reportId));
+  return { success: true };
+}
+
+export async function getAdminMarketplaceDisclosureRequests() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({ request: marketplaceDisclosureRequests, report: { id: marketplaceFraudReports.id, status: marketplaceFraudReports.status }, listing: { id: marketplaceListings.id, title: marketplaceListings.title } }).from(marketplaceDisclosureRequests).leftJoin(marketplaceFraudReports, eq(marketplaceDisclosureRequests.fraudReportId, marketplaceFraudReports.id)).leftJoin(marketplaceListings, eq(marketplaceFraudReports.listingId, marketplaceListings.id)).orderBy(desc(marketplaceDisclosureRequests.createdAt));
+}
+
+export async function createMarketplaceDisclosureRequest(input: { fraudReportId: string; requestBasis: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const report = await db.select({ id: marketplaceFraudReports.id }).from(marketplaceFraudReports).where(eq(marketplaceFraudReports.id, input.fraudReportId)).limit(1);
+  if (!report[0]) throw new Error("Fraud report not found");
+  const id = nanoid();
+  await db.insert(marketplaceDisclosureRequests).values({ id, fraudReportId: input.fraudReportId, requestBasis: input.requestBasis.trim() });
+  return { id };
+}
+
+export async function reviewMarketplaceDisclosureRequest(input: { requestId: string; status: DisclosureRequestStatus; reviewNote?: string | null; reviewerUserId: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  await db.update(marketplaceDisclosureRequests).set({ status: input.status, reviewNote: input.reviewNote?.trim() ?? null, reviewedByUserId: input.reviewerUserId }).where(eq(marketplaceDisclosureRequests.id, input.requestId));
+  return { success: true };
+}
+
 export async function getAdminMarketplaceVerifications(status?: "pending" | "approved" | "rejected") {
   const db = await getDb();
   if (!db) return [];
@@ -322,6 +364,12 @@ export async function getAdminVerificationEvidence(verificationId: string) {
   return db.select({ id: marketplaceVerificationEvidence.id, evidenceType: marketplaceVerificationEvidence.evidenceType, mimeType: marketplaceVerificationEvidence.mimeType, byteSize: marketplaceVerificationEvidence.byteSize, createdAt: marketplaceVerificationEvidence.createdAt }).from(marketplaceVerificationEvidence).where(eq(marketplaceVerificationEvidence.verificationId, verificationId)).orderBy(desc(marketplaceVerificationEvidence.createdAt));
 }
 
+export async function getAdminMarketplaceEvidenceAccessLogs() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({ log: marketplaceEvidenceAccessLogs, evidence: { id: marketplaceVerificationEvidence.id, verificationId: marketplaceVerificationEvidence.verificationId, evidenceType: marketplaceVerificationEvidence.evidenceType }, admin: { id: users.id, displayName: users.displayName, name: users.name, email: users.email } }).from(marketplaceEvidenceAccessLogs).leftJoin(marketplaceVerificationEvidence, eq(marketplaceEvidenceAccessLogs.evidenceId, marketplaceVerificationEvidence.id)).leftJoin(users, eq(marketplaceEvidenceAccessLogs.adminUserId, users.id)).orderBy(desc(marketplaceEvidenceAccessLogs.createdAt));
+}
+
 export async function logMarketplaceEvidenceAccess(input: { evidenceId: string; adminUserId: number; action: "view" | "case_review"; reason: string }) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
@@ -331,12 +379,22 @@ export async function logMarketplaceEvidenceAccess(input: { evidenceId: string; 
   return evidence[0];
 }
 
+export async function removeMarketplaceEvidenceReference(input: { evidenceId: string; adminUserId: number; reason: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const evidence = await db.select({ id: marketplaceVerificationEvidence.id, evidenceType: marketplaceVerificationEvidence.evidenceType, verificationId: marketplaceVerificationEvidence.verificationId }).from(marketplaceVerificationEvidence).where(eq(marketplaceVerificationEvidence.id, input.evidenceId)).limit(1);
+  if (!evidence[0]) throw new Error("Evidence not found");
+  await db.insert(marketplaceEvidenceAccessLogs).values({ id: nanoid(), evidenceId: evidence[0].id, adminUserId: input.adminUserId, action: "case_review", reason: buildEvidenceRetentionAuditReason(evidence[0].evidenceType, evidence[0].verificationId, input.reason) });
+  await db.delete(marketplaceVerificationEvidence).where(eq(marketplaceVerificationEvidence.id, evidence[0].id));
+  return { success: true };
+}
+
 export async function reviewMarketplaceVerification(input: { verificationId: string; status: "approved" | "rejected"; verificationNote?: string | null; reviewerUserId: number }) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
   const record = await db.select().from(marketplaceVerifications).where(eq(marketplaceVerifications.id, input.verificationId)).limit(1);
   if (!record[0]) throw new Error("Verification not found");
-  if (input.status === "approved" && record[0].locationCountry !== "KH") throw new Error("Only Cambodia-eligible verification records can be approved");
+  if (input.status === "approved" && !canApproveMarketplaceVerification(record[0].locationCountry)) throw new Error("Only Cambodia-eligible verification records can be approved");
   await db.update(marketplaceVerifications).set({ status: input.status, verificationNote: input.verificationNote?.trim() ?? null, reviewedByUserId: input.reviewerUserId, reviewedAt: new Date() }).where(eq(marketplaceVerifications.id, input.verificationId));
   return { success: true };
 }

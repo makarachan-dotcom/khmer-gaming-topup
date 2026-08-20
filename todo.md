@@ -61,13 +61,20 @@
 - [x] Design a game-first provider contract so game selection determines supported account fields, packages, and price data; do not display any preloaded package data.
 - [x] Add ZURS Member display-name onboarding with a required `ZURS Member` suffix and a generated 1–9 suffix when the customer skips naming.
 - [x] Add Cambodian payment-ready UI for KHQR and supported bank payment methods, staying inactive until verified merchant credentials are supplied.
-- [ ] Design marketplace eligibility verification that uses consent-based Cambodia location checks and third-party document verification, while storing only minimal verification outcomes for admin review.
-- [ ] Add administrator controls for marketplace eligibility review, verification status, and listing enforcement.
+- [x] Design marketplace eligibility verification that uses consent-based Cambodia location checks and third-party document verification, while storing only minimal verification outcomes for admin review.
+- [x] Add administrator controls for marketplace eligibility review, verification status, and listing enforcement.
 - [x] Add the requested ZURS STORE footer attribution.
-- [ ] Design an admin-only evidence vault for identity document front/back references, face-verification results, location eligibility, access logging, retention, and deletion controls.
-- [ ] Add a vendor-backed verification-session flow that supports ID scan, face/liveness verification, current-location consent, and a non-guaranteed VPN-risk signal without trusting browser claims alone.
-- [ ] Add Telegram username contact handling that stays inside approved marketplace listings.
-- [ ] Allow up to 20 listing screenshots with private upload references and a responsive full-image gallery.
+- [x] Design an admin-only evidence vault for identity document front/back references, face-verification results, location eligibility, access logging, retention, and deletion controls.
+- [x] Add a vendor-backed verification-session flow that supports ID scan, face/liveness verification, current-location consent, and a non-guaranteed VPN-risk signal without trusting browser claims alone.
+- [x] Add a reason-gated administrator control to remove a private evidence reference during retention review while preserving an audit record.
+- [x] Add Telegram username contact handling that stays inside approved marketplace listings.
+- [x] Allow up to 20 listing screenshots with private upload references and a responsive full-image gallery.
 - [x] Add seller-controlled Sold out status and a five-hour server-enforced deletion/expiry workflow.
-- [ ] Add a fraud-report and lawful-information-request workflow visible only to the designated administrator; never disclose a seller’s personal data directly to another user.
-- [ ] Add administrator panels for verification, evidence access records, listing status, deletion timing, fraud reports, and lawful disclosure review.
+- [x] Add a fraud-report and lawful-information-request workflow visible only to the designated administrator; never disclose a seller’s personal data directly to another user.
+- [x] Add administrator panels for verification, evidence access records, listing status, deletion timing, fraud reports, and lawful disclosure review.
+- [x] Prioritize fraud and lawful-disclosure controls before Telegram and public account-media refinements, as approved by the owner.
+- [x] Add administrator fraud-case status and internal-note controls using the protected review procedure.
+- [x] Add an administrator evidence-metadata viewer with an access reason requirement before secure evidence opening.
+- [x] Show approved Telegram seller contact inside the marketplace contact flow without exposing private verification data.
+- [x] Correct the 20-image listing guidance and add a responsive public account-media gallery.
+- [x] Persist a server-resolved Cambodia country result from consented browser location and clearly show the hosted verification status.
