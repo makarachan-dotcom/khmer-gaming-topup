@@ -2,7 +2,7 @@ import { and, asc, desc, eq, lt, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
 import {
-  gamePackages, gameProducts, InsertUser, marketplaceContacts, marketplaceFraudReports, marketplaceListings, marketplaceVerificationEvidence, marketplaceVerifications, orders, paymentTransactions, savedPlayerIds, siteContent, smmServices, smmTiers, users,
+  gamePackages, gameProducts, InsertUser, marketplaceContacts, marketplaceEvidenceAccessLogs, marketplaceFraudReports, marketplaceListings, marketplaceVerificationEvidence, marketplaceVerifications, orders, paymentTransactions, savedPlayerIds, siteContent, smmServices, smmTiers, users,
 } from "../drizzle/schema";
 import { defaultGamePackages, defaultGames, defaultSmmServices, defaultSmmTiers } from "./catalogDefaults";
 import { buildOrderNumber, isSingleAdminEmail } from "./storefrontDomain";
@@ -192,6 +192,19 @@ export async function beginMarketplaceVerification(userId: number) {
   return { ...values, createdAt: new Date(), updatedAt: new Date(), providerSessionId: null, locationCountry: null, locationAccuracyMeters: null, verificationNote: null, reviewedByUserId: null, reviewedAt: null };
 }
 
+export async function linkMarketplaceVerificationProvider(input: { verificationId: string; userId: number; providerSessionId: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  await db.update(marketplaceVerifications).set({ providerSessionId: input.providerSessionId, status: "pending", providerDecision: "pending" }).where(and(eq(marketplaceVerifications.id, input.verificationId), eq(marketplaceVerifications.userId, input.userId)));
+  return { success: true };
+}
+
+export async function updateMarketplaceVerificationDecision(input: { providerSessionId: string; status: "approved" | "rejected" | "manual_review"; decision: "pass" | "fail" | "review" }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  await db.update(marketplaceVerifications).set({ status: input.status, providerDecision: input.decision, autoApprovalEligible: input.status === "approved" && input.decision === "pass" }).where(eq(marketplaceVerifications.providerSessionId, input.providerSessionId));
+}
+
 export async function addMarketplaceVerificationEvidence(input: { verificationId: string; userId: number; evidenceType: "national_id_front" | "national_id_back" | "selfie_liveness"; storageKey: string; mimeType: string; byteSize: number }) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
@@ -301,6 +314,21 @@ export async function getAdminMarketplaceVerifications(status?: "pending" | "app
   if (!db) return [];
   const query = db.select({ verification: marketplaceVerifications, user: { id: users.id, displayName: users.displayName, name: users.name, email: users.email } }).from(marketplaceVerifications).leftJoin(users, eq(marketplaceVerifications.userId, users.id));
   return status ? query.where(eq(marketplaceVerifications.status, status)).orderBy(desc(marketplaceVerifications.createdAt)) : query.orderBy(desc(marketplaceVerifications.createdAt));
+}
+
+export async function getAdminVerificationEvidence(verificationId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({ id: marketplaceVerificationEvidence.id, evidenceType: marketplaceVerificationEvidence.evidenceType, mimeType: marketplaceVerificationEvidence.mimeType, byteSize: marketplaceVerificationEvidence.byteSize, createdAt: marketplaceVerificationEvidence.createdAt }).from(marketplaceVerificationEvidence).where(eq(marketplaceVerificationEvidence.verificationId, verificationId)).orderBy(desc(marketplaceVerificationEvidence.createdAt));
+}
+
+export async function logMarketplaceEvidenceAccess(input: { evidenceId: string; adminUserId: number; action: "view" | "case_review"; reason: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const evidence = await db.select({ id: marketplaceVerificationEvidence.id, storageKey: marketplaceVerificationEvidence.storageKey }).from(marketplaceVerificationEvidence).where(eq(marketplaceVerificationEvidence.id, input.evidenceId)).limit(1);
+  if (!evidence[0]) throw new Error("Evidence not found");
+  await db.insert(marketplaceEvidenceAccessLogs).values({ id: nanoid(), evidenceId: input.evidenceId, adminUserId: input.adminUserId, action: input.action, reason: input.reason.trim() });
+  return evidence[0];
 }
 
 export async function reviewMarketplaceVerification(input: { verificationId: string; status: "approved" | "rejected"; verificationNote?: string | null; reviewerUserId: number }) {

@@ -48,6 +48,12 @@ OWASP advises allowlisting needed file types, generating safe names, applying up
 
 The project-level Heartbeat job `zurs-sold-listing-cleanup` uses task UID `JFEJY8beN6xJsQgKvaX4vG`. It calls `/api/scheduled/cleanup-sold-listings` every five minutes. The handler is idempotent and deletes only listings whose seller-selected `cleanupAt` timestamp is more than five hours after the Sold out action.
 
+## Hosted identity verification provider
+
+The marketplace uses a server-created Didit hosted session for customer-facing ID-document and face-liveness capture. Didit documents this as the recommended pattern for user-facing verification: the server creates `POST /v3/session/` with a published workflow ID and receives a hosted URL; the customer completes document capture and liveness in the provider’s interface, and the merchant receives a decision through retrieval or webhook.[6] The selected workflow must require a Cambodian National ID, a selfie/face match, and liveness. The storefront retains a private provider session reference and an outcome only; no user-facing route exposes the provider key or private evidence URL.
+
+[6] [Didit — Create Session API Reference](https://docs.didit.me/sessions-api/create-session)
+
 ## References
 
 [1] [National Bank of Cambodia — Bakong and KHQR](https://bakong.nbc.gov.kh/en/)
