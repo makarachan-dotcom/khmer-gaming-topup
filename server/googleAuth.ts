@@ -26,6 +26,7 @@ export function getGoogleCallbackUrl(req: Pick<Request, "protocol" | "get" | "he
   const configured = env.GOOGLE_OAUTH_REDIRECT_URI;
   if (configured && /^https:\/\/[^/]+\/api\/auth\/google\/callback$/.test(configured)) return configured;
   const host = req.get("host") ?? "";
+  if (host.endsWith(".a.run.app")) return "https://khmergame-girzfgts.manus.space/api/auth/google/callback";
   const forwarded = req.headers["x-forwarded-proto"];
   const forwardedHttps = typeof forwarded === "string" && forwarded.split(",").some((value) => value.trim() === "https");
   const managedHttpsHost = host.endsWith(".manus.space") || host.endsWith(".manus.computer") || host.endsWith("vercel.app");
