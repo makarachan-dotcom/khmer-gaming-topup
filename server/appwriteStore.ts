@@ -88,10 +88,14 @@ async function allUserRecords() {
   return recordsFor("users");
 }
 
-export async function getAppwriteUserByOpenId(openId: string) {
+async function getAppwriteUserRecordByOpenId(openId: string) {
   const record = await request("GET", userDocumentPath(openId)) as AppwriteRecord | null;
-  if (!record || record.sourceTable !== "users" || record.sourceId !== openId) return undefined;
-  return toUser(record) ?? undefined;
+  return record && record.sourceTable === "users" && record.sourceId === openId ? record : undefined;
+}
+
+export async function getAppwriteUserByOpenId(openId: string) {
+  const record = await getAppwriteUserRecordByOpenId(openId);
+  return record ? toUser(record) ?? undefined : undefined;
 }
 
 export async function getAppwriteUserByEmail(email: string) {
@@ -133,14 +137,13 @@ export async function upsertAppwriteUser(input: InsertUser) {
   return user;
 }
 
-export async function updateAppwriteUserDisplayName(id: number, displayName: string) {
-  const records = await allUserRecords();
-  const record = records.find((candidate) => toUser(candidate)?.id === id);
+export async function updateAppwriteUserDisplayName(input: { openId: string; displayName: string }) {
+  const record = await getAppwriteUserRecordByOpenId(input.openId);
   const current = record ? toUser(record) : null;
-  if (!record || !current) throw new Error("Appwrite user record was not found");
-  const updated: User = { ...current, displayName, updatedAt: new Date() };
-  await request("PUT", `/databases/${databaseId()}/collections/${collectionId}/documents/${record.$id}`, { data: { sourceTable: "users", sourceId: record.sourceId, payload: JSON.stringify(updated), sourceUpdatedAt: updated.updatedAt.toISOString() } });
-  return { displayName };
+  if (!record || !current) throw new Error("Your member profile could not be found. Please sign in again.");
+  const updated: User = { ...current, displayName: input.displayName, updatedAt: new Date() };
+  await request("PUT", userDocumentPath(input.openId), { data: { sourceTable: "users", sourceId: record.sourceId, payload: JSON.stringify(updated), sourceUpdatedAt: updated.updatedAt.toISOString() } });
+  return { displayName: input.displayName };
 }
 
 function toOrder(record: AppwriteRecord): AppwriteOrder | null {

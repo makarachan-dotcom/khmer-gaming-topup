@@ -99,9 +99,9 @@ export async function recordWelcomeEmailDelivery(input: { recipientUserId: numbe
   return { id, ...input };
 }
 
-export async function updateUserDisplayName(input: { userId: number; displayName: string }) {
+export async function updateUserDisplayName(input: { userId: number; openId: string; displayName: string }) {
   const db = await getDb();
-  if (!db) { if (isAppwriteStoreConfigured()) return updateAppwriteUserDisplayName(input.userId, input.displayName); throw new Error("Database unavailable"); }
+  if (!db) { if (isAppwriteStoreConfigured()) return updateAppwriteUserDisplayName({ openId: input.openId, displayName: input.displayName }); throw new Error("Database unavailable"); }
   await db.update(users).set({ displayName: input.displayName }).where(eq(users.id, input.userId));
   return { displayName: input.displayName };
 }

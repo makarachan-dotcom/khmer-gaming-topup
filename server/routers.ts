@@ -20,7 +20,7 @@ export const appRouter = router({
   system: systemRouter,
   auth: router({
     me: publicProcedure.query((opts) => opts.ctx.user),
-    setMemberDisplayName: protectedProcedure.input(z.object({ name: z.string().trim().max(120).optional() })).mutation(({ ctx, input }) => db.updateUserDisplayName({ userId: ctx.user.id, displayName: buildZursMemberDisplayName(input.name) })),
+    setMemberDisplayName: protectedProcedure.input(z.object({ name: z.string().trim().max(120).optional() })).mutation(({ ctx, input }) => db.updateUserDisplayName({ userId: ctx.user.id, openId: ctx.user.openId, displayName: buildZursMemberDisplayName(input.name) })),
     logout: publicProcedure.mutation(({ ctx }) => { const cookieOptions = getSessionCookieOptions(ctx.req); ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 }); ctx.res.clearCookie(ZURS_SESSION_COOKIE, { ...getZursSessionCookieOptions(ctx.req), maxAge: -1 }); return { success: true } as const; }),
   }),
   catalog: router({
