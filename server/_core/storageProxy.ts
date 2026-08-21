@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { ENV } from "./env";
+import { getAppwriteMediaFile, isAppwriteMediaKey } from "../storage";
 
 export function registerStorageProxy(app: Express) {
   app.get("/manus-storage/*", async (req, res) => {
@@ -9,22 +10,28 @@ export function registerStorageProxy(app: Express) {
       return;
     }
 
-    if (!ENV.forgeApiUrl || !ENV.forgeApiKey) {
-      res.status(500).send("Storage proxy not configured");
-      return;
-    }
-
     try {
-      const forgeUrl = new URL(
-        "v1/storage/presign/get",
-        ENV.forgeApiUrl.replace(/\/+$/, "") + "/",
-      );
+      if (isAppwriteMediaKey(key)) {
+        const media = await getAppwriteMediaFile(key);
+        if (!media) {
+          res.status(404).send("Stored media was not found");
+          return;
+        }
+        const contentType = media.headers.get("content-type");
+        if (contentType) res.set("Content-Type", contentType);
+        res.set("Cache-Control", "private, max-age=300");
+        res.status(200).send(Buffer.from(await media.arrayBuffer()));
+        return;
+      }
+
+      if (!ENV.forgeApiUrl || !ENV.forgeApiKey) {
+        res.status(500).send("Storage proxy not configured");
+        return;
+      }
+
+      const forgeUrl = new URL("v1/storage/presign/get", ENV.forgeApiUrl.replace(/\/+$/, "") + "/");
       forgeUrl.searchParams.set("path", key);
-
-      const forgeResp = await fetch(forgeUrl, {
-        headers: { Authorization: `Bearer ${ENV.forgeApiKey}` },
-      });
-
+      const forgeResp = await fetch(forgeUrl, { headers: { Authorization: `Bearer ${ENV.forgeApiKey}` } });
       if (!forgeResp.ok) {
         const body = await forgeResp.text().catch(() => "");
         console.error(`[StorageProxy] forge error: ${forgeResp.status} ${body}`);
@@ -37,7 +44,6 @@ export function registerStorageProxy(app: Express) {
         res.status(502).send("Empty signed URL from backend");
         return;
       }
-
       res.set("Cache-Control", "no-store");
       res.redirect(307, url);
     } catch (err) {
