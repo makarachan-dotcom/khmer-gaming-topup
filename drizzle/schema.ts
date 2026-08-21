@@ -13,6 +13,16 @@ export const users = mysqlTable("users", {
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
 }, (table) => [uniqueIndex("users_email_unique").on(table.email)]);
 
+export const adminRoleAudits = mysqlTable("admin_role_audits", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  actorUserId: int("actorUserId").notNull(),
+  targetUserId: int("targetUserId").notNull(),
+  previousRole: mysqlEnum("previousRole", ["user", "admin"]).notNull(),
+  nextRole: mysqlEnum("nextRole", ["user", "admin"]).notNull(),
+  reason: text("reason").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [index("admin_role_audits_target_idx").on(table.targetUserId), index("admin_role_audits_actor_idx").on(table.actorUserId)]);
+
 export const gameProducts = mysqlTable("game_products", {
   id: varchar("id", { length: 64 }).primaryKey(),
   slug: varchar("slug", { length: 80 }).notNull().unique(),
@@ -32,6 +42,10 @@ export const gamePackages = mysqlTable("game_packages", {
   id: varchar("id", { length: 64 }).primaryKey(),
   productId: varchar("productId", { length: 64 }).notNull(),
   amountLabel: varchar("amountLabel", { length: 64 }).notNull(),
+  providerAuthorized: boolean("providerAuthorized").default(false).notNull(),
+  providerSource: varchar("providerSource", { length: 160 }),
+  basePriceUsd: decimal("basePriceUsd", { precision: 10, scale: 2 }).default("0.00").notNull(),
+  profitMarginPercent: decimal("profitMarginPercent", { precision: 6, scale: 2 }).default("0.00").notNull(),
   priceUsd: decimal("priceUsd", { precision: 10, scale: 2 }).notNull(),
   featured: boolean("featured").default(false).notNull(),
   isActive: boolean("isActive").default(true).notNull(),
@@ -59,6 +73,10 @@ export const smmTiers = mysqlTable("smm_tiers", {
   id: varchar("id", { length: 64 }).primaryKey(),
   serviceId: varchar("serviceId", { length: 64 }).notNull(),
   quantity: int("quantity").notNull(),
+  providerAuthorized: boolean("providerAuthorized").default(false).notNull(),
+  providerSource: varchar("providerSource", { length: 160 }),
+  basePriceUsd: decimal("basePriceUsd", { precision: 10, scale: 2 }).default("0.00").notNull(),
+  profitMarginPercent: decimal("profitMarginPercent", { precision: 6, scale: 2 }).default("0.00").notNull(),
   priceUsd: decimal("priceUsd", { precision: 10, scale: 2 }).notNull(),
   isActive: boolean("isActive").default(true).notNull(),
   sortOrder: int("sortOrder").default(0).notNull(),

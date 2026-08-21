@@ -118,3 +118,12 @@
 - [x] Prepare a safe Appwrite Cloud migration plan and connection setup that preserves existing ZURS data and payment records.
 - [x] Configure the supplied Appwrite Cloud project with server-only credentials and least-privilege access before migration.
 - [x] Document the owner-authorized Appwrite scope decision and verify that API keys remain server-only before enabling Appwrite traffic.
+- [x] Repair logout so the active Google/ZURS session is cleared on all deployed hosts.
+- [x] Compact purchase and transaction histories into concise expandable account sections.
+- [x] Remove customer copy about fake packages/prices and ensure Top-up/SMM show only provider-authorized live records.
+- [x] Add admin controls to edit, delete, activate, and price authorized products with a configurable profit-margin percentage.
+- [ ] Add provider-synchronized creation controls for new authorized products without permitting manual fake-product entry.
+- [x] Add owner-authorized admin role grants and revocations with confirmation, audit records, and a self-lockout safeguard.
+- [x] Replace generic decorative motion with a restrained, professional animated-icon system that respects reduced-motion preferences.
+- [ ] Verify logout end-to-end on both public deployments, confirming the Account page returns to signed-out state.
+- [x] Add provider-authorization source controls that block activation or pricing changes for legacy/default catalog records.

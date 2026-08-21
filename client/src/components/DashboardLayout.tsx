@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/sidebar";
 import { startLogin } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { Boxes, ImagePlus, LayoutDashboard, LogOut, PanelLeft, ReceiptText, ShieldCheck, Users } from "lucide-react";
+import { Boxes, CircleDollarSign, ImagePlus, LayoutDashboard, LogOut, PanelLeft, ReceiptText, ShieldCheck, Users } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -27,6 +27,8 @@ const menuItems = [
   { icon: Boxes, label: "កាតាឡុក", path: "/admin?tab=catalog" },
   { icon: ImagePlus, label: "Banner & Promo", path: "/admin/media" },
   { icon: Users, label: "អ្នកប្រើប្រាស់", path: "/admin?tab=users" },
+  { icon: ShieldCheck, label: "សិទ្ធិ Admin", path: "/admin/access" },
+  { icon: CircleDollarSign, label: "តម្លៃ និង Margin", path: "/admin/pricing" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";

@@ -14,6 +14,8 @@ import AdminMarketplaceSafety from "@/pages/AdminMarketplaceSafety";
 import MyMarketplaceListings from "@/pages/MyMarketplaceListings";
 import Account from "./pages/Account";
 import Admin from "./pages/Admin";
+import AdminAccess from "./pages/AdminAccess";
+import AdminPricing from "./pages/AdminPricing";
 import Checkout from "./pages/Checkout";
 import AdminMedia from "./pages/AdminMedia";
 import GoogleSignIn from "./pages/GoogleSignIn";
@@ -32,6 +34,8 @@ function Router() {
       <Route path="/marketplace/manage" component={MyMarketplaceListings} />
       <Route path={"/account"} component={Account} />
       <Route path="/admin" component={Admin} />
+      <Route path="/admin/access" component={AdminAccess} />
+      <Route path="/admin/pricing" component={AdminPricing} />
       <Route path="/admin/marketplace-safety" component={AdminMarketplaceSafety} />
       <Route path={"/checkout/:orderId"} component={Checkout} />
       <Route path={"/admin/media"} component={AdminMedia} />

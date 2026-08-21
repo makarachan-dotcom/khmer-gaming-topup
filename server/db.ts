@@ -2,11 +2,11 @@ import { and, asc, desc, eq, lt, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
 import {
-  gamePackages, gameProducts, gmailSenderConnections, InsertUser, marketplaceContacts, marketplaceDisclosureRequests, marketplaceEvidenceAccessLogs, marketplaceFraudReports, marketplaceListings, marketplaceVerificationEvidence, marketplaceVerifications, orders, paymentTransactions, savedPlayerIds, siteContent, smmServices, smmTiers, users, welcomeEmailDeliveries,
+  adminRoleAudits, gamePackages, gameProducts, gmailSenderConnections, InsertUser, marketplaceContacts, marketplaceDisclosureRequests, marketplaceEvidenceAccessLogs, marketplaceFraudReports, marketplaceListings, marketplaceVerificationEvidence, marketplaceVerifications, orders, paymentTransactions, savedPlayerIds, siteContent, smmServices, smmTiers, users, welcomeEmailDeliveries,
 } from "../drizzle/schema";
 import { getAppwriteCustomerOrders, getAppwriteCustomerPaymentHistory, getAppwriteUserByEmail, getAppwriteUserByOpenId, isAppwriteStoreConfigured, updateAppwriteUserDisplayName, upsertAppwriteUser } from "./appwriteStore";
-import { defaultGamePackages, defaultGames, defaultSmmServices, defaultSmmTiers } from "./catalogDefaults";
 import { buildOrderNumber, isSingleAdminEmail } from "./storefrontDomain";
+import { validateAdminRoleChange } from "./adminRoles";
 import { buildEvidenceRetentionAuditReason, canApproveMarketplaceVerification, hasOnlyOwnedMarketplaceScreenshotKeys, type DisclosureRequestStatus, type FraudReportStatus } from "./marketplaceSafety";
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -101,24 +101,8 @@ export async function updateUserDisplayName(input: { userId: number; displayName
   return { displayName: input.displayName };
 }
 
-async function ensureDefaultCatalog() {
-  const db = await getDb();
-  if (!db) return null;
-  const existing = await db.select({ count: sql<number>`count(*)` }).from(gameProducts);
-  if (Number(existing[0]?.count ?? 0) === 0) {
-    await db.insert(gameProducts).values([...defaultGames]);
-    await db.insert(gamePackages).values([...defaultGamePackages]);
-  }
-  const services = await db.select({ count: sql<number>`count(*)` }).from(smmServices);
-  if (Number(services[0]?.count ?? 0) === 0) {
-    await db.insert(smmServices).values([...defaultSmmServices]);
-    await db.insert(smmTiers).values([...defaultSmmTiers]);
-  }
-  return db;
-}
-
 export async function getGameCatalog() {
-  const db = await ensureDefaultCatalog();
+  const db = await getDb();
   if (!db) return [];
   const products = await db.select().from(gameProducts).where(eq(gameProducts.isActive, true)).orderBy(asc(gameProducts.sortOrder));
   const packages = await db.select().from(gamePackages).where(eq(gamePackages.isActive, true)).orderBy(asc(gamePackages.sortOrder));
@@ -126,15 +110,25 @@ export async function getGameCatalog() {
 }
 
 export async function getSmmCatalog() {
-  const db = await ensureDefaultCatalog();
+  const db = await getDb();
   if (!db) return [];
   const services = await db.select().from(smmServices).where(eq(smmServices.isActive, true)).orderBy(asc(smmServices.sortOrder));
   const tiers = await db.select().from(smmTiers).where(eq(smmTiers.isActive, true)).orderBy(asc(smmTiers.sortOrder));
   return services.map((service) => ({ ...service, tiers: tiers.filter((item) => item.serviceId === service.id) }));
 }
 
+export async function getAdminCatalog(): Promise<{ games: any[]; smm: any[] }> {
+  const db = await getDb();
+  if (!db) return { games: [], smm: [] };
+  const games = await db.select().from(gameProducts).orderBy(asc(gameProducts.sortOrder));
+  const packages = await db.select().from(gamePackages).orderBy(asc(gamePackages.sortOrder));
+  const services = await db.select().from(smmServices).orderBy(asc(smmServices.sortOrder));
+  const tiers = await db.select().from(smmTiers).orderBy(asc(smmTiers.sortOrder));
+  return { games: games.map((game) => ({ ...game, packages: packages.filter((item) => item.productId === game.id) })), smm: services.map((service) => ({ ...service, tiers: tiers.filter((item) => item.serviceId === service.id) })) };
+}
+
 export async function createTopupOrder(input: { userId: number; packageId: string; playerId: string; zoneId?: string | null; quantity: number }) {
-  const db = await ensureDefaultCatalog();
+  const db = await getDb();
   if (!db) throw new Error("Database unavailable");
   const result = await db.select({ game: gameProducts, package: gamePackages }).from(gamePackages).innerJoin(gameProducts, eq(gamePackages.productId, gameProducts.id)).where(and(eq(gamePackages.id, input.packageId), eq(gamePackages.isActive, true), eq(gameProducts.isActive, true))).limit(1);
   const item = result[0];
@@ -147,7 +141,7 @@ export async function createTopupOrder(input: { userId: number; packageId: strin
 }
 
 export async function createSmmOrder(input: { userId: number; tierId: string; target: string }) {
-  const db = await ensureDefaultCatalog();
+  const db = await getDb();
   if (!db) throw new Error("Database unavailable");
   const result = await db.select({ service: smmServices, tier: smmTiers }).from(smmTiers).innerJoin(smmServices, eq(smmTiers.serviceId, smmServices.id)).where(and(eq(smmTiers.id, input.tierId), eq(smmTiers.isActive, true), eq(smmServices.isActive, true))).limit(1);
   const item = result[0];
@@ -457,19 +451,30 @@ export async function reviewMarketplaceVerification(input: { verificationId: str
   return { success: true };
 }
 
-export async function updateGamePackage(input: { packageId: string; priceUsd: string; isActive: boolean; featured: boolean }) {
+function salePriceFromMargin(basePriceUsd: string, profitMarginPercent: string) {
+  return (Number(basePriceUsd) * (1 + Number(profitMarginPercent) / 100)).toFixed(2);
+}
+
+export async function updateGamePackage(input: { packageId: string; basePriceUsd: string; profitMarginPercent: string; isActive: boolean; featured: boolean }) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
-  await db.update(gamePackages).set({ priceUsd: input.priceUsd, isActive: input.isActive, featured: input.featured }).where(eq(gamePackages.id, input.packageId));
+  const existing = await db.select({ providerAuthorized: gamePackages.providerAuthorized }).from(gamePackages).where(eq(gamePackages.id, input.packageId)).limit(1);
+  if (!existing[0]?.providerAuthorized) throw new Error("Only provider-authorized offers can be activated or repriced.");
+  await db.update(gamePackages).set({ basePriceUsd: input.basePriceUsd, profitMarginPercent: input.profitMarginPercent, priceUsd: salePriceFromMargin(input.basePriceUsd, input.profitMarginPercent), isActive: input.isActive, featured: input.featured }).where(eq(gamePackages.id, input.packageId));
   return { success: true };
 }
 
-export async function updateSmmTier(input: { tierId: string; priceUsd: string; isActive: boolean }) {
+export async function updateSmmTier(input: { tierId: string; basePriceUsd: string; profitMarginPercent: string; isActive: boolean }) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
-  await db.update(smmTiers).set({ priceUsd: input.priceUsd, isActive: input.isActive }).where(eq(smmTiers.id, input.tierId));
+  const existing = await db.select({ providerAuthorized: smmTiers.providerAuthorized }).from(smmTiers).where(eq(smmTiers.id, input.tierId)).limit(1);
+  if (!existing[0]?.providerAuthorized) throw new Error("Only provider-authorized offers can be activated or repriced.");
+  await db.update(smmTiers).set({ basePriceUsd: input.basePriceUsd, profitMarginPercent: input.profitMarginPercent, priceUsd: salePriceFromMargin(input.basePriceUsd, input.profitMarginPercent), isActive: input.isActive }).where(eq(smmTiers.id, input.tierId));
   return { success: true };
 }
+
+export async function deleteGamePackage(packageId: string) { const db = await getDb(); if (!db) throw new Error("Database unavailable"); await db.delete(gamePackages).where(eq(gamePackages.id, packageId)); return { success: true }; }
+export async function deleteSmmTier(tierId: string) { const db = await getDb(); if (!db) throw new Error("Database unavailable"); await db.delete(smmTiers).where(eq(smmTiers.id, tierId)); return { success: true }; }
 
 export async function getPaymentTransactions() {
   const db = await getDb();
@@ -481,6 +486,24 @@ export async function getAdminUsers() {
   const db = await getDb();
   if (!db) return [];
   return db.select({ id: users.id, name: users.name, displayName: users.displayName, email: users.email, role: users.role, createdAt: users.createdAt, lastSignedIn: users.lastSignedIn }).from(users).orderBy(desc(users.createdAt)).limit(100);
+}
+
+export async function setAdminUserRole(input: { actorUserId: number; targetUserId: number; nextRole: "user" | "admin"; confirmationEmail: string; reason: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Role management is unavailable until the primary administrator database is connected.");
+  const target = await db.select().from(users).where(eq(users.id, input.targetUserId)).limit(1);
+  if (!target[0]) throw new Error("The target account was not found.");
+  validateAdminRoleChange({ targetEmail: target[0].email, previousRole: target[0].role, nextRole: input.nextRole, confirmationEmail: input.confirmationEmail, reason: input.reason });
+  await db.update(users).set({ role: input.nextRole }).where(eq(users.id, input.targetUserId));
+  await db.insert(adminRoleAudits).values({ id: nanoid(), actorUserId: input.actorUserId, targetUserId: input.targetUserId, previousRole: target[0].role, nextRole: input.nextRole, reason: input.reason.trim() });
+  return { success: true };
+}
+
+export async function getAdminRoleAudits() {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db.select({ audit: adminRoleAudits, actor: users }).from(adminRoleAudits).leftJoin(users, eq(adminRoleAudits.actorUserId, users.id)).orderBy(desc(adminRoleAudits.createdAt)).limit(100);
+  return rows;
 }
 
 export async function getSiteContent() {
