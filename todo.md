@@ -89,5 +89,8 @@
 - [ ] Verify the active production deployment source and route all `/api/*` requests to the current Express function bundle.
 - [ ] Bundle the Express application for Vercel serverless runtime so its deployed API function has no unresolved local module imports.
 - [ ] Replace unavailable managed-host authentication on Vercel with signed standalone Google sessions for protected ZURS STORE features.
+- [ ] Fix live Google OAuth state validation so the signed state survives the external authorization redirect without weakening CSRF protection.
+- [x] Reuse an existing verified-email user identity during Google sign-in instead of failing on the unique email constraint.
+- [ ] Validate Google sign-in after the existing-email identity collision fix and preserve the verified account's original ZURS identity.
 - [ ] Register and validate the zurs.vercel.app Google callback URL if that deployment remains active.
 - [x] Add automated callback URL tests for managed HTTPS hosts and local development.

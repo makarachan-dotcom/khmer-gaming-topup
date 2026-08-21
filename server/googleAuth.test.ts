@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getGoogleCallbackUrl, getGoogleOAuthStatus } from "./googleAuth";
+import { getGoogleCallbackUrl, getGoogleOAuthStatus, resolveGoogleUserOpenId } from "./googleAuth";
 
 describe("Google OAuth staging", () => {
   it("stays inactive without user-owned Google OAuth credentials", () => {
@@ -18,5 +18,10 @@ describe("Google OAuth staging", () => {
     expect(getGoogleCallbackUrl(request("internal-runtime.a.run.app"))).toBe("https://khmergame-girzfgts.manus.space/api/auth/google/callback");
     expect(getGoogleCallbackUrl(request("internal-runtime.a.run.app:443"))).toBe("https://khmergame-girzfgts.manus.space/api/auth/google/callback");
     expect(getGoogleCallbackUrl(request("internal-runtime.a.run.app"), { GOOGLE_OAUTH_REDIRECT_URI: "https://khmergame-girzfgts.manus.space/api/auth/google/callback" })).toBe("https://khmergame-girzfgts.manus.space/api/auth/google/callback");
+  });
+
+  it("keeps an existing verified-email account identity when Google is connected", () => {
+    expect(resolveGoogleUserOpenId({ openId: "existing-account" }, "google-subject")).toBe("existing-account");
+    expect(resolveGoogleUserOpenId(undefined, "google-subject")).toBe("google:google-subject");
   });
 });

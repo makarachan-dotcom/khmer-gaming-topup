@@ -42,6 +42,13 @@ export async function getUserByOpenId(openId: string) {
   return result[0];
 }
 
+export async function getUserByEmail(email: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.email, email.trim().toLowerCase())).limit(1);
+  return result[0];
+}
+
 export async function upsertGmailSenderConnection(input: { ownerUserId: number; senderEmail: string; encryptedRefreshToken: string }) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
