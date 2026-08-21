@@ -26,9 +26,10 @@ export async function upsertUser(user: InsertUser): Promise<void> {
   if (user.name !== undefined) { values.name = user.name; updateSet.name = user.name; }
   if (user.loginMethod !== undefined) { values.loginMethod = user.loginMethod; updateSet.loginMethod = user.loginMethod; }
   if (user.email !== undefined) {
-    values.email = user.email;
-    updateSet.email = user.email;
-    const role = isSingleAdminEmail(user.email) ? "admin" : "user";
+    const email = user.email?.trim().toLowerCase() ?? null;
+    values.email = email;
+    updateSet.email = email;
+    const role = isSingleAdminEmail(email) ? "admin" : "user";
     values.role = role;
     updateSet.role = role;
   }
@@ -45,7 +46,8 @@ export async function getUserByOpenId(openId: string) {
 export async function getUserByEmail(email: string) {
   const db = await getDb();
   if (!db) return undefined;
-  const result = await db.select().from(users).where(eq(users.email, email.trim().toLowerCase())).limit(1);
+  const normalized = email.trim().toLowerCase();
+  const result = await db.select().from(users).where(sql`lower(trim(${users.email})) = ${normalized}`).limit(1);
   return result[0];
 }
 
