@@ -88,5 +88,6 @@
 - [ ] Force the managed production OAuth callback to the registered ZURS STORE public domain instead of the internal runtime host.
 - [ ] Verify the active production deployment source and route all `/api/*` requests to the current Express function bundle.
 - [ ] Bundle the Express application for Vercel serverless runtime so its deployed API function has no unresolved local module imports.
+- [ ] Replace unavailable managed-host authentication on Vercel with signed standalone Google sessions for protected ZURS STORE features.
 - [ ] Register and validate the zurs.vercel.app Google callback URL if that deployment remains active.
 - [x] Add automated callback URL tests for managed HTTPS hosts and local development.
