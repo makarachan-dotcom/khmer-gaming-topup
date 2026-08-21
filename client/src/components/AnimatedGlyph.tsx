@@ -1,16 +1,20 @@
 import activity from "react-useanimations/lib/activity";
 import checkmark from "react-useanimations/lib/checkmark";
 import home from "react-useanimations/lib/home";
+import searchToX from "react-useanimations/lib/searchToX";
+import settings from "react-useanimations/lib/settings";
 import { OutlineLoader } from "@/components/OutlineLoader";
-import { Activity, CheckCircle2, House } from "lucide-react";
+import { Activity, CheckCircle2, House, Search, Settings } from "lucide-react";
 import { type ComponentType, useEffect, useState } from "react";
 
-export type AnimatedGlyphName = "activity" | "home" | "success";
+export type AnimatedGlyphName = "activity" | "home" | "success" | "search" | "settings";
 
 const glyphs = {
   activity: { animation: activity, Fallback: Activity, loop: true },
   home: { animation: home, Fallback: House, loop: false },
   success: { animation: checkmark, Fallback: CheckCircle2, loop: false },
+  search: { animation: searchToX, Fallback: Search, loop: false },
+  settings: { animation: settings, Fallback: Settings, loop: false },
 } as const;
 
 export function AnimatedGlyph({ name, size = 28, color = "#4f46e5", className = "" }: { name: AnimatedGlyphName; size?: number; color?: string; className?: string }) {
