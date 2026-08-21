@@ -3,7 +3,7 @@ import type { InsertUser, User } from "../drizzle/schema";
 import { isSingleAdminEmail } from "./storefrontDomain";
 
 type AppwriteRecord = { $id: string; sourceTable: string; sourceId: string; payload: string; sourceUpdatedAt?: string | null };
-type AppwriteList = { documents?: AppwriteRecord[] };
+type AppwriteList = { documents?: AppwriteRecord[]; total?: number };
 type AppwriteOrder = { id: string; userId: number; orderNumber: string; orderType: "topup" | "smm"; status: string; currency: string; subtotal: string; productName: string; details: unknown; createdAt: Date; updatedAt: Date };
 type AppwritePayment = { id: string; orderId: string; provider: string; status: string; amount: string; currency: string; createdAt: Date; updatedAt: Date; paidAt: Date | null; orderNumber: string; productName: string; orderStatus: string };
 
@@ -63,9 +63,21 @@ function toUser(record: AppwriteRecord): User | null {
   } catch { return null; }
 }
 
+const RECORD_PAGE_SIZE = 100;
+
+function userDocumentPath(openId: string) {
+  return `/databases/${databaseId()}/collections/${collectionId}/documents/${documentId(`users:${openId}`)}`;
+}
+
 async function allRecords() {
-  const data = await request("GET", `/databases/${databaseId()}/collections/${collectionId}/documents?limit=100&total=false`) as AppwriteList | null;
-  return data?.documents ?? [];
+  const records: AppwriteRecord[] = [];
+  for (let offset = 0; offset < 10_000; offset += RECORD_PAGE_SIZE) {
+    const data = await request("GET", `/databases/${databaseId()}/collections/${collectionId}/documents?limit=${RECORD_PAGE_SIZE}&offset=${offset}&total=true`) as AppwriteList | null;
+    const page = data?.documents ?? [];
+    records.push(...page);
+    if (!data || page.length < RECORD_PAGE_SIZE || (typeof data.total === "number" && records.length >= data.total)) break;
+  }
+  return records;
 }
 
 async function recordsFor(table: string) {
@@ -77,9 +89,9 @@ async function allUserRecords() {
 }
 
 export async function getAppwriteUserByOpenId(openId: string) {
-  const records = await allUserRecords();
-  const users = records.map(toUser).filter((user): user is User => user !== null);
-  return users.find((user) => user.openId === openId);
+  const record = await request("GET", userDocumentPath(openId)) as AppwriteRecord | null;
+  if (!record || record.sourceTable !== "users" || record.sourceId !== openId) return undefined;
+  return toUser(record) ?? undefined;
 }
 
 export async function getAppwriteUserByEmail(email: string) {
@@ -108,7 +120,7 @@ export async function upsertAppwriteUser(input: InsertUser) {
   };
   const sourceId = input.openId;
   const body = { data: { sourceTable: "users", sourceId, payload: JSON.stringify(user), sourceUpdatedAt: user.updatedAt.toISOString() } };
-  const path = `/databases/${databaseId()}/collections/${collectionId}/documents/${documentId(`users:${sourceId}`)}`;
+  const path = userDocumentPath(sourceId);
   if (existing) await request("PUT", path, body);
   else {
     try {
