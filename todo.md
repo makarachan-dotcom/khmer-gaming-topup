@@ -78,3 +78,12 @@
 - [x] Show approved Telegram seller contact inside the marketplace contact flow without exposing private verification data.
 - [x] Correct the 20-image listing guidance and add a responsive public account-media gallery.
 - [x] Persist a server-resolved Cambodia country result from consented browser location and clearly show the hosted verification status.
+- [x] Compress Home, Top-up, and Marketplace information into click-to-expand, privacy-conscious customer surfaces.
+- [x] Add Khmer-first Privacy Policy and Terms of Service pages with clear links across public storefront pages.
+- [ ] Send a branded ZURS STORE welcome email after an email account is connected, using a configured transactional-email sender.
+- [x] Refine the public color system for low visual fatigue while preserving Khmer text contrast and clear actions.
+- [x] Activate Google OAuth with the owner-provided client credentials and safe callback handling.
+- [ ] Implement an owner-authorized Gmail welcome-email flow with the ZURS STORE logo and complete customer opt-in safeguards.
+- [ ] Verify Google OAuth completes successfully end-to-end on the live production host.
+- [ ] Register and validate the zurs.vercel.app Google callback URL if that deployment remains active.
+- [x] Add automated callback URL tests for managed HTTPS hosts and local development.

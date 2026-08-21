@@ -2,7 +2,7 @@ import { and, asc, desc, eq, lt, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
 import {
-  gamePackages, gameProducts, InsertUser, marketplaceContacts, marketplaceDisclosureRequests, marketplaceEvidenceAccessLogs, marketplaceFraudReports, marketplaceListings, marketplaceVerificationEvidence, marketplaceVerifications, orders, paymentTransactions, savedPlayerIds, siteContent, smmServices, smmTiers, users,
+  gamePackages, gameProducts, gmailSenderConnections, InsertUser, marketplaceContacts, marketplaceDisclosureRequests, marketplaceEvidenceAccessLogs, marketplaceFraudReports, marketplaceListings, marketplaceVerificationEvidence, marketplaceVerifications, orders, paymentTransactions, savedPlayerIds, siteContent, smmServices, smmTiers, users, welcomeEmailDeliveries,
 } from "../drizzle/schema";
 import { defaultGamePackages, defaultGames, defaultSmmServices, defaultSmmTiers } from "./catalogDefaults";
 import { buildOrderNumber, isSingleAdminEmail } from "./storefrontDomain";
@@ -40,6 +40,43 @@ export async function getUserByOpenId(openId: string) {
   if (!db) return undefined;
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
   return result[0];
+}
+
+export async function upsertGmailSenderConnection(input: { ownerUserId: number; senderEmail: string; encryptedRefreshToken: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const existing = await db.select({ id: gmailSenderConnections.id }).from(gmailSenderConnections).where(eq(gmailSenderConnections.ownerUserId, input.ownerUserId)).limit(1);
+  if (existing[0]) {
+    await db.update(gmailSenderConnections).set({ senderEmail: input.senderEmail, encryptedRefreshToken: input.encryptedRefreshToken }).where(eq(gmailSenderConnections.id, existing[0].id));
+    return { id: existing[0].id, senderEmail: input.senderEmail };
+  }
+  const id = nanoid();
+  await db.insert(gmailSenderConnections).values({ id, ...input });
+  return { id, senderEmail: input.senderEmail };
+}
+
+export async function getGmailSenderConnection() {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(gmailSenderConnections).orderBy(desc(gmailSenderConnections.updatedAt)).limit(1);
+  return result[0];
+}
+
+export async function getWelcomeEmailDelivery(userId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(welcomeEmailDeliveries).where(eq(welcomeEmailDeliveries.recipientUserId, userId)).limit(1);
+  return result[0];
+}
+
+export async function recordWelcomeEmailDelivery(input: { recipientUserId: number; recipientEmail: string; senderConnectionId: string; providerMessageId?: string | null; status: "sent" | "failed" }) {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await getWelcomeEmailDelivery(input.recipientUserId);
+  if (existing) return existing;
+  const id = nanoid();
+  await db.insert(welcomeEmailDeliveries).values({ id, ...input, providerMessageId: input.providerMessageId ?? null });
+  return { id, ...input };
 }
 
 export async function updateUserDisplayName(input: { userId: number; displayName: string }) {

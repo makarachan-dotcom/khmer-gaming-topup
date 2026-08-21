@@ -184,6 +184,25 @@ export const marketplaceContacts = mysqlTable("marketplace_contacts", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => [index("marketplace_contacts_listing_idx").on(table.listingId), index("marketplace_contacts_user_idx").on(table.initiatorUserId)]);
 
+export const gmailSenderConnections = mysqlTable("gmail_sender_connections", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  ownerUserId: int("ownerUserId").notNull(),
+  senderEmail: varchar("senderEmail", { length: 320 }).notNull(),
+  encryptedRefreshToken: text("encryptedRefreshToken").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [uniqueIndex("gmail_sender_owner_unique").on(table.ownerUserId), uniqueIndex("gmail_sender_email_unique").on(table.senderEmail)]);
+
+export const welcomeEmailDeliveries = mysqlTable("welcome_email_deliveries", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  recipientUserId: int("recipientUserId").notNull(),
+  recipientEmail: varchar("recipientEmail", { length: 320 }).notNull(),
+  senderConnectionId: varchar("senderConnectionId", { length: 64 }).notNull(),
+  providerMessageId: varchar("providerMessageId", { length: 180 }),
+  status: mysqlEnum("status", ["sent", "failed"]).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [uniqueIndex("welcome_email_recipient_unique").on(table.recipientUserId), index("welcome_email_sender_idx").on(table.senderConnectionId)]);
+
 export const paymentTransactions = mysqlTable("payment_transactions", {
   id: varchar("id", { length: 64 }).primaryKey(),
   orderId: varchar("orderId", { length: 64 }).notNull(),
