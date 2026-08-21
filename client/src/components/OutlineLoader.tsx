@@ -1,8 +1,9 @@
 import { LoaderCircle } from "lucide-react";
-import { type ComponentType, useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const outlineLoaderUrl = "/manus-storage/zurs-outline-loader_8cf4a479.json";
-type AnimationRenderer = ComponentType<{ animation: unknown; size: number; strokeColor: string; loop: boolean; autoplay: boolean; speed: number }>;
+type LottieInstance = { destroy: () => void };
+type LottieRenderer = { loadAnimation: (config: { container: HTMLElement; renderer: "svg"; loop: boolean; autoplay: boolean; animationData: unknown }) => LottieInstance };
 
 function toRgba(color: string): [number, number, number, number] | null {
   const value = color.replace("#", "").trim();
@@ -21,28 +22,36 @@ function recolorOutline(animation: unknown, color: string) {
 }
 
 export function OutlineLoader({ size = 28, color = "#4f46e5", className = "" }: { size?: number; color?: string; className?: string }) {
+  const containerRef = useRef<HTMLSpanElement>(null);
   const [reducedMotion, setReducedMotion] = useState(false);
-  const [Renderer, setRenderer] = useState<AnimationRenderer | null>(null);
-  const [animation, setAnimation] = useState<unknown>(null);
+  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
     const update = () => setReducedMotion(media.matches);
     update();
     media.addEventListener("change", update);
-    let mounted = true;
-    if (!media.matches) void Promise.all([import("react-useanimations"), fetch(outlineLoaderUrl).then((response) => {
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || reducedMotion) return;
+    let active = true;
+    let instance: LottieInstance | undefined;
+    setVisible(false);
+    void Promise.all([import("lottie-web"), fetch(outlineLoaderUrl).then((response) => {
       if (!response.ok) throw new Error("Unable to load outline animation");
       return response.json();
-    })]).then(([module, data]) => {
-      if (!mounted) return;
-      setRenderer(() => module.default as AnimationRenderer);
-      setAnimation(recolorOutline(data, color));
-    }).catch(() => { if (mounted) setAnimation(null); });
-    return () => { mounted = false; media.removeEventListener("change", update); };
-  }, [color]);
+    })]).then(([module, animation]) => {
+      if (!active) return;
+      const renderer = ((module as unknown as { default?: LottieRenderer }).default ?? module) as unknown as LottieRenderer;
+      instance = renderer.loadAnimation({ container, renderer: "svg", loop: true, autoplay: true, animationData: recolorOutline(animation, color) });
+      setVisible(true);
+    }).catch(() => { if (active) setVisible(false); });
+    return () => { active = false; instance?.destroy(); };
+  }, [color, reducedMotion]);
 
   if (reducedMotion) return <LoaderCircle aria-hidden="true" className={`${className} animate-spin`} style={{ width: size, height: size, color }} />;
-  const canRenderAnimation = Boolean(Renderer && animation);
-  return <span aria-hidden="true" className={`outline-loader relative inline-grid place-items-center ${className}`} style={{ width: size, height: size }}><LoaderCircle className={`h-full w-full animate-spin ${canRenderAnimation ? "opacity-25" : "opacity-100"}`} style={{ color }} />{canRenderAnimation && Renderer ? <span className="absolute inset-0 grid place-items-center"><Renderer animation={animation} size={size} strokeColor={color} loop autoplay speed={1.1} /></span> : null}</span>;
+  return <span aria-hidden="true" className={`outline-loader relative inline-grid place-items-center ${className}`} style={{ width: size, height: size }}><LoaderCircle className={`absolute inset-0 h-full w-full animate-spin transition-opacity ${visible ? "opacity-20" : "opacity-100"}`} style={{ color }} /><span ref={containerRef} className={`relative z-10 block h-full w-full transition-opacity ${visible ? "opacity-100" : "opacity-0"}`} /></span>;
 }

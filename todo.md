@@ -145,3 +145,6 @@
 - [ ] Prepare a Khmer bank-review packet and customer-facing automatic-payment wording for ZURS STORE, with accurate descriptions of the provider-authorized digital-service workflow and payment safeguards.
 - [x] Rewrite customer-facing ZURS STORE copy across public pages in a concise, professional Khmer business tone, removing internal, informal, and unnecessary technical wording.
 - [x] Replace loading indicators with the owner-provided LottieFlow outline animation while retaining reduced-motion and no-script fallbacks.
+- [ ] Remove the three homepage service cards, make Top-up the primary post-hero section, and move Q&A content to the Account page.
+- [ ] Refine Khmer typography, text rhythm, and mobile spacing for a more polished and engaging storefront presentation.
+- [x] Fix the LottieFlow outline loader so the owner-provided animation is visibly rendered rather than falling back to a generic spinner.
