@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, lt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, lt, sql } from "drizzle-orm";
 import { createHash, randomBytes } from "node:crypto";
 import { drizzle } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
@@ -255,7 +255,10 @@ export async function createSmmOrder(input: { userId: number; tierId: string; ta
 export async function getCustomerOrders(userId: number) {
   const db = await getDb();
   if (!db) return isAppwriteStoreConfigured() ? getAppwriteCustomerOrders(userId) : [];
-  return db.select().from(orders).where(eq(orders.userId, userId)).orderBy(desc(orders.createdAt));
+  const customerOrders = await db.select().from(orders).where(eq(orders.userId, userId)).orderBy(desc(orders.createdAt));
+  if (!customerOrders.length) return [];
+  const events = await db.select().from(orderStatusEvents).where(inArray(orderStatusEvents.orderId, customerOrders.map((order) => order.id))).orderBy(asc(orderStatusEvents.createdAt));
+  return customerOrders.map((order) => ({ ...order, events: events.filter((event) => event.orderId === order.id) }));
 }
 
 export async function getCustomerPaymentHistory(userId: number) {

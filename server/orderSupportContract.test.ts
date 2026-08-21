@@ -25,4 +25,11 @@ describe("order tracking and support contract", () => {
     expect(routerSource).toContain("orderSupportTickets: adminProcedure");
     expect(routerSource).toContain("reviewOrderSupportTicket: adminProcedure");
   });
+
+  it("keeps Fast Check validation concise and local for malformed purchase IDs", () => {
+    const source = readFileSync(resolve(process.cwd(), "client/src/pages/OrderStatus.tsx"), "utf8");
+    expect(source).toContain('normalized.length < 12 || !normalized.startsWith("ZRS-")');
+    expect(source).toContain("សូមបញ្ចូល Purchase ID ដែលត្រឹមត្រូវ");
+    expect(source).not.toContain("{tracker.error.message}");
+  });
 });

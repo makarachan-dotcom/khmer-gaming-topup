@@ -154,3 +154,6 @@
 - [x] Apply, validate, and synchronize the owner-provided rebased homepage floating-particles v2 patch unchanged; do not use the superseded v1 patch.
 - [x] Add secure Top-up and SMM purchase identifiers, customer-visible real order-status logs, and ticket reporting linked to each purchase.
 - [x] Add protected admin controls for reviewing, replying to, and resolving customer tickets without exposing another customer’s purchase data.
+- [x] Apply and synchronize the owner-provided animated-icons v4 patch without manual patch modification; do not use the superseded v3 patch.
+- [x] Replace technical Fast Check validation errors with immediate concise Khmer input guidance before any tracking request is sent.
+- [x] Replace the Account status action with Ticket access and display real order-status logs within expandable purchase history.
