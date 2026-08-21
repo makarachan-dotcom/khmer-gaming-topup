@@ -43,6 +43,12 @@ export type ProviderPackageResponse =
   | { status: "unavailable"; packages: [] }
   | { status: "error"; packages: [] };
 
+export function getProviderCatalogStatus() {
+  const endpointConfigured = Boolean(process.env.PROVIDER_CATALOG_URL);
+  const credentialConfigured = Boolean(process.env.PROVIDER_CATALOG_API_KEY);
+  return { configured: endpointConfigured && credentialConfigured, endpointConfigured, credentialConfigured };
+}
+
 async function providerRequest(action: "games" | "packages", data: Record<string, unknown>) {
   const endpoint = process.env.PROVIDER_CATALOG_URL;
   const apiKey = process.env.PROVIDER_CATALOG_API_KEY;

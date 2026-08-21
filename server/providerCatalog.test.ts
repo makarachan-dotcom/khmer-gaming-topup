@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { fetchProviderGames, fetchProviderPackages } from "./providerCatalog";
+import { fetchProviderGames, fetchProviderPackages, getProviderCatalogStatus } from "./providerCatalog";
 
 const originalEndpoint = process.env.PROVIDER_CATALOG_URL;
 const originalApiKey = process.env.PROVIDER_CATALOG_API_KEY;
@@ -18,5 +18,13 @@ describe("provider catalog", () => {
 
     await expect(fetchProviderGames()).resolves.toEqual({ status: "unavailable", games: [] });
     await expect(fetchProviderPackages({ gameId: "provider-game", fields: { playerId: "123456" } })).resolves.toEqual({ status: "unavailable", packages: [] });
+    expect(getProviderCatalogStatus()).toEqual({ configured: false, endpointConfigured: false, credentialConfigured: false });
+  });
+
+  it("reports connection readiness without disclosing provider secrets", () => {
+    process.env.PROVIDER_CATALOG_URL = "https://provider.example.test/catalog";
+    process.env.PROVIDER_CATALOG_API_KEY = "provider-secret-must-not-be-returned";
+    expect(getProviderCatalogStatus()).toEqual({ configured: true, endpointConfigured: true, credentialConfigured: true });
+    expect(JSON.stringify(getProviderCatalogStatus())).not.toContain("provider-secret-must-not-be-returned");
   });
 });
