@@ -107,6 +107,7 @@
 - [x] Add automated callback URL tests for managed HTTPS hosts and local development.
 - [x] Remove the customer-facing Gmail Sender setup card and keep welcome email automatic after Google sign-in.
 - [ ] Diagnose and fix Google sign-in failure on the zurs.vercel.app deployment.
+- [ ] Repair the Vercel OAuth state-cookie mismatch that returns “Google authorization state expired or did not match” after Google approval.
 - [ ] Await owner-led completion of the live zurs.vercel.app Google authorization to confirm the final session redirect.
 - [x] Add a clear logout action to the authenticated Account dashboard.
 - [x] Show authenticated purchase history and payment transaction history in a clean mobile-first Account dashboard.

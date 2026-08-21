@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getGoogleCallbackFailureReference, getGoogleCallbackUrl, getGoogleOAuthStatus, resolveGoogleUserOpenId, shouldQueueWelcomeEmail } from "./googleAuth";
+import { getGoogleCallbackFailureReference, getGoogleCallbackUrl, getGoogleOAuthStatus, getGoogleStateCookieOptions, resolveGoogleUserOpenId, shouldQueueWelcomeEmail } from "./googleAuth";
 
 describe("Google OAuth staging", () => {
   it("stays inactive without user-owned Google OAuth credentials", () => {
@@ -18,6 +18,11 @@ describe("Google OAuth staging", () => {
     expect(getGoogleCallbackUrl(request("internal-runtime.a.run.app"))).toBe("https://khmergame-girzfgts.manus.space/api/auth/google/callback");
     expect(getGoogleCallbackUrl(request("internal-runtime.a.run.app:443"))).toBe("https://khmergame-girzfgts.manus.space/api/auth/google/callback");
     expect(getGoogleCallbackUrl(request("internal-runtime.a.run.app"), { GOOGLE_OAUTH_REDIRECT_URI: "https://khmergame-girzfgts.manus.space/api/auth/google/callback" })).toBe("https://khmergame-girzfgts.manus.space/api/auth/google/callback");
+  });
+
+  it("uses cross-site-safe state cookies only on secure OAuth hosts", () => {
+    expect(getGoogleStateCookieOptions({ protocol: "https", headers: {} }).sameSite).toBe("none");
+    expect(getGoogleStateCookieOptions({ protocol: "http", headers: {} }).sameSite).toBe("lax");
   });
 
   it("keeps an existing verified-email account identity when Google is connected", () => {
