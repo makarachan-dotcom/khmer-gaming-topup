@@ -157,3 +157,4 @@
 - [x] Apply and synchronize the owner-provided animated-icons v4 patch without manual patch modification; do not use the superseded v3 patch.
 - [x] Replace technical Fast Check validation errors with immediate concise Khmer input guidance before any tracking request is sent.
 - [x] Replace the Account status action with Ticket access and display real order-status logs within expandable purchase history.
+- [x] Verify and push all remaining validated ZURS STORE source changes and deployment-safe asset references to GitHub main.
