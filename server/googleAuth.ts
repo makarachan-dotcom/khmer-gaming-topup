@@ -22,7 +22,9 @@ export function getGoogleOAuthStatus(env = process.env) {
   return { configured, callbackPath: "/api/auth/google/callback", reason: configured ? null : "Google OAuth credentials have not been configured yet." } as const;
 }
 
-export function getGoogleCallbackUrl(req: Pick<Request, "protocol" | "get" | "headers">) {
+export function getGoogleCallbackUrl(req: Pick<Request, "protocol" | "get" | "headers">, env = process.env) {
+  const configured = env.GOOGLE_OAUTH_REDIRECT_URI;
+  if (configured && /^https:\/\/[^/]+\/api\/auth\/google\/callback$/.test(configured)) return configured;
   const host = req.get("host") ?? "";
   const forwarded = req.headers["x-forwarded-proto"];
   const forwardedHttps = typeof forwarded === "string" && forwarded.split(",").some((value) => value.trim() === "https");
