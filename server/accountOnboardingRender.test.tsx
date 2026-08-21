@@ -30,7 +30,10 @@ describe("Account onboarding dashboard", () => {
   it("renders admin recognition, logout, purchase history, and transaction history before choosing a display name", () => {
     render(<Account />);
     expect(screen.getByText("ZURS Admin")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Ticket" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Favorites" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "ចាកចេញ" })).toBeInTheDocument();
+    expect(screen.queryByText("Settings")).not.toBeInTheDocument();
     expect(screen.getByText("ប្រវត្តិការទិញ")).toBeInTheDocument();
     expect(screen.getByText("ប្រវត្តិប្រតិបត្តិការ")).toBeInTheDocument();
     expect(screen.getByText("បង្កើតឈ្មោះ ZURS Member")).toBeInTheDocument();

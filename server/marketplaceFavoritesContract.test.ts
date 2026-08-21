@@ -20,6 +20,8 @@ describe("marketplace favorites contract", () => {
     expect(marketplace).toContain("marketplace.removeFavorite");
     expect(marketplace).not.toContain("function InfoCard");
     expect(account).toContain('href="/favorites"');
-    expect(account).toContain('href="/account/settings"');
+    expect(account).toContain('href="/order-status"');
+    expect(account).toContain("flex-nowrap");
+    expect(account).not.toContain('href="/account/settings"');
   });
 });

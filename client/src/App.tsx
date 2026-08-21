@@ -12,7 +12,6 @@ import MarketplaceVerify from "@/pages/MarketplaceVerify";
 import AdminMarketplaceSafety from "@/pages/AdminMarketplaceSafety";
 import MyMarketplaceListings from "@/pages/MyMarketplaceListings";
 import Account from "./pages/Account";
-import AccountSettings from "./pages/AccountSettings";
 import Favorites from "./pages/Favorites";
 import OrderStatus from "./pages/OrderStatus";
 import Admin from "./pages/Admin";
@@ -35,7 +34,6 @@ function Router() {
       <Route path="/marketplace/verify" component={MarketplaceVerify} />
       <Route path="/marketplace/manage" component={MyMarketplaceListings} />
       <Route path={"/account"} component={Account} />
-      <Route path={"/account/settings"} component={AccountSettings} />
       <Route path={"/favorites"} component={Favorites} />
       <Route path={"/order-status"} component={OrderStatus} />
       <Route path="/admin" component={Admin} />
