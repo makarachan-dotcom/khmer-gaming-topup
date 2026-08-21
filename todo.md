@@ -133,3 +133,4 @@
 - [x] Replace remaining static decorative accents with visible, professionally integrated third-party animated icons while honoring license, performance, and reduced-motion requirements.
 - [x] Remove the public footer animation-source link and retain required source credit in internal release documentation.
 - [x] Replace the mobile tab-bar’s static icons with purposeful animated active-state icons and add motion only for loading, waiting, success, and page-entry states.
+- [x] Audit and correct every mobile navigation icon and animated state so each matches its destination’s meaning.

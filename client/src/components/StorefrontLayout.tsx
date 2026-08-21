@@ -16,10 +16,10 @@ const navigation = [
 
 const mobileNavigation = [
   { href: "/", label: "ទំព័រដើម", icon: House, animation: "home" as const },
-  { href: "/topup", label: "Top-up", icon: Gamepad2, animation: "next" as const },
-  { href: "/smm", label: "SMM", icon: BarChart3, animation: "activity" as const },
-  { href: "/marketplace", label: "ទីផ្សារ", icon: Store, animation: "notify" as const },
-  { href: "/account", label: "គណនី", icon: UserRound, animation: "success" as const },
+  { href: "/topup", label: "Top-up", icon: Gamepad2 },
+  { href: "/smm", label: "SMM", icon: BarChart3 },
+  { href: "/marketplace", label: "ទីផ្សារ", icon: Store },
+  { href: "/account", label: "គណនី", icon: UserRound },
 ];
 
 export default function StorefrontLayout({ children }: { children: ReactNode }) {
@@ -73,7 +73,7 @@ export default function StorefrontLayout({ children }: { children: ReactNode }) 
       </footer>
 
       <nav className="liquid-tabbar fixed inset-x-2 bottom-2 z-40 grid grid-cols-5 gap-1 rounded-2xl p-1.5 sm:hidden" aria-label="Mobile primary navigation">
-        {mobileNavigation.map(({ href, label, icon: Icon, animation }) => { const active = location === href; return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={cn("flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-[9px] font-bold transition-all", active ? "bg-slate-950 text-white shadow-lg shadow-indigo-900/20" : "text-slate-500 hover:bg-white/75 hover:text-indigo-700")}>{active ? <AnimatedGlyph name={animation} size={22} color="#ffffff" /> : <Icon className="h-4 w-4" />}<span className="truncate">{label}</span></Link>; })}
+        {mobileNavigation.map(({ href, label, icon: Icon, animation }) => { const active = location === href; return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={cn("flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-[9px] font-bold transition-all", active ? "bg-slate-950 text-white shadow-lg shadow-indigo-900/20" : "text-slate-500 hover:bg-white/75 hover:text-indigo-700")}>{active && animation ? <AnimatedGlyph name={animation} size={22} color="#ffffff" /> : <Icon className={cn("h-4 w-4", active && "tab-icon-active")} />}<span className="truncate">{label}</span></Link>; })}
       </nav>
     </div>
   );

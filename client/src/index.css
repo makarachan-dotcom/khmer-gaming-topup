@@ -113,12 +113,14 @@ button, input, textarea, select { font: inherit; }
   button:hover .motion-icon, a:hover .motion-icon { transform: translateY(-2px) scale(1.06); }
 .motion-status { animation: motion-status 3.6s cubic-bezier(0.23, 1, 0.32, 1) infinite; transform-origin: center; }
 .motion-reveal { animation: motion-reveal 360ms cubic-bezier(0.23, 1, 0.32, 1) both; }
+.tab-icon-active { animation: tab-icon-active 360ms cubic-bezier(0.23, 1, 0.32, 1) both; }
 }
 .animated-glyph { display: inline-grid; place-items: center; flex: 0 0 auto; transition: transform 180ms cubic-bezier(0.23, 1, 0.32, 1); }
 .animated-glyph > div { display: grid; place-items: center; }
 @keyframes glass-sweep { 0%, 60% { transform: translateX(-115%); } 78%, 100% { transform: translateX(115%); } }
 @keyframes motion-status { 0%, 76%, 100% { transform: scale(1); opacity: 1; } 86% { transform: scale(1.12); opacity: 0.82; } }
 @keyframes motion-reveal { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes tab-icon-active { 0% { opacity: 0.72; transform: translateY(2px) scale(0.88); } 65% { opacity: 1; transform: translateY(-1px) scale(1.1); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
 
 @media (max-width: 639px) {
   .container { padding-inline: 0.75rem; }
