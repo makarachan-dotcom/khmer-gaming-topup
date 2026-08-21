@@ -26,7 +26,7 @@ export default function Marketplace() {
   const current = (listings.data ?? []) as Listing[];
   const detail = current.find((listing) => listing.id === detailId);
   const contactListing = current.find((listing) => listing.id === contactId);
-  const submitContact = () => { if (!isAuthenticated) { window.location.assign("/google-sign-in"); return; } if (contactId && message.trim()) contact.mutate({ listingId: contactId, message: message.trim() }); };
+  const submitContact = () => { if (!isAuthenticated) { window.location.assign("/api/auth/google?returnTo=%2Fmarketplace"); return; } if (contactId && message.trim()) contact.mutate({ listingId: contactId, message: message.trim() }); };
 
   return <StorefrontLayout><main className="container py-6 sm:py-10">
     <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="text-xs font-bold tracking-[0.14em] text-fuchsia-700">ZURS ACCOUNT MARKETPLACE</p><h1 className="mt-1 font-display text-3xl font-bold tracking-tight text-slate-950">ទីផ្សារគណនីហ្គេម</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">ស្វែងរកគណនីហ្គេមដែលបានអនុម័ត ឬដាក់លក់គណនីរបស់អ្នក។ ចុចលើការផ្សាយណាមួយ ដើម្បីមើល Rank, រូបភាព, តម្លៃ និង Telegram របស់អ្នកលក់។</p></div><Link href="/marketplace/sell" className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-bold text-white"><Plus className="h-4 w-4" />ដាក់លក់គណនី</Link></header>

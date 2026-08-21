@@ -18,7 +18,6 @@ import AdminAccess from "./pages/AdminAccess";
 import AdminPricing from "./pages/AdminPricing";
 import Checkout from "./pages/Checkout";
 import AdminMedia from "./pages/AdminMedia";
-import GoogleSignIn from "./pages/GoogleSignIn";
 import Legal from "./pages/Legal";
 
 function Router() {
@@ -39,7 +38,6 @@ function Router() {
       <Route path="/admin/marketplace-safety" component={AdminMarketplaceSafety} />
       <Route path={"/checkout/:orderId"} component={Checkout} />
       <Route path={"/admin/media"} component={AdminMedia} />
-      <Route path={"/google-sign-in"} component={GoogleSignIn} />
       <Route path="/privacy" component={() => <Legal kind="privacy" />} />
       <Route path="/terms" component={() => <Legal kind="terms" />} />
       <Route path={"/404"} component={NotFound} />

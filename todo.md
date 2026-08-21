@@ -99,7 +99,8 @@
 - [x] Fix live Google OAuth state validation so the signed state survives the external authorization redirect without weakening CSRF protection.
 - [x] Reuse an existing verified-email user identity during Google sign-in instead of failing on the unique email constraint.
 - [x] Validate Google sign-in after the existing-email identity collision fix and preserve the verified account's original ZURS identity.
-- [ ] Verify all registered Google callback variants route to the correct ZURS account session flow and remove reliance on obsolete callback paths.
+- [x] Verify both registered Google callback URLs resolve correctly and remove reliance on obsolete `/google-sign-in` paths.
+- [ ] Verify Google OAuth end-to-end on zurs.vercel.app, confirming the callback returns to the intended ZURS page with a working signed-in session.
 - [x] Reflect the active standalone Google session in the public header instead of always showing the sign-in action.
 - [x] Normalize stored user email addresses and reuse the exact OAuth callback URL across authorization and code exchange.
 - [x] Register and validate the zurs.vercel.app Google callback URL if that deployment remains active.
