@@ -151,3 +151,4 @@
 - [x] Remove the duplicate Top-up destination from the mobile tab bar while preserving homepage access to the Top-up flow.
 - [x] Show all provider-backed Top-up games and the complete selection flow on the homepage, remove the “view all games” action, and remove the standalone /topup route.
 - [x] Verify and synchronize active animation, emoji, and icon assets to the connected GitHub repository for the Vercel deployment.
+- [ ] Apply, validate, and synchronize the owner-provided rebased homepage floating-particles v2 patch unchanged; do not use the superseded v1 patch.
