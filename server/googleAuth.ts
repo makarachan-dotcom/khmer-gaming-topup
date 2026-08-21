@@ -26,10 +26,11 @@ export function getGoogleCallbackUrl(req: Pick<Request, "protocol" | "get" | "he
   const configured = env.GOOGLE_OAUTH_REDIRECT_URI;
   if (configured && /^https:\/\/[^/]+\/api\/auth\/google\/callback$/.test(configured)) return configured;
   const host = req.get("host") ?? "";
-  if (host.endsWith(".a.run.app")) return "https://khmergame-girzfgts.manus.space/api/auth/google/callback";
+  const hostname = host.replace(/:\d+$/, "").toLowerCase();
+  if (hostname.endsWith(".a.run.app")) return "https://khmergame-girzfgts.manus.space/api/auth/google/callback";
   const forwarded = req.headers["x-forwarded-proto"];
   const forwardedHttps = typeof forwarded === "string" && forwarded.split(",").some((value) => value.trim() === "https");
-  const managedHttpsHost = host.endsWith(".manus.space") || host.endsWith(".manus.computer") || host.endsWith("vercel.app");
+  const managedHttpsHost = hostname.endsWith(".manus.space") || hostname.endsWith(".manus.computer") || hostname.endsWith("vercel.app");
   return `${forwardedHttps || managedHttpsHost || req.protocol === "https" ? "https" : "http"}://${host}/api/auth/google/callback`;
 }
 function safeReturnPath(value: unknown) { return typeof value === "string" && value.startsWith("/") && !value.startsWith("//") ? value : "/account"; }

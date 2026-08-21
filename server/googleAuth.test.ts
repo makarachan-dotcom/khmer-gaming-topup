@@ -16,6 +16,7 @@ describe("Google OAuth staging", () => {
     expect(getGoogleCallbackUrl(request("zurs.vercel.app"))).toBe("https://zurs.vercel.app/api/auth/google/callback");
     expect(getGoogleCallbackUrl(request("localhost:3000"))).toBe("http://localhost:3000/api/auth/google/callback");
     expect(getGoogleCallbackUrl(request("internal-runtime.a.run.app"))).toBe("https://khmergame-girzfgts.manus.space/api/auth/google/callback");
+    expect(getGoogleCallbackUrl(request("internal-runtime.a.run.app:443"))).toBe("https://khmergame-girzfgts.manus.space/api/auth/google/callback");
     expect(getGoogleCallbackUrl(request("internal-runtime.a.run.app"), { GOOGLE_OAUTH_REDIRECT_URI: "https://khmergame-girzfgts.manus.space/api/auth/google/callback" })).toBe("https://khmergame-girzfgts.manus.space/api/auth/google/callback");
   });
 });
