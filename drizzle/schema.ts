@@ -87,6 +87,7 @@ export const smmTiers = mysqlTable("smm_tiers", {
 export const orders = mysqlTable("orders", {
   id: varchar("id", { length: 64 }).primaryKey(),
   orderNumber: varchar("orderNumber", { length: 48 }).notNull().unique(),
+  trackingCode: varchar("trackingCode", { length: 48 }).notNull().unique(),
   userId: int("userId").notNull(),
   orderType: mysqlEnum("orderType", ["topup", "smm"]).notNull(),
   status: mysqlEnum("status", ["pending", "awaiting_payment", "paid", "delivered", "failed", "expired", "refunded"]).default("pending").notNull(),
@@ -97,6 +98,32 @@ export const orders = mysqlTable("orders", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => [index("orders_user_idx").on(table.userId), index("orders_status_idx").on(table.status)]);
+
+export const orderStatusEvents = mysqlTable("order_status_events", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  orderId: varchar("orderId", { length: 64 }).notNull(),
+  eventType: varchar("eventType", { length: 48 }).notNull(),
+  status: varchar("status", { length: 48 }).notNull(),
+  actorType: mysqlEnum("actorType", ["system", "customer", "admin", "provider"]).notNull(),
+  messageKh: varchar("messageKh", { length: 500 }).notNull(),
+  providerReference: varchar("providerReference", { length: 180 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [index("order_status_events_order_idx").on(table.orderId), index("order_status_events_created_idx").on(table.createdAt)]);
+
+export const orderSupportTickets = mysqlTable("order_support_tickets", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  ticketNumber: varchar("ticketNumber", { length: 48 }).notNull().unique(),
+  orderId: varchar("orderId", { length: 64 }).notNull(),
+  userId: int("userId").notNull(),
+  subject: varchar("subject", { length: 180 }).notNull(),
+  message: text("message").notNull(),
+  status: mysqlEnum("status", ["open", "reviewing", "resolved", "closed"]).default("open").notNull(),
+  adminReply: text("adminReply"),
+  reviewedByUserId: int("reviewedByUserId"),
+  reviewedAt: timestamp("reviewedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [index("order_support_tickets_order_idx").on(table.orderId), index("order_support_tickets_user_idx").on(table.userId), index("order_support_tickets_status_idx").on(table.status)]);
 
 export const savedPlayerIds = mysqlTable("saved_player_ids", {
   id: varchar("id", { length: 64 }).primaryKey(),

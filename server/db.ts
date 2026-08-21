@@ -1,9 +1,9 @@
 import { and, asc, desc, eq, lt, sql } from "drizzle-orm";
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { drizzle } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
 import {
-  adminRoleAudits, gamePackages, gameProducts, gmailSenderConnections, InsertUser, marketplaceContacts, marketplaceDisclosureRequests, marketplaceEvidenceAccessLogs, marketplaceFraudReports, marketplaceListings, marketplaceVerificationEvidence, marketplaceVerifications, orders, paymentTransactions, savedPlayerIds, siteContent, smmServices, smmTiers, User, users, welcomeEmailDeliveries,
+  adminRoleAudits, gamePackages, gameProducts, gmailSenderConnections, InsertUser, marketplaceContacts, marketplaceDisclosureRequests, marketplaceEvidenceAccessLogs, marketplaceFraudReports, marketplaceListings, marketplaceVerificationEvidence, marketplaceVerifications, orders, orderStatusEvents, orderSupportTickets, paymentTransactions, savedPlayerIds, siteContent, smmServices, smmTiers, User, users, welcomeEmailDeliveries,
 } from "../drizzle/schema";
 import { getAppwriteCustomerOrders, getAppwriteCustomerPaymentHistory, getAppwriteUserByEmail, getAppwriteUserByOpenId, isAppwriteStoreConfigured, updateAppwriteUserDisplayName, upsertAppwriteUser } from "./appwriteStore";
 import { buildOrderNumber, isSingleAdminEmail } from "./storefrontDomain";
@@ -136,6 +136,29 @@ function providerRecordId(prefix: string, source: string) {
   return `${prefix}-${createHash("sha256").update(source).digest("hex").slice(0, 40)}`;
 }
 
+type OrderStatus = "pending" | "awaiting_payment" | "paid" | "delivered" | "failed" | "expired" | "refunded";
+type TicketStatus = "open" | "reviewing" | "resolved" | "closed";
+
+function buildTrackingCode() { return `ZRS-${randomBytes(10).toString("hex").toUpperCase()}`; }
+function buildTicketNumber() { return `TKT-${randomBytes(8).toString("hex").toUpperCase()}`; }
+function statusMessageKh(status: OrderStatus) {
+  return ({
+    pending: "ការបញ្ជាទិញត្រូវបានបង្កើត និងកំពុងរង់ចាំការទូទាត់។",
+    awaiting_payment: "បានបង្កើតសំណើទូទាត់។ សូមបំពេញការទូទាត់តាមវិធីសាស្ត្រដែលបានជ្រើស។",
+    paid: "បានទទួលការទូទាត់។ ប្រព័ន្ធកំពុងដំណើរការសេវារបស់អ្នក។",
+    delivered: "សេវាកម្មត្រូវបានបញ្ចប់ដោយជោគជ័យ។",
+    failed: "ការបញ្ជាទិញមិនអាចដំណើរការបានទេ។ អ្នកអាចបើក ticket ដើម្បីស្នើជំនួយ។",
+    expired: "សំណើទូទាត់ផុតកំណត់។ សូមបង្កើតការបញ្ជាទិញថ្មី។",
+    refunded: "ការបញ្ជាទិញត្រូវបានសម្គាល់ថាបានសងប្រាក់វិញ។",
+  } as const)[status];
+}
+
+async function appendOrderStatusEvent(input: { orderId: string; eventType: string; status: OrderStatus; actorType: "system" | "customer" | "admin" | "provider"; messageKh: string; providerReference?: string | null }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  await db.insert(orderStatusEvents).values({ id: nanoid(), orderId: input.orderId, eventType: input.eventType, status: input.status, actorType: input.actorType, messageKh: input.messageKh, providerReference: input.providerReference ?? null });
+}
+
 export async function syncFzrCatalog(snapshot: Extract<FzrProviderSyncSnapshot, { status: "ready" }>) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
@@ -210,9 +233,10 @@ export async function createTopupOrder(input: { userId: number; packageId: strin
   if (!item) throw new Error("Selected game package is unavailable");
   if (item.game.requiresZone && !input.zoneId?.trim()) throw new Error("Server or zone ID is required for this game");
   const subtotal = Number(item.package.priceUsd) * input.quantity;
-  const id = nanoid(); const orderNumber = buildOrderNumber();
-  await db.insert(orders).values({ id, orderNumber, userId: input.userId, orderType: "topup", status: "pending", subtotal: subtotal.toFixed(2), productName: `${item.game.titleEn} • ${item.package.amountLabel} ${item.game.currencyLabel}`, details: { packageId: item.package.id, gameProductId: item.game.id, playerId: input.playerId.trim(), zoneId: input.zoneId?.trim() ?? null, quantity: input.quantity } });
-  return { id, orderNumber, amount: subtotal.toFixed(2), status: "pending" as const };
+  const id = nanoid(); const orderNumber = buildOrderNumber(); const trackingCode = buildTrackingCode();
+  await db.insert(orders).values({ id, orderNumber, trackingCode, userId: input.userId, orderType: "topup", status: "pending", subtotal: subtotal.toFixed(2), productName: `${item.game.titleEn} • ${item.package.amountLabel} ${item.game.currencyLabel}`, details: { packageId: item.package.id, gameProductId: item.game.id, playerId: input.playerId.trim(), zoneId: input.zoneId?.trim() ?? null, quantity: input.quantity } });
+  await appendOrderStatusEvent({ orderId: id, eventType: "order_created", status: "pending", actorType: "customer", messageKh: statusMessageKh("pending") });
+  return { id, orderNumber, trackingCode, amount: subtotal.toFixed(2), status: "pending" as const };
 }
 
 export async function createSmmOrder(input: { userId: number; tierId: string; target: string }) {
@@ -222,9 +246,10 @@ export async function createSmmOrder(input: { userId: number; tierId: string; ta
   const result = await db.select({ service: smmServices, tier: smmTiers }).from(smmTiers).innerJoin(smmServices, eq(smmTiers.serviceId, smmServices.id)).where(and(eq(smmTiers.id, input.tierId), eq(smmTiers.isActive, true), eq(smmServices.isActive, true))).limit(1);
   const item = result[0];
   if (!item) throw new Error("Selected SMM tier is unavailable");
-  const id = nanoid(); const orderNumber = buildOrderNumber();
-  await db.insert(orders).values({ id, orderNumber, userId: input.userId, orderType: "smm", status: "pending", subtotal: item.tier.priceUsd, productName: `${item.service.platform} • ${item.service.titleEn} (${item.tier.quantity.toLocaleString()})`, details: { serviceId: item.service.id, tierId: item.tier.id, target: input.target.trim(), quantity: item.tier.quantity, providerSource: item.tier.providerSource } });
-  return { id, orderNumber, amount: item.tier.priceUsd, status: "pending" as const };
+  const id = nanoid(); const orderNumber = buildOrderNumber(); const trackingCode = buildTrackingCode();
+  await db.insert(orders).values({ id, orderNumber, trackingCode, userId: input.userId, orderType: "smm", status: "pending", subtotal: item.tier.priceUsd, productName: `${item.service.platform} • ${item.service.titleEn} (${item.tier.quantity.toLocaleString()})`, details: { serviceId: item.service.id, tierId: item.tier.id, target: input.target.trim(), quantity: item.tier.quantity, providerSource: item.tier.providerSource } });
+  await appendOrderStatusEvent({ orderId: id, eventType: "order_created", status: "pending", actorType: "customer", messageKh: statusMessageKh("pending") });
+  return { id, orderNumber, trackingCode, amount: item.tier.priceUsd, status: "pending" as const };
 }
 
 export async function getCustomerOrders(userId: number) {
@@ -249,8 +274,9 @@ export async function beginStagedPayment(input: { orderId: string; userId: numbe
   const existing = await db.select().from(paymentTransactions).where(eq(paymentTransactions.orderId, input.orderId)).limit(1);
   const transaction = existing[0] ?? { id: nanoid(), orderId: input.orderId, provider: "toanchetpay_staged", status: "pending" as const, amount: order[0].subtotal, currency: order[0].currency, checkoutUrl: `/checkout/${input.orderId}` };
   if (!existing[0]) await db.insert(paymentTransactions).values(transaction);
+  if (order[0].status !== "awaiting_payment") await appendOrderStatusEvent({ orderId: input.orderId, eventType: "payment_session_created", status: "awaiting_payment", actorType: "system", messageKh: statusMessageKh("awaiting_payment") });
   await db.update(orders).set({ status: "awaiting_payment" }).where(eq(orders.id, input.orderId));
-  return { order: { id: order[0].id, orderNumber: order[0].orderNumber, productName: order[0].productName, subtotal: order[0].subtotal, status: "awaiting_payment" as const }, payment: { id: transaction.id, provider: transaction.provider, status: transaction.status, checkoutUrl: transaction.checkoutUrl } };
+  return { order: { id: order[0].id, orderNumber: order[0].orderNumber, trackingCode: order[0].trackingCode, productName: order[0].productName, subtotal: order[0].subtotal, status: "awaiting_payment" as const }, payment: { id: transaction.id, provider: transaction.provider, status: transaction.status, checkoutUrl: transaction.checkoutUrl } };
 }
 
 export async function getCustomerPaymentSession(input: { orderId: string; userId: number }) {
@@ -260,6 +286,31 @@ export async function getCustomerPaymentSession(input: { orderId: string; userId
   if (!order[0]) throw new Error("Order not found");
   const payment = await db.select().from(paymentTransactions).where(eq(paymentTransactions.orderId, input.orderId)).orderBy(desc(paymentTransactions.createdAt)).limit(1);
   return { order: order[0], payment: payment[0] ?? null };
+}
+
+export async function getCustomerOrderTracking(input: { userId: number; trackingCode: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const row = await db.select().from(orders).where(and(eq(orders.userId, input.userId), eq(orders.trackingCode, input.trackingCode.trim().toUpperCase()))).limit(1);
+  const order = row[0];
+  if (!order) throw new Error("Purchase ID was not found in your account");
+  const events = await db.select().from(orderStatusEvents).where(eq(orderStatusEvents.orderId, order.id)).orderBy(asc(orderStatusEvents.createdAt));
+  const tickets = await db.select().from(orderSupportTickets).where(and(eq(orderSupportTickets.orderId, order.id), eq(orderSupportTickets.userId, input.userId))).orderBy(desc(orderSupportTickets.createdAt));
+  const visibleOrder = { id: order.id, orderNumber: order.orderNumber, trackingCode: order.trackingCode, orderType: order.orderType, status: order.status, productName: order.productName, subtotal: order.subtotal, currency: order.currency, createdAt: order.createdAt, updatedAt: order.updatedAt };
+  const fallback = events.length ? events : [{ id: `created-${order.id}`, orderId: order.id, eventType: "order_created", status: order.status, actorType: "system" as const, messageKh: statusMessageKh(order.status), providerReference: null, createdAt: order.createdAt }];
+  return { order: visibleOrder, events: fallback, tickets };
+}
+
+export async function createOrderSupportTicket(input: { userId: number; trackingCode: string; subject: string; message: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const row = await db.select({ id: orders.id, status: orders.status }).from(orders).where(and(eq(orders.userId, input.userId), eq(orders.trackingCode, input.trackingCode.trim().toUpperCase()))).limit(1);
+  const order = row[0];
+  if (!order) throw new Error("Purchase ID was not found in your account");
+  const id = nanoid(); const ticketNumber = buildTicketNumber();
+  await db.insert(orderSupportTickets).values({ id, ticketNumber, orderId: order.id, userId: input.userId, subject: input.subject.trim(), message: input.message.trim(), status: "open" });
+  await appendOrderStatusEvent({ orderId: order.id, eventType: "ticket_opened", status: order.status, actorType: "customer", messageKh: `បានបើក ticket ${ticketNumber} សម្រាប់ស្នើជំនួយ។` });
+  return { id, ticketNumber, status: "open" as const };
 }
 
 export async function getSavedPlayerIds(userId: number) {
@@ -422,7 +473,7 @@ export async function getAdminOrders() {
   return db.select({ order: orders, user: { id: users.id, name: users.name, email: users.email } }).from(orders).leftJoin(users, eq(orders.userId, users.id)).orderBy(desc(orders.createdAt));
 }
 
-export async function updateOrderStatus(input: { orderId: string; status: "pending" | "awaiting_payment" | "paid" | "delivered" | "failed" | "expired" | "refunded" }) {
+export async function updateOrderStatus(input: { orderId: string; status: OrderStatus; actorUserId?: number }) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
   const current = await db.select().from(orders).where(eq(orders.id, input.orderId)).limit(1);
@@ -438,10 +489,31 @@ export async function updateOrderStatus(input: { orderId: string; status: "pendi
       const result = await submitSmmProviderOrder({ providerServiceId, target, quantity });
       if (result.status !== "submitted") throw new Error("SMM provider fulfillment could not be started. Please retry after the provider is available.");
       await db.update(orders).set({ details: { ...details, providerOrderId: result.providerOrderId, providerFulfillment: "submitted" } }).where(eq(orders.id, input.orderId));
+      await appendOrderStatusEvent({ orderId: input.orderId, eventType: "provider_submitted", status: "paid", actorType: "provider", providerReference: result.providerOrderId, messageKh: "សំណើ SMM ត្រូវបានបញ្ជូនទៅកាន់ provider រួចរាល់។" });
     }
   }
   await db.update(orders).set({ status: input.status }).where(eq(orders.id, input.orderId));
   if (input.status === "refunded") await db.update(paymentTransactions).set({ status: "refunded" }).where(eq(paymentTransactions.orderId, input.orderId));
+  if (order.status !== input.status) await appendOrderStatusEvent({ orderId: input.orderId, eventType: "status_changed", status: input.status, actorType: input.actorUserId ? "admin" : "system", messageKh: statusMessageKh(input.status) });
+  return { success: true };
+}
+
+export async function getAdminOrderSupportTickets() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({ ticket: orderSupportTickets, order: { orderNumber: orders.orderNumber, trackingCode: orders.trackingCode, productName: orders.productName, status: orders.status }, customer: { id: users.id, displayName: users.displayName, email: users.email } }).from(orderSupportTickets).innerJoin(orders, eq(orderSupportTickets.orderId, orders.id)).leftJoin(users, eq(orderSupportTickets.userId, users.id)).orderBy(desc(orderSupportTickets.updatedAt));
+}
+
+export async function reviewOrderSupportTicket(input: { ticketId: string; reviewerUserId: number; status: TicketStatus; adminReply?: string | null }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const row = await db.select().from(orderSupportTickets).where(eq(orderSupportTickets.id, input.ticketId)).limit(1);
+  const ticket = row[0];
+  if (!ticket) throw new Error("Ticket not found");
+  await db.update(orderSupportTickets).set({ status: input.status, adminReply: input.adminReply?.trim() || null, reviewedByUserId: input.reviewerUserId, reviewedAt: new Date() }).where(eq(orderSupportTickets.id, ticket.id));
+  const statusRow = await db.select({ status: orders.status }).from(orders).where(eq(orders.id, ticket.orderId)).limit(1);
+  const resolved = input.status === "resolved" || input.status === "closed";
+  await appendOrderStatusEvent({ orderId: ticket.orderId, eventType: "ticket_reviewed", status: statusRow[0]?.status ?? "pending", actorType: "admin", messageKh: resolved ? `Ticket ${ticket.ticketNumber} ត្រូវបានឆ្លើយតប និងបិទរួចរាល់។` : `Ticket ${ticket.ticketNumber} កំពុងត្រូវបានក្រុមគាំទ្រពិនិត្យ។` });
   return { success: true };
 }
 

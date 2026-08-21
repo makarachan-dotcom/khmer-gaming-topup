@@ -12,7 +12,9 @@ import MarketplaceVerify from "@/pages/MarketplaceVerify";
 import AdminMarketplaceSafety from "@/pages/AdminMarketplaceSafety";
 import MyMarketplaceListings from "@/pages/MyMarketplaceListings";
 import Account from "./pages/Account";
+import OrderStatus from "./pages/OrderStatus";
 import Admin from "./pages/Admin";
+import AdminTickets from "./pages/AdminTickets";
 import AdminAccess from "./pages/AdminAccess";
 import AdminPricing from "./pages/AdminPricing";
 import Checkout from "./pages/Checkout";
@@ -31,7 +33,9 @@ function Router() {
       <Route path="/marketplace/verify" component={MarketplaceVerify} />
       <Route path="/marketplace/manage" component={MyMarketplaceListings} />
       <Route path={"/account"} component={Account} />
+      <Route path={"/order-status"} component={OrderStatus} />
       <Route path="/admin" component={Admin} />
+      <Route path="/admin/tickets" component={AdminTickets} />
       <Route path="/admin/access" component={AdminAccess} />
       <Route path="/admin/pricing" component={AdminPricing} />
       <Route path="/admin/marketplace-safety" component={AdminMarketplaceSafety} />

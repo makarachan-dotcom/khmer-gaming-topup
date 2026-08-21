@@ -152,3 +152,5 @@
 - [x] Show all provider-backed Top-up games and the complete selection flow on the homepage, remove the “view all games” action, and remove the standalone /topup route.
 - [x] Verify and synchronize active animation, emoji, and icon assets to the connected GitHub repository for the Vercel deployment.
 - [x] Apply, validate, and synchronize the owner-provided rebased homepage floating-particles v2 patch unchanged; do not use the superseded v1 patch.
+- [x] Add secure Top-up and SMM purchase identifiers, customer-visible real order-status logs, and ticket reporting linked to each purchase.
+- [x] Add protected admin controls for reviewing, replying to, and resolving customer tickets without exposing another customer’s purchase data.
