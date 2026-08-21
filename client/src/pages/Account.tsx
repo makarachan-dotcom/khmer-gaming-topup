@@ -1,6 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import StorefrontLayout from "@/components/StorefrontLayout";
 import { AnimatedGlyph } from "@/components/AnimatedGlyph";
+import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { getAccountDashboardState } from "@/lib/accountDashboardState";
 import { trpc } from "@/lib/trpc";
 import { ArrowRight, Check, ChevronDown, Crown, Loader2, LogOut, Mail, ReceiptText, ShieldCheck, ShoppingBag, UserRound } from "lucide-react";
@@ -22,7 +23,7 @@ export default function Account() {
   const dashboardState = getAccountDashboardState(user);
   const onboarding = dashboardState.needsDisplayName ? <OnboardingCard name={name} onNameChange={setName} pending={saveName.isPending} error={saveName.error?.message} onSave={() => save(false)} onSkip={() => save(true)} /> : null;
 
-  return <StorefrontLayout><main className="container py-6 sm:py-10"><section className="glass-panel relative mx-auto w-full max-w-4xl overflow-hidden rounded-[1.5rem] p-5 sm:p-9"><img src={sparklesEmoji} alt="" aria-hidden="true" className="emoji-asset float-emoji absolute right-8 top-7 h-7 w-7" /><div className="relative"><p className="text-[10px] font-bold tracking-[0.16em] text-indigo-700">MY ZURS</p><h1 className="mt-2 font-display text-2xl font-bold leading-tight text-slate-950 sm:text-4xl">គណនីរបស់អ្នក</h1>{loading ? <LoadingPanel /> : !user ? <SignedOutCard /> : <MemberDashboard name={user.displayName ?? "ZURS Member"} isAdmin={dashboardState.isAdmin} onLogout={logout} logoutPending={loading} onboarding={onboarding} orders={orders.data ?? []} ordersLoading={orders.isLoading} transactions={transactions.data ?? []} transactionsLoading={transactions.isLoading} />}</div></section></main></StorefrontLayout>;
+  return <StorefrontLayout><LoadingOverlay open={loading} label="កំពុងរៀបចំគណនី…" /><main className="container py-6 sm:py-10"><section className="glass-panel relative mx-auto w-full max-w-4xl overflow-hidden rounded-[1.5rem] p-5 sm:p-9"><img src={sparklesEmoji} alt="" aria-hidden="true" className="emoji-asset float-emoji absolute right-8 top-7 h-7 w-7" /><div className="relative"><p className="text-[10px] font-bold tracking-[0.16em] text-indigo-700">MY ZURS</p><h1 className="mt-2 font-display text-2xl font-bold leading-tight text-slate-950 sm:text-4xl">គណនីរបស់អ្នក</h1>{loading ? <LoadingPanel /> : !user ? <SignedOutCard /> : <MemberDashboard name={user.displayName ?? "ZURS Member"} isAdmin={dashboardState.isAdmin} onLogout={logout} logoutPending={loading} onboarding={onboarding} orders={orders.data ?? []} ordersLoading={orders.isLoading} transactions={transactions.data ?? []} transactionsLoading={transactions.isLoading} />}</div></section></main></StorefrontLayout>;
 }
 
 function LoadingPanel() { return <div className="mt-5 flex items-center gap-2 rounded-xl bg-white/70 p-4 text-xs text-slate-600"><AnimatedGlyph name="activity" size={22} color="#4f46e5" />កំពុងរៀបចំគណនី…</div>; }

@@ -135,3 +135,4 @@
 - [x] Replace the mobile tab-bar’s static icons with purposeful animated active-state icons and add motion only for loading, waiting, success, and page-entry states.
 - [x] Audit and correct every mobile navigation icon and animated state so each matches its destination’s meaning.
 - [x] Remove the remaining Marketplace bell and audit all page-level animated icon mappings for semantic fit.
+- [x] Add a liquid-glass center-screen loading popup for meaningful provider and account loading operations.
