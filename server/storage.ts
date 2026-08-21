@@ -37,13 +37,16 @@ function appendHashSuffix(relKey: string): string {
   return `${relKey.slice(0, lastDot)}_${hash}${relKey.slice(lastDot)}`;
 }
 
-function appwriteMediaKey(fileId: string) {
-  return `appwrite/${APPWRITE_MEDIA_BUCKET}/${fileId}`;
+function appwriteMediaKey(sourceKey: string, fileId: string) {
+  return `appwrite/${APPWRITE_MEDIA_BUCKET}/${normalizeKey(sourceKey)}/${fileId}`;
 }
 
 function parseAppwriteMediaKey(relKey: string) {
-  const [provider, bucketId, fileId, ...rest] = normalizeKey(relKey).split("/");
-  if (provider !== "appwrite" || !bucketId || !fileId || rest.length) return null;
+  const parts = normalizeKey(relKey).split("/");
+  const [provider, bucketId, ...sourceAndFile] = parts;
+  if (provider !== "appwrite" || !bucketId || sourceAndFile.length < 2) return null;
+  const fileId = sourceAndFile.at(-1);
+  if (!fileId) return null;
   return { bucketId, fileId };
 }
 
@@ -107,7 +110,7 @@ async function appwriteStoragePut(
     throw new Error(`Appwrite storage upload failed (${response.status}): ${message}`);
   }
 
-  const key = appwriteMediaKey(fileId);
+  const key = appwriteMediaKey(relKey, fileId);
   return { key, url: `/manus-storage/${key}` };
 }
 

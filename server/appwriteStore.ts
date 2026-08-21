@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { nanoid } from "nanoid";
 import type { InsertUser, User } from "../drizzle/schema";
 import { isSingleAdminEmail } from "./storefrontDomain";
 
@@ -144,6 +145,52 @@ export async function updateAppwriteUserDisplayName(input: { openId: string; dis
   const updated: User = { ...current, displayName: input.displayName, updatedAt: new Date() };
   await request("PUT", userDocumentPath(input.openId), { data: { sourceTable: "users", sourceId: record.sourceId, payload: JSON.stringify(updated), sourceUpdatedAt: updated.updatedAt.toISOString() } });
   return { displayName: input.displayName };
+}
+
+export type AppwriteMarketplaceListingInput = {
+  sellerUserId: number;
+  listingType: "sale" | "swap" | "wanted";
+  game: string;
+  title: string;
+  rankLevel: string;
+  priceUsd?: string | null;
+  description: string;
+  contactMethod: string;
+  telegramUsername?: string | null;
+  screenshots?: string[];
+};
+
+export async function createAppwriteMarketplaceListing(input: AppwriteMarketplaceListingInput) {
+  if (!config()) throw new Error("Appwrite marketplace storage is unavailable");
+  const now = new Date();
+  const id = nanoid();
+  const listing = {
+    id,
+    sellerUserId: input.sellerUserId,
+    listingType: input.listingType,
+    // Pending-only fallback: no listing is publicly visible until an admin reviews it.
+    status: "pending" as const,
+    game: input.game.trim(),
+    title: input.title.trim(),
+    rankLevel: input.rankLevel.trim(),
+    priceUsd: input.priceUsd ?? null,
+    description: input.description.trim(),
+    contactMethod: input.contactMethod.trim(),
+    telegramUsername: input.telegramUsername?.trim().replace(/^@/, "") || null,
+    screenshots: input.screenshots ?? [],
+    createdAt: now,
+    updatedAt: now,
+  };
+  await request("POST", `/databases/${databaseId()}/collections/${collectionId}/documents`, {
+    documentId: documentId(`marketplaceListings:${id}`),
+    data: {
+      sourceTable: "marketplaceListings",
+      sourceId: id,
+      payload: JSON.stringify(listing),
+      sourceUpdatedAt: now.toISOString(),
+    },
+  });
+  return { id, status: "pending" as const };
 }
 
 function toOrder(record: AppwriteRecord): AppwriteOrder | null {

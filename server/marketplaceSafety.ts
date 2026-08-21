@@ -10,7 +10,8 @@ export function canApproveMarketplaceVerification(locationCountry: string | null
 
 export function hasOnlyOwnedMarketplaceScreenshotKeys(keys: string[] | undefined, userId: number) {
   const prefix = `marketplace-listings-private/${userId}/`;
-  return (keys ?? []).every((key) => key.startsWith(prefix));
+  const appwritePrefix = `appwrite/${process.env.APPWRITE_STORAGE_BUCKET_ID || "zurs_media"}/${prefix}`;
+  return (keys ?? []).every((key) => key.startsWith(prefix) || key.startsWith(appwritePrefix));
 }
 
 export function buildEvidenceRetentionAuditReason(evidenceType: string, verificationId: string, reason: string) {

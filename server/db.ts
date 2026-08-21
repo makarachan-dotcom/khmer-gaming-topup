@@ -5,7 +5,7 @@ import { nanoid } from "nanoid";
 import {
   adminRoleAudits, gamePackages, gameProducts, gmailSenderConnections, InsertUser, marketplaceContacts, marketplaceDisclosureRequests, marketplaceEvidenceAccessLogs, marketplaceFavorites, marketplaceFraudReports, marketplaceListings, marketplaceVerificationEvidence, marketplaceVerifications, orders, orderStatusEvents, orderSupportTickets, paymentTransactions, savedPlayerIds, siteContent, smmServices, smmTiers, User, users, welcomeEmailDeliveries,
 } from "../drizzle/schema";
-import { getAppwriteCustomerOrders, getAppwriteCustomerPaymentHistory, getAppwriteUserByEmail, getAppwriteUserByOpenId, isAppwriteStoreConfigured, updateAppwriteUserDisplayName, upsertAppwriteUser } from "./appwriteStore";
+import { createAppwriteMarketplaceListing, getAppwriteCustomerOrders, getAppwriteCustomerPaymentHistory, getAppwriteUserByEmail, getAppwriteUserByOpenId, isAppwriteStoreConfigured, updateAppwriteUserDisplayName, upsertAppwriteUser } from "./appwriteStore";
 import { buildOrderNumber, isSingleAdminEmail } from "./storefrontDomain";
 import { validateAdminRoleChange } from "./adminRoles";
 import { buildEvidenceRetentionAuditReason, canApproveMarketplaceVerification, hasOnlyOwnedMarketplaceScreenshotKeys, type DisclosureRequestStatus, type FraudReportStatus } from "./marketplaceSafety";
@@ -435,8 +435,11 @@ export async function addMarketplaceVerificationEvidence(input: { verificationId
 
 export async function submitMarketplaceListing(input: { sellerUserId: number; listingType: "sale" | "swap" | "wanted"; game: string; title: string; rankLevel: string; priceUsd?: string | null; description: string; contactMethod: string; telegramUsername?: string | null; screenshots?: string[] }) {
   const db = await getDb();
-  if (!db) throw new Error("Database unavailable");
   if (!hasOnlyOwnedMarketplaceScreenshotKeys(input.screenshots, input.sellerUserId)) throw new Error("Marketplace screenshots must be your own uploaded private references");
+  if (!db) {
+    if (isAppwriteStoreConfigured()) return createAppwriteMarketplaceListing(input);
+    throw new Error("Marketplace submission is temporarily unavailable");
+  }
   const verification = await db.select().from(marketplaceVerifications).where(eq(marketplaceVerifications.userId, input.sellerUserId)).orderBy(desc(marketplaceVerifications.createdAt)).limit(1);
   if (verification[0]?.status !== "approved" || verification[0]?.locationCountry !== "KH") throw new Error("Marketplace verification with a Cambodia eligibility result is required before submitting a listing");
   const autoPublish = verification[0].autoApprovalEligible && verification[0].providerDecision === "pass";
