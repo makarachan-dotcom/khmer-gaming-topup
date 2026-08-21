@@ -86,5 +86,6 @@
 - [ ] Implement an owner-authorized Gmail welcome-email flow with the ZURS STORE logo and complete customer opt-in safeguards.
 - [ ] Verify Google OAuth completes successfully end-to-end on the live production host.
 - [ ] Force the managed production OAuth callback to the registered ZURS STORE public domain instead of the internal runtime host.
+- [ ] Verify the active production deployment source and route all `/api/*` requests to the current Express function bundle.
 - [ ] Register and validate the zurs.vercel.app Google callback URL if that deployment remains active.
 - [x] Add automated callback URL tests for managed HTTPS hosts and local development.
