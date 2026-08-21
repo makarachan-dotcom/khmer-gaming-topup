@@ -4,6 +4,7 @@ import { nanoid } from "nanoid";
 import {
   gamePackages, gameProducts, gmailSenderConnections, InsertUser, marketplaceContacts, marketplaceDisclosureRequests, marketplaceEvidenceAccessLogs, marketplaceFraudReports, marketplaceListings, marketplaceVerificationEvidence, marketplaceVerifications, orders, paymentTransactions, savedPlayerIds, siteContent, smmServices, smmTiers, users, welcomeEmailDeliveries,
 } from "../drizzle/schema";
+import { getAppwriteUserByEmail, getAppwriteUserByOpenId, isAppwriteStoreConfigured, updateAppwriteUserDisplayName, upsertAppwriteUser } from "./appwriteStore";
 import { defaultGamePackages, defaultGames, defaultSmmServices, defaultSmmTiers } from "./catalogDefaults";
 import { buildOrderNumber, isSingleAdminEmail } from "./storefrontDomain";
 import { buildEvidenceRetentionAuditReason, canApproveMarketplaceVerification, hasOnlyOwnedMarketplaceScreenshotKeys, type DisclosureRequestStatus, type FraudReportStatus } from "./marketplaceSafety";
@@ -20,7 +21,7 @@ export async function getDb() {
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) throw new Error("User openId is required for upsert");
   const db = await getDb();
-  if (!db) return;
+  if (!db) { if (isAppwriteStoreConfigured()) await upsertAppwriteUser(user); return; }
   const values: InsertUser = { openId: user.openId, lastSignedIn: user.lastSignedIn ?? new Date() };
   const updateSet: Partial<InsertUser> = { lastSignedIn: values.lastSignedIn };
   if (user.name !== undefined) { values.name = user.name; updateSet.name = user.name; }
@@ -38,14 +39,14 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 
 export async function getUserByOpenId(openId: string) {
   const db = await getDb();
-  if (!db) return undefined;
+  if (!db) return isAppwriteStoreConfigured() ? getAppwriteUserByOpenId(openId) : undefined;
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
   return result[0];
 }
 
 export async function getUserByEmail(email: string) {
   const db = await getDb();
-  if (!db) return undefined;
+  if (!db) return isAppwriteStoreConfigured() ? getAppwriteUserByEmail(email) : undefined;
   const normalized = email.trim().toLowerCase();
   const result = await db.select().from(users).where(sql`lower(trim(${users.email})) = ${normalized}`).limit(1);
   return result[0];
@@ -90,7 +91,7 @@ export async function recordWelcomeEmailDelivery(input: { recipientUserId: numbe
 
 export async function updateUserDisplayName(input: { userId: number; displayName: string }) {
   const db = await getDb();
-  if (!db) throw new Error("Database unavailable");
+  if (!db) { if (isAppwriteStoreConfigured()) return updateAppwriteUserDisplayName(input.userId, input.displayName); throw new Error("Database unavailable"); }
   await db.update(users).set({ displayName: input.displayName }).where(eq(users.id, input.userId));
   return { displayName: input.displayName };
 }

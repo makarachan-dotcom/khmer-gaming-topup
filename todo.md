@@ -110,4 +110,4 @@
 - [x] Start Google connection directly from the Account page without navigating to the /google-sign-in route.
 - [x] Prepare a safe Appwrite Cloud migration plan and connection setup that preserves existing ZURS data and payment records.
 - [x] Configure the supplied Appwrite Cloud project with server-only credentials and least-privilege access before migration.
-- [ ] Audit and document the exact Appwrite API key scopes before enabling any Appwrite application reads or writes.
+- [x] Document the owner-authorized Appwrite scope decision and verify that API keys remain server-only before enabling Appwrite traffic.
