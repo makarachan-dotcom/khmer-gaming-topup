@@ -11,6 +11,7 @@ import { validateAdminRoleChange } from "./adminRoles";
 import { buildEvidenceRetentionAuditReason, canApproveMarketplaceVerification, hasOnlyOwnedMarketplaceScreenshotKeys, type DisclosureRequestStatus, type FraudReportStatus } from "./marketplaceSafety";
 import { requireAutomaticPaymentReady } from "./paymentReadiness";
 import type { FzrProviderSyncSnapshot, SmmProviderCatalogResponse } from "./providerCatalog";
+import { submitSmmProviderOrder } from "./providerCatalog";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -222,7 +223,7 @@ export async function createSmmOrder(input: { userId: number; tierId: string; ta
   const item = result[0];
   if (!item) throw new Error("Selected SMM tier is unavailable");
   const id = nanoid(); const orderNumber = buildOrderNumber();
-  await db.insert(orders).values({ id, orderNumber, userId: input.userId, orderType: "smm", status: "pending", subtotal: item.tier.priceUsd, productName: `${item.service.platform} • ${item.service.titleEn} (${item.tier.quantity.toLocaleString()})`, details: { serviceId: item.service.id, tierId: item.tier.id, target: input.target.trim(), quantity: item.tier.quantity } });
+  await db.insert(orders).values({ id, orderNumber, userId: input.userId, orderType: "smm", status: "pending", subtotal: item.tier.priceUsd, productName: `${item.service.platform} • ${item.service.titleEn} (${item.tier.quantity.toLocaleString()})`, details: { serviceId: item.service.id, tierId: item.tier.id, target: input.target.trim(), quantity: item.tier.quantity, providerSource: item.tier.providerSource } });
   return { id, orderNumber, amount: item.tier.priceUsd, status: "pending" as const };
 }
 
@@ -424,6 +425,21 @@ export async function getAdminOrders() {
 export async function updateOrderStatus(input: { orderId: string; status: "pending" | "awaiting_payment" | "paid" | "delivered" | "failed" | "expired" | "refunded" }) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
+  const current = await db.select().from(orders).where(eq(orders.id, input.orderId)).limit(1);
+  const order = current[0];
+  if (!order) throw new Error("Order not found");
+  if (input.status === "paid" && order.orderType === "smm" && order.status !== "paid") {
+    const details = (order.details && typeof order.details === "object" ? order.details : {}) as Record<string, unknown>;
+    const providerSource = typeof details.providerSource === "string" ? details.providerSource : "";
+    const providerServiceId = /^smmglob:(\d+)(?::|$)/.exec(providerSource)?.[1];
+    const target = typeof details.target === "string" ? details.target : "";
+    const quantity = typeof details.quantity === "number" ? details.quantity : Number(details.quantity);
+    if (providerServiceId && !details.providerOrderId) {
+      const result = await submitSmmProviderOrder({ providerServiceId, target, quantity });
+      if (result.status !== "submitted") throw new Error("SMM provider fulfillment could not be started. Please retry after the provider is available.");
+      await db.update(orders).set({ details: { ...details, providerOrderId: result.providerOrderId, providerFulfillment: "submitted" } }).where(eq(orders.id, input.orderId));
+    }
+  }
   await db.update(orders).set({ status: input.status }).where(eq(orders.id, input.orderId));
   if (input.status === "refunded") await db.update(paymentTransactions).set({ status: "refunded" }).where(eq(paymentTransactions.orderId, input.orderId));
   return { success: true };

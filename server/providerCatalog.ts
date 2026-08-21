@@ -97,11 +97,11 @@ async function fzrRequest(path: string) {
   return response.json();
 }
 
-async function smmGlobRequest(action: string) {
+async function smmGlobRequest(action: string, parameters: Record<string, string> = {}) {
   const baseUrl = process.env.SMMGLOB_API_URL;
   const apiKey = process.env.SMMGLOB_API_KEY;
   if (!baseUrl || !apiKey) return null;
-  const body = new URLSearchParams({ key: apiKey, action });
+  const body = new URLSearchParams({ key: apiKey, action, ...parameters });
   const response = await fetch(baseUrl, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body, signal: AbortSignal.timeout(15_000) });
   if (!response.ok) throw new Error(`SMMGlob catalog request failed (${response.status})`);
   return response.json();
@@ -150,6 +150,19 @@ export async function fetchSmmProviderServices(): Promise<SmmProviderCatalogResp
     if (!payload.success) return { status: "error", services: [] };
     return { status: "ready", services: payload.data.map((service) => ({ providerServiceId: service.service, name: service.name, category: service.category, serviceType: service.type, rateUsdPerThousand: Number(service.rate).toFixed(4), min: service.min, max: service.max, refill: Boolean(service.refill), cancel: Boolean(service.cancel), dripfeed: Boolean(service.dripfeed) })) };
   } catch { return { status: "error", services: [] }; }
+}
+
+const smmGlobOrderSchema = z.object({ order: z.union([z.string(), z.number()]).transform(String).pipe(z.string().trim().min(1).max(120)) });
+
+export async function submitSmmProviderOrder(input: { providerServiceId: string; target: string; quantity: number }): Promise<{ status: "submitted"; providerOrderId: string } | { status: "unavailable" } | { status: "error" }> {
+  try {
+    if (!/^\d{1,80}$/.test(input.providerServiceId) || !input.target.trim() || !Number.isInteger(input.quantity) || input.quantity < 1) return { status: "error" };
+    const response = await smmGlobRequest("add", { service: input.providerServiceId, link: input.target.trim(), quantity: String(input.quantity) });
+    if (!response) return { status: "unavailable" };
+    const payload = smmGlobOrderSchema.safeParse(response);
+    if (!payload.success) return { status: "error" };
+    return { status: "submitted", providerOrderId: payload.data.order };
+  } catch { return { status: "error" }; }
 }
 
 async function mapWithConcurrency<T, R>(items: T[], limit: number, worker: (item: T) => Promise<R>) {

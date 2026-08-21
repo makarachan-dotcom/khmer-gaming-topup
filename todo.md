@@ -124,8 +124,8 @@
 - [x] Compact purchase and transaction histories into concise expandable account sections.
 - [x] Remove customer copy about fake packages/prices and ensure Top-up/SMM show only provider-authorized live records.
 - [x] Add admin controls to edit, delete, activate, and price authorized products with a configurable profit-margin percentage.
-- [ ] Integrate FZR Cards as the server-only source for provider-synchronized top-up offers, without permitting manual or fake-product entry.
-- [ ] Integrate SMMGlob as the server-only source for provider-synchronized SMM services, prices, and order fulfillment without manual or fake-service entry.
+- [x] Integrate FZR Cards as the server-only source for provider-synchronized top-up offers, without permitting manual or fake-product entry.
+- [x] Integrate SMMGlob as the server-only source for provider-synchronized SMM services, prices, and order fulfillment without manual or fake-service entry.
 - [x] Add owner-authorized admin role grants and revocations with confirmation, audit records, and a self-lockout safeguard.
 - [x] Replace generic decorative motion with a restrained, professional animated-icon system that respects reduced-motion preferences.
 - [x] Verify logout end-to-end on both public deployments, confirming the Account page returns to signed-out state.
@@ -142,7 +142,7 @@
 - [x] Add smooth, reduced-motion-safe homepage reveal, hover, button, and scroll-aware navigation motion without visual clutter.
 - [x] Repair UTF-8/MIME Khmer welcome-email subject and body encoding for correct Gmail rendering.
 - [x] Make Privacy Policy and Terms navigation start at the top and add an accessible scroll-aware return-to-top control that hides at the top of the page.
-- [ ] Prepare a Khmer bank-review packet and customer-facing automatic-payment wording for ZURS STORE, with accurate descriptions of the provider-authorized digital-service workflow and payment safeguards.
+- [x] Prepare a Khmer bank-review packet and customer-facing automatic-payment wording for ZURS STORE, with accurate descriptions of the provider-authorized digital-service workflow and payment safeguards. Superseded by the owner's request for the completed public website wording rather than a separate packet.
 - [x] Rewrite customer-facing ZURS STORE copy across public pages in a concise, professional Khmer business tone, removing internal, informal, and unnecessary technical wording.
 - [x] Replace loading indicators with the owner-provided LottieFlow outline animation while retaining reduced-motion and no-script fallbacks.
 - [x] Remove the three homepage service cards, make Top-up the primary post-hero section, and move Q&A content to the Account page.
