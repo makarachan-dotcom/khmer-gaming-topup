@@ -1,11 +1,10 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
-import { Route, Switch } from "wouter";
+import { Redirect, Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
-import Topup from "./pages/Topup";
 import Smm from "./pages/Smm";
 import Marketplace from "./pages/Marketplace";
 import SellAccount from "@/pages/SellAccount";
@@ -25,7 +24,7 @@ function Router() {
   return (
     <Switch>
       <Route path={"/"} component={Home} />
-      <Route path={"/topup"} component={Topup} />
+      <Route path={"/topup"}><Redirect to="/" /></Route>
       <Route path={"/smm"} component={Smm} />
       <Route path={"/marketplace"} component={Marketplace} />
       <Route path="/marketplace/sell" component={SellAccount} />

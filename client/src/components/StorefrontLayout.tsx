@@ -9,7 +9,6 @@ import { Link, useLocation } from "wouter";
 const logoUrl = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/kBXeVXEnNVEuNZKS.jpg";
 
 const navigation = [
-  { href: "/topup", label: "បញ្ចូលពេជ្យហ្គេម" },
   { href: "/smm", label: "SMM" },
   { href: "/marketplace", label: "ទីផ្សារគណនី" },
 ];
