@@ -138,7 +138,9 @@
 - [x] Remove the remaining Marketplace bell and audit all page-level animated icon mappings for semantic fit.
 - [x] Add a liquid-glass center-screen loading popup for meaningful provider and account loading operations.
 - [x] Gate customer Top-up and SMM purchase actions until a verified automatic Cambodian bank or KHQR payment integration is active.
-- [ ] Redesign the Khmer-first homepage with an emoji-free professional line-icon system, refined dark-hero/light-body hierarchy, generous spacing, and accessible mobile-first micro-interactions.
-- [ ] Add smooth, reduced-motion-safe homepage reveal, hover, button, and scroll-aware navigation motion without visual clutter.
+- [x] Redesign the Khmer-first homepage with an emoji-free professional line-icon system, refined dark-hero/light-body hierarchy, generous spacing, and accessible mobile-first micro-interactions.
+- [x] Add smooth, reduced-motion-safe homepage reveal, hover, button, and scroll-aware navigation motion without visual clutter.
 - [x] Repair UTF-8/MIME Khmer welcome-email subject and body encoding for correct Gmail rendering.
 - [x] Make Privacy Policy and Terms navigation start at the top and add an accessible scroll-aware return-to-top control that hides at the top of the page.
+- [ ] Prepare a Khmer bank-review packet and customer-facing automatic-payment wording for ZURS STORE, with accurate descriptions of the provider-authorized digital-service workflow and payment safeguards.
+- [x] Rewrite customer-facing ZURS STORE copy across public pages in a concise, professional Khmer business tone, removing internal, informal, and unnecessary technical wording.

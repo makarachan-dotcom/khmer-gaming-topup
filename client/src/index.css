@@ -113,7 +113,12 @@ button, input, textarea, select { font: inherit; }
   button:hover .motion-icon, a:hover .motion-icon { transform: translateY(-2px) scale(1.06); }
 .motion-status { animation: motion-status 3.6s cubic-bezier(0.23, 1, 0.32, 1) infinite; transform-origin: center; }
 .motion-reveal { animation: motion-reveal 360ms cubic-bezier(0.23, 1, 0.32, 1) both; }
-.tab-icon-active { animation: tab-icon-active 360ms cubic-bezier(0.23, 1, 0.32, 1) both; }
+	.tab-icon-active { animation: tab-icon-active 360ms cubic-bezier(0.23, 1, 0.32, 1) both; }
+	.homepage-feature-card { animation: homepage-card-reveal 360ms cubic-bezier(0.23, 1, 0.32, 1) both; }
+	.homepage-feature-card:hover { transform: translateY(-4px); box-shadow: 0 20px 38px oklch(0.32 0.06 265 / 0.13), inset 0 1px 0 oklch(1 0 0 / 1); }
+	.homepage-primary-action:hover { transform: scale(1.02); box-shadow: 0 12px 24px oklch(0.10 0.03 265 / 0.30); }
+	.homepage-orb { animation: homepage-orb-float 7s cubic-bezier(0.23, 1, 0.32, 1) infinite; }
+	.homepage-orb-delayed { animation: homepage-orb-float 9s cubic-bezier(0.23, 1, 0.32, 1) -3s infinite; }
 }
 .animated-glyph { display: inline-grid; place-items: center; flex: 0 0 auto; transition: transform 180ms cubic-bezier(0.23, 1, 0.32, 1); }
 .animated-glyph > div { display: grid; place-items: center; }
@@ -121,6 +126,8 @@ button, input, textarea, select { font: inherit; }
 @keyframes motion-status { 0%, 76%, 100% { transform: scale(1); opacity: 1; } 86% { transform: scale(1.12); opacity: 0.82; } }
 @keyframes motion-reveal { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes tab-icon-active { 0% { opacity: 0.72; transform: translateY(2px) scale(0.88); } 65% { opacity: 1; transform: translateY(-1px) scale(1.1); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes homepage-card-reveal { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes homepage-orb-float { 0%, 100% { transform: translate3d(0, 0, 0); } 50% { transform: translate3d(-5px, 8px, 0); } }
 
 @media (max-width: 639px) {
   .container { padding-inline: 0.75rem; }
