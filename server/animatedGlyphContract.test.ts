@@ -7,8 +7,8 @@ describe("animated glyph integration", () => {
     const source = readFileSync(resolve(process.cwd(), "client/src/components/AnimatedGlyph.tsx"), "utf8");
     expect(source).toContain('import("react-useanimations")');
     expect(source).toContain("prefers-reduced-motion: reduce");
-    expect(source).toContain("notification");
     expect(source).toContain("checkmark");
     expect(source).toContain("home");
+    expect(source).not.toContain("notification");
   });
 });
