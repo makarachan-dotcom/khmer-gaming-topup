@@ -3,7 +3,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { drizzle } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
 import {
-  adminRoleAudits, gamePackages, gameProducts, gmailSenderConnections, InsertUser, marketplaceContacts, marketplaceDisclosureRequests, marketplaceEvidenceAccessLogs, marketplaceFraudReports, marketplaceListings, marketplaceVerificationEvidence, marketplaceVerifications, orders, orderStatusEvents, orderSupportTickets, paymentTransactions, savedPlayerIds, siteContent, smmServices, smmTiers, User, users, welcomeEmailDeliveries,
+  adminRoleAudits, gamePackages, gameProducts, gmailSenderConnections, InsertUser, marketplaceContacts, marketplaceDisclosureRequests, marketplaceEvidenceAccessLogs, marketplaceFavorites, marketplaceFraudReports, marketplaceListings, marketplaceVerificationEvidence, marketplaceVerifications, orders, orderStatusEvents, orderSupportTickets, paymentTransactions, savedPlayerIds, siteContent, smmServices, smmTiers, User, users, welcomeEmailDeliveries,
 } from "../drizzle/schema";
 import { getAppwriteCustomerOrders, getAppwriteCustomerPaymentHistory, getAppwriteUserByEmail, getAppwriteUserByOpenId, isAppwriteStoreConfigured, updateAppwriteUserDisplayName, upsertAppwriteUser } from "./appwriteStore";
 import { buildOrderNumber, isSingleAdminEmail } from "./storefrontDomain";
@@ -354,6 +354,31 @@ export async function listMarketplace(input: { listingType?: "sale" | "swap" | "
   const results = await db.select().from(marketplaceListings).where(and(...conditions)).orderBy(desc(marketplaceListings.createdAt));
   const search = input.search?.trim().toLowerCase();
   return search ? results.filter((listing) => `${listing.title} ${listing.description}`.toLowerCase().includes(search)) : results;
+}
+
+export async function getMarketplaceFavorites(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({ favorite: marketplaceFavorites, listing: marketplaceListings }).from(marketplaceFavorites).innerJoin(marketplaceListings, eq(marketplaceFavorites.listingId, marketplaceListings.id)).where(and(eq(marketplaceFavorites.userId, userId), eq(marketplaceListings.status, "approved"))).orderBy(desc(marketplaceFavorites.createdAt));
+}
+
+export async function addMarketplaceFavorite(input: { userId: number; listingId: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const listing = await db.select({ id: marketplaceListings.id }).from(marketplaceListings).where(and(eq(marketplaceListings.id, input.listingId), eq(marketplaceListings.status, "approved"))).limit(1);
+  if (!listing[0]) throw new Error("Listing is unavailable");
+  const existing = await db.select({ id: marketplaceFavorites.id }).from(marketplaceFavorites).where(and(eq(marketplaceFavorites.userId, input.userId), eq(marketplaceFavorites.listingId, input.listingId))).limit(1);
+  if (existing[0]) return { id: existing[0].id, saved: true as const };
+  const id = nanoid();
+  await db.insert(marketplaceFavorites).values({ id, userId: input.userId, listingId: input.listingId });
+  return { id, saved: true as const };
+}
+
+export async function removeMarketplaceFavorite(input: { userId: number; listingId: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  await db.delete(marketplaceFavorites).where(and(eq(marketplaceFavorites.userId, input.userId), eq(marketplaceFavorites.listingId, input.listingId)));
+  return { success: true };
 }
 
 export async function getMarketplaceEligibility(userId: number) {

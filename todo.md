@@ -158,3 +158,5 @@
 - [x] Replace technical Fast Check validation errors with immediate concise Khmer input guidance before any tracking request is sent.
 - [x] Replace the Account status action with Ticket access and display real order-status logs within expandable purchase history.
 - [x] Verify and push all remaining validated ZURS STORE source changes and deployment-safe asset references to GitHub main.
+- [x] Remove Marketplace explanatory cards from the purchase-first screen and relocate the guidance to Account settings.
+- [x] Add private saved marketplace favorites with add/remove controls and an Account entry point next to Ticket.

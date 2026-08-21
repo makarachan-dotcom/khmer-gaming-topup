@@ -158,6 +158,13 @@ export const marketplaceListings = mysqlTable("marketplace_listings", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => [index("marketplace_status_idx").on(table.status), index("marketplace_game_idx").on(table.game), index("marketplace_seller_idx").on(table.sellerUserId)]);
 
+export const marketplaceFavorites = mysqlTable("marketplace_favorites", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  userId: int("userId").notNull(),
+  listingId: varchar("listingId", { length: 64 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [uniqueIndex("marketplace_favorites_user_listing_unique").on(table.userId, table.listingId), index("marketplace_favorites_user_idx").on(table.userId), index("marketplace_favorites_listing_idx").on(table.listingId)]);
+
 export const marketplaceVerifications = mysqlTable("marketplace_verifications", {
   id: varchar("id", { length: 64 }).primaryKey(),
   userId: int("userId").notNull(),

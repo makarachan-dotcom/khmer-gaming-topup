@@ -1,0 +1,9 @@
+import { useAuth } from "@/_core/hooks/useAuth";
+import StorefrontLayout from "@/components/StorefrontLayout";
+import { Link } from "wouter";
+
+export default function AccountSettings() {
+  const { user } = useAuth();
+  return <StorefrontLayout><main className="container py-6 sm:py-10"><section className="mx-auto max-w-3xl"><p className="text-[10px] font-bold tracking-[0.16em] text-indigo-700">ACCOUNT SETTINGS</p><h1 className="mt-2 font-display text-2xl font-bold text-slate-950 sm:text-4xl">ការកំណត់ និងព័ត៌មានទីផ្សារ</h1><p className="mt-2 text-xs leading-6 text-slate-600 sm:text-sm">ព័ត៌មានណែនាំអំពីការប្រើប្រាស់ទីផ្សារ ត្រូវបានរក្សាទុកនៅទីនេះ ដើម្បីទុកកន្លែងសំខាន់សម្រាប់បញ្ជីគណនីនៅទំព័រទីផ្សារ។</p><div className="mt-5 grid gap-3"><Info title="ដាក់លក់គណនី" copy="បំពេញព័ត៌មានគណនី តម្លៃ និងរូបភាពឲ្យច្បាស់លាស់។ ការផ្សាយត្រូវពិនិត្យមុនបង្ហាញជាសាធារណៈ។" /><Info title="ស្វែងរក និងរក្សាទុក" copy="អ្នកអាចស្វែងរកតាមឈ្មោះហ្គេម ឬប្រភេទការផ្សាយ ហើយចុចរូបបេះដូងដើម្បីរក្សាទុកគណនីដែលចង់ទិញ។" /><Info title="ទំនាក់ទំនងអ្នកលក់" copy="ពិនិត្យព័ត៌មានការផ្សាយជាមុន រួចទាក់ទងអ្នកលក់តាម Telegram ដែលបានបញ្ជាក់ក្នុងការផ្សាយ។" /></div>{user ? <div className="mt-5 flex gap-2"><Link href="/favorites" className="inline-flex h-10 items-center rounded-xl bg-slate-950 px-4 text-xs font-bold text-white">មើល Favorites</Link><Link href="/account" className="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-700">ត្រឡប់ទៅគណនី</Link></div> : null}</section></main></StorefrontLayout>;
+}
+function Info({ title, copy }: { title: string; copy: string }) { return <article className="rounded-2xl border border-slate-200 bg-white p-4"><h2 className="text-sm font-bold text-slate-900">{title}</h2><p className="mt-1 text-xs leading-6 text-slate-600">{copy}</p></article>; }

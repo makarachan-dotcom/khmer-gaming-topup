@@ -85,6 +85,13 @@
       "when": 1787312760909,
       "tag": "0011_sturdy_domino",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "5",
+      "when": 1787315664476,
+      "tag": "0012_soft_hulk",
+      "breakpoints": true
     }
   ]
 }
