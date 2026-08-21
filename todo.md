@@ -80,7 +80,7 @@
 - [x] Persist a server-resolved Cambodia country result from consented browser location and clearly show the hosted verification status.
 - [x] Compress Home, Top-up, and Marketplace information into click-to-expand, privacy-conscious customer surfaces.
 - [x] Add Khmer-first Privacy Policy and Terms of Service pages with clear links across public storefront pages.
-- [ ] Send a branded ZURS STORE welcome email after an email account is connected, using a configured transactional-email sender.
+- [x] Send a branded ZURS STORE welcome email after an email account is connected, using a configured transactional-email sender.
 - [x] Add the owner Gmail account as an approved OAuth test user, or publish the consent screen, before authorizing the restricted Gmail sender scope.
 - [x] Rewrite the Home page hierarchy so customers immediately understand ZURS STORE sells game diamonds, top-ups, SMM services, and verified accounts.
 - [x] Remove internal-looking terms such as “listing preview” and “prepared for mobile” from customer-facing copy.
@@ -106,6 +106,7 @@
 - [x] Add automated callback URL tests for managed HTTPS hosts and local development.
 - [x] Remove the customer-facing Gmail Sender setup card and keep welcome email automatic after Google sign-in.
 - [ ] Diagnose and fix Google sign-in failure on the zurs.vercel.app deployment.
+- [ ] Await owner-led completion of the live zurs.vercel.app Google authorization to confirm the final session redirect.
 - [x] Show a gray Connect with Gmail action next to sign-in in the account panel without sending the user through /google-sign-in.
 - [x] Start Google connection directly from the Account page without navigating to the /google-sign-in route.
 - [x] Prepare a safe Appwrite Cloud migration plan and connection setup that preserves existing ZURS data and payment records.
