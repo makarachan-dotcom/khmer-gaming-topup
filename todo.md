@@ -100,15 +100,15 @@
 - [x] Reuse an existing verified-email user identity during Google sign-in instead of failing on the unique email constraint.
 - [x] Validate Google sign-in after the existing-email identity collision fix and preserve the verified account's original ZURS identity.
 - [x] Verify both registered Google callback URLs resolve correctly and remove reliance on obsolete `/google-sign-in` paths.
-- [ ] Verify Google OAuth end-to-end on zurs.vercel.app, confirming the callback returns to the intended ZURS page with a working signed-in session.
+- [x] Verify Google OAuth end-to-end on zurs.vercel.app, confirming the callback returns to the intended ZURS page with a working signed-in session.
 - [x] Reflect the active standalone Google session in the public header instead of always showing the sign-in action.
 - [x] Normalize stored user email addresses and reuse the exact OAuth callback URL across authorization and code exchange.
 - [x] Register and validate the zurs.vercel.app Google callback URL if that deployment remains active.
 - [x] Add automated callback URL tests for managed HTTPS hosts and local development.
 - [x] Remove the customer-facing Gmail Sender setup card and keep welcome email automatic after Google sign-in.
-- [ ] Diagnose and fix Google sign-in failure on the zurs.vercel.app deployment.
-- [ ] Repair the Vercel OAuth state-cookie mismatch that returns “Google authorization state expired or did not match” after Google approval.
-- [ ] Await owner-led completion of the live zurs.vercel.app Google authorization to confirm the final session redirect.
+- [x] Diagnose and fix Google sign-in failure on the zurs.vercel.app deployment.
+- [x] Repair the Vercel OAuth state-cookie mismatch that returns “Google authorization state expired or did not match” after Google approval.
+- [x] Await owner-led completion of the live zurs.vercel.app Google authorization to confirm the final session redirect.
 - [x] Add a clear logout action to the authenticated Account dashboard.
 - [x] Show authenticated purchase history and payment transaction history in a clean mobile-first Account dashboard.
 - [x] Ensure chanmakara672@gmail.com always resolves to the ZURS STORE admin role after Google sign-in, including Appwrite-backed sessions.
@@ -127,5 +127,5 @@
 - [ ] Add provider-synchronized creation controls for new authorized products without permitting manual fake-product entry.
 - [x] Add owner-authorized admin role grants and revocations with confirmation, audit records, and a self-lockout safeguard.
 - [x] Replace generic decorative motion with a restrained, professional animated-icon system that respects reduced-motion preferences.
-- [ ] Verify logout end-to-end on both public deployments, confirming the Account page returns to signed-out state.
+- [x] Verify logout end-to-end on both public deployments, confirming the Account page returns to signed-out state.
 - [x] Add provider-authorization source controls that block activation or pricing changes for legacy/default catalog records.
