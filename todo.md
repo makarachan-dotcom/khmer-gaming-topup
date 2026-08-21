@@ -91,19 +91,23 @@
 - [x] Refine the public color system for low visual fatigue while preserving Khmer text contrast and clear actions.
 - [x] Activate Google OAuth with the owner-provided client credentials and safe callback handling.
 - [x] Implement an owner-authorized Gmail welcome-email flow with the ZURS STORE logo and complete customer opt-in safeguards.
-- [ ] Verify Google OAuth completes successfully end-to-end on the live production host.
-- [ ] Force the managed production OAuth callback to the registered ZURS STORE public domain instead of the internal runtime host.
-- [ ] Verify the active production deployment source and route all `/api/*` requests to the current Express function bundle.
-- [ ] Bundle the Express application for Vercel serverless runtime so its deployed API function has no unresolved local module imports.
-- [ ] Replace unavailable managed-host authentication on Vercel with signed standalone Google sessions for protected ZURS STORE features.
-- [ ] Fix live Google OAuth state validation so the signed state survives the external authorization redirect without weakening CSRF protection.
+- [x] Verify Google OAuth completes successfully end-to-end on the live production host.
+- [x] Force the managed production OAuth callback to the registered ZURS STORE public domain instead of the internal runtime host.
+- [x] Verify the active production deployment source and route all `/api/*` requests to the current Express function bundle.
+- [x] Bundle the Express application for Vercel serverless runtime so its deployed API function has no unresolved local module imports.
+- [x] Replace unavailable managed-host authentication on Vercel with signed standalone Google sessions for protected ZURS STORE features.
+- [x] Fix live Google OAuth state validation so the signed state survives the external authorization redirect without weakening CSRF protection.
 - [x] Reuse an existing verified-email user identity during Google sign-in instead of failing on the unique email constraint.
-- [ ] Validate Google sign-in after the existing-email identity collision fix and preserve the verified account's original ZURS identity.
+- [x] Validate Google sign-in after the existing-email identity collision fix and preserve the verified account's original ZURS identity.
 - [ ] Verify all registered Google callback variants route to the correct ZURS account session flow and remove reliance on obsolete callback paths.
 - [x] Reflect the active standalone Google session in the public header instead of always showing the sign-in action.
 - [x] Normalize stored user email addresses and reuse the exact OAuth callback URL across authorization and code exchange.
-- [ ] Register and validate the zurs.vercel.app Google callback URL if that deployment remains active.
+- [x] Register and validate the zurs.vercel.app Google callback URL if that deployment remains active.
 - [x] Add automated callback URL tests for managed HTTPS hosts and local development.
-- [ ] Remove the customer-facing Gmail Sender setup card and keep welcome email automatic after Google sign-in.
+- [x] Remove the customer-facing Gmail Sender setup card and keep welcome email automatic after Google sign-in.
 - [ ] Diagnose and fix Google sign-in failure on the zurs.vercel.app deployment.
-- [ ] Show a disabled gray Connect with Gmail indicator in the account header while retaining the sign-in control.
+- [x] Show a gray Connect with Gmail action next to sign-in in the account panel without sending the user through /google-sign-in.
+- [x] Start Google connection directly from the Account page without navigating to the /google-sign-in route.
+- [x] Prepare a safe Appwrite Cloud migration plan and connection setup that preserves existing ZURS data and payment records.
+- [x] Configure the supplied Appwrite Cloud project with server-only credentials and least-privilege access before migration.
+- [ ] Audit and document the exact Appwrite API key scopes before enabling any Appwrite application reads or writes.
