@@ -129,3 +129,5 @@
 - [x] Replace generic decorative motion with a restrained, professional animated-icon system that respects reduced-motion preferences.
 - [x] Verify logout end-to-end on both public deployments, confirming the Account page returns to signed-out state.
 - [x] Add provider-authorization source controls that block activation or pricing changes for legacy/default catalog records.
+- [ ] Diagnose and repair the live Vercel OAuth completion failure that now returns “Google sign-in could not be completed.”
+- [ ] Replace remaining static decorative accents with visible, professionally integrated third-party animated icons while honoring license, performance, and reduced-motion requirements.

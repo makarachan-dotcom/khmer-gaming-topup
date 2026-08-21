@@ -23,6 +23,10 @@ function asDate(value: unknown) { return value ? new Date(String(value)) : new D
 
 export function isAppwriteStoreConfigured() { return Boolean(config()); }
 
+export function shouldRetryAppwriteCreateAsUpdate(error: unknown) {
+  return error instanceof Error && error.message.includes("HTTP 409");
+}
+
 async function request(method: string, path: string, body?: unknown) {
   const current = config();
   if (!current) return null;
@@ -106,7 +110,14 @@ export async function upsertAppwriteUser(input: InsertUser) {
   const body = { data: { sourceTable: "users", sourceId, payload: JSON.stringify(user), sourceUpdatedAt: user.updatedAt.toISOString() } };
   const path = `/databases/${databaseId()}/collections/${collectionId}/documents/${documentId(`users:${sourceId}`)}`;
   if (existing) await request("PUT", path, body);
-  else await request("POST", `/databases/${databaseId()}/collections/${collectionId}/documents`, { documentId: documentId(`users:${sourceId}`), ...body });
+  else {
+    try {
+      await request("POST", `/databases/${databaseId()}/collections/${collectionId}/documents`, { documentId: documentId(`users:${sourceId}`), ...body });
+    } catch (error) {
+      if (!shouldRetryAppwriteCreateAsUpdate(error)) throw error;
+      await request("PUT", path, body);
+    }
+  }
   return user;
 }
 

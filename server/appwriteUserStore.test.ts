@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getAppwriteCustomerOrders, getAppwriteCustomerPaymentHistory, isAppwriteStoreConfigured } from "./appwriteStore";
+import { getAppwriteCustomerOrders, getAppwriteCustomerPaymentHistory, isAppwriteStoreConfigured, shouldRetryAppwriteCreateAsUpdate } from "./appwriteStore";
 import { isSingleAdminEmail } from "./storefrontDomain";
 
 describe("Appwrite user store", () => {
@@ -14,5 +14,10 @@ describe("Appwrite user store", () => {
 
   it("recognizes the owner email as the single ZURS STORE administrator", () => {
     expect(isSingleAdminEmail("ChanMakara672@gmail.com")).toBe(true);
+  });
+
+  it("retries an Appwrite duplicate-document create as an idempotent update", () => {
+    expect(shouldRetryAppwriteCreateAsUpdate(new Error("Appwrite user store request failed with HTTP 409"))).toBe(true);
+    expect(shouldRetryAppwriteCreateAsUpdate(new Error("Appwrite user store request failed with HTTP 500"))).toBe(false);
   });
 });
