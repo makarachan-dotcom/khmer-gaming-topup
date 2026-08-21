@@ -150,3 +150,4 @@
 - [x] Fix the LottieFlow outline loader so the owner-provided animation is visibly rendered rather than falling back to a generic spinner.
 - [x] Remove the duplicate Top-up destination from the mobile tab bar while preserving homepage access to the Top-up flow.
 - [x] Show all provider-backed Top-up games and the complete selection flow on the homepage, remove the “view all games” action, and remove the standalone /topup route.
+- [x] Verify and synchronize active animation, emoji, and icon assets to the connected GitHub repository for the Vercel deployment.

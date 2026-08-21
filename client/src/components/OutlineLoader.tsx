@@ -1,7 +1,7 @@
 import { LoaderCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-const outlineLoaderUrl = "/manus-storage/zurs-outline-loader_8cf4a479.json";
+const outlineLoaderUrl = "https://khmergame-girzfgts.manus.space/manus-storage/zurs-outline-loader_3529c2fb.json";
 type LottieInstance = { destroy: () => void };
 type LottieRenderer = { loadAnimation: (config: { container: HTMLElement; renderer: "svg"; loop: boolean; autoplay: boolean; animationData: unknown }) => LottieInstance };
 
