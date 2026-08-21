@@ -23,6 +23,10 @@ export function shouldQueueWelcomeEmail(input: { hasExistingDelivery: boolean; h
   return !input.hasExistingDelivery && input.hasAuthorizedSender;
 }
 
+export function getGoogleCallbackFailureReference(stage: "token" | "profile" | "user" | "session" | "welcome") {
+  return `GOOGLE_${stage.toUpperCase()}_FAILED`;
+}
+
 export function getGoogleOAuthStatus(env = process.env) {
   const configured = Boolean(env.GOOGLE_OAUTH_CLIENT_ID && env.GOOGLE_OAUTH_CLIENT_SECRET);
   return { configured, callbackPath: "/api/auth/google/callback", reason: configured ? null : "Google OAuth credentials have not been configured yet." } as const;
@@ -73,7 +77,7 @@ async function sendWelcomeIfEligible(user: { id: number; email: string | null; n
 
 export function registerGoogleAuthRoutes(app: Express) {
   app.get("/api/auth/google/status", async (req, res) => { const sender = await db.getGmailSenderConnection(); res.json({ ...getGoogleOAuthStatus(), callbackUrl: getGoogleCallbackUrl(req), gmailSenderConnected: Boolean(sender), senderEmail: sender?.senderEmail ?? null }); });
-  app.get("/api/auth/google/diagnostic", (req, res) => { res.setHeader("Cache-Control", "no-store"); res.json({ routeVersion: "oauth-callback-v2", callbackUrl: getGoogleCallbackUrl(req) }); });
+  app.get("/api/auth/google/diagnostic", (req, res) => { res.setHeader("Cache-Control", "no-store"); res.json({ routeVersion: "oauth-callback-v3", callbackUrl: getGoogleCallbackUrl(req), databaseConfigured: Boolean(process.env.DATABASE_URL) }); });
   app.get("/api/auth/google", (req, res) => redirectToGoogle(req, res, "sign_in", typeof req.query.returnTo === "string" ? req.query.returnTo : "/account"));
   app.get("/api/auth/google/sender", async (req, res) => { const openId = await readZursSession(req); const user = openId ? await db.getUserByOpenId(openId) : null; if (!user || !isSingleAdminEmail(user.email)) return res.status(401).json({ error: "Sign in as the designated administrator before authorizing Gmail." }); return redirectToGoogle(req, res, "gmail_sender", "/account?gmail=connected"); });
   app.get("/api/auth/google/callback", async (req, res) => { const saved = readState(req); res.clearCookie(STATE_COOKIE, getZursSessionCookieOptions(req)); if (!saved || saved.state !== req.query.state || typeof req.query.code !== "string") return res.status(400).send("Google authorization state expired or did not match. Please try again."); try { const token = await exchangeCode(saved.callbackUrl, req.query.code); const profile = await fetchProfile(token.access_token!); const email = profile.email.toLowerCase(); if (saved.intent === "gmail_sender") { const openId = await readZursSession(req); const currentUser = openId ? await db.getUserByOpenId(openId) : null; if (!currentUser || !isSingleAdminEmail(currentUser.email) || email !== "chanmakara672@gmail.com") return res.status(403).send("The Gmail sender must be authorized by the designated administrator account."); if (!token.refresh_token) return res.status(400).send("Google did not return a refresh token. Remove the app from your Google account and authorize Gmail again."); await db.upsertGmailSenderConnection({ ownerUserId: currentUser.id, senderEmail: email, encryptedRefreshToken: encryptRefreshToken(token.refresh_token) }); return res.redirect(saved.returnPath); }

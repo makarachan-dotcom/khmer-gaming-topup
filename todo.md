@@ -83,9 +83,9 @@
 - [ ] Send a branded ZURS STORE welcome email after an email account is connected, using a configured transactional-email sender.
 - [x] Add the owner Gmail account as an approved OAuth test user, or publish the consent screen, before authorizing the restricted Gmail sender scope.
 - [x] Rewrite the Home page hierarchy so customers immediately understand ZURS STORE sells game diamonds, top-ups, SMM services, and verified accounts.
-- [ ] Remove internal-looking terms such as “listing preview” and “prepared for mobile” from customer-facing copy.
+- [x] Remove internal-looking terms such as “listing preview” and “prepared for mobile” from customer-facing copy.
 - [x] Move the ZURS STORE trust label beneath the brand block and center the Privacy Policy and Terms of Service links in the footer.
-- [ ] Move the ZURS STORE trust label beneath the brand block and center the Privacy Policy and Terms of Service links in the footer.
+- [x] Move the ZURS STORE trust label beneath the brand block and center the Privacy Policy and Terms of Service links in the footer.
 - [x] Show official game logo and game name prominently for each supported provider game selection.
 - [x] Keep Top-up and SMM service choices fully visible rather than collapsed into click-to-expand content.
 - [x] Refine the public color system for low visual fatigue while preserving Khmer text contrast and clear actions.
@@ -104,3 +104,6 @@
 - [x] Normalize stored user email addresses and reuse the exact OAuth callback URL across authorization and code exchange.
 - [ ] Register and validate the zurs.vercel.app Google callback URL if that deployment remains active.
 - [x] Add automated callback URL tests for managed HTTPS hosts and local development.
+- [ ] Remove the customer-facing Gmail Sender setup card and keep welcome email automatic after Google sign-in.
+- [ ] Diagnose and fix Google sign-in failure on the zurs.vercel.app deployment.
+- [ ] Show a disabled gray Connect with Gmail indicator in the account header while retaining the sign-in control.
