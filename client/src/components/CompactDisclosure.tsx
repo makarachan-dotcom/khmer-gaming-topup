@@ -1,5 +1,5 @@
 import { ChevronDown } from "lucide-react";
-import { ReactNode, useState } from "react";
+import React, { ReactNode, useState } from "react";
 import { cn } from "@/lib/utils";
 
 export function CompactDisclosure({ label, summary, children, className }: { label: string; summary: string; children: ReactNode; className?: string }) {

@@ -1,6 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import StorefrontLayout from "@/components/StorefrontLayout";
 import { AnimatedGlyph } from "@/components/AnimatedGlyph";
+import { CompactDisclosure } from "@/components/CompactDisclosure";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { getAccountDashboardState } from "@/lib/accountDashboardState";
 import { trpc } from "@/lib/trpc";
@@ -23,10 +24,12 @@ export default function Account() {
   const dashboardState = getAccountDashboardState(user);
   const onboarding = dashboardState.needsDisplayName ? <OnboardingCard name={name} onNameChange={setName} pending={saveName.isPending} error={saveName.error?.message} onSave={() => save(false)} onSkip={() => save(true)} /> : null;
 
-  return <StorefrontLayout><LoadingOverlay open={loading} label="កំពុងរៀបចំគណនី…" /><main className="container py-6 sm:py-10"><section className="glass-panel relative mx-auto w-full max-w-4xl overflow-hidden rounded-[1.5rem] p-5 sm:p-9"><img src={sparklesEmoji} alt="" aria-hidden="true" className="emoji-asset float-emoji absolute right-8 top-7 h-7 w-7" /><div className="relative"><p className="text-[10px] font-bold tracking-[0.16em] text-indigo-700">MY ZURS</p><h1 className="mt-2 font-display text-2xl font-bold leading-tight text-slate-950 sm:text-4xl">គណនីរបស់អ្នក</h1>{loading ? <LoadingPanel /> : !user ? <SignedOutCard /> : <MemberDashboard name={user.displayName ?? "ZURS Member"} isAdmin={dashboardState.isAdmin} onLogout={logout} logoutPending={loading} onboarding={onboarding} orders={orders.data ?? []} ordersLoading={orders.isLoading} transactions={transactions.data ?? []} transactionsLoading={transactions.isLoading} />}</div></section></main></StorefrontLayout>;
+  return <StorefrontLayout><LoadingOverlay open={loading} label="កំពុងរៀបចំគណនី…" /><main className="container py-6 sm:py-10"><section className="glass-panel relative mx-auto w-full max-w-4xl overflow-hidden rounded-[1.5rem] p-5 sm:p-9"><img src={sparklesEmoji} alt="" aria-hidden="true" className="emoji-asset float-emoji absolute right-8 top-7 h-7 w-7" /><div className="relative"><p className="text-[10px] font-bold tracking-[0.16em] text-indigo-700">ZURS MEMBER</p><h1 className="mt-2 font-display text-2xl font-bold leading-tight text-slate-950 sm:text-4xl">គណនីរបស់អ្នក</h1>{loading ? <LoadingPanel /> : !user ? <SignedOutCard /> : <MemberDashboard name={user.displayName ?? "ZURS Member"} isAdmin={dashboardState.isAdmin} onLogout={logout} logoutPending={loading} onboarding={onboarding} orders={orders.data ?? []} ordersLoading={orders.isLoading} transactions={transactions.data ?? []} transactionsLoading={transactions.isLoading} />}</div></section><AccountHelp /></main></StorefrontLayout>;
 }
 
 function LoadingPanel() { return <div className="mt-5 flex items-center gap-2 rounded-xl bg-white/70 p-4 text-xs text-slate-600"><AnimatedGlyph name="activity" size={22} color="#4f46e5" />កំពុងរៀបចំគណនី…</div>; }
+
+function AccountHelp() { return <section className="mx-auto mt-5 max-w-4xl"><div className="mb-3"><p className="text-[10px] font-bold tracking-[0.16em] text-indigo-700">ZURS HELP</p><h2 className="mt-1 font-display text-xl font-bold text-slate-950">សំណួរដែលសួរញឹកញាប់</h2><p className="mt-1 text-xs leading-5 text-slate-500">ព័ត៌មានសំខាន់សម្រាប់ការប្រើប្រាស់សេវា ZURS STORE។</p></div><div className="grid gap-3"><CompactDisclosure label="របៀបទិញពេជ្យ និង Top-up" summary="មើលជំហានជ្រើសហ្គេម និងបំពេញព័ត៌មានគណនី"><p>ចូលទៅកាន់ទំព័រ <strong>បញ្ចូលពេជ្យ / Top-up</strong> ជ្រើសឈ្មោះហ្គេមរបស់អ្នកជាមុនសិន។ បន្ទាប់មកបំពេញព័ត៌មានគណនី និងជ្រើសកញ្ចប់សេវាដែលមានសម្រាប់ហ្គេមនោះ។</p></CompactDisclosure><CompactDisclosure label="សេវាអ្វីខ្លះនៅ ZURS STORE?" summary="ពេជ្យហ្គេម, Top-up, សេវាបណ្តាញសង្គម និងទីផ្សារគណនី"><p>យើងផ្តល់សេវាបញ្ចូលពេជ្យហ្គេម សេវាបណ្តាញសង្គម និងវេទិកាទិញ/លក់គណនីហ្គេម។ ព័ត៌មានសេវា និងតម្លៃបង្ហាញតាមបញ្ជីសេវារបស់ហាង។</p></CompactDisclosure><CompactDisclosure label="ទីផ្សារគណនីមានសុវត្ថិភាពដែរឬទេ?" summary="ការផ្សាយត្រូវពិនិត្យមុនបង្ហាញជាសាធារណៈ"><p>អ្នកលក់ត្រូវបំពេញការផ្ទៀងផ្ទាត់មុនដាក់ការផ្សាយ។ សូមពិនិត្យព័ត៌មានលម្អិត និងរូបភាពគណនីឲ្យបានច្បាស់លាស់ មុនធ្វើការទំនាក់ទំនង ឬសម្រេចចិត្ត។</p></CompactDisclosure></div></section>; }
 
 function SignedOutCard() {
   const googleConnectUrl = "/api/auth/google?returnTo=%2Faccount";
