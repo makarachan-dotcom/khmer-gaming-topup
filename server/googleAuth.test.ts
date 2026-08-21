@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getGoogleCallbackUrl, getGoogleOAuthStatus, resolveGoogleUserOpenId } from "./googleAuth";
+import { getGoogleCallbackUrl, getGoogleOAuthStatus, resolveGoogleUserOpenId, shouldQueueWelcomeEmail } from "./googleAuth";
 
 describe("Google OAuth staging", () => {
   it("stays inactive without user-owned Google OAuth credentials", () => {
@@ -23,5 +23,11 @@ describe("Google OAuth staging", () => {
   it("keeps an existing verified-email account identity when Google is connected", () => {
     expect(resolveGoogleUserOpenId({ openId: "existing-account" }, "google-subject")).toBe("existing-account");
     expect(resolveGoogleUserOpenId(undefined, "google-subject")).toBe("google:google-subject");
+  });
+
+  it("queues one branded welcome email when a sender is authorized and no delivery exists", () => {
+    expect(shouldQueueWelcomeEmail({ hasExistingDelivery: false, hasAuthorizedSender: true })).toBe(true);
+    expect(shouldQueueWelcomeEmail({ hasExistingDelivery: true, hasAuthorizedSender: true })).toBe(false);
+    expect(shouldQueueWelcomeEmail({ hasExistingDelivery: false, hasAuthorizedSender: false })).toBe(false);
   });
 });

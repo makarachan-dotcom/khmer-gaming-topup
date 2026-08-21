@@ -81,13 +81,16 @@
 - [x] Compress Home, Top-up, and Marketplace information into click-to-expand, privacy-conscious customer surfaces.
 - [x] Add Khmer-first Privacy Policy and Terms of Service pages with clear links across public storefront pages.
 - [ ] Send a branded ZURS STORE welcome email after an email account is connected, using a configured transactional-email sender.
-- [ ] Add the owner Gmail account as an approved OAuth test user, or publish the consent screen, before authorizing the restricted Gmail sender scope.
+- [x] Add the owner Gmail account as an approved OAuth test user, or publish the consent screen, before authorizing the restricted Gmail sender scope.
 - [x] Rewrite the Home page hierarchy so customers immediately understand ZURS STORE sells game diamonds, top-ups, SMM services, and verified accounts.
+- [ ] Remove internal-looking terms such as “listing preview” and “prepared for mobile” from customer-facing copy.
+- [x] Move the ZURS STORE trust label beneath the brand block and center the Privacy Policy and Terms of Service links in the footer.
+- [ ] Move the ZURS STORE trust label beneath the brand block and center the Privacy Policy and Terms of Service links in the footer.
 - [x] Show official game logo and game name prominently for each supported provider game selection.
 - [x] Keep Top-up and SMM service choices fully visible rather than collapsed into click-to-expand content.
 - [x] Refine the public color system for low visual fatigue while preserving Khmer text contrast and clear actions.
 - [x] Activate Google OAuth with the owner-provided client credentials and safe callback handling.
-- [ ] Implement an owner-authorized Gmail welcome-email flow with the ZURS STORE logo and complete customer opt-in safeguards.
+- [x] Implement an owner-authorized Gmail welcome-email flow with the ZURS STORE logo and complete customer opt-in safeguards.
 - [ ] Verify Google OAuth completes successfully end-to-end on the live production host.
 - [ ] Force the managed production OAuth callback to the registered ZURS STORE public domain instead of the internal runtime host.
 - [ ] Verify the active production deployment source and route all `/api/*` requests to the current Express function bundle.

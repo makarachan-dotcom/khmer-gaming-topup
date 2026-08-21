@@ -19,6 +19,10 @@ export function resolveGoogleUserOpenId(existing: { openId: string } | undefined
   return existing?.openId ?? `google:${googleProfileId}`;
 }
 
+export function shouldQueueWelcomeEmail(input: { hasExistingDelivery: boolean; hasAuthorizedSender: boolean }) {
+  return !input.hasExistingDelivery && input.hasAuthorizedSender;
+}
+
 export function getGoogleOAuthStatus(env = process.env) {
   const configured = Boolean(env.GOOGLE_OAUTH_CLIENT_ID && env.GOOGLE_OAUTH_CLIENT_SECRET);
   return { configured, callbackPath: "/api/auth/google/callback", reason: configured ? null : "Google OAuth credentials have not been configured yet." } as const;
@@ -63,7 +67,7 @@ async function fetchProfile(accessToken: string) {
 async function sendWelcomeIfEligible(user: { id: number; email: string | null; name: string | null }) {
   if (!user.email) return;
   const existing = await db.getWelcomeEmailDelivery(user.id); const sender = await db.getGmailSenderConnection();
-  if (existing || !sender) return;
+  if (!shouldQueueWelcomeEmail({ hasExistingDelivery: Boolean(existing), hasAuthorizedSender: Boolean(sender) }) || !sender) return;
   try { const providerMessageId = await sendGmailWelcomeEmail({ refreshToken: decryptRefreshToken(sender.encryptedRefreshToken), senderEmail: sender.senderEmail, recipientEmail: user.email, recipientName: user.name ?? "ZURS Member" }); await db.recordWelcomeEmailDelivery({ recipientUserId: user.id, recipientEmail: user.email, senderConnectionId: sender.id, providerMessageId, status: "sent" }); } catch (error) { console.error("[Gmail] Welcome email failed", error); await db.recordWelcomeEmailDelivery({ recipientUserId: user.id, recipientEmail: user.email, senderConnectionId: sender.id, status: "failed" }); }
 }
 
@@ -73,6 +77,6 @@ export function registerGoogleAuthRoutes(app: Express) {
   app.get("/api/auth/google", (req, res) => redirectToGoogle(req, res, "sign_in", typeof req.query.returnTo === "string" ? req.query.returnTo : "/account"));
   app.get("/api/auth/google/sender", async (req, res) => { const openId = await readZursSession(req); const user = openId ? await db.getUserByOpenId(openId) : null; if (!user || !isSingleAdminEmail(user.email)) return res.status(401).json({ error: "Sign in as the designated administrator before authorizing Gmail." }); return redirectToGoogle(req, res, "gmail_sender", "/account?gmail=connected"); });
   app.get("/api/auth/google/callback", async (req, res) => { const saved = readState(req); res.clearCookie(STATE_COOKIE, getZursSessionCookieOptions(req)); if (!saved || saved.state !== req.query.state || typeof req.query.code !== "string") return res.status(400).send("Google authorization state expired or did not match. Please try again."); try { const token = await exchangeCode(saved.callbackUrl, req.query.code); const profile = await fetchProfile(token.access_token!); const email = profile.email.toLowerCase(); if (saved.intent === "gmail_sender") { const openId = await readZursSession(req); const currentUser = openId ? await db.getUserByOpenId(openId) : null; if (!currentUser || !isSingleAdminEmail(currentUser.email) || email !== "chanmakara672@gmail.com") return res.status(403).send("The Gmail sender must be authorized by the designated administrator account."); if (!token.refresh_token) return res.status(400).send("Google did not return a refresh token. Remove the app from your Google account and authorize Gmail again."); await db.upsertGmailSenderConnection({ ownerUserId: currentUser.id, senderEmail: email, encryptedRefreshToken: encryptRefreshToken(token.refresh_token) }); return res.redirect(saved.returnPath); }
-    const existingByEmail = await db.getUserByEmail(email); const openId = resolveGoogleUserOpenId(existingByEmail, profile.id); const existing = existingByEmail ?? await db.getUserByOpenId(openId); await db.upsertUser({ openId, name: profile.name ?? null, email, loginMethod: "google", lastSignedIn: new Date() }); const user = await db.getUserByOpenId(openId); if (!user) throw new Error("Unable to create Google user session"); const session = await createZursSession(openId); res.cookie(ZURS_SESSION_COOKIE, session, getZursSessionCookieOptions(req)); if (!existing) await sendWelcomeIfEligible(user); return res.redirect(saved.returnPath);
+    const existingByEmail = await db.getUserByEmail(email); const openId = resolveGoogleUserOpenId(existingByEmail, profile.id); await db.upsertUser({ openId, name: profile.name ?? null, email, loginMethod: "google", lastSignedIn: new Date() }); const user = await db.getUserByOpenId(openId); if (!user) throw new Error("Unable to create Google user session"); const session = await createZursSession(openId); res.cookie(ZURS_SESSION_COOKIE, session, getZursSessionCookieOptions(req)); await sendWelcomeIfEligible(user); return res.redirect(saved.returnPath);
   } catch (error) { const detail = error instanceof Error ? error.message : "unknown error"; console.error("[Google OAuth] callback failed", detail); return res.status(500).send("Google sign-in could not be completed. Please try again."); } });
 }

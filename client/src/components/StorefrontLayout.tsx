@@ -52,9 +52,10 @@ export default function StorefrontLayout({ children }: { children: ReactNode }) 
       {children}
 
       <footer className="mt-16 border-t border-white/80 bg-white/70 py-8 backdrop-blur-xl">
-        <div className="container flex flex-col justify-between gap-5 text-xs text-slate-500 sm:flex-row sm:items-center">
-          <div className="flex items-center gap-3"><img src={logoUrl} alt="ZURS STORE logo" className="h-9 w-9 rounded-xl object-cover" /><div><p className="font-display font-extrabold text-slate-900">ZURS STORE</p><p className="mt-1 khmer-body">សេវាកម្មហ្គេម និងឌីជីថល សម្រាប់អ្នកលេងកម្ពុជា។</p><p className="mt-1 text-[10px] font-semibold text-slate-500">© ZURS STORE · by ZURS STORE</p></div></div>
-          <div className="flex flex-col items-start gap-2 sm:items-end"><div className="flex items-center gap-2 rounded-lg bg-emerald-50/85 px-3 py-2 text-emerald-800"><ShieldCheck className="h-4 w-4" /><span className="khmer-tight">សេវាកម្មរហ័ស និងមានទំនុកចិត្ត</span></div><div className="flex items-center gap-3 text-[11px] font-semibold text-slate-500"><Link href="/privacy" className="hover:text-indigo-700">Privacy Policy</Link><Link href="/terms" className="hover:text-indigo-700">Terms of Service</Link></div></div>
+        <div className="container grid gap-5 text-xs text-slate-500 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
+          <div className="flex items-center gap-3"><img src={logoUrl} alt="ZURS STORE logo" className="h-9 w-9 rounded-xl object-cover" /><div><p className="font-display font-extrabold text-slate-900">ZURS STORE</p><p className="mt-1 khmer-body">សេវាកម្មហ្គេម និងឌីជីថល សម្រាប់អ្នកលេងកម្ពុជា។</p><p className="mt-1 text-[10px] font-semibold text-slate-500">© ZURS STORE · by ZURS STORE</p><div className="mt-2 inline-flex items-center gap-2 rounded-lg bg-emerald-50/85 px-3 py-2 text-emerald-800"><ShieldCheck className="h-4 w-4" /><span className="khmer-tight">សេវាកម្មរហ័ស និងមានទំនុកចិត្ត</span></div></div></div>
+          <div className="flex justify-center gap-4 text-[11px] font-semibold text-slate-500"><Link href="/privacy" className="hover:text-indigo-700">Privacy Policy</Link><Link href="/terms" className="hover:text-indigo-700">Terms of Service</Link></div>
+          <div className="hidden sm:block" />
         </div>
       </footer>
 
