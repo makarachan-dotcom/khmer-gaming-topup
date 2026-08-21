@@ -1,8 +1,9 @@
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { AnimatedGlyph } from "@/components/AnimatedGlyph";
+import { animate } from "animejs";
 import { BarChart3, BadgeCheck, Crown, Gamepad2, House, LogIn, ShieldCheck, Store, UserRound } from "lucide-react";
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
 
 const logoUrl = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/kBXeVXEnNVEuNZKS.jpg";
@@ -14,11 +15,11 @@ const navigation = [
 ];
 
 const mobileNavigation = [
-  { href: "/", label: "ទំព័រដើម", icon: House },
-  { href: "/topup", label: "Top-up", icon: Gamepad2 },
-  { href: "/smm", label: "SMM", icon: BarChart3 },
-  { href: "/marketplace", label: "ទីផ្សារ", icon: Store },
-  { href: "/account", label: "គណនី", icon: UserRound },
+  { href: "/", label: "ទំព័រដើម", icon: House, animation: "home" as const },
+  { href: "/topup", label: "Top-up", icon: Gamepad2, animation: "next" as const },
+  { href: "/smm", label: "SMM", icon: BarChart3, animation: "activity" as const },
+  { href: "/marketplace", label: "ទីផ្សារ", icon: Store, animation: "notify" as const },
+  { href: "/account", label: "គណនី", icon: UserRound, animation: "success" as const },
 ];
 
 export default function StorefrontLayout({ children }: { children: ReactNode }) {
@@ -27,9 +28,17 @@ export default function StorefrontLayout({ children }: { children: ReactNode }) 
   const accountLabel = user?.displayName || user?.name || "គណនីខ្ញុំ";
   const isOwnerAdmin = user?.role === "admin" || user?.email?.trim().toLowerCase() === "chanmakara672@gmail.com";
   const googleSignInHref = `/api/auth/google?returnTo=${encodeURIComponent(location)}`;
+  const shellRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const target = shellRef.current?.querySelector("main");
+    if (!target) return;
+    animate(target, { opacity: [0.82, 1], translateY: [7, 0], duration: 360, ease: "outExpo" });
+  }, [location]);
 
   return (
-    <div className="min-h-screen pb-24 sm:pb-0">
+    <div ref={shellRef} className="min-h-screen pb-24 sm:pb-0">
       <header className="sticky top-0 z-50 border-b border-white/75 bg-white/68 shadow-[0_8px_28px_oklch(0.35_0.08_265/0.06)] backdrop-blur-2xl">
         <div className="container flex h-15 items-center justify-between gap-3 sm:h-16">
           <Link href="/" className="flex min-w-0 shrink items-center gap-2.5" aria-label="ZURS STORE home">
@@ -47,7 +56,7 @@ export default function StorefrontLayout({ children }: { children: ReactNode }) 
           <div className="flex items-center gap-1.5 sm:gap-2">
             <Link href="/account" className="hidden h-9 max-w-48 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-slate-700 hover:bg-white/70 sm:inline-flex"><UserRound className="h-4 w-4" /><span className="truncate">{accountLabel}</span></Link>
             {isOwnerAdmin ? <Link href="/admin" className="hidden h-9 items-center gap-1.5 rounded-lg bg-amber-50 px-3 text-xs font-bold text-amber-800 hover:bg-amber-100 lg:inline-flex"><Crown className="h-3.5 w-3.5" />Admin</Link> : null}
-            {loading ? <span className="hidden h-9 items-center px-2 text-xs font-semibold text-slate-400 sm:inline-flex">កំពុងពិនិត្យ…</span> : user ? <button type="button" onClick={() => logout()} className="hidden h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-sm font-bold text-white hover:bg-slate-800 sm:inline-flex"><LogIn className="h-3.5 w-3.5" />ចេញពីគណនី</button> : <a href={googleSignInHref} className="hidden h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-sm font-bold text-white hover:bg-slate-800 sm:inline-flex"><LogIn className="h-3.5 w-3.5" />ចូលគណនី</a>}
+            {loading ? <span className="hidden h-9 items-center gap-1.5 px-2 text-xs font-semibold text-slate-400 sm:inline-flex"><AnimatedGlyph name="activity" size={18} color="#64748b" />កំពុងពិនិត្យ…</span> : user ? <button type="button" onClick={() => logout()} className="hidden h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-sm font-bold text-white hover:bg-slate-800 sm:inline-flex"><LogIn className="h-3.5 w-3.5" />ចេញពីគណនី</button> : <a href={googleSignInHref} className="hidden h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-sm font-bold text-white hover:bg-slate-800 sm:inline-flex"><LogIn className="h-3.5 w-3.5" />ចូលគណនី</a>}
             <div className="glass-status hidden h-8 items-center gap-1.5 rounded-full px-2.5 text-[10px] font-bold text-emerald-700 sm:flex"><AnimatedGlyph name="activity" size={18} color="#047857" />ZURS</div>
           </div>
         </div>
@@ -58,13 +67,13 @@ export default function StorefrontLayout({ children }: { children: ReactNode }) 
       <footer className="mt-16 border-t border-white/80 bg-white/70 py-8 backdrop-blur-xl">
         <div className="container grid gap-5 text-xs text-slate-500 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
           <div className="flex items-center gap-3"><img src={logoUrl} alt="ZURS STORE logo" className="h-9 w-9 rounded-xl object-cover" /><div><p className="font-display font-extrabold text-slate-900">ZURS STORE</p><p className="mt-1 khmer-body">សេវាកម្មហ្គេម និងឌីជីថល សម្រាប់អ្នកលេងកម្ពុជា។</p><p className="mt-1 text-[10px] font-semibold text-slate-500">© ZURS STORE · by ZURS STORE</p><div className="mt-2 inline-flex items-center gap-2 rounded-lg bg-emerald-50/85 px-3 py-2 text-emerald-800"><ShieldCheck className="h-4 w-4" /><span className="khmer-tight">សេវាកម្មរហ័ស និងមានទំនុកចិត្ត</span></div></div></div>
-          <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-[11px] font-semibold text-slate-500"><Link href="/privacy" className="hover:text-indigo-700">Privacy Policy</Link><Link href="/terms" className="hover:text-indigo-700">Terms of Service</Link><a href="https://useanimations.com/" target="_blank" rel="noreferrer" className="hover:text-indigo-700">Animation icons</a></div>
+          <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-[11px] font-semibold text-slate-500"><Link href="/privacy" className="hover:text-indigo-700">Privacy Policy</Link><Link href="/terms" className="hover:text-indigo-700">Terms of Service</Link></div>
           <div className="hidden sm:block" />
         </div>
       </footer>
 
       <nav className="liquid-tabbar fixed inset-x-2 bottom-2 z-40 grid grid-cols-5 gap-1 rounded-2xl p-1.5 sm:hidden" aria-label="Mobile primary navigation">
-        {mobileNavigation.map(({ href, label, icon: Icon }) => <Link key={href} href={href} className={cn("flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-[9px] font-bold transition-all", location === href ? "bg-slate-950 text-white shadow-lg shadow-indigo-900/20" : "text-slate-500 hover:bg-white/75 hover:text-indigo-700")}><Icon className="h-4 w-4" /><span className="truncate">{label}</span></Link>)}
+        {mobileNavigation.map(({ href, label, icon: Icon, animation }) => { const active = location === href; return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={cn("flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-[9px] font-bold transition-all", active ? "bg-slate-950 text-white shadow-lg shadow-indigo-900/20" : "text-slate-500 hover:bg-white/75 hover:text-indigo-700")}>{active ? <AnimatedGlyph name={animation} size={22} color="#ffffff" /> : <Icon className="h-4 w-4" />}<span className="truncate">{label}</span></Link>; })}
       </nav>
     </div>
   );

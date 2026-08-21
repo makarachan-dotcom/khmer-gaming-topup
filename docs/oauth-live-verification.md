@@ -8,3 +8,7 @@ The Vercel OAuth start response was confirmed to use `Cache-Control: private, no
 | `khmergame-girzfgts.manus.space` | Google OAuth initiated with the registered managed-host callback URL | Returned to `/account` with the owner account and ZURS Admin badge visible | Returned to the signed-out Account state with sign-in controls visible |
 
 No OAuth code, access token, refresh token, cookie value, or account credential is recorded in this document.
+
+## Follow-up verification — 2026-08-21
+
+After the production Appwrite conflict repair, a new Google OAuth attempt on `zurs.vercel.app` completed successfully and returned to `/account` with the ZURS Member identity, ZURS Admin badge, purchase history, and payment history present. This confirms that a pre-existing deterministic Appwrite document no longer blocks Google session creation.
