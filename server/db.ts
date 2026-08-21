@@ -8,6 +8,7 @@ import { getAppwriteCustomerOrders, getAppwriteCustomerPaymentHistory, getAppwri
 import { buildOrderNumber, isSingleAdminEmail } from "./storefrontDomain";
 import { validateAdminRoleChange } from "./adminRoles";
 import { buildEvidenceRetentionAuditReason, canApproveMarketplaceVerification, hasOnlyOwnedMarketplaceScreenshotKeys, type DisclosureRequestStatus, type FraudReportStatus } from "./marketplaceSafety";
+import { requireAutomaticPaymentReady } from "./paymentReadiness";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -129,6 +130,7 @@ export async function getAdminCatalog(): Promise<{ games: any[]; smm: any[] }> {
 }
 
 export async function createTopupOrder(input: { userId: number; packageId: string; playerId: string; zoneId?: string | null; quantity: number }) {
+  requireAutomaticPaymentReady();
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
   const result = await db.select({ game: gameProducts, package: gamePackages }).from(gamePackages).innerJoin(gameProducts, eq(gamePackages.productId, gameProducts.id)).where(and(eq(gamePackages.id, input.packageId), eq(gamePackages.isActive, true), eq(gameProducts.isActive, true))).limit(1);
@@ -142,6 +144,7 @@ export async function createTopupOrder(input: { userId: number; packageId: strin
 }
 
 export async function createSmmOrder(input: { userId: number; tierId: string; target: string }) {
+  requireAutomaticPaymentReady();
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
   const result = await db.select({ service: smmServices, tier: smmTiers }).from(smmTiers).innerJoin(smmServices, eq(smmTiers.serviceId, smmServices.id)).where(and(eq(smmTiers.id, input.tierId), eq(smmTiers.isActive, true), eq(smmServices.isActive, true))).limit(1);
@@ -165,6 +168,7 @@ export async function getCustomerPaymentHistory(userId: number) {
 }
 
 export async function beginStagedPayment(input: { orderId: string; userId: number }) {
+  requireAutomaticPaymentReady();
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
   const order = await db.select().from(orders).where(and(eq(orders.id, input.orderId), eq(orders.userId, input.userId))).limit(1);

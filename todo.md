@@ -124,7 +124,8 @@
 - [x] Compact purchase and transaction histories into concise expandable account sections.
 - [x] Remove customer copy about fake packages/prices and ensure Top-up/SMM show only provider-authorized live records.
 - [x] Add admin controls to edit, delete, activate, and price authorized products with a configurable profit-margin percentage.
-- [ ] Add provider-synchronized creation controls for new authorized products without permitting manual fake-product entry.
+- [ ] Integrate FZR Cards as the server-only source for provider-synchronized top-up offers, without permitting manual or fake-product entry.
+- [ ] Integrate SMMGlob as the server-only source for provider-synchronized SMM services, prices, and order fulfillment without manual or fake-service entry.
 - [x] Add owner-authorized admin role grants and revocations with confirmation, audit records, and a self-lockout safeguard.
 - [x] Replace generic decorative motion with a restrained, professional animated-icon system that respects reduced-motion preferences.
 - [x] Verify logout end-to-end on both public deployments, confirming the Account page returns to signed-out state.
@@ -136,3 +137,8 @@
 - [x] Audit and correct every mobile navigation icon and animated state so each matches its destination’s meaning.
 - [x] Remove the remaining Marketplace bell and audit all page-level animated icon mappings for semantic fit.
 - [x] Add a liquid-glass center-screen loading popup for meaningful provider and account loading operations.
+- [x] Gate customer Top-up and SMM purchase actions until a verified automatic Cambodian bank or KHQR payment integration is active.
+- [ ] Redesign the Khmer-first homepage with an emoji-free professional line-icon system, refined dark-hero/light-body hierarchy, generous spacing, and accessible mobile-first micro-interactions.
+- [ ] Add smooth, reduced-motion-safe homepage reveal, hover, button, and scroll-aware navigation motion without visual clutter.
+- [x] Repair UTF-8/MIME Khmer welcome-email subject and body encoding for correct Gmail rendering.
+- [x] Make Privacy Policy and Terms navigation start at the top and add an accessible scroll-aware return-to-top control that hides at the top of the page.

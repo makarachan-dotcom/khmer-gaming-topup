@@ -2,8 +2,8 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { AnimatedGlyph } from "@/components/AnimatedGlyph";
 import { animate } from "animejs";
-import { BarChart3, BadgeCheck, Crown, Gamepad2, House, LogIn, ShieldCheck, Store, UserRound } from "lucide-react";
-import { ReactNode, useEffect, useRef } from "react";
+import { ArrowUp, BarChart3, BadgeCheck, Crown, Gamepad2, House, LogIn, ShieldCheck, Store, UserRound } from "lucide-react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 
 const logoUrl = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/kBXeVXEnNVEuNZKS.jpg";
@@ -29,6 +29,7 @@ export default function StorefrontLayout({ children }: { children: ReactNode }) 
   const isOwnerAdmin = user?.role === "admin" || user?.email?.trim().toLowerCase() === "chanmakara672@gmail.com";
   const googleSignInHref = `/api/auth/google?returnTo=${encodeURIComponent(location)}`;
   const shellRef = useRef<HTMLDivElement>(null);
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -36,6 +37,15 @@ export default function StorefrontLayout({ children }: { children: ReactNode }) 
     if (!target) return;
     animate(target, { opacity: [0.82, 1], translateY: [7, 0], duration: 360, ease: "outExpo" });
   }, [location]);
+
+  useEffect(() => {
+    const updateScrollTopVisibility = () => setShowScrollTop(window.scrollY > 360);
+    updateScrollTopVisibility();
+    window.addEventListener("scroll", updateScrollTopVisibility, { passive: true });
+    return () => window.removeEventListener("scroll", updateScrollTopVisibility);
+  }, [location]);
+
+  const navigateToTop = () => window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
 
   return (
     <div ref={shellRef} className="min-h-screen pb-24 sm:pb-0">
@@ -67,7 +77,7 @@ export default function StorefrontLayout({ children }: { children: ReactNode }) 
       <footer className="mt-16 border-t border-white/80 bg-white/70 py-8 backdrop-blur-xl">
         <div className="container grid gap-5 text-xs text-slate-500 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
           <div className="flex items-center gap-3"><img src={logoUrl} alt="ZURS STORE logo" className="h-9 w-9 rounded-xl object-cover" /><div><p className="font-display font-extrabold text-slate-900">ZURS STORE</p><p className="mt-1 khmer-body">សេវាកម្មហ្គេម និងឌីជីថល សម្រាប់អ្នកលេងកម្ពុជា។</p><p className="mt-1 text-[10px] font-semibold text-slate-500">© ZURS STORE · by ZURS STORE</p><div className="mt-2 inline-flex items-center gap-2 rounded-lg bg-emerald-50/85 px-3 py-2 text-emerald-800"><ShieldCheck className="h-4 w-4" /><span className="khmer-tight">សេវាកម្មរហ័ស និងមានទំនុកចិត្ត</span></div></div></div>
-          <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-[11px] font-semibold text-slate-500"><Link href="/privacy" className="hover:text-indigo-700">Privacy Policy</Link><Link href="/terms" className="hover:text-indigo-700">Terms of Service</Link></div>
+          <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-[11px] font-semibold text-slate-500"><Link href="/privacy" onClick={() => window.scrollTo({ top: 0, behavior: "auto" })} className="hover:text-indigo-700">Privacy Policy</Link><Link href="/terms" onClick={() => window.scrollTo({ top: 0, behavior: "auto" })} className="hover:text-indigo-700">Terms of Service</Link></div>
           <div className="hidden sm:block" />
         </div>
       </footer>
@@ -75,6 +85,7 @@ export default function StorefrontLayout({ children }: { children: ReactNode }) 
       <nav className="liquid-tabbar fixed inset-x-2 bottom-2 z-40 grid grid-cols-5 gap-1 rounded-2xl p-1.5 sm:hidden" aria-label="Mobile primary navigation">
         {mobileNavigation.map(({ href, label, icon: Icon, animation }) => { const active = location === href; return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={cn("flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-[9px] font-bold transition-all", active ? "bg-slate-950 text-white shadow-lg shadow-indigo-900/20" : "text-slate-500 hover:bg-white/75 hover:text-indigo-700")}>{active && animation ? <AnimatedGlyph name={animation} size={22} color="#ffffff" /> : <Icon className={cn("h-4 w-4", active && "tab-icon-active")} />}<span className="truncate">{label}</span></Link>; })}
       </nav>
+      <button type="button" onClick={navigateToTop} aria-label="ត្រឡប់ទៅខាងលើ" className={cn("fixed right-4 z-[45] grid h-11 w-11 place-items-center rounded-2xl border border-white/80 bg-slate-950 text-white shadow-lg shadow-slate-950/20 transition-[opacity,transform,background-color] duration-200 hover:-translate-y-1 hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 sm:bottom-6", showScrollTop ? "bottom-[5.5rem] opacity-100" : "pointer-events-none bottom-[4.5rem] translate-y-3 opacity-0")}><ArrowUp className="h-5 w-5" strokeWidth={2.25} /></button>
     </div>
   );
 }

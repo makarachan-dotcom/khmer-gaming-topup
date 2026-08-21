@@ -12,6 +12,7 @@ import { createDiditHostedSession } from "./didit";
 import { disclosureRequestStatuses, fraudReportStatuses } from "./marketplaceSafety";
 import { deriveLocationRisk, resolveLocationCountry } from "./marketplaceLocation";
 import { getZursSessionCookieOptions, ZURS_SESSION_COOKIE } from "./zursSession";
+import { getAutomaticPaymentReadiness } from "./paymentReadiness";
 
 const marketplaceType = z.enum(["sale", "swap", "wanted"]);
 
@@ -25,6 +26,9 @@ export const appRouter = router({
   catalog: router({
     games: publicProcedure.query(() => db.getGameCatalog()),
     smm: publicProcedure.query(() => db.getSmmCatalog()),
+  }),
+  payments: router({
+    readiness: publicProcedure.query(() => getAutomaticPaymentReadiness()),
   }),
   provider: router({
     games: publicProcedure.query(() => fetchProviderGames()),

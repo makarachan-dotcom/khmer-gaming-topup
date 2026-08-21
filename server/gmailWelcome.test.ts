@@ -12,8 +12,13 @@ describe("Gmail welcome email safeguards", () => {
   it("builds a logo-branded welcome message without injecting a recipient name as HTML", () => {
     const message = buildWelcomeEmail({ recipientName: "<script>alert(1)</script>", recipientEmail: "member@example.com", senderEmail: "chanmakara672@gmail.com" });
     const raw = Buffer.from(message.raw, "base64url").toString("utf8");
+    const encodedBody = raw.split("\r\n\r\n")[1];
+    const decodedBody = Buffer.from(encodedBody, "base64").toString("utf8");
     expect(raw).toContain("ZURS STORE");
-    expect(raw).toContain("files.manuscdn.com");
-    expect(raw).not.toContain("<script>alert(1)</script>");
+    expect(decodedBody).toContain("files.manuscdn.com");
+    expect(decodedBody).not.toContain("<script>alert(1)</script>");
+    expect(raw).toContain("Subject: =?UTF-8?B?");
+    expect(raw).toContain("Content-Transfer-Encoding: base64");
+    expect(decodedBody).toContain("សូមស្វាគមន៍");
   });
 });
