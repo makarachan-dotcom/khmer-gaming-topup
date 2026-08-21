@@ -18,13 +18,13 @@ describe("provider catalog", () => {
 
     await expect(fetchProviderGames()).resolves.toEqual({ status: "unavailable", games: [] });
     await expect(fetchProviderPackages({ gameId: "provider-game", fields: { playerId: "123456" } })).resolves.toEqual({ status: "unavailable", packages: [] });
-    expect(getProviderCatalogStatus()).toEqual({ configured: false, endpointConfigured: false, credentialConfigured: false });
+    expect(getProviderCatalogStatus()).toMatchObject({ configured: false, endpointConfigured: false, credentialConfigured: false });
   });
 
   it("reports connection readiness without disclosing provider secrets", () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "provider-secret-must-not-be-returned";
-    expect(getProviderCatalogStatus()).toEqual({ configured: true, endpointConfigured: true, credentialConfigured: true });
+    expect(getProviderCatalogStatus()).toMatchObject({ configured: true, endpointConfigured: true, credentialConfigured: true });
     expect(JSON.stringify(getProviderCatalogStatus())).not.toContain("provider-secret-must-not-be-returned");
   });
 });

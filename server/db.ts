@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, lt, sql } from "drizzle-orm";
+import { createHash } from "node:crypto";
 import { drizzle } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
 import {
@@ -9,6 +10,7 @@ import { buildOrderNumber, isSingleAdminEmail } from "./storefrontDomain";
 import { validateAdminRoleChange } from "./adminRoles";
 import { buildEvidenceRetentionAuditReason, canApproveMarketplaceVerification, hasOnlyOwnedMarketplaceScreenshotKeys, type DisclosureRequestStatus, type FraudReportStatus } from "./marketplaceSafety";
 import { requireAutomaticPaymentReady } from "./paymentReadiness";
+import type { FzrProviderSyncSnapshot, SmmProviderCatalogResponse } from "./providerCatalog";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -127,6 +129,75 @@ export async function getAdminCatalog(): Promise<{ games: any[]; smm: any[] }> {
   const services = await db.select().from(smmServices).orderBy(asc(smmServices.sortOrder));
   const tiers = await db.select().from(smmTiers).orderBy(asc(smmTiers.sortOrder));
   return { games: games.map((game) => ({ ...game, packages: packages.filter((item) => item.productId === game.id) })), smm: services.map((service) => ({ ...service, tiers: tiers.filter((item) => item.serviceId === service.id) })) };
+}
+
+function providerRecordId(prefix: string, source: string) {
+  return `${prefix}-${createHash("sha256").update(source).digest("hex").slice(0, 40)}`;
+}
+
+export async function syncFzrCatalog(snapshot: Extract<FzrProviderSyncSnapshot, { status: "ready" }>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  let gamesImported = 0;
+  let offersImported = 0;
+  for (let sortOrder = 0; sortOrder < snapshot.games.length; sortOrder += 1) {
+    const game = snapshot.games[sortOrder]!;
+    const gameId = providerRecordId("fzr-game", game.providerGameId);
+    const requiresZone = game.requiredFields.some((field: { key: string }) => /zone|server|region/i.test(field.key));
+    const existingGame = await db.select({ id: gameProducts.id }).from(gameProducts).where(eq(gameProducts.id, gameId)).limit(1);
+    if (existingGame[0]) {
+      await db.update(gameProducts).set({ titleKh: game.name, titleEn: game.name, currencyLabel: "Top-up", requiresZone, sortOrder }).where(eq(gameProducts.id, gameId));
+    } else {
+      await db.insert(gameProducts).values({ id: gameId, slug: `fzr-${createHash("sha256").update(game.providerGameId).digest("hex").slice(0, 32)}`, titleKh: game.name, titleEn: game.name, currencyLabel: "Top-up", iconLabel: "G", accent: "#4f46e5", requiresZone, isActive: false, sortOrder });
+      gamesImported += 1;
+    }
+    for (let offerOrder = 0; offerOrder < game.offers.length; offerOrder += 1) {
+      const offer = game.offers[offerOrder]!;
+      const source = `fzr_cards:${game.providerGameId}:${offer.providerOfferId}`;
+      const packageId = providerRecordId("fzr-offer", source);
+      const existing = await db.select({ id: gamePackages.id, profitMarginPercent: gamePackages.profitMarginPercent }).from(gamePackages).where(eq(gamePackages.id, packageId)).limit(1);
+      if (existing[0]) {
+        const margin = String(existing[0].profitMarginPercent);
+        await db.update(gamePackages).set({ amountLabel: offer.name, providerAuthorized: true, providerSource: source, basePriceUsd: offer.priceUsd, priceUsd: salePriceFromMargin(offer.priceUsd, margin), sortOrder: offerOrder }).where(eq(gamePackages.id, packageId));
+      } else {
+        await db.insert(gamePackages).values({ id: packageId, productId: gameId, amountLabel: offer.name, providerAuthorized: true, providerSource: source, basePriceUsd: offer.priceUsd, profitMarginPercent: "0.00", priceUsd: offer.priceUsd, featured: false, isActive: false, sortOrder: offerOrder });
+        offersImported += 1;
+      }
+    }
+  }
+  return { gamesImported, offersImported, provider: "FZR Cards" as const };
+}
+
+export async function syncSmmCatalog(snapshot: Extract<SmmProviderCatalogResponse, { status: "ready" }>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  let servicesImported = 0;
+  let tiersImported = 0;
+  for (let sortOrder = 0; sortOrder < snapshot.services.length; sortOrder += 1) {
+    const service = snapshot.services[sortOrder]!;
+    const serviceId = providerRecordId("smm-service", service.providerServiceId);
+    const slug = `smm-${createHash("sha256").update(service.providerServiceId).digest("hex").slice(0, 32)}`;
+    const descriptionKh = `${service.name} · អប្បបរមា ${service.min.toLocaleString()} និងអតិបរមា ${service.max.toLocaleString()}។`;
+    const existingService = await db.select({ id: smmServices.id }).from(smmServices).where(eq(smmServices.id, serviceId)).limit(1);
+    if (existingService[0]) {
+      await db.update(smmServices).set({ platform: service.category, serviceType: service.serviceType, titleKh: service.name, titleEn: service.name, descriptionKh, sortOrder }).where(eq(smmServices.id, serviceId));
+    } else {
+      await db.insert(smmServices).values({ id: serviceId, slug, platform: service.category, serviceType: service.serviceType, titleKh: service.name, titleEn: service.name, descriptionKh, iconLabel: "S", isActive: false, sortOrder });
+      servicesImported += 1;
+    }
+    const source = `smmglob:${service.providerServiceId}:min=${service.min}:max=${service.max}`;
+    const tierId = providerRecordId("smm-tier", source);
+    const basePrice = (Number(service.rateUsdPerThousand) * Math.max(service.min, 1) / 1000).toFixed(2);
+    const existingTier = await db.select({ id: smmTiers.id, profitMarginPercent: smmTiers.profitMarginPercent }).from(smmTiers).where(eq(smmTiers.id, tierId)).limit(1);
+    if (existingTier[0]) {
+      const margin = String(existingTier[0].profitMarginPercent);
+      await db.update(smmTiers).set({ quantity: Math.max(service.min, 1), providerAuthorized: true, providerSource: source, basePriceUsd: basePrice, priceUsd: salePriceFromMargin(basePrice, margin), sortOrder }).where(eq(smmTiers.id, tierId));
+    } else {
+      await db.insert(smmTiers).values({ id: tierId, serviceId, quantity: Math.max(service.min, 1), providerAuthorized: true, providerSource: source, basePriceUsd: basePrice, profitMarginPercent: "0.00", priceUsd: basePrice, isActive: false, sortOrder });
+      tiersImported += 1;
+    }
+  }
+  return { servicesImported, tiersImported, provider: "SMMGlob" as const };
 }
 
 export async function createTopupOrder(input: { userId: number; packageId: string; playerId: string; zoneId?: string | null; quantity: number }) {

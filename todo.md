@@ -148,3 +148,4 @@
 - [x] Remove the three homepage service cards, make Top-up the primary post-hero section, and move Q&A content to the Account page.
 - [x] Refine Khmer typography, text rhythm, and mobile spacing for a more polished and engaging storefront presentation.
 - [x] Fix the LottieFlow outline loader so the owner-provided animation is visibly rendered rather than falling back to a generic spinner.
+- [x] Remove the duplicate Top-up destination from the mobile tab bar while preserving homepage access to the Top-up flow.

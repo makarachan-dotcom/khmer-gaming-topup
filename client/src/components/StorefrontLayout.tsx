@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { AnimatedGlyph } from "@/components/AnimatedGlyph";
 import { animate } from "animejs";
-import { ArrowUp, BarChart3, BadgeCheck, Crown, Gamepad2, House, LogIn, ShieldCheck, Store, UserRound } from "lucide-react";
+import { ArrowUp, BarChart3, BadgeCheck, Crown, House, LogIn, ShieldCheck, Store, UserRound } from "lucide-react";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 
@@ -16,7 +16,6 @@ const navigation = [
 
 const mobileNavigation = [
   { href: "/", label: "ទំព័រដើម", icon: House, animation: "home" as const },
-  { href: "/topup", label: "Top-up", icon: Gamepad2 },
   { href: "/smm", label: "SMM", icon: BarChart3 },
   { href: "/marketplace", label: "ទីផ្សារ", icon: Store },
   { href: "/account", label: "គណនី", icon: UserRound },
@@ -82,7 +81,7 @@ export default function StorefrontLayout({ children }: { children: ReactNode }) 
         </div>
       </footer>
 
-      <nav className="liquid-tabbar fixed inset-x-2 bottom-2 z-40 grid grid-cols-5 gap-1 rounded-2xl p-1.5 sm:hidden" aria-label="Mobile primary navigation">
+      <nav className="liquid-tabbar fixed inset-x-2 bottom-2 z-40 grid grid-cols-4 gap-1 rounded-2xl p-1.5 sm:hidden" aria-label="Mobile primary navigation">
         {mobileNavigation.map(({ href, label, icon: Icon, animation }) => { const active = location === href; return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={cn("flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-[9px] font-bold transition-all", active ? "bg-slate-950 text-white shadow-lg shadow-indigo-900/20" : "text-slate-500 hover:bg-white/75 hover:text-indigo-700")}>{active && animation ? <AnimatedGlyph name={animation} size={22} color="#ffffff" /> : <Icon className={cn("h-4 w-4", active && "tab-icon-active")} />}<span className="truncate">{label}</span></Link>; })}
       </nav>
       <button type="button" onClick={navigateToTop} aria-label="ត្រឡប់ទៅខាងលើ" className={cn("fixed right-4 z-[45] grid h-11 w-11 place-items-center rounded-2xl border border-white/80 bg-slate-950 text-white shadow-lg shadow-slate-950/20 transition-[opacity,transform,background-color] duration-200 hover:-translate-y-1 hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 sm:bottom-6", showScrollTop ? "bottom-[5.5rem] opacity-100" : "pointer-events-none bottom-[4.5rem] translate-y-3 opacity-0")}><ArrowUp className="h-5 w-5" strokeWidth={2.25} /></button>

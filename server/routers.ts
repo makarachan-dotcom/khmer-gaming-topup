@@ -4,7 +4,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, ownerProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import * as db from "./db";
-import { fetchProviderGames, fetchProviderPackages, getProviderCatalogStatus } from "./providerCatalog";
+import { fetchFzrProviderSyncSnapshot, fetchProviderGameDetails, fetchProviderGames, fetchProviderPackages, fetchSmmProviderServices, getProviderCatalogStatus } from "./providerCatalog";
 import { buildZursMemberDisplayName } from "./storefrontDomain";
 import { uploadMarketplaceScreenshot, uploadMarketplaceVerificationEvidence } from "./uploads";
 import { storageGet } from "./storage";
@@ -32,6 +32,7 @@ export const appRouter = router({
   }),
   provider: router({
     games: publicProcedure.query(() => fetchProviderGames()),
+    gameDetails: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120) })).query(({ input }) => fetchProviderGameDetails(input.gameId)),
     packages: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120), fields: z.record(z.string().trim().max(64), z.string().trim().min(1).max(256)).refine((fields) => Object.keys(fields).length <= 12, "Too many provider fields") })).mutation(({ input }) => fetchProviderPackages(input)),
   }),
   marketplace: router({
@@ -86,6 +87,8 @@ export const appRouter = router({
     catalog: adminProcedure.query(async () => ({ games: await db.getGameCatalog(), smm: await db.getSmmCatalog() })),
     fullCatalog: adminProcedure.query(() => db.getAdminCatalog()),
     providerCatalogStatus: adminProcedure.query(() => getProviderCatalogStatus()),
+    syncTopupCatalog: adminProcedure.mutation(async () => { const snapshot = await fetchFzrProviderSyncSnapshot(); if (snapshot.status !== "ready") throw new Error("FZR Cards catalog is currently unavailable"); return db.syncFzrCatalog(snapshot); }),
+    syncSmmCatalog: adminProcedure.mutation(async () => { const snapshot = await fetchSmmProviderServices(); if (snapshot.status !== "ready") throw new Error("SMMGlob catalog is currently unavailable"); return db.syncSmmCatalog(snapshot); }),
     updateGamePackage: adminProcedure.input(z.object({ packageId: z.string().min(4).max(64), priceUsd: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(), basePriceUsd: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(), profitMarginPercent: z.string().regex(/^\d+(\.\d{1,2})?$/).refine((value) => Number(value) <= 1000).optional(), isActive: z.boolean(), featured: z.boolean() }).refine((input) => Boolean(input.priceUsd ?? input.basePriceUsd), "A base price is required")).mutation(({ input }) => db.updateGamePackage({ ...input, basePriceUsd: input.basePriceUsd ?? input.priceUsd!, profitMarginPercent: input.profitMarginPercent ?? "0.00" })),
     deleteGamePackage: adminProcedure.input(z.object({ packageId: z.string().min(4).max(64) })).mutation(({ input }) => db.deleteGamePackage(input.packageId)),
     updateSmmTier: adminProcedure.input(z.object({ tierId: z.string().min(4).max(64), priceUsd: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(), basePriceUsd: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(), profitMarginPercent: z.string().regex(/^\d+(\.\d{1,2})?$/).refine((value) => Number(value) <= 1000).optional(), isActive: z.boolean() }).refine((input) => Boolean(input.priceUsd ?? input.basePriceUsd), "A base price is required")).mutation(({ input }) => db.updateSmmTier({ ...input, basePriceUsd: input.basePriceUsd ?? input.priceUsd!, profitMarginPercent: input.profitMarginPercent ?? "0.00" })),
