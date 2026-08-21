@@ -4,6 +4,8 @@ import { isSingleAdminEmail } from "./storefrontDomain";
 
 type AppwriteRecord = { $id: string; sourceTable: string; sourceId: string; payload: string; sourceUpdatedAt?: string | null };
 type AppwriteList = { documents?: AppwriteRecord[] };
+type AppwriteOrder = { id: string; userId: number; orderNumber: string; orderType: "topup" | "smm"; status: string; currency: string; subtotal: string; productName: string; details: unknown; createdAt: Date; updatedAt: Date };
+type AppwritePayment = { id: string; orderId: string; provider: string; status: string; amount: string; currency: string; createdAt: Date; updatedAt: Date; paidAt: Date | null; orderNumber: string; productName: string; orderStatus: string };
 
 const databaseId = () => process.env.APPWRITE_DATABASE_ID || "zurs_store";
 const collectionId = "zurs_records";
@@ -35,9 +37,12 @@ async function request(method: string, path: string, body?: unknown) {
   return response.status === 204 ? {} : response.json();
 }
 
+function parsePayload<T>(record: AppwriteRecord): T | null { try { return JSON.parse(record.payload) as T; } catch { return null; } }
+
 function toUser(record: AppwriteRecord): User | null {
   try {
-    const payload = JSON.parse(record.payload) as Partial<User>;
+    const payload = parsePayload<Partial<User>>(record);
+    if (!payload) return null;
     if (!payload.openId || typeof payload.id !== "number") return null;
     return {
       id: payload.id,
@@ -46,7 +51,7 @@ function toUser(record: AppwriteRecord): User | null {
       displayName: payload.displayName ?? null,
       email: payload.email ?? null,
       loginMethod: payload.loginMethod ?? null,
-      role: payload.role === "admin" ? "admin" : "user",
+      role: isSingleAdminEmail(payload.email) || payload.role === "admin" ? "admin" : "user",
       createdAt: asDate(payload.createdAt),
       updatedAt: asDate(payload.updatedAt),
       lastSignedIn: asDate(payload.lastSignedIn),
@@ -54,9 +59,17 @@ function toUser(record: AppwriteRecord): User | null {
   } catch { return null; }
 }
 
-async function allUserRecords() {
+async function allRecords() {
   const data = await request("GET", `/databases/${databaseId()}/collections/${collectionId}/documents?limit=100&total=false`) as AppwriteList | null;
-  return (data?.documents ?? []).filter((record) => record.sourceTable === "users");
+  return data?.documents ?? [];
+}
+
+async function recordsFor(table: string) {
+  return (await allRecords()).filter((record) => record.sourceTable === table);
+}
+
+async function allUserRecords() {
+  return recordsFor("users");
 }
 
 export async function getAppwriteUserByOpenId(openId: string) {
@@ -105,4 +118,30 @@ export async function updateAppwriteUserDisplayName(id: number, displayName: str
   const updated: User = { ...current, displayName, updatedAt: new Date() };
   await request("PUT", `/databases/${databaseId()}/collections/${collectionId}/documents/${record.$id}`, { data: { sourceTable: "users", sourceId: record.sourceId, payload: JSON.stringify(updated), sourceUpdatedAt: updated.updatedAt.toISOString() } });
   return { displayName };
+}
+
+function toOrder(record: AppwriteRecord): AppwriteOrder | null {
+  const value = parsePayload<Partial<AppwriteOrder>>(record);
+  if (!value || typeof value.id !== "string" || typeof value.userId !== "number" || typeof value.orderNumber !== "string") return null;
+  return { id: value.id, userId: value.userId, orderNumber: value.orderNumber, orderType: value.orderType === "smm" ? "smm" : "topup", status: String(value.status ?? "pending"), currency: String(value.currency ?? "USD"), subtotal: String(value.subtotal ?? "0"), productName: String(value.productName ?? "ZURS order"), details: value.details ?? {}, createdAt: asDate(value.createdAt), updatedAt: asDate(value.updatedAt) };
+}
+
+function toPayment(record: AppwriteRecord, ordersById: Map<string, AppwriteOrder>): AppwritePayment | null {
+  const value = parsePayload<Partial<AppwritePayment>>(record);
+  if (!value || typeof value.id !== "string" || typeof value.orderId !== "string") return null;
+  const order = ordersById.get(value.orderId);
+  if (!order) return null;
+  return { id: value.id, orderId: value.orderId, provider: String(value.provider ?? "payment"), status: String(value.status ?? "pending"), amount: String(value.amount ?? "0"), currency: String(value.currency ?? order.currency ?? "USD"), createdAt: asDate(value.createdAt), updatedAt: asDate(value.updatedAt), paidAt: value.paidAt ? asDate(value.paidAt) : null, orderNumber: order.orderNumber, productName: order.productName, orderStatus: order.status };
+}
+
+export async function getAppwriteCustomerOrders(userId: number) {
+  const orders = (await recordsFor("orders")).map(toOrder).filter((order): order is AppwriteOrder => order?.userId === userId);
+  return orders.sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime());
+}
+
+export async function getAppwriteCustomerPaymentHistory(userId: number) {
+  const orders = await getAppwriteCustomerOrders(userId);
+  const ordersById = new Map(orders.map((order) => [order.id, order]));
+  const payments = (await recordsFor("payment_transactions")).map((record) => toPayment(record, ordersById)).filter((payment): payment is AppwritePayment => payment !== null);
+  return payments.sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime());
 }

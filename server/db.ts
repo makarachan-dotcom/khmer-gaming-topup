@@ -4,12 +4,17 @@ import { nanoid } from "nanoid";
 import {
   gamePackages, gameProducts, gmailSenderConnections, InsertUser, marketplaceContacts, marketplaceDisclosureRequests, marketplaceEvidenceAccessLogs, marketplaceFraudReports, marketplaceListings, marketplaceVerificationEvidence, marketplaceVerifications, orders, paymentTransactions, savedPlayerIds, siteContent, smmServices, smmTiers, users, welcomeEmailDeliveries,
 } from "../drizzle/schema";
-import { getAppwriteUserByEmail, getAppwriteUserByOpenId, isAppwriteStoreConfigured, updateAppwriteUserDisplayName, upsertAppwriteUser } from "./appwriteStore";
+import { getAppwriteCustomerOrders, getAppwriteCustomerPaymentHistory, getAppwriteUserByEmail, getAppwriteUserByOpenId, isAppwriteStoreConfigured, updateAppwriteUserDisplayName, upsertAppwriteUser } from "./appwriteStore";
 import { defaultGamePackages, defaultGames, defaultSmmServices, defaultSmmTiers } from "./catalogDefaults";
 import { buildOrderNumber, isSingleAdminEmail } from "./storefrontDomain";
 import { buildEvidenceRetentionAuditReason, canApproveMarketplaceVerification, hasOnlyOwnedMarketplaceScreenshotKeys, type DisclosureRequestStatus, type FraudReportStatus } from "./marketplaceSafety";
 
 let _db: ReturnType<typeof drizzle> | null = null;
+
+function normalizeOwnerRole<T extends { email: string | null; role: "admin" | "user" } | undefined>(user: T): T {
+  if (user && isSingleAdminEmail(user.email) && user.role !== "admin") return { ...user, role: "admin" } as T;
+  return user;
+}
 
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
@@ -39,17 +44,17 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 
 export async function getUserByOpenId(openId: string) {
   const db = await getDb();
-  if (!db) return isAppwriteStoreConfigured() ? getAppwriteUserByOpenId(openId) : undefined;
+  if (!db) return normalizeOwnerRole(isAppwriteStoreConfigured() ? await getAppwriteUserByOpenId(openId) : undefined);
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
-  return result[0];
+  return normalizeOwnerRole(result[0]);
 }
 
 export async function getUserByEmail(email: string) {
   const db = await getDb();
-  if (!db) return isAppwriteStoreConfigured() ? getAppwriteUserByEmail(email) : undefined;
+  if (!db) return normalizeOwnerRole(isAppwriteStoreConfigured() ? await getAppwriteUserByEmail(email) : undefined);
   const normalized = email.trim().toLowerCase();
   const result = await db.select().from(users).where(sql`lower(trim(${users.email})) = ${normalized}`).limit(1);
-  return result[0];
+  return normalizeOwnerRole(result[0]);
 }
 
 export async function upsertGmailSenderConnection(input: { ownerUserId: number; senderEmail: string; encryptedRefreshToken: string }) {
@@ -154,8 +159,14 @@ export async function createSmmOrder(input: { userId: number; tierId: string; ta
 
 export async function getCustomerOrders(userId: number) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) return isAppwriteStoreConfigured() ? getAppwriteCustomerOrders(userId) : [];
   return db.select().from(orders).where(eq(orders.userId, userId)).orderBy(desc(orders.createdAt));
+}
+
+export async function getCustomerPaymentHistory(userId: number) {
+  const db = await getDb();
+  if (!db) return isAppwriteStoreConfigured() ? getAppwriteCustomerPaymentHistory(userId) : [];
+  return db.select({ id: paymentTransactions.id, orderId: paymentTransactions.orderId, provider: paymentTransactions.provider, status: paymentTransactions.status, amount: paymentTransactions.amount, currency: paymentTransactions.currency, createdAt: paymentTransactions.createdAt, updatedAt: paymentTransactions.updatedAt, paidAt: paymentTransactions.paidAt, orderNumber: orders.orderNumber, productName: orders.productName, orderStatus: orders.status }).from(paymentTransactions).innerJoin(orders, eq(paymentTransactions.orderId, orders.id)).where(eq(orders.userId, userId)).orderBy(desc(paymentTransactions.createdAt));
 }
 
 export async function beginStagedPayment(input: { orderId: string; userId: number }) {

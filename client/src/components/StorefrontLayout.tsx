@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { BarChart3, BadgeCheck, Gamepad2, House, LogIn, ShieldCheck, Store, UserRound } from "lucide-react";
+import { BarChart3, BadgeCheck, Crown, Gamepad2, House, LogIn, ShieldCheck, Store, UserRound } from "lucide-react";
 import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 
@@ -24,6 +24,7 @@ export default function StorefrontLayout({ children }: { children: ReactNode }) 
   const [location] = useLocation();
   const { user, loading, logout } = useAuth();
   const accountLabel = user?.displayName || user?.name || "គណនីខ្ញុំ";
+  const isOwnerAdmin = user?.role === "admin" || user?.email?.trim().toLowerCase() === "chanmakara672@gmail.com";
 
   return (
     <div className="min-h-screen pb-24 sm:pb-0">
@@ -43,6 +44,7 @@ export default function StorefrontLayout({ children }: { children: ReactNode }) 
 
           <div className="flex items-center gap-1.5 sm:gap-2">
             <Link href="/account" className="hidden h-9 max-w-48 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-slate-700 hover:bg-white/70 sm:inline-flex"><UserRound className="h-4 w-4" /><span className="truncate">{accountLabel}</span></Link>
+            {isOwnerAdmin ? <Link href="/admin" className="hidden h-9 items-center gap-1.5 rounded-lg bg-amber-50 px-3 text-xs font-bold text-amber-800 hover:bg-amber-100 lg:inline-flex"><Crown className="h-3.5 w-3.5" />Admin</Link> : null}
             {loading ? <span className="hidden h-9 items-center px-2 text-xs font-semibold text-slate-400 sm:inline-flex">កំពុងពិនិត្យ…</span> : user ? <button type="button" onClick={() => logout()} className="hidden h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-sm font-bold text-white hover:bg-slate-800 sm:inline-flex"><LogIn className="h-3.5 w-3.5" />ចេញពីគណនី</button> : <Link href="/google-sign-in" className="hidden h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-sm font-bold text-white hover:bg-slate-800 sm:inline-flex"><LogIn className="h-3.5 w-3.5" />ចូលគណនី</Link>}
             <div className="glass-status hidden h-8 items-center gap-1.5 rounded-full px-2.5 text-[10px] font-bold text-emerald-700 sm:flex"><BadgeCheck className="h-3.5 w-3.5" />ZURS</div>
           </div>

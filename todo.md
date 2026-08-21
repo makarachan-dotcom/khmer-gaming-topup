@@ -107,6 +107,12 @@
 - [x] Remove the customer-facing Gmail Sender setup card and keep welcome email automatic after Google sign-in.
 - [ ] Diagnose and fix Google sign-in failure on the zurs.vercel.app deployment.
 - [ ] Await owner-led completion of the live zurs.vercel.app Google authorization to confirm the final session redirect.
+- [x] Add a clear logout action to the authenticated Account dashboard.
+- [x] Show authenticated purchase history and payment transaction history in a clean mobile-first Account dashboard.
+- [x] Ensure chanmakara672@gmail.com always resolves to the ZURS STORE admin role after Google sign-in, including Appwrite-backed sessions.
+- [x] Keep logout, purchase history, and transaction history available for authenticated users while they complete display-name onboarding.
+- [x] Verify the authenticated no-display-name Account state keeps admin recognition, logout, and history accessible.
+- [x] Add automated Account onboarding-state coverage for admin recognition, logout, purchase history, and transaction history.
 - [x] Show a gray Connect with Gmail action next to sign-in in the account panel without sending the user through /google-sign-in.
 - [x] Start Google connection directly from the Account page without navigating to the /google-sign-in route.
 - [x] Prepare a safe Appwrite Cloud migration plan and connection setup that preserves existing ZURS data and payment records.

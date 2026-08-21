@@ -1,8 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { isAppwriteStoreConfigured } from "./appwriteStore";
+import { getAppwriteCustomerOrders, getAppwriteCustomerPaymentHistory, isAppwriteStoreConfigured } from "./appwriteStore";
+import { isSingleAdminEmail } from "./storefrontDomain";
 
 describe("Appwrite user store", () => {
   it("uses server-only Appwrite credentials when they are available", () => {
     expect(isAppwriteStoreConfigured()).toBe(true);
+  });
+
+  it("exports account-history readers for Appwrite-backed Vercel sessions", () => {
+    expect(typeof getAppwriteCustomerOrders).toBe("function");
+    expect(typeof getAppwriteCustomerPaymentHistory).toBe("function");
+  });
+
+  it("recognizes the owner email as the single ZURS STORE administrator", () => {
+    expect(isSingleAdminEmail("ChanMakara672@gmail.com")).toBe(true);
   });
 });

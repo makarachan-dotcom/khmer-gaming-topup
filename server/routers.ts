@@ -55,6 +55,7 @@ export const appRouter = router({
     beginPayment: protectedProcedure.input(z.object({ orderId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => db.beginStagedPayment({ userId: ctx.user.id, ...input })),
     paymentSession: protectedProcedure.input(z.object({ orderId: z.string().min(4).max(64) })).query(({ ctx, input }) => db.getCustomerPaymentSession({ userId: ctx.user.id, ...input })),
     mine: protectedProcedure.query(({ ctx }) => db.getCustomerOrders(ctx.user.id)),
+    paymentHistory: protectedProcedure.query(({ ctx }) => db.getCustomerPaymentHistory(ctx.user.id)),
     savedPlayers: protectedProcedure.query(({ ctx }) => db.getSavedPlayerIds(ctx.user.id)),
     savePlayer: protectedProcedure.input(z.object({ gameProductId: z.string().min(4).max(64), playerId: z.string().trim().min(2).max(128), zoneId: z.string().trim().max(128).optional(), label: z.string().trim().max(80).optional() })).mutation(({ ctx, input }) => db.savePlayerId({ userId: ctx.user.id, ...input })),
     updateSavedPlayer: protectedProcedure.input(z.object({ id: z.string().min(4).max(64), gameProductId: z.string().min(4).max(64), playerId: z.string().trim().min(2).max(128), zoneId: z.string().trim().max(128).optional(), label: z.string().trim().max(80).optional() })).mutation(({ ctx, input }) => db.updateSavedPlayerId({ userId: ctx.user.id, ...input })),
