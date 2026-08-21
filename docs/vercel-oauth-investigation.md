@@ -19,3 +19,5 @@ On 21 August 2026, the Vercel `zurs` project received `APPWRITE_ENDPOINT`, `APPW
 The follow-up production deployment from checkpoint `71f62d57` reached **Ready** status on Vercel. The `zurs.vercel.app` Google authorization entry point opens Google with the registered `https://zurs.vercel.app/api/auth/google/callback` callback URL. The owner elected to complete the final password-protected authorization independently.
 
 The public `/account` page was also checked after the production release. Both the Khmer sign-in button and the gray `Connect with Gmail` action point directly to `/api/auth/google?returnTo=%2Faccount`; neither uses the intermediate `/google-sign-in` route.
+
+After the Account dashboard release, the public Vercel Account page was rechecked. Its session-loading state completed normally and the signed-out state continued to expose both direct `/api/auth/google?returnTo=%2Faccount` actions. The final authenticated callback confirmation remains owner-led.
