@@ -11,6 +11,7 @@ export const providerFieldSchema = z.object({
 export const providerGameSchema = z.object({
   id: z.string().trim().min(1).max(120),
   name: z.string().trim().min(1).max(160),
+  logoUrl: z.string().url().refine((url) => url.startsWith("https://"), "Game logo must use HTTPS").optional(),
   provider: z.string().trim().min(1).max(120),
   requiredFields: z.array(providerFieldSchema).min(1).max(12),
 });

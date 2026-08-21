@@ -81,6 +81,10 @@
 - [x] Compress Home, Top-up, and Marketplace information into click-to-expand, privacy-conscious customer surfaces.
 - [x] Add Khmer-first Privacy Policy and Terms of Service pages with clear links across public storefront pages.
 - [ ] Send a branded ZURS STORE welcome email after an email account is connected, using a configured transactional-email sender.
+- [ ] Add the owner Gmail account as an approved OAuth test user, or publish the consent screen, before authorizing the restricted Gmail sender scope.
+- [x] Rewrite the Home page hierarchy so customers immediately understand ZURS STORE sells game diamonds, top-ups, SMM services, and verified accounts.
+- [x] Show official game logo and game name prominently for each supported provider game selection.
+- [x] Keep Top-up and SMM service choices fully visible rather than collapsed into click-to-expand content.
 - [x] Refine the public color system for low visual fatigue while preserving Khmer text contrast and clear actions.
 - [x] Activate Google OAuth with the owner-provided client credentials and safe callback handling.
 - [ ] Implement an owner-authorized Gmail welcome-email flow with the ZURS STORE logo and complete customer opt-in safeguards.
@@ -92,6 +96,8 @@
 - [ ] Fix live Google OAuth state validation so the signed state survives the external authorization redirect without weakening CSRF protection.
 - [x] Reuse an existing verified-email user identity during Google sign-in instead of failing on the unique email constraint.
 - [ ] Validate Google sign-in after the existing-email identity collision fix and preserve the verified account's original ZURS identity.
+- [ ] Verify all registered Google callback variants route to the correct ZURS account session flow and remove reliance on obsolete callback paths.
+- [x] Reflect the active standalone Google session in the public header instead of always showing the sign-in action.
 - [x] Normalize stored user email addresses and reuse the exact OAuth callback URL across authorization and code exchange.
 - [ ] Register and validate the zurs.vercel.app Google callback URL if that deployment remains active.
 - [x] Add automated callback URL tests for managed HTTPS hosts and local development.
