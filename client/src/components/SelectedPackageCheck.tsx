@@ -41,5 +41,5 @@ export function SelectedPackageCheck({ size = 28, className = "" }: { size?: num
     };
   }, [reduceMotion]);
 
-  return <span className={`selected-package-check relative inline-grid place-items-center ${className}`} style={{ width: size, height: size }} aria-hidden="true"><Check className={`h-[68%] w-[68%] transition-opacity ${reduceMotion ? "opacity-100" : "opacity-0"}`} strokeWidth={2.4} /><span ref={hostRef} className="absolute inset-0" /></span>;
+  return <span className={`selected-package-check relative inline-grid place-items-center ${className}`} style={{ width: size, height: size }} aria-hidden="true"><Check className="relative z-10 h-[68%] w-[68%] text-slate-950" strokeWidth={2.6} /><span ref={hostRef} className="selected-package-check-animation absolute inset-0" /></span>;
 }

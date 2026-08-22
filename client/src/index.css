@@ -107,6 +107,11 @@ button, input, textarea, select { font: inherit; }
 .game-title-marquee-track { display: flex; width: max-content; min-width: 100%; gap: 2.25rem; animation: game-title-marquee 13s linear infinite; }
 .game-title-marquee-track > span { display: block; flex: 0 0 auto; }
 .game-catalog-card:hover .game-title-marquee-track, .game-catalog-card:focus-visible .game-title-marquee-track { animation-play-state: paused; }
+.overflow-marquee { display: block; min-width: 0; overflow: hidden; white-space: nowrap; }
+.overflow-marquee__track { display: inline-flex; min-width: 100%; width: max-content; gap: 2.25rem; will-change: transform; }
+.overflow-marquee__track > span { display: inline-block; flex: 0 0 auto; }
+@media (prefers-reduced-motion: no-preference) { .overflow-marquee__track--active { animation: overflow-marquee-slide 8s linear infinite; } }
+@keyframes overflow-marquee-slide { 0%, 12% { transform: translateX(0); } 88%, 100% { transform: translateX(calc(-50% - 1.125rem)); } }
 @keyframes game-title-marquee { 0% { transform: translateX(0); } 61.5% { transform: translateX(calc(-50% - 1.125rem)); } 99.9% { transform: translateX(calc(-50% - 1.125rem)); } 100% { transform: translateX(0); } }
 .diamond-decor { position: absolute; color: oklch(0.82 0.15 276 / 0.50); filter: drop-shadow(0 0 16px oklch(0.75 0.18 280 / 0.48)); pointer-events: none; }
 .diamond-decor--one { right: 2.25rem; bottom: 1.6rem; transform: rotate(-15deg); }
@@ -117,6 +122,9 @@ button, input, textarea, select { font: inherit; }
 .package-choice-surface { position: relative; z-index: 1; min-height: 8.9rem; background: linear-gradient(150deg, oklch(1 0 0 / 0.99), oklch(0.98 0.01 273 / 0.96)); }
 .package-choice--selected { border-color: transparent; background: conic-gradient(from var(--package-gradient-angle), oklch(0.53 0.23 270), oklch(0.68 0.18 301), oklch(0.82 0.14 225), oklch(0.53 0.23 270)); box-shadow: 0 14px 30px oklch(0.46 0.16 276 / 0.24); }
 .package-choice--selected .package-choice-surface { margin: 1px; border-radius: calc(0.8rem - 1px); }
+.package-choice--clean .package-choice-surface { min-height: 10.4rem; }
+.package-event-group { border: 1px solid oklch(0.86 0.075 291 / 0.78); background: linear-gradient(135deg, oklch(0.975 0.022 296 / 0.94), oklch(0.95 0.045 270 / 0.66)); box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.94), 0 14px 28px oklch(0.39 0.08 280 / 0.10); }
+.package-event-title-icon { display: grid; height: 1.8rem; width: 1.8rem; flex: 0 0 auto; place-items: center; border-radius: 0.7rem; background: linear-gradient(135deg, oklch(0.57 0.19 286), oklch(0.48 0.16 269)); color: white; box-shadow: 0 6px 14px oklch(0.40 0.12 278 / 0.20); }
 .package-badge { display: inline-flex; align-items: center; min-height: 1.2rem; border-radius: 999px; padding: 0.1rem 0.45rem; font-size: 0.55rem; font-weight: 800; letter-spacing: 0.07em; }
 .package-badge--standard { background: oklch(0.96 0.02 272); color: oklch(0.42 0.11 270); }
 .package-badge--weekly { background: oklch(0.94 0.05 275); color: oklch(0.39 0.16 270); }
@@ -178,6 +186,7 @@ button, input, textarea, select { font: inherit; }
 .outline-loader--loading-v2:has(.outline-loader-lottie svg) .outline-loader-lottie { opacity: 1; }
 .selected-product-action-bar { border: 1px solid oklch(1 0 0 / 0.85); background: linear-gradient(135deg, oklch(1 0 0 / 0.86), oklch(0.93 0.055 272 / 0.70)); box-shadow: 0 16px 36px oklch(0.27 0.07 266 / 0.18), inset 0 1px 0 oklch(1 0 0 / 0.92); backdrop-filter: blur(24px) saturate(1.2); }
 .selected-product-check { border: 1px solid oklch(1 0 0 / 0.72); background: oklch(1 0 0 / 0.54); box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.9); }
+.selected-package-check-animation { filter: brightness(0) saturate(100%); }
 .saved-player-picker { border: 1px solid oklch(0.88 0.045 270 / 0.72); background: linear-gradient(135deg, oklch(0.98 0.018 274 / 0.88), oklch(0.95 0.048 255 / 0.58)); box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.86); }
 .saved-player-picker-icon { display: grid; height: 1.75rem; width: 1.75rem; flex: 0 0 auto; place-items: center; border-radius: 0.65rem; background: oklch(1 0 0 / 0.72); color: oklch(0.45 0.14 269); }
 .saved-player-choice { min-height: 1.85rem; border: 1px solid oklch(1 0 0 / 0.8); border-radius: 0.6rem; background: oklch(1 0 0 / 0.68); padding: 0.25rem 0.55rem; color: oklch(0.36 0.09 268); font-size: 0.65rem; font-weight: 800; box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.92); }

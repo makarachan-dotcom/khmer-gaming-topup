@@ -3,11 +3,12 @@ import { AnimatedGlyph } from "@/components/AnimatedGlyph";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { OutlineLoader } from "@/components/OutlineLoader";
 import { ProviderGameArtwork } from "@/components/ProviderGameIdentity";
+import { OverflowMarquee } from "@/components/OverflowMarquee";
 import { useSelectedProduct } from "@/contexts/SelectedProductContext";
 import { SelectedPackageCheck } from "@/components/SelectedPackageCheck";
 import { countryFlagForRegion, providerPackageBadge } from "@/lib/providerPresentation";
 import { trpc } from "@/lib/trpc";
-import { ArrowLeft, Check, CheckCircle2, ChevronRight, CircleAlert, Gem, History, ShieldAlert, UserRound, WalletCards } from "lucide-react";
+import { ArrowLeft, CheckCircle2, ChevronRight, CircleAlert, Gem, History, ShieldAlert, Ticket, UserRound, WalletCards } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 
@@ -145,6 +146,27 @@ function IdentityStatus({ identity, pending, country, unsupportedIdConfirmed, on
   return <div className="mt-4 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600"><OutlineLoader size={18} color="#64748b" />កំពុងរៀបចំការពិនិត្យគណនី…</div>;
 }
 
-function DiamondPackages({ packages, status, selectedPackageId, onSelect, gameName, gameLogoUrl }: { packages: Array<{ id: string; label: string; amountLabel: string; priceLabel: string }>; status?: "ready" | "unavailable" | "error" | "verification_required"; selectedPackageId: string; onSelect: (id: string) => void; gameName: string; gameLogoUrl?: string }) {
-  return <div className="mt-6 border-t border-slate-100 pt-5"><div className="flex items-center gap-2"><span className="diamond-title-icon"><Gem className="h-4 w-4" /></span><p className="text-sm font-bold text-slate-900">កញ្ចប់ Diamond ដែលមាន</p></div>{status === "ready" && packages.length ? <div className="mt-3 grid grid-cols-2 gap-3">{packages.map((item) => { const badge = providerPackageBadge(item.label); const selected = selectedPackageId === item.id; return <article key={item.id} className="min-w-0"><button type="button" aria-pressed={selected} onClick={() => onSelect(item.id)} className={`package-choice w-full text-left ${selected ? "package-choice--selected" : ""}`}><span className="package-choice-surface block rounded-[0.7rem] p-3"><span className="flex items-start justify-between gap-2"><span className="flex min-w-0 items-center gap-2"><ProviderGameArtwork name={gameName} logoUrl={gameLogoUrl} className="package-product-art h-7 w-7 rounded-lg" iconClassName="h-3.5 w-3.5" />{badge ? <span className={`package-badge package-badge--${badge.tone}`}>{badge.label}</span> : <span className="package-badge package-badge--standard">DIAMOND</span>}</span>{selected ? <SelectedPackageCheck size={20} className="package-choice-check text-emerald-600" /> : <Gem className="package-gem h-4 w-4 text-indigo-500" />}</span><span className="mt-3 block text-sm font-extrabold leading-5 text-slate-900">{item.label}</span><span className="mt-1 block text-xs text-slate-500">{item.amountLabel}</span><span className="mt-3 block text-sm font-extrabold text-indigo-700">{item.priceLabel}</span></span></button><button type="button" disabled aria-disabled="true" className="mt-2 inline-flex h-8 w-full cursor-not-allowed items-center justify-center gap-1.5 rounded-lg bg-slate-100 px-2 text-[10px] font-bold text-slate-500"><Check className="h-3.5 w-3.5" />ទិញមិនទាន់បើក</button></article>; })}</div> : <div className="mt-3 rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-xs leading-5 text-slate-600">មិនអាចបង្ហាញកញ្ចប់សេវាសម្រាប់ពេលនេះទេ។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។</div>}</div>;
+type ProviderPackage = { id: string; label: string; amountLabel: string; priceLabel: string };
+
+function isFullTicketPackage(item: ProviderPackage) {
+  return /\bfull\s*ticket\b/i.test(`${item.label} ${item.amountLabel}`);
+}
+
+function PackageCard({ item, selected, onSelect, gameName, gameLogoUrl }: { item: ProviderPackage; selected: boolean; onSelect: () => void; gameName: string; gameLogoUrl?: string }) {
+  const badge = providerPackageBadge(item.label);
+  return <article className="min-w-0"><button type="button" aria-pressed={selected} onClick={onSelect} className={`package-choice package-choice--clean w-full text-left ${selected ? "package-choice--selected" : ""}`}><span className="package-choice-surface block rounded-[0.7rem] p-3.5"><span className="flex items-start justify-between gap-2"><span className="flex min-w-0 items-center gap-2"><ProviderGameArtwork name={gameName} logoUrl={gameLogoUrl} className="package-product-art h-9 w-9 rounded-xl" iconClassName="h-4 w-4" />{badge ? <span className={`package-badge package-badge--${badge.tone}`}>{badge.label}</span> : <span className="package-badge package-badge--standard">PACKAGE</span>}</span>{selected ? <SelectedPackageCheck size={21} className="package-choice-check" /> : <Gem className="package-gem h-4 w-4 text-indigo-600" />}</span><OverflowMarquee text={item.label} className="mt-3 text-sm font-extrabold leading-5 text-slate-950" /><OverflowMarquee text={item.amountLabel} className="mt-1 text-xs font-medium text-slate-500" /><span className="mt-3 block text-[15px] font-extrabold text-indigo-700">{item.priceLabel}</span></span></button></article>;
+}
+
+function PackageSection({ title, description, icon: Icon, items, selectedPackageId, onSelect, gameName, gameLogoUrl, event }: { title: string; description?: string | null; icon: typeof Gem; items: ProviderPackage[]; selectedPackageId: string; onSelect: (id: string) => void; gameName: string; gameLogoUrl?: string; event?: boolean }) {
+  if (!items.length) return null;
+  return <section className={event ? "package-event-group rounded-2xl p-3 sm:p-4" : ""}><div className="flex items-start gap-2"><span className={event ? "package-event-title-icon" : "diamond-title-icon"}><Icon className="h-4 w-4" /></span><div className="min-w-0"><p className="text-sm font-extrabold text-slate-950">{title}</p>{description ? <p className="mt-0.5 text-[10px] leading-4 text-slate-500">{description}</p> : null}</div></div><div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">{items.map((item) => <PackageCard key={item.id} item={item} selected={selectedPackageId === item.id} onSelect={() => onSelect(item.id)} gameName={gameName} gameLogoUrl={gameLogoUrl} />)}</div></section>;
+}
+
+function DiamondPackages({ packages, status, selectedPackageId, onSelect, gameName, gameLogoUrl }: { packages: ProviderPackage[]; status?: "ready" | "unavailable" | "error" | "verification_required"; selectedPackageId: string; onSelect: (id: string) => void; gameName: string; gameLogoUrl?: string }) {
+  const eventContent = trpc.content.active.useQuery();
+  const fullTicketEvent = (eventContent.data ?? []).find((item) => item.contentKey === "topup-event-full-ticket");
+  const fullTicketPackages = fullTicketEvent ? packages.filter(isFullTicketPackage) : [];
+  const standardPackages = fullTicketPackages.length ? packages.filter((item) => !isFullTicketPackage(item)) : packages;
+
+  return <div className="mt-6 border-t border-slate-100 pt-5">{status === "ready" && packages.length ? <div className="space-y-5"><PackageSection title={fullTicketEvent?.titleKh?.trim() || "កញ្ចប់ Full Ticket"} description={fullTicketEvent?.bodyKh} icon={Ticket} items={fullTicketPackages} selectedPackageId={selectedPackageId} onSelect={onSelect} gameName={gameName} gameLogoUrl={gameLogoUrl} event /><PackageSection title="កញ្ចប់ដែលមាន" icon={Gem} items={standardPackages} selectedPackageId={selectedPackageId} onSelect={onSelect} gameName={gameName} gameLogoUrl={gameLogoUrl} /></div> : <div className="mt-3 rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-xs leading-5 text-slate-600">មិនអាចបង្ហាញកញ្ចប់សេវាសម្រាប់ពេលនេះទេ។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។</div>}</div>;
 }
