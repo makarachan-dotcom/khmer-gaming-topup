@@ -3,6 +3,7 @@ import {
   isPubgTopupGame,
   pubgUcArtworkForAmount,
   pubgUcDisplayAmount,
+  pubgUcFallbackArtwork,
 } from "./pubgUcAssets";
 
 describe("PUBG UC package artwork", () => {
@@ -18,6 +19,10 @@ describe("PUBG UC package artwork", () => {
     expect(pubgUcArtworkForAmount("8,100 UC")).toContain("GJJlrzeXsdGEqqXH.png");
     expect(pubgUcArtworkForAmount("60 UC + 5 UC")).toBeNull();
     expect(pubgUcArtworkForAmount("Prime Plus")).toBeNull();
+  });
+
+  it("provides a generic online UC image for every unmatched provider package", () => {
+    expect(pubgUcFallbackArtwork).toContain("pvWkNiIBtgouSNwH.jpeg");
   });
 
   it("preserves the authorized provider text for a dynamic UC fallback", () => {

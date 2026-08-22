@@ -1,3 +1,5 @@
+export const pubgUcFallbackArtwork = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663905831999/pvWkNiIBtgouSNwH.jpeg";
+
 const pubgUcArtworkByAmount: Record<string, string> = {
   "60": "https://files.manuscdn.com/user_upload_by_module/session_file/310519663905831999/uyyNbCjPfviXKQLj.png",
   "120": "https://files.manuscdn.com/user_upload_by_module/session_file/310519663905831999/WuShoFojVABNXNqY.png",
