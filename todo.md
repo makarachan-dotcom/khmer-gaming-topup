@@ -208,3 +208,4 @@
 - [ ] Add a direct Appwrite provider-catalog index so Admin can retrieve synchronized offer records without relying on document-list pagination.
 - [x] Integrate the owner-supplied Back-arrow animation so Back controls remain static until clicked, then play until navigation completes with an accessible reduced-motion fallback.
 - [x] Order provider game Top-up cards Cambodia/KH first, Global second, and other country or regional catalog entries last without changing provider data or visibility rules.
+- [ ] Refactor Appwrite provider catalog storage into size-safe granular offer records so full FZR/SMM synchronization and per-offer Admin pricing do not exceed document payload limits.

@@ -10,7 +10,7 @@ type AppwriteOrder = { id: string; userId: number; orderNumber: string; orderTyp
 type AppwritePayment = { id: string; orderId: string; provider: string; status: string; amount: string; currency: string; createdAt: Date; updatedAt: Date; paidAt: Date | null; orderNumber: string; productName: string; orderStatus: string };
 export type AppwriteWalletTopup = { id: string; userId: number; referenceCode: string; provider: string; providerRequestId: string; providerTransactionId: string | null; status: "pending" | "paid" | "expired" | "failed"; amountKhr: string; paymentPayload: Record<string, unknown>; expiresAt: Date; paidAt: Date | null; creditedAt: Date | null; createdAt: Date; updatedAt: Date };
 export type AppwriteProviderAvailability = { hiddenGameIds: string[]; hiddenSmmServiceIds: string[]; updatedAt: Date };
-export type AppwriteProviderCatalog = { games: Array<{ id: string; providerSourceId: string; titleKh: string; titleEn: string; packages: Array<{ id: string; amountLabel: string; basePriceUsd: string; profitMarginPercent: string; priceUsd: string; isActive: boolean; featured: boolean; providerAuthorized: true; providerSource: string }> }>; smm: Array<{ id: string; providerSourceId: string; platform: string; titleKh: string; titleEn: string; tiers: Array<{ id: string; quantity: number; basePriceUsd: string; profitMarginPercent: string; priceUsd: string; isActive: boolean; providerAuthorized: true; providerSource: string }> }> };
+export type AppwriteProviderCatalog = { games: Array<{ id: string; providerSourceId: string; titleKh: string; titleEn: string; packageSourceIds?: string[]; packages: Array<{ id: string; providerOfferSourceId?: string; amountLabel: string; basePriceUsd: string; profitMarginPercent: string; priceUsd: string; isActive: boolean; featured: boolean; providerAuthorized: true; providerSource: string }> }>; smm: Array<{ id: string; providerSourceId: string; platform: string; titleKh: string; titleEn: string; tiers: Array<{ id: string; quantity: number; basePriceUsd: string; profitMarginPercent: string; priceUsd: string; isActive: boolean; providerAuthorized: true; providerSource: string }> }> };
 type AppwriteProviderCatalogIndex = { gameSourceIds: string[]; smmSourceIds: string[]; updatedAt: string };
 
 const databaseId = () => process.env.APPWRITE_DATABASE_ID || "zurs_store";
@@ -76,7 +76,7 @@ function providerCatalogId(prefix: string, sourceId: string) {
   return `${prefix}-${documentId(sourceId)}`;
 }
 
-async function upsertProviderCatalogRecord(table: "provider_catalog_game" | "provider_catalog_smm" | "provider_catalog_index", sourceId: string, payload: unknown) {
+async function upsertProviderCatalogRecord(table: "provider_catalog_game" | "provider_catalog_game_offer" | "provider_catalog_smm" | "provider_catalog_index", sourceId: string, payload: unknown) {
   if (!config()) throw new Error("Provider catalog storage is unavailable");
   const now = new Date();
   const path = providerCatalogDocumentPath(table, sourceId);
@@ -92,6 +92,11 @@ async function upsertProviderCatalogRecord(table: "provider_catalog_game" | "pro
 function asProviderGame(record: AppwriteRecord) {
   const value = parsePayload<AppwriteProviderCatalog["games"][number]>(record);
   return value && typeof value.id === "string" && Array.isArray(value.packages) ? value : null;
+}
+
+function asProviderGameOffer(record: AppwriteRecord) {
+  const value = parsePayload<AppwriteProviderCatalog["games"][number]["packages"][number]>(record);
+  return value && typeof value.id === "string" && typeof value.amountLabel === "string" ? value : null;
 }
 
 function asProviderSmm(record: AppwriteRecord) {
@@ -126,10 +131,18 @@ async function mergeAppwriteProviderCatalogIndex(input: { gameSourceIds?: string
 }
 
 async function readIndexedProviderCatalog(index: AppwriteProviderCatalogIndex): Promise<AppwriteProviderCatalog> {
-  const games = (await mapWithConcurrency(index.gameSourceIds, 8, async (sourceId) => {
+  const indexedGames = (await mapWithConcurrency(index.gameSourceIds, 8, async (sourceId) => {
     const record = await request("GET", providerCatalogDocumentPath("provider_catalog_game", sourceId)) as AppwriteRecord | null;
     return record?.sourceTable === "provider_catalog_game" ? asProviderGame(record) : null;
   })).filter((item): item is NonNullable<typeof item> => item !== null);
+  const games = await mapWithConcurrency(indexedGames, 6, async (game) => {
+    if (!game.packageSourceIds?.length) return game;
+    const packages = (await mapWithConcurrency(game.packageSourceIds, 8, async (sourceId) => {
+      const record = await request("GET", providerCatalogDocumentPath("provider_catalog_game_offer", sourceId)) as AppwriteRecord | null;
+      return record?.sourceTable === "provider_catalog_game_offer" ? asProviderGameOffer(record) : null;
+    })).filter((item): item is NonNullable<typeof item> => item !== null);
+    return { ...game, packages };
+  });
   const smm = (await mapWithConcurrency(index.smmSourceIds, 8, async (sourceId) => {
     const record = await request("GET", providerCatalogDocumentPath("provider_catalog_smm", sourceId)) as AppwriteRecord | null;
     return record?.sourceTable === "provider_catalog_smm" ? asProviderSmm(record) : null;
@@ -175,7 +188,10 @@ export async function syncAppwriteFzrCatalog(snapshot: Extract<FzrProviderSyncSn
       const profitMarginPercent = previous?.profitMarginPercent ?? "0.00";
       return { id, amountLabel: offer.name, basePriceUsd, profitMarginPercent, priceUsd: previous?.priceUsd ?? basePriceUsd, isActive: previous?.isActive ?? false, featured: previous?.featured ?? false, providerAuthorized: true as const, providerSource: "FZR Cards" };
     });
-    await upsertProviderCatalogRecord("provider_catalog_game", game.providerGameId, { id: gameId, providerSourceId: game.providerGameId, titleKh: game.name, titleEn: game.name, packages });
+    const packageSourceIds = game.offers.map((offer) => `${game.providerGameId}:${offer.providerOfferId}`);
+    const packagesWithSourceIds = packages.map((offer, index) => ({ ...offer, providerOfferSourceId: packageSourceIds[index]! }));
+    await upsertProviderCatalogRecord("provider_catalog_game", game.providerGameId, { id: gameId, providerSourceId: game.providerGameId, titleKh: game.name, titleEn: game.name, packageSourceIds, packages: [] });
+    await mapWithConcurrency(packagesWithSourceIds, 8, async (offer) => upsertProviderCatalogRecord("provider_catalog_game_offer", offer.providerOfferSourceId!, offer));
     return { games: existing ? 0 : 1, offers: game.offers.filter((offer) => !existingPackages.has(providerCatalogId("fzr-offer", `${game.providerGameId}:${offer.providerOfferId}`))).length };
   });
   return { gamesImported: imported.reduce((total, item) => total + item.games, 0), offersImported: imported.reduce((total, item) => total + item.offers, 0), provider: "FZR Cards" as const };
@@ -205,7 +221,9 @@ export async function updateAppwriteProviderOffer(input: { kind: "game" | "smm";
     const game = catalog.games.find((item) => item.packages.some((offer) => offer.id === input.offerId));
     if (!game) throw new Error("Provider-authorized game offer was not found");
     const packages = game.packages.map((offer) => offer.id === input.offerId ? { ...offer, basePriceUsd: input.basePriceUsd, profitMarginPercent: input.profitMarginPercent, priceUsd, isActive: input.isActive, featured: input.featured ?? offer.featured } : offer);
-    await upsertProviderCatalogRecord("provider_catalog_game", game.providerSourceId, { ...game, packages });
+    const changedOffer = packages.find((offer) => offer.id === input.offerId);
+    if (changedOffer?.providerOfferSourceId) await upsertProviderCatalogRecord("provider_catalog_game_offer", changedOffer.providerOfferSourceId, changedOffer);
+    else await upsertProviderCatalogRecord("provider_catalog_game", game.providerSourceId, { ...game, packages });
     return { success: true };
   }
   const service = catalog.smm.find((item) => item.tiers.some((tier) => tier.id === input.offerId));

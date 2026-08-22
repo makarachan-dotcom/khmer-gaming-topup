@@ -49,5 +49,6 @@ describe("Appwrite provider catalog fallback", () => {
     expect(requests.some((request) => request.url.includes("queries%5B%5D=limit%28100%29") && request.url.includes("queries%5B%5D=offset%280%29"))).toBe(true);
     expect(requests.some((request) => request.url.includes("?limit=25&offset=0"))).toBe(true);
     expect(requests.some((request) => request.body.includes("provider_catalog_index"))).toBe(true);
+    expect(requests.some((request) => request.body.includes("provider_catalog_game_offer"))).toBe(true);
   });
 });
