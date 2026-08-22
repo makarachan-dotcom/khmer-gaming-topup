@@ -226,10 +226,10 @@ export async function fetchProviderGames(options: { includeInactive?: boolean } 
   return { status: "ready", games: games.filter((game) => activeIds.has(game.id) && !availability.hiddenGameIds.includes(game.id)) };
 }
 
-export async function fetchProviderGameDetails(gameId: string): Promise<ProviderGameDetailsResponse> {
+export async function fetchProviderGameDetails(gameId: string, options: { includeInactive?: boolean } = {}): Promise<ProviderGameDetailsResponse> {
   try {
-    const publicGames = await fetchProviderGames();
-    if (publicGames.status !== "ready" || !publicGames.games.some((game) => game.id === gameId)) return { status: publicGames.status === "error" ? "error" : "unavailable", game: null, packages: [] };
+    const availableGames = await fetchProviderGames({ includeInactive: options.includeInactive });
+    if (availableGames.status !== "ready" || !availableGames.games.some((game) => game.id === gameId)) return { status: availableGames.status === "error" ? "error" : "unavailable", game: null, packages: [] };
     const response = await fzrRequest(`/api/v2/topups/offers?category_id=${encodeURIComponent(gameId)}&include_ui=1`);
     if (!response) return { status: "unavailable", game: null, packages: [] };
     const payload = fzrOffersSchema.safeParse(response);
@@ -238,6 +238,13 @@ export async function fetchProviderGameDetails(gameId: string): Promise<Provider
     const fields = providerFields(payload.data.fields);
     return { status: "ready", game: { id: gameId, name: payload.data.name, region: providerGameRegion(payload.data.name), logoUrl: payload.data.imageurl, provider: "FZR Cards", requiredFields: fields }, packages: providerPackages(gameId, payload.data.offers) };
   } catch { return { status: "error", game: null, packages: [] }; }
+}
+
+/** Admin-only callers use this to inspect authorized package UI without supplying a customer identity. */
+export async function fetchProviderPreviewPackages(gameId: string): Promise<ProviderPackageResponse> {
+  const details = await fetchProviderGameDetails(gameId, { includeInactive: true });
+  if (details.status !== "ready") return { status: details.status, packages: [] };
+  return { status: "ready", packages: details.packages };
 }
 
 export async function fetchProviderPackages(input: ProviderPackageRequest): Promise<ProviderPackageResponse> {

@@ -4,7 +4,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, ownerProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import * as db from "./db";
-import { fetchFzrProviderSyncSnapshot, fetchProviderGameDetails, fetchProviderGames, fetchProviderPackages, fetchSmmProviderServices, getProviderAvailabilityCatalog, getProviderCatalogStatus, setProviderAvailability, validateProviderPlayerIdentity } from "./providerCatalog";
+import { fetchFzrProviderSyncSnapshot, fetchProviderGameDetails, fetchProviderGames, fetchProviderPackages, fetchProviderPreviewPackages, fetchSmmProviderServices, getProviderAvailabilityCatalog, getProviderCatalogStatus, setProviderAvailability, validateProviderPlayerIdentity } from "./providerCatalog";
 import { buildZursMemberDisplayName } from "./storefrontDomain";
 import { uploadAdminMediaImage, uploadMarketplaceScreenshot, uploadMarketplaceVerificationEvidence } from "./uploads";
 import { storageGet } from "./storage";
@@ -109,6 +109,8 @@ export const appRouter = router({
     catalog: adminProcedure.query(async () => ({ games: await db.getGameCatalog(), smm: await db.getSmmCatalog() })),
     fullCatalog: adminProcedure.query(() => db.getAdminCatalog()),
     providerCatalogStatus: adminProcedure.query(() => getProviderCatalogStatus()),
+    previewGamePackages: adminProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120) })).query(({ input }) => fetchProviderPreviewPackages(input.gameId)),
+    previewSmmServices: adminProcedure.query(() => fetchSmmProviderServices({ includeHidden: true })),
     providerAvailability: adminProcedure.query(() => getProviderAvailabilityCatalog()),
     setProviderAvailability: adminProcedure.input(z.object({ kind: z.enum(["game", "smm"]), providerId: z.string().trim().min(1).max(120), isActive: z.boolean() })).mutation(({ input }) => setProviderAvailability(input)),
     syncTopupCatalog: adminProcedure.mutation(async () => { const snapshot = await fetchFzrProviderSyncSnapshot(); if (snapshot.status !== "ready") throw new Error("FZR Cards catalog is currently unavailable"); return db.syncFzrCatalog(snapshot); }),

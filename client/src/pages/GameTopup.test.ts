@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canBrowseVerifiedPackages, gameIdFromTopupPath, gameTopupPath, readVerifiedPlayerEntries, saveVerifiedPlayerEntry, sortProviderPackagesByPrice } from "./GameTopup";
+import { canBrowseTopupPackages, canBrowseVerifiedPackages, gameIdFromTopupPath, gameTopupPath, readVerifiedPlayerEntries, saveVerifiedPlayerEntry, sortProviderPackagesByPrice } from "./GameTopup";
 
 describe("dedicated game top-up routes", () => {
   it("creates and reads an encoded provider game route", () => {
@@ -29,6 +29,12 @@ describe("dedicated game top-up routes", () => {
     expect(canBrowseVerifiedPackages(true, "not_supported")).toBe(false);
     expect(canBrowseVerifiedPackages(true, "unavailable")).toBe(false);
     expect(canBrowseVerifiedPackages(true, "verified")).toBe(true);
+  });
+
+  it("allows package UI without player fields only when the protected Admin preview mode is active", () => {
+    expect(canBrowseTopupPackages(false, "invalid", false)).toBe(false);
+    expect(canBrowseTopupPackages(true, "not_supported", false)).toBe(false);
+    expect(canBrowseTopupPackages(false, undefined, true)).toBe(true);
   });
 
   it("keeps only private verified ID fields in a small per-game browser history", () => {

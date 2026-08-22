@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { balanceSocialProviderServices, fetchProviderGameDetails, fetchProviderGames, fetchProviderPackages, fetchSmmProviderServices, getProviderAvailabilityCatalog, getProviderCatalogStatus, isThailandProviderProduct, submitSmmProviderOrder, validateProviderPlayerIdentity } from "./providerCatalog";
+import { balanceSocialProviderServices, fetchProviderGameDetails, fetchProviderGames, fetchProviderPackages, fetchProviderPreviewPackages, fetchSmmProviderServices, getProviderAvailabilityCatalog, getProviderCatalogStatus, isThailandProviderProduct, submitSmmProviderOrder, validateProviderPlayerIdentity } from "./providerCatalog";
 
 const originalEndpoint = process.env.FZR_CARDS_API_BASE_URL;
 const originalApiKey = process.env.FZR_CARDS_API_KEY;
@@ -60,6 +60,18 @@ describe("provider catalog", () => {
       .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, kind: "topup", items: [{ category_id: "acecraft", name: "Acecraft" }], meta: { next_cursor: null, has_more: false } }) })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "acecraft", name: "Acecraft", imageurl: "https://cdn.example.test/acecraft.png", fields: [{ key: "user_id", label: "User ID", type: "text" }], offers: [{ offer_id: "80_diamonds", name: "80 Diamonds", price_usd: "0.9864" }] }) }));
     await expect(fetchProviderGameDetails("acecraft")).resolves.toEqual({ status: "ready", game: { id: "acecraft", name: "Acecraft", region: "Global", logoUrl: "https://cdn.example.test/acecraft.png", provider: "FZR Cards", requiredFields: [{ key: "user_id", label: "User ID", required: true, kind: "text" }] }, packages: [{ id: "acecraft:80_diamonds", label: "80 Diamonds", amountLabel: "80 Diamonds", priceLabel: "$0.99", provider: "FZR Cards", paymentMethods: ["khqr", "bank"] }] });
+  });
+
+  it("returns authorized package UI for an admin preview without submitting a player identity", async () => {
+    process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
+    process.env.FZR_CARDS_API_KEY = "server-only-key";
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, kind: "topup", items: [{ category_id: "preview-only-game", name: "Preview Only Game" }], meta: { next_cursor: null, has_more: false } }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "preview-only-game", name: "Preview Only Game", fields: [{ key: "user_id", label: "User ID", type: "text" }], offers: [{ offer_id: "starter", name: "Starter Pack", price_usd: "1.25" }] }) }));
+
+    await expect(fetchProviderPreviewPackages("preview-only-game")).resolves.toEqual({ status: "ready", packages: [{ id: "preview-only-game:starter", label: "Starter Pack", amountLabel: "Starter Pack", priceLabel: "$1.25", provider: "FZR Cards", paymentMethods: ["khqr", "bank"] }] });
+    expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(2);
+    expect((fetch as ReturnType<typeof vi.fn>).mock.calls[1]?.[0]).toContain("/offers?category_id=preview-only-game");
   });
 
   it("validates a player name only through the server-side FZR endpoint", async () => {
