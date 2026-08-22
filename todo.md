@@ -195,8 +195,9 @@
 - [x] Replace game selection with clear provider-derived region/country presentation: flag for a specific country, globe for Global, and no false region claim when absent.
 - [x] Audit the requested LottieFlow category for semantically suitable outline motion assets; avoid generic emoji/static-icon clutter and respect reduced-motion preferences.
 - [x] Validate and add the owner-supplied RapidAPI Game ID Checker credential as a server-only Mobile Legends name-check provider in the resilient lookup chain.
-- [ ] Replace shared loading states across customer and Admin pages with the owner-supplied LoadingV2 outline animation, including an accessible reduced-motion fallback.
+- [x] Replace shared loading states across customer and Admin pages with the owner-supplied LoadingV2 outline animation, including an accessible reduced-motion fallback.
 - [x] Repair Admin provider catalog sync and add durable per-offer price and profit-margin controls for game and SMM products, with clear actionable outcomes.
 - [x] Make overflow-only game-title marquee motion pause for five seconds between scroll cycles while respecting reduced-motion preferences.
 - [x] Update Admin product price, margin, and availability interactions optimistically so the changed record reflects immediately without a manual page refresh.
 - [ ] Verify the owner-authenticated production catalog sync and one per-offer price/margin edit after the release is published.
+- [x] Remove background surfaces from the LoadingV2 outline presentation while retaining legible status text and reduced-motion support.
