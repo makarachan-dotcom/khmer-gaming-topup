@@ -2,6 +2,7 @@ import StorefrontLayout from "@/components/StorefrontLayout";
 import { AnimatedGlyph } from "@/components/AnimatedGlyph";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { OutlineLoader } from "@/components/OutlineLoader";
+import { OverflowMarquee } from "@/components/OverflowMarquee";
 import {
   ProviderGameArtwork,
   ProviderGameRegion,
@@ -9,7 +10,9 @@ import {
 } from "@/components/ProviderGameIdentity";
 import {
   filterProviderGames,
+  groupProviderGamesByBaseName,
   orderProviderGames,
+  providerGameVariantLabel,
   type ProviderGameFilter,
 } from "@/lib/providerPresentation";
 import { trpc } from "@/lib/trpc";
@@ -184,7 +187,7 @@ function HomeGameCard({
             className="h-11 w-11 rounded-xl"
           />
           <span className="min-w-0 flex-1">
-            {displayName ? <span className="block truncate text-sm font-bold text-slate-900">{displayName}</span> : <ProviderGameTitle name={game.name} className="text-sm font-bold text-slate-900" />}
+            {displayName ? <OverflowMarquee text={displayName} className="block text-sm font-bold text-slate-900" /> : <ProviderGameTitle name={game.name} className="text-sm font-bold text-slate-900" />}
             <ProviderGameRegion
               name={game.name}
               region={game.region}
@@ -197,21 +200,12 @@ function HomeGameCard({
   );
 }
 
-function isMobileLegendsCatalogGame(game: { id: string; name: string }) {
-  return /^mobile_legends(?:_|$)/i.test(game.id) || /^mobile legends\b/i.test(game.name);
-}
+type CatalogGame = { id: string; name: string; region?: string; logoUrl?: string };
 
-function mobileLegendsVariantLabel(game: { id: string; name: string }) {
-  if (game.id === "mobile_legends_global" || /\bglobal\b/i.test(game.name)) return "Global";
-  const distinct = game.name.replace(/^mobile legends\s*/i, "").replace(/^[-·:(\s]+|[)\s]+$/g, "").trim();
-  return distinct || "Global";
-}
-
-function MobileLegendsCatalogGroup({ games }: { games: Array<{ id: string; name: string; region?: string; logoUrl?: string }> }) {
-  const sorted = [...games].sort((left, right) => Number(right.id === "mobile_legends_global") - Number(left.id === "mobile_legends_global") || mobileLegendsVariantLabel(left).localeCompare(mobileLegendsVariantLabel(right)));
-  const primary = sorted[0];
+function ProviderGameCatalogGroup({ baseName, games }: { baseName: string; games: CatalogGame[] }) {
+  const primary = games[0];
   if (!primary) return null;
-  return <section className="col-span-full rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/80 via-white to-cyan-50/80 p-3 shadow-sm"><div className="flex items-center gap-2"><ProviderGameArtwork name={primary.name} region={primary.region} logoUrl={primary.logoUrl} className="h-9 w-9 rounded-xl" /><div className="min-w-0"><p className="text-sm font-extrabold text-slate-950">Mobile Legends</p><p className="mt-0.5 text-[10px] font-semibold text-indigo-700">🇰🇭 Cambodia support · ជ្រើសរើសប្រភេទ top-up</p></div></div><div className={sorted.length === 1 ? "mx-auto mt-3 grid w-full max-w-[12rem] grid-cols-1 gap-3" : "mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"}>{sorted.map(game => <HomeGameCard key={game.id} game={game} displayName={mobileLegendsVariantLabel(game)} />)}</div></section>;
+  return <section className="col-span-full rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/80 via-white to-cyan-50/80 p-3 shadow-sm"><div className="flex items-center gap-2"><ProviderGameArtwork name={primary.name} region={primary.region} logoUrl={primary.logoUrl} className="h-9 w-9 rounded-xl" /><div className="min-w-0"><OverflowMarquee text={baseName} className="block text-sm font-extrabold text-slate-950" /><p className="mt-0.5 text-[10px] font-semibold text-indigo-700">🇰🇭 Cambodia support · ជ្រើសរើសប្រភេទ top-up</p></div></div><div className={games.length === 1 ? "mx-auto mt-3 grid w-full max-w-[12rem] grid-cols-1 gap-3" : "mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"}>{games.map(game => <HomeGameCard key={game.id} game={game} displayName={providerGameVariantLabel(game)} />)}</div></section>;
 }
 
 const catalogFilters: Array<{ value: ProviderGameFilter; label: string }> = [
@@ -231,8 +225,7 @@ function HomeTopupExperience() {
     [games, query, regionFilter]
   );
   const hasFilters = Boolean(query.trim()) || regionFilter !== "all";
-  const mobileLegendsGames = visibleGames.filter(isMobileLegendsCatalogGame);
-  const otherGames = visibleGames.filter(game => !isMobileLegendsCatalogGame(game));
+  const catalogGroups = useMemo(() => groupProviderGamesByBaseName(visibleGames), [visibleGames]);
 
   return (
     <section id="topup-games" className="container mt-5 pb-5 sm:mt-10">
@@ -330,8 +323,7 @@ function HomeTopupExperience() {
             </div>
             {visibleGames.length ? (
               <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                {otherGames.map(game => <HomeGameCard key={game.id} game={game} />)}
-                <MobileLegendsCatalogGroup games={mobileLegendsGames} />
+                {catalogGroups.map(group => group.games.length > 1 ? <ProviderGameCatalogGroup key={group.baseName} baseName={group.baseName} games={group.games} /> : <HomeGameCard key={group.games[0]!.id} game={group.games[0]!} />)}
               </div>
             ) : (
               <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center">

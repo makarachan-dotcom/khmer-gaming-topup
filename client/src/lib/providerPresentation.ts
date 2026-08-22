@@ -117,3 +117,127 @@ export function filterProviderGames<
     return matchesFilter && matchesQuery;
   });
 }
+
+
+export type ProviderGameCatalogItem = {
+  id: string;
+  name: string;
+  region?: string | null;
+};
+
+export type ProviderGameCatalogGroup<T extends ProviderGameCatalogItem> = {
+  baseName: string;
+  games: T[];
+};
+
+const trailingVariantNames = [
+  "auto via login",
+  "exclusive",
+  "global",
+  "promo",
+  "special",
+  "asia",
+  "sea",
+  "mena",
+  "cis",
+  "latam",
+  "naeu",
+  "bangladesh",
+  "brazil",
+  "canada",
+  "cambodia",
+  "europe",
+  "indonesia",
+  "malaysia",
+  "pakistan",
+  "philippines",
+  "russia",
+  "singapore",
+  "taiwan",
+  "turkey",
+  "united states",
+  "usa",
+  "vietnam",
+  "bd",
+  "br",
+  "eu",
+  "id",
+  "kh",
+  "my",
+  "ph",
+  "pk",
+  "ru",
+  "sg",
+  "tr",
+  "tw",
+  "us",
+  "vn",
+  "my/sg",
+].sort((left, right) => right.length - left.length);
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+const trailingVariantPattern = new RegExp(
+  `^(.*?)(?:\\s+-\\s*|\\s+)(${trailingVariantNames.map(escapeRegExp).join("|")})\\s*$`,
+  "i"
+);
+
+/** Splits a provider title into a customer-facing game name and the genuine provider variant. */
+export function providerGameNameParts(name: string) {
+  const normalized = name.trim().replace(/\s+/g, " ");
+  const parenthetical = normalized.match(/^(.*?)\s*\(([^()]+)\)\s*$/);
+  if (parenthetical?.[1]?.trim() && parenthetical[2]?.trim()) {
+    return { baseName: parenthetical[1].trim(), variant: parenthetical[2].trim() };
+  }
+
+  const suffix = normalized.match(trailingVariantPattern);
+  if (suffix?.[1]?.trim() && suffix[2]?.trim()) {
+    return { baseName: suffix[1].trim(), variant: suffix[2].trim() };
+  }
+
+  return { baseName: normalized, variant: "" };
+}
+
+export function providerGameBaseName(game: Pick<ProviderGameCatalogItem, "name">) {
+  return providerGameNameParts(game.name).baseName;
+}
+
+/** The compact label is shown only inside a group of the same base game. */
+export function providerGameVariantLabel(game: Pick<ProviderGameCatalogItem, "name">) {
+  return providerGameNameParts(game.name).variant || "Global";
+}
+
+function providerVariantPriority(game: ProviderGameCatalogItem) {
+  const variant = providerGameVariantLabel(game).toLocaleLowerCase();
+  if (variant === "global") return 0;
+  if (variant === "cambodia" || variant === "kh") return 1;
+  return 2;
+}
+
+/**
+ * Groups only genuinely equivalent provider titles. The individual product IDs stay untouched,
+ * so every selected variant continues to load its own authorized details and packages.
+ */
+export function groupProviderGamesByBaseName<T extends ProviderGameCatalogItem>(games: T[]): ProviderGameCatalogGroup<T>[] {
+  const groups = new Map<string, ProviderGameCatalogGroup<T>>();
+  for (const game of games) {
+    const baseName = providerGameBaseName(game);
+    const key = baseName.toLocaleLowerCase();
+    const existing = groups.get(key);
+    if (existing) existing.games.push(game);
+    else groups.set(key, { baseName, games: [game] });
+  }
+
+  return Array.from(groups.values())
+    .map(group => ({
+      ...group,
+      games: [...group.games].sort((left, right) =>
+        providerVariantPriority(left) - providerVariantPriority(right) ||
+        providerGameVariantLabel(left).localeCompare(providerGameVariantLabel(right), undefined, { sensitivity: "base" }) ||
+        left.id.localeCompare(right.id)
+      ),
+    }))
+    .sort((left, right) => left.baseName.localeCompare(right.baseName, undefined, { sensitivity: "base" }));
+}

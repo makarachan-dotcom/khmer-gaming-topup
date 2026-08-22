@@ -3,7 +3,10 @@ import {
   cambodiaSupportMarker,
   countryFlagForRegion,
   filterProviderGames,
+  groupProviderGamesByBaseName,
   orderProviderGames,
+  providerGameNameParts,
+  providerGameVariantLabel,
   providerPackageBadge,
 } from "./providerPresentation";
 
@@ -54,5 +57,41 @@ describe("provider package presentation", () => {
     expect(
       filterProviderGames(games, "", "global").map(game => game.id)
     ).toEqual(["global"]);
+  });
+});
+
+
+describe("provider game catalog grouping", () => {
+  it("separates a provider title into its base game and genuine variant", () => {
+    expect(providerGameNameParts("Mobile Legends (Global)")).toEqual({ baseName: "Mobile Legends", variant: "Global" });
+    expect(providerGameNameParts("Free Fire (MY/SG)")).toEqual({ baseName: "Free Fire", variant: "MY/SG" });
+    expect(providerGameNameParts("Blood Strike MENA")).toEqual({ baseName: "Blood Strike", variant: "MENA" });
+    expect(providerGameNameParts("Mobile Legends: Adventure")).toEqual({ baseName: "Mobile Legends: Adventure", variant: "" });
+  });
+
+  it("groups every equivalent public game name and retains each provider product id", () => {
+    const games = [
+      { id: "mobile_legends_promo", name: "Mobile Legends (Promo)", region: "Promo" },
+      { id: "mobile_legends_global", name: "Mobile Legends (Global)", region: "Global" },
+      { id: "mobile_legends_special", name: "Mobile Legends (Special)", region: "Special" },
+      { id: "free_fire_sg", name: "Free Fire (SG)", region: "Singapore" },
+      { id: "free_fire_kh", name: "Free Fire (KH)", region: "Cambodia" },
+      { id: "honor_of_kings", name: "Honor of Kings", region: "Global" },
+    ];
+
+    const grouped = groupProviderGamesByBaseName(games);
+    const mobileLegends = grouped.find(group => group.baseName === "Mobile Legends");
+    const freeFire = grouped.find(group => group.baseName === "Free Fire");
+    const honorOfKings = grouped.find(group => group.baseName === "Honor of Kings");
+
+    expect(mobileLegends?.games.map(game => game.id)).toEqual(["mobile_legends_global", "mobile_legends_promo", "mobile_legends_special"]);
+    expect(mobileLegends?.games.map(providerGameVariantLabel)).toEqual(["Global", "Promo", "Special"]);
+    expect(freeFire?.games.map(game => game.id)).toEqual(["free_fire_kh", "free_fire_sg"]);
+    expect(freeFire?.games.map(providerGameVariantLabel)).toEqual(["KH", "SG"]);
+    expect(honorOfKings?.games.map(game => game.id)).toEqual(["honor_of_kings"]);
+  });
+
+  it("uses Global only as the compact label for an unqualified title inside a group", () => {
+    expect(providerGameVariantLabel({ id: "blood_strike", name: "Blood Strike" })).toBe("Global");
   });
 });
