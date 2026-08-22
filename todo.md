@@ -201,3 +201,5 @@
 - [x] Update Admin product price, margin, and availability interactions optimistically so the changed record reflects immediately without a manual page refresh.
 - [ ] Verify the owner-authenticated production catalog sync and one per-offer price/margin edit after the release is published.
 - [x] Remove background surfaces from the LoadingV2 outline presentation while retaining legible status text and reduced-motion support.
+- [x] Replace the remaining rotating Admin catalog loading spinners with the shared LoadingV2 outline animation.
+- [x] Ensure Admin catalog retrieval falls back to persisted Appwrite provider offers after a successful sync when the primary catalog is empty or unavailable.

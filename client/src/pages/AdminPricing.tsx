@@ -2,12 +2,29 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
 import { OutlineLoader } from "@/components/OutlineLoader";
 import { trpc } from "@/lib/trpc";
-import { Calculator, CheckCircle2, CloudOff, Loader2, Power, RefreshCw, Save, ShieldAlert, ShieldCheck, Trash2 } from "lucide-react";
+import { Calculator, CheckCircle2, CloudOff, Power, RefreshCw, Save, ShieldAlert, ShieldCheck, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 
 const ownerEmail = "chanmakara672@gmail.com";
-type Offer = { id: string; amountLabel?: string; quantity?: number; basePriceUsd: string; profitMarginPercent: string; priceUsd: string; isActive: boolean; featured?: boolean; providerAuthorized: boolean; providerSource?: string | null };
+
+type Offer = {
+  id: string;
+  amountLabel?: string;
+  quantity?: number;
+  basePriceUsd: string;
+  profitMarginPercent: string;
+  priceUsd: string;
+  isActive: boolean;
+  featured?: boolean;
+  providerAuthorized: boolean;
+  providerSource?: string | null;
+};
+
 type AvailabilityItem = { id: string; name: string; category?: string; isActive: boolean };
+
+function ActivityLoader({ size = 22, color = "#4f46e5", label }: { size?: number; color?: string; label?: string }) {
+  return <span className="inline-flex items-center gap-2" aria-live="polite"><OutlineLoader size={size} color={color} />{label ? <span>{label}</span> : null}</span>;
+}
 
 export default function AdminPricing() {
   const { user, loading } = useAuth();
@@ -20,59 +37,132 @@ export default function AdminPricing() {
 function PricingWorkspace() {
   const catalog = trpc.admin.fullCatalog.useQuery();
   const availability = trpc.admin.providerAvailability.useQuery();
+  const providerStatus = trpc.admin.providerCatalogStatus.useQuery();
   const utils = trpc.useUtils();
   const [syncNotice, setSyncNotice] = useState<string | null>(null);
+  const [filter, setFilter] = useState("");
+
   const applyOfferUpdate = (kind: "game" | "smm", offerId: string, values: { basePriceUsd: string; profitMarginPercent: string; isActive: boolean; featured?: boolean }) => {
     const priceUsd = (Number(values.basePriceUsd) * (1 + Number(values.profitMarginPercent) / 100)).toFixed(2);
     utils.admin.fullCatalog.setData(undefined, (current) => {
       if (!current) return current;
-      return kind === "game"
-        ? { ...current, games: current.games.map((game) => ({ ...game, packages: game.packages?.map((offer: Offer) => offer.id === offerId ? { ...offer, ...values, priceUsd, featured: values.featured ?? offer.featured } : offer) ?? [] })) }
-        : { ...current, smm: current.smm.map((service) => ({ ...service, tiers: service.tiers?.map((offer: Offer) => offer.id === offerId ? { ...offer, ...values, priceUsd } : offer) ?? [] })) };
+      if (kind === "game") {
+        return {
+          ...current,
+          games: current.games.map((game) => ({
+            ...game,
+            packages: game.packages?.map((offer: Offer) => offer.id === offerId ? { ...offer, ...values, priceUsd, featured: values.featured ?? offer.featured } : offer) ?? [],
+          })),
+        };
+      }
+      return {
+        ...current,
+        smm: current.smm.map((service) => ({
+          ...service,
+          tiers: service.tiers?.map((offer: Offer) => offer.id === offerId ? { ...offer, ...values, priceUsd } : offer) ?? [],
+        })),
+      };
     });
   };
-  const updateGame = trpc.admin.updateGamePackage.useMutation({ onMutate: (input) => { const previous = utils.admin.fullCatalog.getData(); applyOfferUpdate("game", input.packageId, { basePriceUsd: input.basePriceUsd ?? input.priceUsd ?? "0", profitMarginPercent: input.profitMarginPercent ?? "0.00", isActive: input.isActive, featured: input.featured }); return { previous }; }, onError: (_error, _input, context) => utils.admin.fullCatalog.setData(undefined, context?.previous), onSuccess: () => utils.admin.fullCatalog.invalidate() });
-  const updateSmm = trpc.admin.updateSmmTier.useMutation({ onMutate: (input) => { const previous = utils.admin.fullCatalog.getData(); applyOfferUpdate("smm", input.tierId, { basePriceUsd: input.basePriceUsd ?? input.priceUsd ?? "0", profitMarginPercent: input.profitMarginPercent ?? "0.00", isActive: input.isActive }); return { previous }; }, onError: (_error, _input, context) => utils.admin.fullCatalog.setData(undefined, context?.previous), onSuccess: () => utils.admin.fullCatalog.invalidate() });
+
+  const updateGame = trpc.admin.updateGamePackage.useMutation({
+    onMutate: (input) => {
+      const previous = utils.admin.fullCatalog.getData();
+      applyOfferUpdate("game", input.packageId, { basePriceUsd: input.basePriceUsd ?? input.priceUsd ?? "0", profitMarginPercent: input.profitMarginPercent ?? "0.00", isActive: input.isActive, featured: input.featured });
+      return { previous };
+    },
+    onError: (_error, _input, context) => utils.admin.fullCatalog.setData(undefined, context?.previous),
+    onSuccess: () => utils.admin.fullCatalog.invalidate(),
+  });
+
+  const updateSmm = trpc.admin.updateSmmTier.useMutation({
+    onMutate: (input) => {
+      const previous = utils.admin.fullCatalog.getData();
+      applyOfferUpdate("smm", input.tierId, { basePriceUsd: input.basePriceUsd ?? input.priceUsd ?? "0", profitMarginPercent: input.profitMarginPercent ?? "0.00", isActive: input.isActive });
+      return { previous };
+    },
+    onError: (_error, _input, context) => utils.admin.fullCatalog.setData(undefined, context?.previous),
+    onSuccess: () => utils.admin.fullCatalog.invalidate(),
+  });
+
   const deleteGame = trpc.admin.deleteGamePackage.useMutation({ onSuccess: () => utils.admin.fullCatalog.invalidate() });
   const deleteSmm = trpc.admin.deleteSmmTier.useMutation({ onSuccess: () => utils.admin.fullCatalog.invalidate() });
-  const providerStatus = trpc.admin.providerCatalogStatus.useQuery();
-  const syncTopup = trpc.admin.syncTopupCatalog.useMutation({ onSuccess: (result) => { setSyncNotice(`បាន Sync ហ្គេម ${result.gamesImported} និងកញ្ចប់ ${result.offersImported} រួចរាល់។ ឥឡូវអ្នកអាចកំណត់ Base USD និង Margin សម្រាប់កញ្ចប់នីមួយៗបាន។`); utils.admin.fullCatalog.invalidate(); utils.admin.providerCatalogStatus.invalidate(); } });
-  const syncSmm = trpc.admin.syncSmmCatalog.useMutation({ onSuccess: (result) => { setSyncNotice(`បាន Sync សេវា SMM ${result.servicesImported} និង offer ${result.tiersImported} រួចរាល់។ ឥឡូវអ្នកអាចកំណត់ Base USD និង Margin សម្រាប់ offer នីមួយៗបាន។`); utils.admin.fullCatalog.invalidate(); utils.admin.providerCatalogStatus.invalidate(); } });
-  const toggleAvailability = trpc.admin.setProviderAvailability.useMutation({ onSuccess: () => { utils.admin.providerAvailability.invalidate(); utils.provider.games.invalidate(); utils.provider.smmServices.invalidate(); } });
-  const [filter, setFilter] = useState("");
+  const syncTopup = trpc.admin.syncTopupCatalog.useMutation({
+    onSuccess: (result) => {
+      setSyncNotice(`បាន Sync ហ្គេម ${result.gamesImported} និងកញ្ចប់ ${result.offersImported} រួចរាល់។ ឥឡូវអ្នកអាចកំណត់ Base USD និង Margin សម្រាប់កញ្ចប់នីមួយៗបាន។`);
+      utils.admin.fullCatalog.invalidate();
+      utils.admin.providerCatalogStatus.invalidate();
+    },
+  });
+  const syncSmm = trpc.admin.syncSmmCatalog.useMutation({
+    onSuccess: (result) => {
+      setSyncNotice(`បាន Sync សេវា SMM ${result.servicesImported} និង offer ${result.tiersImported} រួចរាល់។ ឥឡូវអ្នកអាចកំណត់ Base USD និង Margin សម្រាប់ offer នីមួយៗបាន។`);
+      utils.admin.fullCatalog.invalidate();
+      utils.admin.providerCatalogStatus.invalidate();
+    },
+  });
+  const toggleAvailability = trpc.admin.setProviderAvailability.useMutation({
+    onSuccess: () => {
+      utils.admin.providerAvailability.invalidate();
+      utils.provider.games.invalidate();
+      utils.provider.smmServices.invalidate();
+    },
+  });
   const actionError = availability.error ?? toggleAvailability.error ?? updateGame.error ?? updateSmm.error ?? deleteGame.error ?? deleteSmm.error ?? syncTopup.error ?? syncSmm.error;
-  return <main className="mx-auto max-w-6xl pb-10"><header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="text-xs font-bold tracking-[0.14em] text-indigo-700">CATALOG CONTROL</p><h1 className="mt-1 font-display text-3xl font-bold text-slate-950">គ្រប់គ្រងផលិតផល និងតម្លៃ</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">អ្នកអាចបិទ ឬបើកផលិតផលពិតពី provider បានភ្លាមៗ។ ផលិតផលដែលបិទនឹងមិនបង្ហាញនៅទំព័រអតិថិជន ឬអាចចូលតាមតំណដោយផ្ទាល់បានទេ។</p></div><a href="/admin" className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-700">ត្រឡប់ទៅ Admin</a></header>
+
+  return <main className="mx-auto max-w-6xl pb-10">
+    <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+      <div>
+        <p className="text-xs font-bold tracking-[0.14em] text-indigo-700">CATALOG CONTROL</p>
+        <h1 className="mt-1 font-display text-3xl font-bold text-slate-950">គ្រប់គ្រងផលិតផល និងតម្លៃ</h1>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">អ្នកអាចបិទ ឬបើកផលិតផលពិតពី provider បានភ្លាមៗ។ ផលិតផលដែលបិទនឹងមិនបង្ហាញនៅទំព័រអតិថិជន ឬអាចចូលតាមតំណដោយផ្ទាល់បានទេ។</p>
+      </div>
+      <a href="/admin" className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-700">ត្រឡប់ទៅ Admin</a>
+    </header>
+
     {actionError ? <AdminError error={actionError} /> : null}
     {syncNotice ? <div className="mt-5 flex items-start gap-2 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-xs leading-5 text-emerald-900"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /><p>{syncNotice}</p></div> : null}
     <ProviderAvailabilityControls loading={availability.isLoading} inventory={availability.data} filter={filter} onFilter={setFilter} busy={toggleAvailability.isPending} onToggle={(kind, providerId, isActive) => toggleAvailability.mutate({ kind, providerId, isActive })} />
     <section className="mt-6 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-xs leading-6 text-amber-900"><Calculator className="mr-2 inline h-4 w-4" />ការកំណត់តម្លៃ និង Margin ខាងក្រោមប្រើសម្រាប់ records ដែលបាន sync និងមាន provider authorization ប៉ុណ្ណោះ។ មិនមានការបង្កើតផលិតផលក្លែងក្លាយដោយដៃឡើយ។</section>
     <ProviderSyncStatus loading={providerStatus.isLoading} status={providerStatus.data} onSyncTopup={() => syncTopup.mutate()} onSyncSmm={() => syncSmm.mutate()} syncingTopup={syncTopup.isPending} syncingSmm={syncSmm.isPending} />
-    {catalog.isLoading ? <div className="mt-6 grid min-h-48 place-items-center"><Loader2 className="h-6 w-6 animate-[spin_1.2s_linear_infinite] text-indigo-600" /></div> : <section className="mt-6 grid gap-5 xl:grid-cols-2"><CatalogGroup title="Game Top-up offers" groups={catalog.data?.games ?? []} onSaveGame={(offer, values) => updateGame.mutate({ packageId: offer.id, ...values })} onDeleteGame={(id) => deleteGame.mutate({ packageId: id })} /><CatalogGroup title="SMM offers" groups={catalog.data?.smm ?? []} onSaveSmm={(offer, values) => updateSmm.mutate({ tierId: offer.id, ...values })} onDeleteSmm={(id) => deleteSmm.mutate({ tierId: id })} /></section>}
+    {catalog.isLoading ? <div className="mt-6 grid min-h-48 place-items-center"><ActivityLoader size={30} /></div> : <section className="mt-6 grid gap-5 xl:grid-cols-2"><CatalogGroup title="Game Top-up offers" groups={catalog.data?.games ?? []} onSaveGame={(offer, values) => updateGame.mutate({ packageId: offer.id, ...values })} onDeleteGame={(id) => deleteGame.mutate({ packageId: id })} /><CatalogGroup title="SMM offers" groups={catalog.data?.smm ?? []} onSaveSmm={(offer, values) => updateSmm.mutate({ tierId: offer.id, ...values })} onDeleteSmm={(id) => deleteSmm.mutate({ tierId: id })} /></section>}
   </main>;
 }
 
 function ProviderAvailabilityControls({ loading, inventory, filter, onFilter, busy, onToggle }: { loading: boolean; inventory?: { games: AvailabilityItem[]; smm: AvailabilityItem[] }; filter: string; onFilter: (value: string) => void; busy: boolean; onToggle: (kind: "game" | "smm", providerId: string, isActive: boolean) => void }) {
   const query = filter.trim().toLowerCase();
-  const games = useMemo(() => (inventory?.games ?? []).filter((item) => `${item.name}`.toLowerCase().includes(query)).slice(0, 60), [inventory?.games, query]);
+  const games = useMemo(() => (inventory?.games ?? []).filter((item) => item.name.toLowerCase().includes(query)).slice(0, 60), [inventory?.games, query]);
   const smm = useMemo(() => (inventory?.smm ?? []).filter((item) => `${item.category ?? ""} ${item.name}`.toLowerCase().includes(query)).slice(0, 60), [inventory?.smm, query]);
-  return <section className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"><div className="flex flex-col justify-between gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center"><div><div className="flex items-center gap-2"><Power className="h-4 w-4 text-indigo-600" /><h2 className="text-sm font-bold text-slate-900">បិទ / បើក ផលិតផល Provider</h2></div><p className="mt-1 text-xs leading-5 text-slate-500">ការកំណត់នេះគ្រប់គ្រងតែ visibility របស់ផលិតផលពិតដែល provider ផ្តល់ឲ្យ។</p></div><input value={filter} onChange={(event) => onFilter(event.target.value)} placeholder="ស្វែងរក game ឬ service…" className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs outline-none focus:border-indigo-500 sm:w-64" /></div>{loading ? <div className="grid min-h-32 place-items-center"><Loader2 className="h-5 w-5 animate-[spin_1.2s_linear_infinite] text-indigo-600" /></div> : !inventory ? <div className="p-5 text-xs leading-5 text-rose-700">មិនអាចទាញបញ្ជីផលិតផលបានទេ។ សូមពិនិត្យ provider និង Appwrite configuration។</div> : <div className="grid gap-0 xl:grid-cols-2"><AvailabilityGroup title="Game Top-up" items={games} kind="game" busy={busy} onToggle={onToggle} /><AvailabilityGroup title="SMM / Boost Services" items={smm} kind="smm" busy={busy} onToggle={onToggle} /></div>}</section>;
+  return <section className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div className="flex flex-col justify-between gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center"><div><div className="flex items-center gap-2"><Power className="h-4 w-4 text-indigo-600" /><h2 className="text-sm font-bold text-slate-900">បិទ / បើក ផលិតផល Provider</h2></div><p className="mt-1 text-xs leading-5 text-slate-500">ការកំណត់នេះគ្រប់គ្រងតែ visibility របស់ផលិតផលពិតដែល provider ផ្តល់ឲ្យ។</p></div><input value={filter} onChange={(event) => onFilter(event.target.value)} placeholder="ស្វែងរក game ឬ service…" className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs outline-none focus:border-indigo-500 sm:w-64" /></div>
+    {loading ? <div className="grid min-h-32 place-items-center"><ActivityLoader /></div> : !inventory ? <div className="p-5 text-xs leading-5 text-rose-700">មិនអាចទាញបញ្ជីផលិតផលបានទេ។ សូមពិនិត្យ provider និង Appwrite configuration។</div> : <div className="grid gap-0 xl:grid-cols-2"><AvailabilityGroup title="Game Top-up" items={games} kind="game" busy={busy} onToggle={onToggle} /><AvailabilityGroup title="SMM / Boost Services" items={smm} kind="smm" busy={busy} onToggle={onToggle} /></div>}
+  </section>;
 }
 
 function AvailabilityGroup({ title, items, kind, busy, onToggle }: { title: string; items: AvailabilityItem[]; kind: "game" | "smm"; busy: boolean; onToggle: (kind: "game" | "smm", providerId: string, isActive: boolean) => void }) {
   return <div className="border-t border-slate-100 p-4 first:border-t-0 xl:border-l xl:first:border-l-0"><div className="mb-3 flex items-center justify-between"><h3 className="text-xs font-bold text-slate-800">{title}</h3><span className="text-[10px] font-semibold text-slate-500">{items.filter((item) => item.isActive).length}/{items.length} កំពុងបង្ហាញ</span></div>{items.length ? <div className="max-h-[30rem] space-y-2 overflow-y-auto pr-1">{items.map((item) => <div key={item.id} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 p-2.5"><div className="min-w-0"><p className="truncate text-xs font-bold text-slate-800">{item.name}</p>{kind === "smm" ? <p className="mt-0.5 truncate text-[10px] text-slate-500">Boost service · {item.category ?? "Social"} · provider caption</p> : null}</div><button type="button" disabled={busy} onClick={() => onToggle(kind, item.id, !item.isActive)} className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-[10px] font-bold disabled:opacity-50 ${item.isActive ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-600"}`}>{item.isActive ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Power className="h-3.5 w-3.5" />}{item.isActive ? "កំពុងបើក" : "បានបិទ"}</button></div>)}</div> : <p className="rounded-xl bg-slate-50 p-3 text-xs text-slate-500">មិនមានផលិតផលដែលត្រូវគ្នាទេ។</p>}</div>;
 }
 
-function AdminError({ error }: { error: { message: string } }) { const message = /availability control is not configured/i.test(error.message) ? "មិនទាន់មាន persistent storage សម្រាប់ control នេះទេ។ សូមកុំគិតថាការកែប្រែបានរក្សាទុក—ប្រព័ន្ធមិនបានប្តូរផលិតផលណាមួយឡើយ។" : "មិនអាចរក្សាទុកការកែប្រែបានទេ។ ការកំណត់ចាស់មិនត្រូវបានប្តូរ។ សូមព្យាយាមម្ដងទៀត បន្ទាប់ពីពិនិត្យការភ្ជាប់ Admin storage។"; return <div className="mt-5 flex items-start gap-2 rounded-2xl border border-rose-100 bg-rose-50 p-4 text-xs leading-5 text-rose-900"><ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" /><p>{message}</p></div>; }
-
-function ProviderSyncStatus({ loading, status, onSyncTopup, onSyncSmm, syncingTopup, syncingSmm }: { loading: boolean; status?: { configured: boolean; smmConfigured?: boolean }; onSyncTopup: () => void; onSyncSmm: () => void; syncingTopup: boolean; syncingSmm: boolean }) {
-  if (loading) return <div className="mt-3 flex items-center gap-2 rounded-2xl border border-slate-200 bg-white p-4 text-xs text-slate-500"><Loader2 className="h-4 w-4 animate-[spin_1.2s_linear_infinite]" />កំពុងពិនិត្យ provider connection…</div>;
-  const sources = [{ label: "FZR Cards · Game Top-up", ready: Boolean(status?.configured), syncing: syncingTopup, onSync: onSyncTopup }, { label: "SMMGlob · SMM Services", ready: Boolean(status?.smmConfigured), syncing: syncingSmm, onSync: onSyncSmm }];
-  return <div className="mt-3 grid gap-3 lg:grid-cols-2">{sources.map((source) => <div key={source.label} className={`flex flex-col gap-3 rounded-2xl border p-4 text-xs ${source.ready ? "border-emerald-100 bg-emerald-50 text-emerald-900" : "border-slate-200 bg-white text-slate-700"}`}><div className="flex items-start gap-3">{source.ready ? <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" /> : <CloudOff className="mt-0.5 h-5 w-5 shrink-0 text-slate-500" />}<div><p className="font-bold">{source.label}</p><p className="mt-1 leading-5">{source.ready ? "អាចទាញទិន្នន័យពី provider បាន។ Sync ប្រើសម្រាប់ record តម្លៃ និង margin ខាងក្រោម។" : "មិនទាន់អាច sync បានទេ។ មិនមានការបង្កើតផលិតផលក្លែងក្លាយឡើយ។"}</p></div></div><button type="button" disabled={!source.ready || source.syncing} onClick={source.onSync} className="inline-flex h-9 items-center justify-center gap-2 rounded-xl bg-slate-950 px-3 text-xs font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-300">{source.syncing ? <Loader2 className="h-3.5 w-3.5 animate-[spin_1.2s_linear_infinite]" /> : <RefreshCw className="h-3.5 w-3.5" />}Sync catalog</button></div>)}</div>;
+function AdminError({ error }: { error: { message: string } }) {
+  const message = /availability control is not configured/i.test(error.message) ? "មិនទាន់មាន persistent storage សម្រាប់ control នេះទេ។ សូមកុំគិតថាការកែប្រែបានរក្សាទុក—ប្រព័ន្ធមិនបានប្តូរផលិតផលណាមួយឡើយ។" : "មិនអាចរក្សាទុកការកែប្រែបានទេ។ ការកំណត់ចាស់មិនត្រូវបានប្តូរ។ សូមព្យាយាមម្ដងទៀត បន្ទាប់ពីពិនិត្យការភ្ជាប់ Admin storage។";
+  return <div className="mt-5 flex items-start gap-2 rounded-2xl border border-rose-100 bg-rose-50 p-4 text-xs leading-5 text-rose-900"><ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" /><p>{message}</p></div>;
 }
 
-function CatalogGroup({ title, groups, onSaveGame, onDeleteGame, onSaveSmm, onDeleteSmm }: { title: string; groups: any[]; onSaveGame?: (offer: Offer, values: { basePriceUsd: string; profitMarginPercent: string; isActive: boolean; featured: boolean }) => void; onDeleteGame?: (id: string) => void; onSaveSmm?: (offer: Offer, values: { basePriceUsd: string; profitMarginPercent: string; isActive: boolean }) => void; onDeleteSmm?: (id: string) => void }) { return <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white"><div className="border-b border-slate-100 p-4"><h2 className="text-sm font-bold text-slate-900">{title}</h2></div>{groups.length ? groups.map((group) => <div key={group.id} className="border-b border-slate-100 p-4 last:border-0"><p className="text-sm font-bold text-slate-900">{group.titleKh ?? group.platform ?? "Provider product"}</p><div className="mt-3 space-y-2">{group.packages?.map((offer: Offer) => <OfferEditor key={offer.id} offer={offer} label={offer.amountLabel ?? "Offer"} onSave={(values) => onSaveGame?.(offer, { ...values, featured: Boolean(offer.featured) })} onDelete={() => onDeleteGame?.(offer.id)} />)}{group.tiers?.map((offer: Offer) => <OfferEditor key={offer.id} offer={offer} label={`${Number(offer.quantity).toLocaleString()} units`} onSave={(values) => onSaveSmm?.(offer, values)} onDelete={() => onDeleteSmm?.(offer.id)} />)}</div></div>) : <div className="p-6 text-center text-xs text-slate-500">មិនទាន់មាន provider offers សម្រាប់កំណត់តម្លៃទេ។</div>}</div>; }
+function ProviderSyncStatus({ loading, status, onSyncTopup, onSyncSmm, syncingTopup, syncingSmm }: { loading: boolean; status?: { configured: boolean; smmConfigured?: boolean }; onSyncTopup: () => void; onSyncSmm: () => void; syncingTopup: boolean; syncingSmm: boolean }) {
+  if (loading) return <div className="mt-3 flex items-center gap-2 rounded-2xl border border-slate-200 bg-white p-4 text-xs text-slate-500"><ActivityLoader size={18} label="កំពុងពិនិត្យ provider connection…" /></div>;
+  const sources = [{ label: "FZR Cards · Game Top-up", ready: Boolean(status?.configured), syncing: syncingTopup, onSync: onSyncTopup }, { label: "SMMGlob · SMM Services", ready: Boolean(status?.smmConfigured), syncing: syncingSmm, onSync: onSyncSmm }];
+  return <div className="mt-3 grid gap-3 lg:grid-cols-2">{sources.map((source) => <div key={source.label} className={`flex flex-col gap-3 rounded-2xl border p-4 text-xs ${source.ready ? "border-emerald-100 bg-emerald-50 text-emerald-900" : "border-slate-200 bg-white text-slate-700"}`}><div className="flex items-start gap-3">{source.ready ? <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" /> : <CloudOff className="mt-0.5 h-5 w-5 shrink-0 text-slate-500" />}<div><p className="font-bold">{source.label}</p><p className="mt-1 leading-5">{source.ready ? "អាចទាញទិន្នន័យពី provider បាន។ Sync ប្រើសម្រាប់ record តម្លៃ និង margin ខាងក្រោម។" : "មិនទាន់អាច sync បានទេ។ មិនមានការបង្កើតផលិតផលក្លែងក្លាយឡើយ។"}</p></div></div><button type="button" disabled={!source.ready || source.syncing} onClick={source.onSync} className="inline-flex h-9 items-center justify-center gap-2 rounded-xl bg-slate-950 px-3 text-xs font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-300">{source.syncing ? <ActivityLoader size={16} color="#ffffff" /> : <RefreshCw className="h-3.5 w-3.5" />}Sync catalog</button></div>)}</div>;
+}
+
+function CatalogGroup({ title, groups, onSaveGame, onDeleteGame, onSaveSmm, onDeleteSmm }: { title: string; groups: any[]; onSaveGame?: (offer: Offer, values: { basePriceUsd: string; profitMarginPercent: string; isActive: boolean; featured: boolean }) => void; onDeleteGame?: (id: string) => void; onSaveSmm?: (offer: Offer, values: { basePriceUsd: string; profitMarginPercent: string; isActive: boolean }) => void; onDeleteSmm?: (id: string) => void }) {
+  return <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white"><div className="border-b border-slate-100 p-4"><h2 className="text-sm font-bold text-slate-900">{title}</h2></div>{groups.length ? groups.map((group) => <div key={group.id} className="border-b border-slate-100 p-4 last:border-0"><p className="text-sm font-bold text-slate-900">{group.titleKh ?? group.platform ?? "Provider product"}</p><div className="mt-3 space-y-2">{group.packages?.map((offer: Offer) => <OfferEditor key={offer.id} offer={offer} label={offer.amountLabel ?? "Offer"} onSave={(values) => onSaveGame?.(offer, { ...values, featured: Boolean(offer.featured) })} onDelete={() => onDeleteGame?.(offer.id)} />)}{group.tiers?.map((offer: Offer) => <OfferEditor key={offer.id} offer={offer} label={`${Number(offer.quantity).toLocaleString()} units`} onSave={(values) => onSaveSmm?.(offer, values)} onDelete={() => onDeleteSmm?.(offer.id)} />)}</div></div>) : <div className="p-6 text-center text-xs text-slate-500">មិនទាន់មាន provider offers សម្រាប់កំណត់តម្លៃទេ។</div>}</div>;
+}
 
 function OfferEditor({ offer, label, onSave, onDelete }: { offer: Offer; label: string; onSave: (values: { basePriceUsd: string; profitMarginPercent: string; isActive: boolean }) => void; onDelete: () => void }) {
-  const [base, setBase] = useState(offer.basePriceUsd); const [margin, setMargin] = useState(offer.profitMarginPercent); const [active, setActive] = useState(offer.isActive); const canEdit = offer.providerAuthorized; const sale = Number(base || 0) * (1 + Number(margin || 0) / 100);
-  return <div className="rounded-xl bg-slate-50 p-3"><div className="flex items-center justify-between gap-3"><div className="min-w-0"><p className="truncate text-xs font-bold text-slate-800">{label}</p><p className={`mt-1 text-[10px] font-bold ${canEdit ? "text-emerald-700" : "text-amber-700"}`}>{canEdit ? `Provider authorized${offer.providerSource ? ` · ${offer.providerSource}` : ""}` : "Provider authorization required"}</p></div><label className="flex shrink-0 items-center gap-1 text-[10px] font-bold text-slate-600"><input checked={active} disabled={!canEdit} onChange={(event) => setActive(event.target.checked)} type="checkbox" />Live</label></div>{!canEdit && <p className="mt-2 rounded-lg border border-amber-100 bg-amber-50 px-2 py-1.5 text-[10px] leading-4 text-amber-800">Record នេះមិនអាចកែ ឬបើកបានទេ រហូតដល់ provider sync បានបញ្ជាក់ source របស់វា។</p>}<div className="mt-3 grid grid-cols-2 gap-2"><label><span className="mb-1 block text-[10px] font-bold text-slate-500">Base USD</span><input disabled={!canEdit} value={base} onChange={(event) => setBase(event.target.value)} inputMode="decimal" className="h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-xs disabled:cursor-not-allowed disabled:bg-slate-100" /></label><label><span className="mb-1 block text-[10px] font-bold text-slate-500">Margin %</span><input disabled={!canEdit} value={margin} onChange={(event) => setMargin(event.target.value)} inputMode="decimal" className="h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-xs disabled:cursor-not-allowed disabled:bg-slate-100" /></label></div><div className="mt-2 flex items-center justify-between gap-2"><p className="text-[11px] text-slate-600">តម្លៃលក់៖ <strong className="text-slate-900">${Number.isFinite(sale) ? sale.toFixed(2) : "0.00"}</strong></p><div className="flex gap-1"><button type="button" disabled={!canEdit} onClick={() => onSave({ basePriceUsd: base, profitMarginPercent: margin, isActive: active })} className="inline-flex h-8 items-center gap-1 rounded-lg bg-slate-900 px-2 text-[10px] font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-300"><Save className="h-3 w-3" />រក្សាទុក</button><button type="button" onClick={() => { if (window.confirm(`លុប ${label} ពិតមែនទេ?`)) onDelete(); }} className="grid h-8 w-8 place-items-center rounded-lg border border-rose-200 bg-rose-50 text-rose-700" aria-label="Delete offer"><Trash2 className="h-3.5 w-3.5" /></button></div></div></div>;
+  const [base, setBase] = useState(offer.basePriceUsd);
+  const [margin, setMargin] = useState(offer.profitMarginPercent);
+  const [active, setActive] = useState(offer.isActive);
+  const canEdit = offer.providerAuthorized;
+  const sale = Number(base || 0) * (1 + Number(margin || 0) / 100);
+  return <div className="rounded-xl bg-slate-50 p-3"><div className="flex items-center justify-between gap-3"><div className="min-w-0"><p className="truncate text-xs font-bold text-slate-800">{label}</p><p className={`mt-1 text-[10px] font-bold ${canEdit ? "text-emerald-700" : "text-amber-700"}`}>{canEdit ? `Provider authorized${offer.providerSource ? ` · ${offer.providerSource}` : ""}` : "Provider authorization required"}</p></div><label className="flex shrink-0 items-center gap-1 text-[10px] font-bold text-slate-600"><input checked={active} disabled={!canEdit} onChange={(event) => setActive(event.target.checked)} type="checkbox" />Live</label></div>{!canEdit ? <p className="mt-2 rounded-lg border border-amber-100 bg-amber-50 px-2 py-1.5 text-[10px] leading-4 text-amber-800">Record នេះមិនអាចកែ ឬបើកបានទេ រហូតដល់ provider sync បានបញ្ជាក់ source របស់វា។</p> : null}<div className="mt-3 grid grid-cols-2 gap-2"><label><span className="mb-1 block text-[10px] font-bold text-slate-500">Base USD</span><input disabled={!canEdit} value={base} onChange={(event) => setBase(event.target.value)} inputMode="decimal" className="h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-xs disabled:cursor-not-allowed disabled:bg-slate-100" /></label><label><span className="mb-1 block text-[10px] font-bold text-slate-500">Margin %</span><input disabled={!canEdit} value={margin} onChange={(event) => setMargin(event.target.value)} inputMode="decimal" className="h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-xs disabled:cursor-not-allowed disabled:bg-slate-100" /></label></div><div className="mt-2 flex items-center justify-between gap-2"><p className="text-[11px] text-slate-600">តម្លៃលក់៖ <strong className="text-slate-900">${Number.isFinite(sale) ? sale.toFixed(2) : "0.00"}</strong></p><div className="flex gap-1"><button type="button" disabled={!canEdit} onClick={() => onSave({ basePriceUsd: base, profitMarginPercent: margin, isActive: active })} className="inline-flex h-8 items-center gap-1 rounded-lg bg-slate-900 px-2 text-[10px] font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-300"><Save className="h-3 w-3" />រក្សាទុក</button><button type="button" onClick={() => { if (window.confirm(`លុប ${label} ពិតមែនទេ?`)) onDelete(); }} className="grid h-8 w-8 place-items-center rounded-lg border border-rose-200 bg-rose-50 text-rose-700" aria-label="Delete offer"><Trash2 className="h-3.5 w-3.5" /></button></div></div></div>;
 }

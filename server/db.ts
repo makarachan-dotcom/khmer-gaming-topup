@@ -241,7 +241,9 @@ export async function getAdminCatalog(): Promise<{ games: any[]; smm: any[] }> {
   const packages = await db.select().from(gamePackages).orderBy(asc(gamePackages.sortOrder));
   const services = await db.select().from(smmServices).orderBy(asc(smmServices.sortOrder));
   const tiers = await db.select().from(smmTiers).orderBy(asc(smmTiers.sortOrder));
-  return { games: games.map((game) => ({ ...game, packages: packages.filter((item) => item.productId === game.id) })), smm: services.map((service) => ({ ...service, tiers: tiers.filter((item) => item.serviceId === service.id) })) };
+  const primaryCatalog = { games: games.map((game) => ({ ...game, packages: packages.filter((item) => item.productId === game.id) })), smm: services.map((service) => ({ ...service, tiers: tiers.filter((item) => item.serviceId === service.id) })) };
+  if (primaryCatalog.games.length || primaryCatalog.smm.length || !isAppwriteStoreConfigured()) return primaryCatalog;
+  return getAppwriteProviderCatalog();
 }
 
 function providerRecordId(prefix: string, source: string) {
