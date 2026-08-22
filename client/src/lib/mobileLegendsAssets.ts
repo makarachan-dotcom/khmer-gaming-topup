@@ -1,8 +1,8 @@
 export const goldDiamondChestArtworkUrl = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663905831999/ynsfRvMWPhvlHFjn.png";
 export const khqrLogoUrl = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663905831999/mnJpaWeYfuTtadpv.svg";
 
-export function isMobileLegendsGame(gameName: string) {
-  return /mobile\s*legends|mlbb/i.test(gameName);
+export function isMobileLegendsGlobalGame(gameId: string) {
+  return gameId.trim().toLowerCase() === "mobile_legends_global";
 }
 
 export function mobileLegendsDiamondAmount(label: string, amountLabel: string) {

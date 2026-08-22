@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { isMobileLegendsGame, mobileLegendsDiamondAmount, mobileLegendsDiamondLabel } from "./mobileLegendsAssets";
+import { isMobileLegendsGlobalGame, mobileLegendsDiamondAmount, mobileLegendsDiamondLabel } from "./mobileLegendsAssets";
 
 describe("Mobile Legends package presentation", () => {
-  it("recognizes Cambodia and Global Mobile Legends listings", () => {
-    expect(isMobileLegendsGame("Mobile Legends Cambodia")).toBe(true);
-    expect(isMobileLegendsGame("MLBB Global")).toBe(true);
-    expect(isMobileLegendsGame("Free Fire Global")).toBe(false);
+  it("targets only the provider Mobile Legends Global game ID", () => {
+    expect(isMobileLegendsGlobalGame("mobile_legends_global")).toBe(true);
+    expect(isMobileLegendsGlobalGame("MOBILE_LEGENDS_GLOBAL")).toBe(true);
+    expect(isMobileLegendsGlobalGame("mobile_legends_brazil")).toBe(false);
+    expect(isMobileLegendsGlobalGame("mobile_legends_adventure")).toBe(false);
   });
 
   it("derives an editable diamond quantity from provider package text", () => {
