@@ -49,6 +49,17 @@ describe("provider catalog", () => {
     expect((fetch as ReturnType<typeof vi.fn>).mock.calls[0]?.[1]).toMatchObject({ method: "POST" });
   });
 
+  it("keeps valid social services when a provider catalog includes malformed records", async () => {
+    process.env.SMMGLOB_API_URL = "https://smm.example.test";
+    process.env.SMMGLOB_API_KEY = "server-only-key";
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => [{ service: 101, name: "Instagram Followers", category: "Instagram", type: "Default", rate: "3.5", min: 100, max: 10000 }, { service: null, name: "Broken provider row" }] }));
+    const result = await fetchSmmProviderServices();
+    expect(result.status).toBe("ready");
+    expect(result.services).toHaveLength(1);
+    expect(result.services[0]?.providerServiceId).toBe("101");
+    expect((fetch as ReturnType<typeof vi.fn>).mock.calls[0]?.[0]).toBe("https://smm.example.test/api/v2");
+  });
+
   it("submits a paid SMM fulfillment request only through the server-side SMMGlob add action", async () => {
     process.env.SMMGLOB_API_URL = "https://smm.example.test/api/v2";
     process.env.SMMGLOB_API_KEY = "server-only-key";

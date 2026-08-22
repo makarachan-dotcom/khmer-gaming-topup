@@ -41,6 +41,7 @@ export const appRouter = router({
     games: publicProcedure.query(() => fetchProviderGames()),
     gameDetails: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120) })).query(({ input }) => fetchProviderGameDetails(input.gameId)),
     packages: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120), fields: z.record(z.string().trim().max(64), z.string().trim().min(1).max(256)).refine((fields) => Object.keys(fields).length <= 12, "Too many provider fields") })).mutation(({ input }) => fetchProviderPackages(input)),
+    smmServices: publicProcedure.query(() => fetchSmmProviderServices()),
   }),
   marketplace: router({
     list: publicProcedure.input(z.object({ listingType: marketplaceType.optional(), game: z.string().max(120).optional(), search: z.string().max(120).optional() }).optional()).query(async ({ input }) => Promise.all((await db.listMarketplace(input ?? {})).map(async (listing) => {

@@ -98,7 +98,8 @@ async function fzrRequest(path: string) {
 }
 
 async function smmGlobRequest(action: string, parameters: Record<string, string> = {}) {
-  const baseUrl = process.env.SMMGLOB_API_URL;
+  const configuredUrl = process.env.SMMGLOB_API_URL?.trim();
+  const baseUrl = configuredUrl ? `${configuredUrl.replace(/\/+$/, "").replace(/\/api\/v2$/, "")}/api/v2` : null;
   const apiKey = process.env.SMMGLOB_API_KEY;
   if (!baseUrl || !apiKey) return null;
   const body = new URLSearchParams({ key: apiKey, action, ...parameters });
@@ -146,9 +147,10 @@ export async function fetchSmmProviderServices(): Promise<SmmProviderCatalogResp
   try {
     const response = await smmGlobRequest("services");
     if (!response) return { status: "unavailable", services: [] };
-    const payload = z.array(smmGlobServiceSchema).max(20_000).safeParse(response);
+    const payload = z.array(z.unknown()).max(20_000).safeParse(response);
     if (!payload.success) return { status: "error", services: [] };
-    return { status: "ready", services: payload.data.map((service) => ({ providerServiceId: service.service, name: service.name, category: service.category, serviceType: service.type, rateUsdPerThousand: Number(service.rate).toFixed(4), min: service.min, max: service.max, refill: Boolean(service.refill), cancel: Boolean(service.cancel), dripfeed: Boolean(service.dripfeed) })) };
+    const services = payload.data.map((item) => smmGlobServiceSchema.safeParse(item)).filter((item): item is z.ZodSafeParseSuccess<z.infer<typeof smmGlobServiceSchema>> => item.success).map((item) => item.data).filter((service) => /(facebook|instagram|tiktok|youtube|telegram)/i.test(`${service.category} ${service.name}`)).slice(0, 120);
+    return { status: "ready", services: services.map((service) => ({ providerServiceId: service.service, name: service.name, category: service.category, serviceType: service.type, rateUsdPerThousand: Number(service.rate).toFixed(4), min: service.min, max: service.max, refill: Boolean(service.refill), cancel: Boolean(service.cancel), dripfeed: Boolean(service.dripfeed) })) };
   } catch { return { status: "error", services: [] }; }
 }
 
