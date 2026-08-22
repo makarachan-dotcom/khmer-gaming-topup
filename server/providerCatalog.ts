@@ -70,10 +70,40 @@ export type ProviderPackageResponse =
   | { status: "unavailable"; packages: [] }
   | { status: "error"; packages: [] };
 
+export type ProviderPlayerIdentityResponse =
+  | { status: "verified"; playerName: string; playerId: string | null; region: string | null }
+  | { status: "invalid"; playerName: null; playerId: null; region: null }
+  | { status: "not_supported"; playerName: null; playerId: null; region: null }
+  | { status: "unavailable"; playerName: null; playerId: null; region: null }
+  | { status: "error"; playerName: null; playerId: null; region: null };
+
 export type SmmProviderCatalogResponse =
   | { status: "ready"; services: Array<{ providerServiceId: string; name: string; category: string; serviceType: string; rateUsdPerThousand: string; min: number; max: number; refill: boolean; cancel: boolean; dripfeed: boolean }> }
   | { status: "unavailable"; services: [] }
   | { status: "error"; services: [] };
+
+const socialPlatformOrder = ["facebook", "instagram", "tiktok", "youtube", "telegram"] as const;
+
+export function balanceSocialProviderServices<T extends { name: string; category: string }>(services: T[], limit = 120) {
+  const buckets = new Map<string, T[]>(socialPlatformOrder.map((platform) => [platform, []]));
+  const fallback: T[] = [];
+  for (const service of services) {
+    const text = `${service.category} ${service.name}`.toLowerCase();
+    const platform = socialPlatformOrder.find((candidate) => text.includes(candidate));
+    if (platform) buckets.get(platform)?.push(service);
+    else fallback.push(service);
+  }
+  const balanced: T[] = [];
+  for (let index = 0; balanced.length < limit; index += 1) {
+    let added = false;
+    for (const platform of socialPlatformOrder) {
+      const service = buckets.get(platform)?.[index];
+      if (service && balanced.length < limit) { balanced.push(service); added = true; }
+    }
+    if (!added) break;
+  }
+  return [...balanced, ...fallback].slice(0, limit);
+}
 
 export type FzrProviderSyncSnapshot =
   | { status: "ready"; games: Array<{ providerGameId: string; name: string; logoUrl?: string; requiredFields: z.infer<typeof providerFieldSchema>[]; offers: Array<{ providerOfferId: string; name: string; priceUsd: string }> }> }
@@ -88,12 +118,16 @@ export function getProviderCatalogStatus() {
   return { configured: endpointConfigured && credentialConfigured, endpointConfigured, credentialConfigured, smmConfigured: smmEndpointConfigured && smmCredentialConfigured, smmEndpointConfigured, smmCredentialConfigured };
 }
 
-async function fzrRequest(path: string) {
+class FzrRequestError extends Error {
+  constructor(readonly status: number) { super(`FZR Cards request failed (${status})`); }
+}
+
+async function fzrRequest(path: string, init: RequestInit = {}) {
   const baseUrl = process.env.FZR_CARDS_API_BASE_URL;
   const apiKey = process.env.FZR_CARDS_API_KEY;
   if (!baseUrl || !apiKey) return null;
-  const response = await fetch(`${baseUrl}${path}`, { headers: { "X-API-Key": apiKey }, signal: AbortSignal.timeout(15_000) });
-  if (!response.ok) throw new Error(`FZR Cards catalog request failed (${response.status})`);
+  const response = await fetch(`${baseUrl}${path}`, { ...init, headers: { "X-API-Key": apiKey, ...init.headers }, signal: AbortSignal.timeout(15_000) });
+  if (!response.ok) throw new FzrRequestError(response.status);
   return response.json();
 }
 
@@ -143,13 +177,38 @@ export async function fetchProviderPackages(input: ProviderPackageRequest): Prom
   return { status: "ready", packages: details.packages };
 }
 
+const fzrPlayerIdentitySchema = z.object({
+  ok: z.literal(true),
+  category_id: z.string().trim().min(1).max(120),
+  valid: z.boolean(),
+  player_name: z.string().trim().min(1).max(180).nullable(),
+  player_id: z.string().trim().min(1).max(180).nullable().optional(),
+  region: z.string().trim().min(1).max(120).nullable().optional(),
+});
+
+export async function validateProviderPlayerIdentity(input: ProviderPackageRequest): Promise<ProviderPlayerIdentityResponse> {
+  try {
+    const response = await fzrRequest("/api/v2/topups/validate-id", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ category_id: input.gameId, fields: input.fields }) });
+    if (!response) return { status: "unavailable", playerName: null, playerId: null, region: null };
+    const payload = fzrPlayerIdentitySchema.safeParse(response);
+    if (!payload.success || payload.data.category_id !== input.gameId) return { status: "error", playerName: null, playerId: null, region: null };
+    if (!payload.data.valid || !payload.data.player_name) return { status: "invalid", playerName: null, playerId: null, region: null };
+    return { status: "verified", playerName: payload.data.player_name, playerId: payload.data.player_id ?? null, region: payload.data.region ?? null };
+  } catch (error) {
+    if (error instanceof FzrRequestError && [400, 404].includes(error.status)) return { status: "not_supported", playerName: null, playerId: null, region: null };
+    if (error instanceof FzrRequestError && error.status === 422) return { status: "invalid", playerName: null, playerId: null, region: null };
+    if (error instanceof FzrRequestError && [502, 503].includes(error.status)) return { status: "unavailable", playerName: null, playerId: null, region: null };
+    return { status: "error", playerName: null, playerId: null, region: null };
+  }
+}
+
 export async function fetchSmmProviderServices(): Promise<SmmProviderCatalogResponse> {
   try {
     const response = await smmGlobRequest("services");
     if (!response) return { status: "unavailable", services: [] };
     const payload = z.array(z.unknown()).max(20_000).safeParse(response);
     if (!payload.success) return { status: "error", services: [] };
-    const services = payload.data.map((item) => smmGlobServiceSchema.safeParse(item)).filter((item): item is z.ZodSafeParseSuccess<z.infer<typeof smmGlobServiceSchema>> => item.success).map((item) => item.data).filter((service) => /(facebook|instagram|tiktok|youtube|telegram)/i.test(`${service.category} ${service.name}`)).slice(0, 120);
+    const services = balanceSocialProviderServices(payload.data.map((item) => smmGlobServiceSchema.safeParse(item)).filter((item): item is z.ZodSafeParseSuccess<z.infer<typeof smmGlobServiceSchema>> => item.success).map((item) => item.data).filter((service) => /(facebook|instagram|tiktok|youtube|telegram)/i.test(`${service.category} ${service.name}`)));
     return { status: "ready", services: services.map((service) => ({ providerServiceId: service.service, name: service.name, category: service.category, serviceType: service.type, rateUsdPerThousand: Number(service.rate).toFixed(4), min: service.min, max: service.max, refill: Boolean(service.refill), cancel: Boolean(service.cancel), dripfeed: Boolean(service.dripfeed) })) };
   } catch { return { status: "error", services: [] }; }
 }

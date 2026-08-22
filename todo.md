@@ -170,3 +170,10 @@
 - [x] Refine purposeful animated icons and loading/success motion throughout the storefront without visual clutter.
 - [x] Enable multiple admin-managed Khmer banners, promotions, and announcements with secure image upload, image URL, and auto-looping video support.
 - [x] Replace remaining solid spinner loading indicators with the owner-approved outline loader across customer and administrator views.
+- [x] Route each selected provider-backed game to its own dedicated Top-up page while retaining browse-only, disabled purchase controls.
+- [x] Refine the SMM catalog with authentic official social-platform branding and a clean, mobile-first hierarchy without fake products.
+- [x] Apply a restrained semantic icon and animation system informed by the supplied design references, with reduced-motion support.
+- [x] Use authentic official game logos where provider-approved artwork is available, and add an accessible infinite right-to-left marquee only for overflowing game names.
+- [x] Implement the owner-approved dedicated game-page and clean SMM browsing redesign, then validate and publish it.
+- [x] Add a polished provider-backed Diamond package layout with category badges, selected-card gradient feedback, country indicators, and non-deceptive decorative diamond motion.
+- [x] Assess and implement account-name verification only when an authorized provider lookup is available; keep purchase, delivery, and any scheduled fulfillment disabled until verified secure capability exists.

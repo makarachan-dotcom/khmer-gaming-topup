@@ -22,12 +22,14 @@ import AdminPricing from "./pages/AdminPricing";
 import Checkout from "./pages/Checkout";
 import AdminMedia from "./pages/AdminMedia";
 import Legal from "./pages/Legal";
+import GameTopup from "./pages/GameTopup";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
       <Route path={"/"} component={Home} />
+      <Route path="/topup/:gameId" component={GameTopup} />
       <Route path={"/topup"}><Redirect to="/" /></Route>
       <Route path={"/smm"} component={Smm} />
       <Route path={"/marketplace"} component={Marketplace} />
