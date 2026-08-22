@@ -1,9 +1,25 @@
-import type { AnimationItem } from "lottie-web";
+import lottie, { type AnimationItem } from "lottie-web";
 import { useEffect, useRef, useState } from "react";
 
-const loadingV2AssetUrl = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663905831999/KxkCHUOElXQbfZQw.json";
+/**
+ * Same-origin copy of the owner's Loading V2 JSON. The previous CDN request had
+ * no browser CORS permission, so it could succeed in server tooling while the
+ * animation stayed invisible in customers' browsers.
+ */
+const loadingV2AssetUrl = "/loading-v2.json";
+let loadingV2Payload: Promise<unknown> | null = null;
 
 type LoadingV2Props = { size?: number; color?: string; className?: string };
+
+function loadLoadingV2Payload() {
+  if (!loadingV2Payload) {
+    loadingV2Payload = fetch(loadingV2AssetUrl, { cache: "force-cache" }).then((response) => {
+      if (!response.ok) throw new Error("Loading V2 animation is unavailable");
+      return response.json();
+    });
+  }
+  return loadingV2Payload;
+}
 
 function rgbForColor(value: string) {
   const normalized = value.trim();
@@ -29,10 +45,16 @@ function recolorLoadingV2(animation: unknown, color: string) {
   return cloned;
 }
 
+/** A non-spinning first-frame mark prevents an invisible gap while Loading V2 initializes. */
+function LoadingV2Placeholder() {
+  return <span className="loading-v2__placeholder" aria-hidden="true"><i /><i /><i /></span>;
+}
+
 export function LoadingV2({ size = 28, color = "#0f172a", className = "" }: LoadingV2Props) {
   const hostRef = useRef<HTMLSpanElement>(null);
   const animationRef = useRef<AnimationItem | null>(null);
   const [reduceMotion, setReduceMotion] = useState(false);
+  const [animationReady, setAnimationReady] = useState(false);
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -45,20 +67,13 @@ export function LoadingV2({ size = 28, color = "#0f172a", className = "" }: Load
   useEffect(() => {
     const host = hostRef.current;
     if (!host || navigator.userAgent.toLowerCase().includes("jsdom")) return;
-    const controller = new AbortController();
     let disposed = false;
+    setAnimationReady(false);
     host.replaceChildren();
 
-    void Promise.all([
-      fetch(loadingV2AssetUrl, { signal: controller.signal }).then((response) => {
-        if (!response.ok) throw new Error("Loading V2 animation is unavailable");
-        return response.json();
-      }),
-      import("lottie-web"),
-    ])
-      .then(([payload, module]) => {
+    void loadLoadingV2Payload()
+      .then((payload) => {
         if (disposed || !hostRef.current) return;
-        const lottie = module.default;
         const animation = lottie.loadAnimation({
           container: hostRef.current,
           renderer: "svg",
@@ -69,18 +84,21 @@ export function LoadingV2({ size = 28, color = "#0f172a", className = "" }: Load
         });
         animationRef.current = animation;
         if (reduceMotion) animation.goToAndStop(22, true);
+        setAnimationReady(true);
       })
-      .catch(() => { /* Keep the loading state transparent when the asset cannot be fetched. */ });
+      .catch(() => {
+        // Keep the transparent Loading V2 first-frame mark visible if the local asset is unavailable.
+        setAnimationReady(false);
+      });
 
     return () => {
       disposed = true;
-      controller.abort();
       animationRef.current?.destroy();
       animationRef.current = null;
     };
   }, [color, reduceMotion]);
 
-  return <span aria-hidden="true" className={`loading-v2 inline-grid place-items-center ${className}`} style={{ width: size, height: size, color }}><span ref={hostRef} className="loading-v2__animation" /></span>;
+  return <span aria-hidden="true" className={`loading-v2 inline-grid place-items-center ${animationReady ? "loading-v2--ready" : ""} ${className}`} style={{ width: size, height: size, color }}><LoadingV2Placeholder /><span ref={hostRef} className="loading-v2__animation" /></span>;
 }
 
 /** @deprecated Use LoadingV2 for new code. Kept temporarily to migrate existing loading states safely. */

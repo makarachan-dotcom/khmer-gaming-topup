@@ -7,7 +7,9 @@ describe("outline loader contract", () => {
     const loader = readFileSync(resolve(process.cwd(), "client/src/components/OutlineLoader.tsx"), "utf8");
     const overlay = readFileSync(resolve(process.cwd(), "client/src/components/LoadingOverlay.tsx"), "utf8");
     expect(loader).not.toContain('animate-spin');
-    expect(loader).toContain('KxkCHUOElXQbfZQw.json');
+    expect(loader).toContain('const loadingV2AssetUrl = "/loading-v2.json"');
+    expect(loader).toContain('LoadingV2Placeholder');
+    expect(loader).toContain('cache: "force-cache"');
     expect(loader).toContain('lottie.loadAnimation');
     expect(loader).toContain('prefers-reduced-motion: reduce');
     expect(loader).toContain('LoadingV2');
