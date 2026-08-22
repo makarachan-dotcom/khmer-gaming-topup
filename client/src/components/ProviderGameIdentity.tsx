@@ -11,15 +11,24 @@ type ArtworkProps = {
   priority?: boolean;
 };
 
+const managedProviderArtwork: Array<{ matches: RegExp; url: string }> = [
+  { matches: /^mobile legends/i, url: "/manus-storage/fzr-mobile-legends-global_d1d5e868.webp" },
+];
+
 export function hasProviderApprovedGameLogo(logoUrl?: string) {
   return Boolean(logoUrl?.startsWith("https://"));
 }
 
+export function resolveProviderGameLogo(name: string, logoUrl?: string) {
+  return managedProviderArtwork.find((item) => item.matches.test(name))?.url ?? logoUrl;
+}
+
 export function ProviderGameArtwork({ name, logoUrl, className, iconClassName, priority = false }: ArtworkProps) {
   const [imageFailed, setImageFailed] = useState(false);
-  useEffect(() => setImageFailed(false), [logoUrl]);
-  if (hasProviderApprovedGameLogo(logoUrl) && !imageFailed) {
-    return <span className={cn("game-logo-frame", className)}><img src={logoUrl} alt={`${name} official logo`} className="game-logo-image" loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : "auto"} referrerPolicy="no-referrer" onError={() => setImageFailed(true)} /></span>;
+  const resolvedLogoUrl = resolveProviderGameLogo(name, logoUrl);
+  useEffect(() => setImageFailed(false), [resolvedLogoUrl]);
+  if ((hasProviderApprovedGameLogo(resolvedLogoUrl) || resolvedLogoUrl?.startsWith("/manus-storage/")) && !imageFailed) {
+    return <span className={cn("game-logo-frame", className)}><img src={resolvedLogoUrl} alt={`${name} official logo`} className="game-logo-image" loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : "auto"} referrerPolicy="no-referrer" onError={() => setImageFailed(true)} /></span>;
   }
   return <span className={cn("game-logo-fallback", className)} aria-label={`${name} game icon`}><Gamepad2 className={cn("h-5 w-5", iconClassName)} /></span>;
 }
