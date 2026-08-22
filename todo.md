@@ -185,7 +185,7 @@
 - [x] Replace generic SMM platform glyphs with official platform brand marks and verify their rendering on mobile.
 - [x] Populate provider game-list cards with provider-approved official artwork, and apply accessible right-to-left marquee motion only to overflowing game titles.
 - [x] Exclude all Thailand-related provider Game and SMM products from both customer and Admin catalog views without adding replacement products.
-- [ ] Verify the branded, filtered catalog release on zurs.vercel.app after publication.
+- [x] Verify the branded, filtered catalog release on zurs.vercel.app after publication.
 - [x] Repair seller-account request persistence so a successful customer submission is visible immediately in the protected Admin review queue.
 - [x] Repair Admin provider catalog-edit controls so availability changes have a durable backend policy and clear actionable error states.
 - [x] Add end-to-end regression coverage for seller submission, Admin review visibility, and Admin product availability changes before publication.
