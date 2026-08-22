@@ -161,6 +161,7 @@ async function mapWithConcurrency<T, R>(items: T[], limit: number, worker: (item
 }
 
 export async function syncAppwriteFzrCatalog(snapshot: Extract<FzrProviderSyncSnapshot, { status: "ready" }>) {
+  await mergeAppwriteProviderCatalogIndex({ gameSourceIds: snapshot.games.map((game) => game.providerGameId) });
   const catalog = await getAppwriteProviderCatalog();
   const gamesById = new Map(catalog.games.map((item) => [item.id, item]));
   const imported = await mapWithConcurrency(snapshot.games, 8, async (game) => {
@@ -177,11 +178,11 @@ export async function syncAppwriteFzrCatalog(snapshot: Extract<FzrProviderSyncSn
     await upsertProviderCatalogRecord("provider_catalog_game", game.providerGameId, { id: gameId, providerSourceId: game.providerGameId, titleKh: game.name, titleEn: game.name, packages });
     return { games: existing ? 0 : 1, offers: game.offers.filter((offer) => !existingPackages.has(providerCatalogId("fzr-offer", `${game.providerGameId}:${offer.providerOfferId}`))).length };
   });
-  await mergeAppwriteProviderCatalogIndex({ gameSourceIds: snapshot.games.map((game) => game.providerGameId) });
   return { gamesImported: imported.reduce((total, item) => total + item.games, 0), offersImported: imported.reduce((total, item) => total + item.offers, 0), provider: "FZR Cards" as const };
 }
 
 export async function syncAppwriteSmmCatalog(snapshot: Extract<SmmProviderCatalogResponse, { status: "ready" }>) {
+  await mergeAppwriteProviderCatalogIndex({ smmSourceIds: snapshot.services.map((service) => service.providerServiceId) });
   const catalog = await getAppwriteProviderCatalog();
   const servicesById = new Map(catalog.smm.map((item) => [item.id, item]));
   const imported = await mapWithConcurrency(snapshot.services, 8, async (service) => {
@@ -194,7 +195,6 @@ export async function syncAppwriteSmmCatalog(snapshot: Extract<SmmProviderCatalo
     await upsertProviderCatalogRecord("provider_catalog_smm", service.providerServiceId, { id: serviceId, providerSourceId: service.providerServiceId, platform: service.category, titleKh: service.name, titleEn: service.name, tiers: [{ id: tierId, quantity: Math.max(service.min, 1), basePriceUsd, profitMarginPercent, priceUsd: previous?.priceUsd ?? basePriceUsd, isActive: previous?.isActive ?? false, providerAuthorized: true as const, providerSource: "SMMGlob" }] });
     return { services: existing ? 0 : 1, tiers: previous ? 0 : 1 };
   });
-  await mergeAppwriteProviderCatalogIndex({ smmSourceIds: snapshot.services.map((service) => service.providerServiceId) });
   return { servicesImported: imported.reduce((total, item) => total + item.services, 0), tiersImported: imported.reduce((total, item) => total + item.tiers, 0), provider: "SMMGlob" as const };
 }
 

@@ -30,6 +30,8 @@ describe("Appwrite provider catalog fallback", () => {
       return new Response(JSON.stringify(records.get(documentId)), { status: init?.method === "POST" ? 201 : 200 });
     }));
 
+    await expect(getAppwriteProviderCatalog()).resolves.toEqual({ games: [], smm: [] });
+
     const result = await syncAppwriteFzrCatalog({
       status: "ready",
       games: [{ providerGameId: "mobile_legends_global", name: "Mobile Legends", requiredFields: [{ key: "player_id", label: "Player ID", required: true }], offers: [{ providerOfferId: "86", name: "86 Diamonds", priceUsd: "1.00" }] }],
@@ -46,5 +48,6 @@ describe("Appwrite provider catalog fallback", () => {
     expect(requests.map((request) => request.body).join(" ")).not.toContain("server-only-test-key");
     expect(requests.some((request) => request.url.includes("queries%5B%5D=limit%28100%29") && request.url.includes("queries%5B%5D=offset%280%29"))).toBe(true);
     expect(requests.some((request) => request.url.includes("?limit=25&offset=0"))).toBe(true);
+    expect(requests.some((request) => request.body.includes("provider_catalog_index"))).toBe(true);
   });
 });
