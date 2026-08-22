@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+vi.mock("./_core/env", () => ({ ENV: { forgeApiUrl: "", forgeApiKey: "" } }));
 import { isAppwriteMediaKey, storageGet, storagePut } from "./storage";
 
 const savedEnvironment = {
