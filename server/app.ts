@@ -8,6 +8,7 @@ import { registerStorageProxy } from "./_core/storageProxy";
 import { sdk } from "./_core/sdk";
 import { cleanupExpiredSoldMarketplaceListings } from "./db";
 import { deriveProviderNetworkRisk } from "./providerNetworkRisk";
+import { registerProviderArtworkRoutes } from "./providerArtwork";
 import crypto from "node:crypto";
 
 /**
@@ -35,6 +36,7 @@ export function createApp() {
   // an unavailable identity provider. The storage proxy remains enabled in
   // production because it can serve Appwrite-backed marketplace media.
   registerStorageProxy(app);
+  registerProviderArtworkRoutes(app);
   if (!process.env.VERCEL) {
     registerOAuthRoutes(app);
   }
