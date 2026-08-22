@@ -4,7 +4,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, ownerProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import * as db from "./db";
-import { fetchFzrProviderSyncSnapshot, fetchProviderGameDetails, fetchProviderGames, fetchProviderPackages, fetchSmmProviderServices, getProviderCatalogStatus, validateProviderPlayerIdentity } from "./providerCatalog";
+import { fetchFzrProviderSyncSnapshot, fetchProviderGameDetails, fetchProviderGames, fetchProviderPackages, fetchSmmProviderServices, getProviderAvailabilityCatalog, getProviderCatalogStatus, setProviderAvailability, validateProviderPlayerIdentity } from "./providerCatalog";
 import { buildZursMemberDisplayName } from "./storefrontDomain";
 import { uploadAdminMediaImage, uploadMarketplaceScreenshot, uploadMarketplaceVerificationEvidence } from "./uploads";
 import { storageGet } from "./storage";
@@ -109,6 +109,8 @@ export const appRouter = router({
     catalog: adminProcedure.query(async () => ({ games: await db.getGameCatalog(), smm: await db.getSmmCatalog() })),
     fullCatalog: adminProcedure.query(() => db.getAdminCatalog()),
     providerCatalogStatus: adminProcedure.query(() => getProviderCatalogStatus()),
+    providerAvailability: adminProcedure.query(() => getProviderAvailabilityCatalog()),
+    setProviderAvailability: adminProcedure.input(z.object({ kind: z.enum(["game", "smm"]), providerId: z.string().trim().min(1).max(120), isActive: z.boolean() })).mutation(({ input }) => setProviderAvailability(input)),
     syncTopupCatalog: adminProcedure.mutation(async () => { const snapshot = await fetchFzrProviderSyncSnapshot(); if (snapshot.status !== "ready") throw new Error("FZR Cards catalog is currently unavailable"); return db.syncFzrCatalog(snapshot); }),
     syncSmmCatalog: adminProcedure.mutation(async () => { const snapshot = await fetchSmmProviderServices(); if (snapshot.status !== "ready") throw new Error("SMMGlob catalog is currently unavailable"); return db.syncSmmCatalog(snapshot); }),
     updateGamePackage: adminProcedure.input(z.object({ packageId: z.string().min(4).max(64), priceUsd: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(), basePriceUsd: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(), profitMarginPercent: z.string().regex(/^\d+(\.\d{1,2})?$/).refine((value) => Number(value) <= 1000).optional(), isActive: z.boolean(), featured: z.boolean() }).refine((input) => Boolean(input.priceUsd ?? input.basePriceUsd), "A base price is required")).mutation(({ input }) => db.updateGamePackage({ ...input, basePriceUsd: input.basePriceUsd ?? input.priceUsd!, profitMarginPercent: input.profitMarginPercent ?? "0.00" })),

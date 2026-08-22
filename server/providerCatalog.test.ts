@@ -51,6 +51,14 @@ describe("provider catalog", () => {
     expect(JSON.stringify(result)).not.toContain("server-only-key");
   });
 
+  it("requires a verified player name before revealing provider packages", async () => {
+    process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
+    process.env.FZR_CARDS_API_KEY = "server-only-key";
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ok: true, category_id: "mobile-legends", valid: false, player_name: null }) }));
+    await expect(fetchProviderPackages({ gameId: "mobile-legends", fields: { player_id: "not-valid" } })).resolves.toEqual({ status: "verification_required", packages: [] });
+    expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1);
+  });
+
   it("maps SMMGlob services through the server-only form request", async () => {
     process.env.SMMGLOB_API_URL = "https://smm.example.test/api/v2";
     process.env.SMMGLOB_API_KEY = "server-only-key";

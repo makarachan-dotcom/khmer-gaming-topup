@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { getAppwriteProviderAvailability, isAppwriteStoreConfigured, updateAppwriteProviderAvailability } from "./appwriteStore";
 
 export const providerFieldSchema = z.object({
   key: z.string().trim().regex(/^[a-z][a-zA-Z0-9_]{0,63}$/),
@@ -67,6 +68,7 @@ export type ProviderGameDetailsResponse =
 export type ProviderPackageRequest = { gameId: string; fields: Record<string, string> };
 export type ProviderPackageResponse =
   | { status: "ready"; packages: z.infer<typeof providerPackageSchema>[] }
+  | { status: "verification_required"; packages: [] }
   | { status: "unavailable"; packages: [] }
   | { status: "error"; packages: [] };
 
@@ -81,6 +83,8 @@ export type SmmProviderCatalogResponse =
   | { status: "ready"; services: Array<{ providerServiceId: string; name: string; category: string; serviceType: string; rateUsdPerThousand: string; min: number; max: number; refill: boolean; cancel: boolean; dripfeed: boolean }> }
   | { status: "unavailable"; services: [] }
   | { status: "error"; services: [] };
+
+export type ProviderAvailabilityCatalog = { games: Array<{ id: string; name: string; isActive: boolean }>; smm: Array<{ id: string; name: string; category: string; isActive: boolean }> };
 
 const socialPlatformOrder = ["facebook", "instagram", "tiktok", "youtube", "telegram"] as const;
 
@@ -131,6 +135,11 @@ async function fzrRequest(path: string, init: RequestInit = {}) {
   return response.json();
 }
 
+async function providerAvailability() {
+  if (!isAppwriteStoreConfigured()) return { hiddenGameIds: [] as string[], hiddenSmmServiceIds: [] as string[] };
+  try { return await getAppwriteProviderAvailability(); } catch { return { hiddenGameIds: [] as string[], hiddenSmmServiceIds: [] as string[] }; }
+}
+
 async function smmGlobRequest(action: string, parameters: Record<string, string> = {}) {
   const configuredUrl = process.env.SMMGLOB_API_URL?.trim();
   const baseUrl = configuredUrl ? `${configuredUrl.replace(/\/+$/, "").replace(/\/api\/v2$/, "")}/api/v2` : null;
@@ -150,13 +159,15 @@ function providerPackages(categoryId: string, offers: z.infer<typeof fzrOffersSc
   return offers.filter((offer) => Boolean(offer.offer_id)).map((offer) => ({ id: `${categoryId}:${offer.offer_id}`, label: offer.name, amountLabel: offer.name, priceLabel: `$${Number(offer.price_usd).toFixed(2)}`, provider: "FZR Cards", paymentMethods: ["khqr", "bank"] as ("khqr" | "bank")[] }));
 }
 
-export async function fetchProviderGames(): Promise<ProviderGameResponse> {
+export async function fetchProviderGames(options: { includeHidden?: boolean } = {}): Promise<ProviderGameResponse> {
   try {
     const response = await fzrRequest("/api/v2/topups");
     if (!response) return { status: "unavailable", games: [] };
+    const availability = options.includeHidden ? null : await providerAvailability();
     const payload = fzrTopupsSchema.safeParse(response);
     if (!payload.success) return { status: "error", games: [] };
-    return { status: "ready", games: payload.data.items.map((item) => ({ id: item.category_id, name: item.name, provider: "FZR Cards", requiredFields: [] })) };
+    const hidden = new Set(availability?.hiddenGameIds ?? []);
+    return { status: "ready", games: payload.data.items.filter((item) => !hidden.has(item.category_id)).map((item) => ({ id: item.category_id, name: item.name, provider: "FZR Cards", requiredFields: [] })) };
   } catch { return { status: "error", games: [] }; }
 }
 
@@ -164,6 +175,8 @@ export async function fetchProviderGameDetails(gameId: string): Promise<Provider
   try {
     const response = await fzrRequest(`/api/v2/topups/offers?category_id=${encodeURIComponent(gameId)}&include_ui=1`);
     if (!response) return { status: "unavailable", game: null, packages: [] };
+    const availability = await providerAvailability();
+    if (availability.hiddenGameIds.includes(gameId)) return { status: "unavailable", game: null, packages: [] };
     const payload = fzrOffersSchema.safeParse(response);
     if (!payload.success || payload.data.category_id !== gameId) return { status: "error", game: null, packages: [] };
     const fields = providerFields(payload.data.fields);
@@ -172,6 +185,11 @@ export async function fetchProviderGameDetails(gameId: string): Promise<Provider
 }
 
 export async function fetchProviderPackages(input: ProviderPackageRequest): Promise<ProviderPackageResponse> {
+  const identity = await validateProviderPlayerIdentity(input);
+  if (identity.status !== "verified") {
+    if (identity.status === "unavailable") return { status: "unavailable", packages: [] };
+    return { status: "verification_required", packages: [] };
+  }
   const details = await fetchProviderGameDetails(input.gameId);
   if (details.status !== "ready") return { status: details.status, packages: [] };
   return { status: "ready", packages: details.packages };
@@ -202,15 +220,32 @@ export async function validateProviderPlayerIdentity(input: ProviderPackageReque
   }
 }
 
-export async function fetchSmmProviderServices(): Promise<SmmProviderCatalogResponse> {
+export async function fetchSmmProviderServices(options: { includeHidden?: boolean } = {}): Promise<SmmProviderCatalogResponse> {
   try {
     const response = await smmGlobRequest("services");
     if (!response) return { status: "unavailable", services: [] };
+    const availability = options.includeHidden ? null : await providerAvailability();
     const payload = z.array(z.unknown()).max(20_000).safeParse(response);
     if (!payload.success) return { status: "error", services: [] };
-    const services = balanceSocialProviderServices(payload.data.map((item) => smmGlobServiceSchema.safeParse(item)).filter((item): item is z.ZodSafeParseSuccess<z.infer<typeof smmGlobServiceSchema>> => item.success).map((item) => item.data).filter((service) => /(facebook|instagram|tiktok|youtube|telegram)/i.test(`${service.category} ${service.name}`)));
+    const hidden = new Set(availability?.hiddenSmmServiceIds ?? []);
+    const services = balanceSocialProviderServices(payload.data.map((item) => smmGlobServiceSchema.safeParse(item)).filter((item): item is z.ZodSafeParseSuccess<z.infer<typeof smmGlobServiceSchema>> => item.success).map((item) => item.data).filter((service) => /(facebook|instagram|tiktok|youtube|telegram)/i.test(`${service.category} ${service.name}`) && !hidden.has(service.service)));
     return { status: "ready", services: services.map((service) => ({ providerServiceId: service.service, name: service.name, category: service.category, serviceType: service.type, rateUsdPerThousand: Number(service.rate).toFixed(4), min: service.min, max: service.max, refill: Boolean(service.refill), cancel: Boolean(service.cancel), dripfeed: Boolean(service.dripfeed) })) };
   } catch { return { status: "error", services: [] }; }
+}
+
+export async function getProviderAvailabilityCatalog(): Promise<ProviderAvailabilityCatalog> {
+  const [gamesResponse, smmResponse, availability] = await Promise.all([fetchProviderGames({ includeHidden: true }), fetchSmmProviderServices({ includeHidden: true }), providerAvailability()]);
+  const hiddenGames = new Set(availability.hiddenGameIds);
+  const hiddenSmm = new Set(availability.hiddenSmmServiceIds);
+  return {
+    games: gamesResponse.status === "ready" ? gamesResponse.games.map((game) => ({ id: game.id, name: game.name, isActive: !hiddenGames.has(game.id) })) : [],
+    smm: smmResponse.status === "ready" ? smmResponse.services.map((service) => ({ id: service.providerServiceId, name: service.name, category: service.category, isActive: !hiddenSmm.has(service.providerServiceId) })) : [],
+  };
+}
+
+export async function setProviderAvailability(input: { kind: "game" | "smm"; providerId: string; isActive: boolean }) {
+  if (!isAppwriteStoreConfigured()) throw new Error("Provider availability control is not configured");
+  return updateAppwriteProviderAvailability(input);
 }
 
 const smmGlobOrderSchema = z.object({ order: z.union([z.string(), z.number()]).transform(String).pipe(z.string().trim().min(1).max(120)) });

@@ -177,3 +177,8 @@
 - [x] Implement the owner-approved dedicated game-page and clean SMM browsing redesign, then validate and publish it.
 - [x] Add a polished provider-backed Diamond package layout with category badges, selected-card gradient feedback, country indicators, and non-deceptive decorative diamond motion.
 - [x] Assess and implement account-name verification only when an authorized provider lookup is available; keep purchase, delivery, and any scheduled fulfillment disabled until verified secure capability exists.
+- [x] Require a visible verified player name before any game can reveal or continue to Diamond packages; do not allow a fallback bypass for unsupported validation.
+- [x] Diagnose and repair current Admin Panel errors, then visually validate its protected routes and error states.
+- [x] Add clear, reliable administrator controls to deactivate and reactivate authorized game and SMM products, with accurate customer visibility.
+- [x] Clarify boost-service captions and confirmation copy using only provider-backed service details.
+- [x] Test and repair the protected account-sale submission request flow, retaining pending-admin review before a listing becomes public.

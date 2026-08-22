@@ -8,6 +8,7 @@ type AppwriteList = { documents?: AppwriteRecord[]; total?: number };
 type AppwriteOrder = { id: string; userId: number; orderNumber: string; orderType: "topup" | "smm"; status: string; currency: string; subtotal: string; productName: string; details: unknown; createdAt: Date; updatedAt: Date };
 type AppwritePayment = { id: string; orderId: string; provider: string; status: string; amount: string; currency: string; createdAt: Date; updatedAt: Date; paidAt: Date | null; orderNumber: string; productName: string; orderStatus: string };
 export type AppwriteWalletTopup = { id: string; userId: number; referenceCode: string; provider: string; providerRequestId: string; providerTransactionId: string | null; status: "pending" | "paid" | "expired" | "failed"; amountKhr: string; paymentPayload: Record<string, unknown>; expiresAt: Date; paidAt: Date | null; creditedAt: Date | null; createdAt: Date; updatedAt: Date };
+export type AppwriteProviderAvailability = { hiddenGameIds: string[]; hiddenSmmServiceIds: string[]; updatedAt: Date };
 
 const databaseId = () => process.env.APPWRITE_DATABASE_ID || "zurs_store";
 const collectionId = "zurs_records";
@@ -24,6 +25,44 @@ function userId(openId: string) { return 1_000_000_000 + parseInt(documentId(ope
 function asDate(value: unknown) { return value ? new Date(String(value)) : new Date(); }
 
 export function isAppwriteStoreConfigured() { return Boolean(config()); }
+
+const providerAvailabilitySourceId = "global";
+
+function providerAvailabilityDocumentPath() {
+  return `/databases/${databaseId()}/collections/${collectionId}/documents/${documentId(`provider_availability:${providerAvailabilitySourceId}`)}`;
+}
+
+function parseProviderAvailability(record: AppwriteRecord | null) {
+  const value = record ? parsePayload<Partial<AppwriteProviderAvailability>>(record) : null;
+  return {
+    hiddenGameIds: Array.isArray(value?.hiddenGameIds) ? value.hiddenGameIds.filter((id): id is string => typeof id === "string" && id.length <= 120) : [],
+    hiddenSmmServiceIds: Array.isArray(value?.hiddenSmmServiceIds) ? value.hiddenSmmServiceIds.filter((id): id is string => typeof id === "string" && id.length <= 120) : [],
+    updatedAt: value?.updatedAt ? asDate(value.updatedAt) : new Date(0),
+  } satisfies AppwriteProviderAvailability;
+}
+
+export async function getAppwriteProviderAvailability() {
+  if (!config()) return parseProviderAvailability(null);
+  const record = await request("GET", providerAvailabilityDocumentPath()) as AppwriteRecord | null;
+  return parseProviderAvailability(record?.sourceTable === "provider_availability" && record.sourceId === providerAvailabilitySourceId ? record : null);
+}
+
+export async function updateAppwriteProviderAvailability(input: { kind: "game" | "smm"; providerId: string; isActive: boolean }) {
+  if (!config()) throw new Error("Provider availability storage is unavailable");
+  const current = await getAppwriteProviderAvailability();
+  const source = input.kind === "game" ? current.hiddenGameIds : current.hiddenSmmServiceIds;
+  const nextSource = input.isActive ? source.filter((id) => id !== input.providerId) : Array.from(new Set([...source, input.providerId]));
+  const next: AppwriteProviderAvailability = input.kind === "game" ? { ...current, hiddenGameIds: nextSource, updatedAt: new Date() } : { ...current, hiddenSmmServiceIds: nextSource, updatedAt: new Date() };
+  const body = { data: { sourceTable: "provider_availability", sourceId: providerAvailabilitySourceId, payload: JSON.stringify(next), sourceUpdatedAt: next.updatedAt.toISOString() } };
+  const path = providerAvailabilityDocumentPath();
+  const existing = await request("GET", path) as AppwriteRecord | null;
+  if (existing) await request("PUT", path, body);
+  else {
+    try { await request("POST", `/databases/${databaseId()}/collections/${collectionId}/documents`, { documentId: documentId(`provider_availability:${providerAvailabilitySourceId}`), ...body }); }
+    catch (error) { if (!shouldRetryAppwriteCreateAsUpdate(error)) throw error; await request("PUT", path, body); }
+  }
+  return next;
+}
 
 export function shouldRetryAppwriteCreateAsUpdate(error: unknown) {
   return error instanceof Error && error.message.includes("HTTP 409");
@@ -299,9 +338,8 @@ export async function createAppwriteMarketplaceListing(input: AppwriteMarketplac
     id,
     sellerUserId: input.sellerUserId,
     listingType: input.listingType,
-    // Seller submissions are published immediately; administrators can still hold,
-    // remove, or close any listing from the marketplace control panel.
-    status: "approved" as const,
+    // Appwrite-backed submissions must remain private until an administrator reviews them.
+    status: "pending" as const,
     game: input.game.trim(),
     title: input.title.trim(),
     rankLevel: input.rankLevel.trim(),
@@ -322,7 +360,7 @@ export async function createAppwriteMarketplaceListing(input: AppwriteMarketplac
       sourceUpdatedAt: now.toISOString(),
     },
   });
-  return { id, status: "approved" as const };
+  return { id, status: "pending" as const };
 }
 
 function toOrder(record: AppwriteRecord): AppwriteOrder | null {
