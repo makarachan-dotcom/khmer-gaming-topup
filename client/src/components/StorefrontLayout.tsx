@@ -95,7 +95,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
         </div>
       </footer>
 
-      {selectedProduct ? <SelectedProductActionBar product={selectedProduct} onClear={clearSelectedProduct} /> : <nav className="liquid-tabbar fixed inset-x-2 bottom-2 z-40 grid grid-cols-4 gap-1 rounded-2xl p-1.5 sm:hidden" aria-label="Mobile primary navigation">
+      {selectedProduct ? <SelectedProductActionBar product={selectedProduct} onClear={clearSelectedProduct} isAuthenticated={Boolean(user)} isAuthenticationLoading={loading} signInHref={googleSignInHref} /> : <nav className="liquid-tabbar fixed inset-x-2 bottom-2 z-40 grid grid-cols-4 gap-1 rounded-2xl p-1.5 sm:hidden" aria-label="Mobile primary navigation">
         {mobileNavigation.map(({ href, label, icon: Icon, animation }) => { const active = location === href; return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={cn("flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-[9px] font-bold transition-all", active ? "bg-slate-950 text-white shadow-lg shadow-indigo-900/20" : "text-slate-500 hover:bg-white/75 hover:text-indigo-700")}>{active && animation ? <AnimatedGlyph name={animation} size={22} color="#ffffff" /> : <Icon className={cn("h-4 w-4", active && "tab-icon-active")} />}<span className="truncate">{label}</span></Link>; })}
       </nav>}
       <button type="button" onClick={navigateToTop} aria-label="ត្រឡប់ទៅខាងលើ" className={cn("fixed right-4 z-[45] grid h-11 w-11 place-items-center rounded-2xl border border-white/80 bg-slate-950 text-white shadow-lg shadow-slate-950/20 transition-[opacity,transform,background-color] duration-200 hover:-translate-y-1 hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 sm:bottom-6", showScrollTop ? "bottom-[5.5rem] opacity-100" : "pointer-events-none bottom-[4.5rem] translate-y-3 opacity-0")}><ArrowUp className="h-5 w-5" strokeWidth={2.25} /></button>
@@ -103,12 +103,12 @@ function StorefrontShell({ children }: { children: ReactNode }) {
   );
 }
 
-function SelectedProductActionBar({ product, onClear }: { product: { label: string; amountLabel: string; priceLabel: string; gameName: string; gameLogoUrl?: string }; onClear: () => void }) {
+function SelectedProductActionBar({ product, onClear, isAuthenticated, isAuthenticationLoading, signInHref }: { product: { label: string; amountLabel: string; priceLabel: string; gameName: string; gameLogoUrl?: string }; onClear: () => void; isAuthenticated: boolean; isAuthenticationLoading: boolean; signInHref: string }) {
   return <aside className="selected-product-action-bar fixed inset-x-2 bottom-2 z-40 flex items-center gap-2 rounded-2xl p-2 sm:hidden" aria-label="Selected package action bar" aria-live="polite">
     <ProviderGameArtwork name={product.gameName} logoUrl={product.gameLogoUrl} priority className="h-11 w-11 shrink-0 rounded-xl" iconClassName="h-5 w-5" />
     <span className="selected-product-check grid h-11 w-9 shrink-0 place-items-center rounded-xl"><SelectedPackageCheck size={25} /></span>
     <div className="min-w-0 flex-1"><p className="truncate text-xs font-extrabold text-slate-950">{product.label}</p><p className="mt-0.5 truncate text-[10px] font-semibold text-slate-600">{product.amountLabel} · {product.priceLabel}</p></div>
     <button type="button" onClick={onClear} className="inline-flex h-10 shrink-0 items-center rounded-xl border border-white/85 bg-white/68 px-2.5 text-[10px] font-bold text-slate-700 shadow-sm">ប្ដូរ</button>
-    <button type="button" disabled aria-disabled="true" className="inline-flex h-10 shrink-0 items-center rounded-xl bg-slate-900/10 px-2.5 text-[10px] font-bold text-slate-500">ទិញមិនទាន់បើក</button>
+    {isAuthenticationLoading ? <button type="button" disabled aria-disabled="true" className="inline-flex h-10 shrink-0 items-center gap-1 rounded-xl bg-slate-900/10 px-2.5 text-[10px] font-bold text-slate-500"><OutlineLoader size={14} color="#64748b" />កំពុងពិនិត្យ</button> : isAuthenticated ? <button type="button" disabled aria-disabled="true" className="inline-flex h-10 shrink-0 items-center rounded-xl bg-slate-900/10 px-2.5 text-[10px] font-bold text-slate-500">ទិញមិនទាន់បើក</button> : <a href={signInHref} className="inline-flex h-10 shrink-0 items-center gap-1 rounded-xl bg-slate-950 px-2.5 text-[10px] font-bold text-white shadow-sm transition hover:bg-indigo-700"><LogIn className="h-3.5 w-3.5" />ចូលគណនីដើម្បីទិញ</a>}
   </aside>;
 }
