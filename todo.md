@@ -199,16 +199,16 @@
 - [x] Repair Admin provider catalog sync and add durable per-offer price and profit-margin controls for game and SMM products, with clear actionable outcomes.
 - [x] Make overflow-only game-title marquee motion pause for five seconds between scroll cycles while respecting reduced-motion preferences.
 - [x] Update Admin product price, margin, and availability interactions optimistically so the changed record reflects immediately without a manual page refresh.
-- [ ] Verify the owner-authenticated production catalog sync and one per-offer price/margin edit after the release is published.
+- [x] Verify the owner-authenticated production catalog sync and one per-offer price/margin edit after the release is published.
 - [x] Remove background surfaces from the LoadingV2 outline presentation while retaining legible status text and reduced-motion support.
 - [x] Replace the remaining rotating Admin catalog loading spinners with the shared LoadingV2 outline animation.
 - [x] Ensure Admin catalog retrieval falls back to persisted Appwrite provider offers after a successful sync when the primary catalog is empty or unavailable.
-- [ ] Correct Appwrite document-list query syntax so synchronized provider catalog records are retrieved reliably for Admin editors.
-- [ ] Add and verify an approved legacy Appwrite pagination fallback for instances that reject the query-array document-list format.
-- [ ] Add a direct Appwrite provider-catalog index so Admin can retrieve synchronized offer records without relying on document-list pagination.
+- [x] Correct Appwrite document-list query syntax so synchronized provider catalog records are retrieved reliably for Admin editors.
+- [x] Add and verify an approved legacy Appwrite pagination fallback for instances that reject the query-array document-list format.
+- [x] Add a direct Appwrite provider-catalog index so Admin can retrieve synchronized offer records without relying on document-list pagination.
 - [x] Integrate the owner-supplied Back-arrow animation so Back controls remain static until clicked, then play until navigation completes with an accessible reduced-motion fallback.
 - [x] Order provider game Top-up cards Cambodia/KH first, Global second, and other country or regional catalog entries last without changing provider data or visibility rules.
-- [ ] Refactor Appwrite provider catalog storage into size-safe granular offer records so full FZR/SMM synchronization and per-offer Admin pricing do not exceed document payload limits.
+- [x] Refactor Appwrite provider catalog storage into size-safe granular offer records so full FZR/SMM synchronization and per-offer Admin pricing do not exceed document payload limits.
 - [x] Keep owner-authorized Admin catalog sync controls available while provider-status checks are still loading, with server-side configuration validation retained.
 - [x] When a provider-authorized package is selected, temporarily hide the standard mobile tab bar and show a selected-package bottom action bar using the owner-supplied Checkbox 08 animation, while leaving product purchasing disabled.
 - [x] Repair selected-package context scope so dedicated game pages and the storefront shell share the same action-bar state without runtime errors.
@@ -217,4 +217,4 @@
 - [x] Require a successful server-side RapidAPI-supported player-ID check before packages can be browsed; retain strict blocking on lookup error or not-found, while allowing unsupported providers only after clear no-refund ID-confirmation safeguards.
 - [x] Save successfully verified player IDs, provide a safe selector for multiple previous IDs, and animate only user-confirmed autofill without exposing verified player names or enabling purchase.
 - [x] Recheck and repair shared LoadingV2 outline animation rendering across loading states, including transparent presentation, non-stuck completion behavior, and reduced-motion fallback.
-- [ ] Verify the exact production deployment and cache path serving zurs.vercel.app, then correct any mismatch preventing the latest selected-package, artwork, verified-ID, saved-ID, or LoadingV2 updates from being visible to the owner.
+- [x] Verify the exact production deployment and cache path serving zurs.vercel.app, then correct any mismatch preventing the latest selected-package, artwork, verified-ID, saved-ID, or LoadingV2 updates from being visible to the owner.
