@@ -15,9 +15,11 @@ describe("animated glyph integration", () => {
 
   it("uses the owner-supplied LoadingV2 outline loader for activity states", () => {
     const source = readFileSync(resolve(process.cwd(), "client/src/components/OutlineLoader.tsx"), "utf8");
-    expect(source).toContain("loading-v2-outline_78a8cd0e.json");
+    expect(source).toContain("KxkCHUOElXQbfZQw.json");
     expect(source).toContain('import("lottie-web")');
     expect(source).toContain("prefers-reduced-motion: reduce");
+    expect(source).toContain("LoadingV2");
+    expect(source).not.toContain("outline-loader-fallback");
     expect(source).not.toContain("animate-spin");
   });
 });

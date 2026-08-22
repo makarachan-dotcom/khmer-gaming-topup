@@ -98,6 +98,14 @@ export default function GameTopup() {
   useEffect(() => () => clearSelectedProduct(), []);
 
   useEffect(() => {
+    if (!isMobileLegendsGlobalGame(game?.id ?? "")) return;
+    const artwork = new Image();
+    artwork.decoding = "async";
+    artwork.fetchPriority = "high";
+    artwork.src = goldDiamondChestArtworkUrl;
+  }, [game?.id]);
+
+  useEffect(() => {
     setSavedPlayers(game ? readVerifiedPlayerEntries(game.id) : []);
   }, [game?.id]);
 
@@ -153,11 +161,31 @@ function isFullTicketPackage(item: ProviderPackage) {
   return /\bfull\s*ticket\b/i.test(`${item.label} ${item.amountLabel}`);
 }
 
+function packageText(item: ProviderPackage) {
+  return `${item.label} ${item.amountLabel}`.toLowerCase();
+}
+
+function isWeeklyPassPackage(item: ProviderPackage) {
+  return /\bweekly\b/.test(packageText(item));
+}
+
+function isBonusDiamondPackage(item: ProviderPackage) {
+  return /\bbonus\b|first\s*top[\s-]*up/.test(packageText(item));
+}
+
+function isDiamondPackage(item: ProviderPackage) {
+  return /\bdiamond(?:s)?\b/.test(packageText(item));
+}
+
+function isBaseDiamondPackage(item: ProviderPackage) {
+  return isDiamondPackage(item) && !isBonusDiamondPackage(item) && !isWeeklyPassPackage(item);
+}
+
 function PackageCard({ item, selected, onSelect, gameId, gameName, gameLogoUrl }: { item: ProviderPackage; selected: boolean; onSelect: () => void; gameId: string; gameName: string; gameLogoUrl?: string }) {
   const badge = providerPackageBadge(item.label);
   const mobileLegends = isMobileLegendsGlobalGame(gameId);
   const diamondLabel = mobileLegendsDiamondLabel(item.label, item.amountLabel);
-  return <article className="min-w-0"><button type="button" aria-pressed={selected} onClick={onSelect} className={`package-choice package-choice--clean w-full text-left ${mobileLegends ? "package-choice--mobile-legends" : ""} ${selected ? "package-choice--selected" : ""}`}><span className="package-choice-surface block rounded-[0.7rem] p-3.5"><span className="flex items-start justify-between gap-2"><span className="flex min-w-0 items-center gap-2"><ProviderGameArtwork name={gameName} logoUrl={gameLogoUrl} className="package-product-art h-9 w-9 rounded-xl" iconClassName="h-4 w-4" />{badge ? <span className={`package-badge package-badge--${badge.tone}`}>{badge.label}</span> : <span className={`package-badge ${mobileLegends ? "package-badge--gold" : "package-badge--standard"}`}>{mobileLegends ? "MLBB · GOLD" : "PACKAGE"}</span>}</span>{selected ? <SelectedPackageCheck size={21} className="package-choice-check" /> : <Gem className={`package-gem h-4 w-4 ${mobileLegends ? "text-amber-600" : "text-indigo-600"}`} />}</span>{mobileLegends ? <span className="mobile-legends-diamond-art mt-2 block"><img src={goldDiamondChestArtworkUrl} alt="Mobile Legends diamond chest" className="mobile-legends-diamond-art__image" /><span className="mobile-legends-diamond-art__amount">{diamondLabel}</span></span> : null}<OverflowMarquee text={item.label} className={`${mobileLegends ? "mt-1" : "mt-3"} text-sm font-extrabold leading-5 text-slate-950`} /><OverflowMarquee text={mobileLegends ? "Mobile Legends · Cambodia & Global" : item.amountLabel} className="mt-1 text-xs font-medium text-slate-500" /><span className={`mt-3 block text-[15px] font-extrabold ${mobileLegends ? "text-amber-800" : "text-indigo-700"}`}>{item.priceLabel}</span></span></button></article>;
+  return <article className="min-w-0"><button type="button" aria-pressed={selected} onClick={onSelect} className={`package-choice package-choice--clean w-full text-left ${mobileLegends ? "package-choice--mobile-legends" : ""} ${selected ? "package-choice--selected" : ""}`}><span className="package-choice-surface block rounded-[0.7rem] p-3.5"><span className="flex items-start justify-between gap-2"><span className="flex min-w-0 items-center gap-2"><ProviderGameArtwork name={gameName} logoUrl={gameLogoUrl} priority={mobileLegends} className="package-product-art h-9 w-9 rounded-xl" iconClassName="h-4 w-4" />{badge ? <span className={`package-badge package-badge--${badge.tone}`}>{badge.label}</span> : <span className={`package-badge ${mobileLegends ? "package-badge--gold" : "package-badge--standard"}`}>{mobileLegends ? "MLBB · GOLD" : "PACKAGE"}</span>}</span>{selected ? <SelectedPackageCheck size={21} className="package-choice-check" /> : <Gem className={`package-gem h-4 w-4 ${mobileLegends ? "text-amber-600" : "text-indigo-600"}`} />}</span>{mobileLegends ? <span className="mobile-legends-diamond-art mt-2 block"><img src={goldDiamondChestArtworkUrl} alt="Mobile Legends diamond chest" className="mobile-legends-diamond-art__image" loading="eager" fetchPriority="high" decoding="async" /><span className="mobile-legends-diamond-art__amount">{diamondLabel}</span></span> : null}<OverflowMarquee text={item.label} className={`${mobileLegends ? "mt-1" : "mt-3"} text-sm font-extrabold leading-5 text-slate-950`} /><OverflowMarquee text={mobileLegends ? "Mobile Legends · Cambodia & Global" : item.amountLabel} className="mt-1 text-xs font-medium text-slate-500" /><span className={`mt-3 block text-[15px] font-extrabold ${mobileLegends ? "text-amber-800" : "text-indigo-700"}`}>{item.priceLabel}</span></span></button></article>;
 }
 
 function PackageSection({ title, description, icon: Icon, items, selectedPackageId, onSelect, gameId, gameName, gameLogoUrl, event }: { title: string; description?: string | null; icon: typeof Gem; items: ProviderPackage[]; selectedPackageId: string; onSelect: (id: string) => void; gameId: string; gameName: string; gameLogoUrl?: string; event?: boolean }) {
@@ -170,6 +198,11 @@ function DiamondPackages({ packages, status, selectedPackageId, onSelect, gameId
   const fullTicketEvent = (eventContent.data ?? []).find((item) => item.contentKey === "topup-event-full-ticket");
   const fullTicketPackages = fullTicketEvent ? packages.filter(isFullTicketPackage) : [];
   const standardPackages = fullTicketPackages.length ? packages.filter((item) => !isFullTicketPackage(item)) : packages;
+  const isMobileLegendsGlobal = isMobileLegendsGlobalGame(gameId);
+  const baseDiamondPackages = isMobileLegendsGlobal ? standardPackages.filter(isBaseDiamondPackage) : [];
+  const bonusDiamondPackages = isMobileLegendsGlobal ? standardPackages.filter((item) => isBonusDiamondPackage(item) && !isWeeklyPassPackage(item)) : [];
+  const weeklyPassPackages = isMobileLegendsGlobal ? standardPackages.filter(isWeeklyPassPackage) : [];
+  const otherPackages = isMobileLegendsGlobal ? standardPackages.filter((item) => !baseDiamondPackages.includes(item) && !bonusDiamondPackages.includes(item) && !weeklyPassPackages.includes(item)) : standardPackages;
 
-  return <div className="mt-6 border-t border-slate-100 pt-5">{status === "ready" && packages.length ? <div className="space-y-5"><PackageSection title={fullTicketEvent?.titleKh?.trim() || "កញ្ចប់ Full Ticket"} description={fullTicketEvent?.bodyKh} icon={Ticket} items={fullTicketPackages} selectedPackageId={selectedPackageId} onSelect={onSelect} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} event /><PackageSection title="កញ្ចប់ដែលមាន" icon={Gem} items={standardPackages} selectedPackageId={selectedPackageId} onSelect={onSelect} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} /></div> : <div className="mt-3 rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-xs leading-5 text-slate-600">មិនអាចបង្ហាញកញ្ចប់សេវាសម្រាប់ពេលនេះទេ។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។</div>}</div>;
+  return <div className="mt-6 border-t border-slate-100 pt-5">{status === "ready" && packages.length ? <div className="space-y-5"><PackageSection title={fullTicketEvent?.titleKh?.trim() || "កញ្ចប់ Full Ticket"} description={fullTicketEvent?.bodyKh} icon={Ticket} items={fullTicketPackages} selectedPackageId={selectedPackageId} onSelect={onSelect} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} event />{isMobileLegendsGlobal ? <><PackageSection title="កញ្ចប់ពេជ្យ · តម្លៃដើមពី Provider" description="តម្លៃពេជ្យធម្មតា ដោយមិនបញ្ចូល Bonus ឬ Pass" icon={Gem} items={baseDiamondPackages} selectedPackageId={selectedPackageId} onSelect={onSelect} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} /><PackageSection title="កញ្ចប់ពេជ្យ Bonus និង First Top-Up" description="កញ្ចប់ពេជ្យដែលមាន Bonus ពិសេសពី Provider" icon={Gem} items={bonusDiamondPackages} selectedPackageId={selectedPackageId} onSelect={onSelect} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} /><PackageSection title="Weekly Pass" description="បង្ហាញដាច់ដោយឡែកពីកញ្ចប់ពេជ្យ" icon={Ticket} items={weeklyPassPackages} selectedPackageId={selectedPackageId} onSelect={onSelect} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} /><PackageSection title="សេវា Mobile Legends ផ្សេងៗ" description="Pass និងកញ្ចប់ពិសេសផ្សេងទៀតពី Provider" icon={WalletCards} items={otherPackages} selectedPackageId={selectedPackageId} onSelect={onSelect} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} /></> : <PackageSection title="កញ្ចប់ដែលមាន" icon={Gem} items={otherPackages} selectedPackageId={selectedPackageId} onSelect={onSelect} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} />}</div> : <div className="mt-3 rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-xs leading-5 text-slate-600">មិនអាចបង្ហាញកញ្ចប់សេវាសម្រាប់ពេលនេះទេ។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។</div>}</div>;
 }

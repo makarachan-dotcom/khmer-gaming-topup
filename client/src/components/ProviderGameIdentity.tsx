@@ -32,7 +32,7 @@ export function ProviderGameArtwork({ name, logoUrl, className, iconClassName, p
   const resolvedLogoUrl = resolveProviderGameLogo(name, logoUrl);
   useEffect(() => setImageFailed(false), [resolvedLogoUrl]);
   if (canRenderProviderArtwork(resolvedLogoUrl) && !imageFailed) {
-    return <span className={cn("game-logo-frame", className)}><img src={resolvedLogoUrl} alt={`${name} official logo`} className="game-logo-image" loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : "auto"} referrerPolicy="no-referrer" onError={() => setImageFailed(true)} /></span>;
+    return <span className={cn("game-logo-frame", className)}><img src={resolvedLogoUrl} alt={`${name} official logo`} className="game-logo-image" loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : "auto"} decoding="async" referrerPolicy="no-referrer" onError={() => setImageFailed(true)} /></span>;
   }
   return <span className={cn("game-logo-fallback", className)} aria-label={`${name} game icon`}><Gamepad2 className={cn("h-5 w-5", iconClassName)} /></span>;
 }

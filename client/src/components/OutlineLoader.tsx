@@ -1,17 +1,19 @@
 import type { AnimationItem } from "lottie-web";
 import { useEffect, useRef, useState } from "react";
 
-const loadingV2AssetUrl = "/manus-storage/loading-v2-outline_78a8cd0e.json";
+const loadingV2AssetUrl = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663905831999/KxkCHUOElXQbfZQw.json";
+
+type LoadingV2Props = { size?: number; color?: string; className?: string };
 
 function rgbForColor(value: string) {
   const normalized = value.trim();
   const match = normalized.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
-  if (!match) return [79 / 255, 70 / 255, 229 / 255] as const;
+  if (!match) return [15 / 255, 23 / 255, 42 / 255] as const;
   const hex = match[1].length === 3 ? match[1].split("").map((part) => `${part}${part}`).join("") : match[1];
   return [parseInt(hex.slice(0, 2), 16) / 255, parseInt(hex.slice(2, 4), 16) / 255, parseInt(hex.slice(4, 6), 16) / 255] as const;
 }
 
-function recolorOutlineAsset(animation: unknown, color: string) {
+function recolorLoadingV2(animation: unknown, color: string) {
   const cloned = JSON.parse(JSON.stringify(animation)) as Record<string, unknown>;
   const rgb = rgbForColor(color);
   const visit = (node: unknown): void => {
@@ -27,7 +29,7 @@ function recolorOutlineAsset(animation: unknown, color: string) {
   return cloned;
 }
 
-export function OutlineLoader({ size = 28, color = "#4f46e5", className = "" }: { size?: number; color?: string; className?: string }) {
+export function LoadingV2({ size = 28, color = "#0f172a", className = "" }: LoadingV2Props) {
   const hostRef = useRef<HTMLSpanElement>(null);
   const animationRef = useRef<AnimationItem | null>(null);
   const [reduceMotion, setReduceMotion] = useState(false);
@@ -46,9 +48,10 @@ export function OutlineLoader({ size = 28, color = "#4f46e5", className = "" }: 
     const controller = new AbortController();
     let disposed = false;
     host.replaceChildren();
+
     void Promise.all([
       fetch(loadingV2AssetUrl, { signal: controller.signal }).then((response) => {
-        if (!response.ok) throw new Error("Loading animation is unavailable");
+        if (!response.ok) throw new Error("Loading V2 animation is unavailable");
         return response.json();
       }),
       import("lottie-web"),
@@ -56,11 +59,19 @@ export function OutlineLoader({ size = 28, color = "#4f46e5", className = "" }: 
       .then(([payload, module]) => {
         if (disposed || !hostRef.current) return;
         const lottie = module.default;
-        const animation = lottie.loadAnimation({ container: hostRef.current, renderer: "svg", loop: !reduceMotion, autoplay: !reduceMotion, animationData: recolorOutlineAsset(payload, color), rendererSettings: { preserveAspectRatio: "xMidYMid meet" } });
+        const animation = lottie.loadAnimation({
+          container: hostRef.current,
+          renderer: "svg",
+          loop: !reduceMotion,
+          autoplay: !reduceMotion,
+          animationData: recolorLoadingV2(payload, color),
+          rendererSettings: { preserveAspectRatio: "xMidYMid meet" },
+        });
         animationRef.current = animation;
         if (reduceMotion) animation.goToAndStop(22, true);
       })
-      .catch(() => { /* The static outline remains visible if the animation asset cannot load. */ });
+      .catch(() => { /* Keep the loading state transparent when the asset cannot be fetched. */ });
+
     return () => {
       disposed = true;
       controller.abort();
@@ -69,8 +80,8 @@ export function OutlineLoader({ size = 28, color = "#4f46e5", className = "" }: 
     };
   }, [color, reduceMotion]);
 
-  return <span aria-hidden="true" className={`outline-loader outline-loader--loading-v2 inline-grid place-items-center ${className}`} style={{ width: size, height: size, color }}>
-    <svg className="outline-loader-fallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" focusable="false"><circle cx="12" cy="12" r="8.4" strokeOpacity="0.28" /><path d="M12 3.6A8.4 8.4 0 0 1 20.4 12" strokeLinecap="round" /></svg>
-    <span ref={hostRef} className="outline-loader-lottie" />
-  </span>;
+  return <span aria-hidden="true" className={`loading-v2 inline-grid place-items-center ${className}`} style={{ width: size, height: size, color }}><span ref={hostRef} className="loading-v2__animation" /></span>;
 }
+
+/** @deprecated Use LoadingV2 for new code. Kept temporarily to migrate existing loading states safely. */
+export const OutlineLoader = LoadingV2;
