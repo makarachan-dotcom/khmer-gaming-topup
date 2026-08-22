@@ -5,7 +5,7 @@ import { nanoid } from "nanoid";
 import {
   adminRoleAudits, gamePackages, gameProducts, gmailSenderConnections, InsertUser, marketplaceContacts, marketplaceDisclosureRequests, marketplaceEvidenceAccessLogs, marketplaceFavorites, marketplaceFraudReports, marketplaceListings, marketplaceVerificationEvidence, marketplaceVerifications, orders, orderStatusEvents, orderSupportTickets, paymentTransactions, savedPlayerIds, siteContent, smmServices, smmTiers, User, users, welcomeEmailDeliveries,
 } from "../drizzle/schema";
-import { createAppwriteMarketplaceListing, getAppwriteCustomerOrders, getAppwriteCustomerPaymentHistory, getAppwriteUserByEmail, getAppwriteUserByOpenId, isAppwriteStoreConfigured, updateAppwriteUserDisplayName, upsertAppwriteUser } from "./appwriteStore";
+import { createAppwriteMarketplaceListing, deleteAppwriteMarketplaceListing, getAppwriteCustomerOrders, getAppwriteCustomerPaymentHistory, getAppwriteUserByEmail, getAppwriteUserByOpenId, isAppwriteStoreConfigured, listAppwriteMarketplaceListings, updateAppwriteMarketplaceListing, updateAppwriteUserDisplayName, upsertAppwriteUser } from "./appwriteStore";
 import { buildOrderNumber, isSingleAdminEmail } from "./storefrontDomain";
 import { validateAdminRoleChange } from "./adminRoles";
 import { buildEvidenceRetentionAuditReason, canApproveMarketplaceVerification, hasOnlyOwnedMarketplaceScreenshotKeys, type DisclosureRequestStatus, type FraudReportStatus } from "./marketplaceSafety";
@@ -347,7 +347,16 @@ export async function deleteSavedPlayerId(input: { id: string; userId: number })
 
 export async function listMarketplace(input: { listingType?: "sale" | "swap" | "wanted"; game?: string; search?: string }) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) {
+    if (!isAppwriteStoreConfigured()) return [];
+    const rows = await listAppwriteMarketplaceListings("approved");
+    const search = input.search?.trim().toLowerCase();
+    return rows.map(({ listing }) => listing).filter((listing) => {
+      if (input.listingType && listing.listingType !== input.listingType) return false;
+      if (input.game && listing.game !== input.game) return false;
+      return !search || `${listing.title} ${listing.description}`.toLowerCase().includes(search);
+    });
+  }
   const conditions = [eq(marketplaceListings.status, "approved")];
   if (input.listingType) conditions.push(eq(marketplaceListings.listingType, input.listingType));
   if (input.game) conditions.push(eq(marketplaceListings.game, input.game));
@@ -469,7 +478,11 @@ export async function markMarketplaceListingSold(input: { listingId: string; sel
 
 export async function getSellerMarketplaceListings(sellerUserId: number) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) {
+    if (!isAppwriteStoreConfigured()) return [];
+    const rows = await listAppwriteMarketplaceListings();
+    return rows.map(({ listing }) => listing).filter((listing) => listing.sellerUserId === sellerUserId);
+  }
   return db.select().from(marketplaceListings).where(eq(marketplaceListings.sellerUserId, sellerUserId)).orderBy(desc(marketplaceListings.createdAt));
 }
 
@@ -550,15 +563,28 @@ export async function reviewOrderSupportTicket(input: { ticketId: string; review
 
 export async function getAdminMarketplaceListings(status?: "draft" | "pending" | "approved" | "rejected" | "closed" | "sold") {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) return isAppwriteStoreConfigured() ? listAppwriteMarketplaceListings(status) : [];
   const query = db.select({ listing: marketplaceListings, seller: { id: users.id, name: users.name, email: users.email } }).from(marketplaceListings).leftJoin(users, eq(marketplaceListings.sellerUserId, users.id));
   return status ? query.where(eq(marketplaceListings.status, status)).orderBy(desc(marketplaceListings.createdAt)) : query.orderBy(desc(marketplaceListings.createdAt));
 }
 
 export async function reviewMarketplaceListing(input: { listingId: string; status: "approved" | "rejected" | "closed"; reviewNote?: string | null; reviewerUserId: number }) {
   const db = await getDb();
-  if (!db) throw new Error("Database unavailable");
+  if (!db) {
+    if (isAppwriteStoreConfigured()) return updateAppwriteMarketplaceListing(input);
+    throw new Error("Marketplace administration is temporarily unavailable");
+  }
   await db.update(marketplaceListings).set({ status: input.status, reviewNote: input.reviewNote?.trim() ?? null, reviewedByUserId: input.reviewerUserId, reviewedAt: new Date() }).where(eq(marketplaceListings.id, input.listingId));
+  return { success: true };
+}
+
+export async function deleteMarketplaceListingByAdmin(input: { listingId: string }) {
+  const db = await getDb();
+  if (!db) {
+    if (isAppwriteStoreConfigured()) return deleteAppwriteMarketplaceListing(input.listingId);
+    throw new Error("Marketplace administration is temporarily unavailable");
+  }
+  await db.delete(marketplaceListings).where(eq(marketplaceListings.id, input.listingId));
   return { success: true };
 }
 

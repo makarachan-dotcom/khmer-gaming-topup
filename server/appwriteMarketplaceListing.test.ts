@@ -15,7 +15,7 @@ afterEach(() => {
 });
 
 describe("Appwrite marketplace listing fallback", () => {
-  it("persists a new listing as pending without publishing it automatically", async () => {
+  it("publishes a new seller listing immediately while retaining the administrator review controls", async () => {
     process.env.APPWRITE_ENDPOINT = "https://appwrite.example/v1";
     process.env.APPWRITE_PROJECT_ID = "zurs-project";
     process.env.APPWRITE_API_KEY = "server-only-test-key";
@@ -25,7 +25,7 @@ describe("Appwrite marketplace listing fallback", () => {
       const request = JSON.parse(String(init?.body));
       const listing = JSON.parse(request.data.payload);
       expect(request.data.sourceTable).toBe("marketplaceListings");
-      expect(listing).toMatchObject({ sellerUserId: 42, title: "Mythic account", status: "pending" });
+      expect(listing).toMatchObject({ sellerUserId: 42, title: "Mythic account", status: "approved" });
       return new Response(JSON.stringify({ $id: request.documentId }), { status: 201 });
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -43,7 +43,7 @@ describe("Appwrite marketplace listing fallback", () => {
       screenshots: ["appwrite/zurs_media/marketplace-listings-private/42/proof.webp/file-1"],
     });
 
-    expect(result.status).toBe("pending");
+    expect(result.status).toBe("approved");
     expect(result.id).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
