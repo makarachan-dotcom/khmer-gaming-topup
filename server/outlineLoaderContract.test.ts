@@ -10,7 +10,8 @@ describe("outline loader contract", () => {
     expect(loader).toContain('const loadingV2AssetUrl = "/loading-v2.json"');
     expect(loader).toContain('LoadingV2Placeholder');
     expect(loader).toContain('cache: "force-cache"');
-    expect(loader).toContain('lottie.loadAnimation');
+    expect(loader).toContain('import("lottie-web")');
+    expect(loader).toContain('module.default.loadAnimation');
     expect(loader).toContain('prefers-reduced-motion: reduce');
     expect(loader).toContain('LoadingV2');
     expect(loader).toContain('loading-v2__animation');

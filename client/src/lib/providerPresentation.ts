@@ -70,12 +70,12 @@ export function gameRegionMarker(name: string, providerRegion?: string | null) {
   return { kind: "global" as const, label: "Global" };
 }
 
-/** Cambodia storefront marker for all Global titles and Singapore (SG) titles accepted for Cambodia. */
+/** Every storefront product has been selected for Cambodia support; retain the original provider region only as a secondary label. */
 export function cambodiaSupportMarker(name: string, providerRegion?: string | null) {
   const marker = gameRegionMarker(name, providerRegion);
   if (marker.kind === "global") return { flag: "🇰🇭", label: "Cambodia · Global" };
-  if (marker.kind === "country" && marker.label === "Singapore") return { flag: "🇰🇭", label: "Cambodia · SG" };
-  return null;
+  if (marker.kind === "country" && marker.label === "Cambodia") return { flag: "🇰🇭", label: "Cambodia" };
+  return { flag: "🇰🇭", label: `Cambodia · ${marker.label}` };
 }
 
 export function orderProviderGames<
@@ -107,9 +107,7 @@ export function filterProviderGames<
     const marker = gameRegionMarker(game.name, game.region);
     const matchesFilter =
       filter === "all" ||
-      (filter === "cambodia" &&
-        marker.kind === "country" &&
-        marker.label === "Cambodia") ||
+      (filter === "cambodia") ||
       (filter === "global" && marker.kind === "global");
     const matchesQuery =
       !normalizedQuery ||

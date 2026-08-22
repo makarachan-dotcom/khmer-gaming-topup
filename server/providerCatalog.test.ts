@@ -65,13 +65,11 @@ describe("provider catalog", () => {
     expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1);
   });
 
-  it("allows an unsupported provider category only after the customer explicitly confirms the exact ID", async () => {
+  it("keeps an unsupported provider category locked until a username can be verified", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "server-only-key";
-    vi.stubGlobal("fetch", vi.fn()
-      .mockResolvedValueOnce({ ok: false, status: 400 })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "acecraft", name: "Acecraft", imageurl: "https://cdn.example.test/acecraft.png", fields: [{ key: "user_id", label: "User ID", type: "text" }], offers: [{ offer_id: "80_diamonds", name: "80 Diamonds", price_usd: "0.9864" }] }) }));
-    await expect(fetchProviderPackages({ gameId: "acecraft", fields: { user_id: "123456" }, idConfirmed: true })).resolves.toMatchObject({ status: "ready", packages: [{ id: "acecraft:80_diamonds" }] });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce({ ok: false, status: 400 }));
+    await expect(fetchProviderPackages({ gameId: "acecraft", fields: { user_id: "123456" } })).resolves.toEqual({ status: "verification_required", packages: [] });
   });
 
   it("keeps Mobile Legends packages gated when FZR reports that name validation is unavailable for its exact category", async () => {

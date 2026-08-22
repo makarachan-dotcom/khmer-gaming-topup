@@ -23,10 +23,10 @@ describe("provider package presentation", () => {
     expect(countryFlagForRegion("Unknown region")).toBeNull();
   });
 
-  it("marks Global and SG game listings as Cambodia-supported without changing their catalog region", () => {
+  it("marks every public listing as Cambodia-supported without changing its catalog region", () => {
     expect(cambodiaSupportMarker("Mobile Legends", "Global")).toEqual({ flag: "🇰🇭", label: "Cambodia · Global" });
-    expect(cambodiaSupportMarker("Free Fire (SG)", "Singapore")).toEqual({ flag: "🇰🇭", label: "Cambodia · SG" });
-    expect(cambodiaSupportMarker("Arena of Valor", "Indonesia")).toBeNull();
+    expect(cambodiaSupportMarker("Free Fire (SG)", "Singapore")).toEqual({ flag: "🇰🇭", label: "Cambodia · Singapore" });
+    expect(cambodiaSupportMarker("Arena of Valor", "Indonesia")).toEqual({ flag: "🇰🇭", label: "Cambodia · Indonesia" });
   });
 
   it("orders Cambodia games before Global and other provider regions", () => {
@@ -50,7 +50,7 @@ describe("provider package presentation", () => {
     ]);
     expect(
       filterProviderGames(games, "", "cambodia").map(game => game.id)
-    ).toEqual(["kh"]);
+    ).toEqual(["kh", "global", "other"]);
     expect(
       filterProviderGames(games, "", "global").map(game => game.id)
     ).toEqual(["global"]);

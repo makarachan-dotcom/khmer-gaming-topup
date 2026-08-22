@@ -1,4 +1,4 @@
-import lottie, { type AnimationItem } from "lottie-web";
+import type { AnimationItem } from "lottie-web";
 import { useEffect, useRef, useState } from "react";
 
 /**
@@ -71,10 +71,10 @@ export function LoadingV2({ size = 28, color = "#0f172a", className = "" }: Load
     setAnimationReady(false);
     host.replaceChildren();
 
-    void loadLoadingV2Payload()
-      .then((payload) => {
+    void Promise.all([loadLoadingV2Payload(), import("lottie-web")])
+      .then(([payload, module]) => {
         if (disposed || !hostRef.current) return;
-        const animation = lottie.loadAnimation({
+        const animation = module.default.loadAnimation({
           container: hostRef.current,
           renderer: "svg",
           loop: !reduceMotion,

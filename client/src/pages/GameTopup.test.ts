@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { gameIdFromTopupPath, gameTopupPath, readVerifiedPlayerEntries, saveVerifiedPlayerEntry, sortProviderPackagesByPrice } from "./GameTopup";
+import { canBrowseVerifiedPackages, gameIdFromTopupPath, gameTopupPath, readVerifiedPlayerEntries, saveVerifiedPlayerEntry, sortProviderPackagesByPrice } from "./GameTopup";
 
 describe("dedicated game top-up routes", () => {
   it("creates and reads an encoded provider game route", () => {
@@ -21,6 +21,14 @@ describe("dedicated game top-up routes", () => {
     ];
     expect(sortProviderPackagesByPrice(packages).map((item) => item.id)).toEqual(["low", "mid", "high"]);
     expect(packages.map((item) => item.id)).toEqual(["mid", "low", "high"]);
+  });
+
+  it("locks package browsing for invalid, unavailable, and unsupported username checks", () => {
+    expect(canBrowseVerifiedPackages(false, "verified")).toBe(false);
+    expect(canBrowseVerifiedPackages(true, "invalid")).toBe(false);
+    expect(canBrowseVerifiedPackages(true, "not_supported")).toBe(false);
+    expect(canBrowseVerifiedPackages(true, "unavailable")).toBe(false);
+    expect(canBrowseVerifiedPackages(true, "verified")).toBe(true);
   });
 
   it("keeps only private verified ID fields in a small per-game browser history", () => {
