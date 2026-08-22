@@ -69,5 +69,8 @@ export function OutlineLoader({ size = 28, color = "#4f46e5", className = "" }: 
     };
   }, [color, reduceMotion]);
 
-  return <span aria-hidden="true" ref={hostRef} className={`outline-loader outline-loader--loading-v2 inline-grid place-items-center ${className}`} style={{ width: size, height: size, color }} />;
+  return <span aria-hidden="true" className={`outline-loader outline-loader--loading-v2 inline-grid place-items-center ${className}`} style={{ width: size, height: size, color }}>
+    <svg className="outline-loader-fallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" focusable="false"><circle cx="12" cy="12" r="8.4" strokeOpacity="0.28" /><path d="M12 3.6A8.4 8.4 0 0 1 20.4 12" strokeLinecap="round" /></svg>
+    <span ref={hostRef} className="outline-loader-lottie" />
+  </span>;
 }

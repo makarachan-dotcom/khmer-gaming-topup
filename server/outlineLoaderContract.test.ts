@@ -10,6 +10,8 @@ describe("outline loader contract", () => {
     expect(loader).toContain('/manus-storage/loading-v2-outline_78a8cd0e.json');
     expect(loader).toContain('lottie.loadAnimation');
     expect(loader).toContain('prefers-reduced-motion: reduce');
+    expect(loader).toContain('outline-loader-fallback');
+    expect(loader).toContain('outline-loader-lottie');
     expect(overlay).toContain('OutlineLoader');
   });
 });

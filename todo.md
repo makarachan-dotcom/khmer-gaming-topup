@@ -212,3 +212,8 @@
 - [x] Keep owner-authorized Admin catalog sync controls available while provider-status checks are still loading, with server-side configuration validation retained.
 - [x] When a provider-authorized package is selected, temporarily hide the standard mobile tab bar and show a selected-package bottom action bar using the owner-supplied Checkbox 08 animation, while leaving product purchasing disabled.
 - [x] Repair selected-package context scope so dedicated game pages and the storefront shell share the same action-bar state without runtime errors.
+- [x] Refine the selected-provider-package mobile action bar with a liquid-glass surface, a provider-approved game logo at left, and truthful package-specific artwork where a permitted source is available.
+- [x] Review the requested third-party storefront and other product pages for reusable artwork permissions; retain only provider-supplied or otherwise permitted assets and do not copy copyrighted competitor imagery.
+- [x] Require a successful server-side RapidAPI-supported player-ID check before packages can be browsed; retain strict blocking on lookup error or not-found, while allowing unsupported providers only after clear no-refund ID-confirmation safeguards.
+- [x] Save successfully verified player IDs, provide a safe selector for multiple previous IDs, and animate only user-confirmed autofill without exposing verified player names or enabling purchase.
+- [x] Recheck and repair shared LoadingV2 outline animation rendering across loading states, including transparent presentation, non-stuck completion behavior, and reduced-motion fallback.

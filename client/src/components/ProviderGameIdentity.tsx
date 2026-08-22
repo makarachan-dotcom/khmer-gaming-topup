@@ -8,15 +8,18 @@ type ArtworkProps = {
   logoUrl?: string;
   className?: string;
   iconClassName?: string;
+  priority?: boolean;
 };
 
 export function hasProviderApprovedGameLogo(logoUrl?: string) {
   return Boolean(logoUrl?.startsWith("https://"));
 }
 
-export function ProviderGameArtwork({ name, logoUrl, className, iconClassName }: ArtworkProps) {
-  if (hasProviderApprovedGameLogo(logoUrl)) {
-    return <span className={cn("game-logo-frame", className)}><img src={logoUrl} alt={`${name} official logo`} className="game-logo-image" loading="lazy" /></span>;
+export function ProviderGameArtwork({ name, logoUrl, className, iconClassName, priority = false }: ArtworkProps) {
+  const [imageFailed, setImageFailed] = useState(false);
+  useEffect(() => setImageFailed(false), [logoUrl]);
+  if (hasProviderApprovedGameLogo(logoUrl) && !imageFailed) {
+    return <span className={cn("game-logo-frame", className)}><img src={logoUrl} alt={`${name} official logo`} className="game-logo-image" loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : "auto"} referrerPolicy="no-referrer" onError={() => setImageFailed(true)} /></span>;
   }
   return <span className={cn("game-logo-fallback", className)} aria-label={`${name} game icon`}><Gamepad2 className={cn("h-5 w-5", iconClassName)} /></span>;
 }

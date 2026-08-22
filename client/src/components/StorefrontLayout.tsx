@@ -3,6 +3,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { AnimatedGlyph } from "@/components/AnimatedGlyph";
 import { OutlineLoader } from "@/components/OutlineLoader";
 import { SelectedPackageCheck } from "@/components/SelectedPackageCheck";
+import { ProviderGameArtwork } from "@/components/ProviderGameIdentity";
 import { useSelectedProduct } from "@/contexts/SelectedProductContext";
 import { trpc } from "@/lib/trpc";
 import { animate } from "animejs";
@@ -102,11 +103,12 @@ function StorefrontShell({ children }: { children: ReactNode }) {
   );
 }
 
-function SelectedProductActionBar({ product, onClear }: { product: { label: string; amountLabel: string; priceLabel: string }; onClear: () => void }) {
-  return <aside className="fixed inset-x-2 bottom-2 z-40 flex items-center gap-2 rounded-2xl border border-indigo-100 bg-white/95 p-2 shadow-2xl shadow-slate-950/20 backdrop-blur-xl sm:hidden" aria-label="Selected package action bar" aria-live="polite">
-    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-indigo-50 text-indigo-700"><SelectedPackageCheck size={28} /></span>
-    <div className="min-w-0 flex-1"><p className="truncate text-xs font-extrabold text-slate-900">{product.label}</p><p className="mt-0.5 truncate text-[10px] text-slate-500">{product.amountLabel} · {product.priceLabel}</p></div>
-    <button type="button" onClick={onClear} className="inline-flex h-10 shrink-0 items-center rounded-xl border border-slate-200 bg-white px-3 text-[10px] font-bold text-slate-600">ប្ដូរ</button>
-    <button type="button" disabled aria-disabled="true" className="inline-flex h-10 shrink-0 items-center rounded-xl bg-slate-100 px-3 text-[10px] font-bold text-slate-500">ទិញមិនទាន់បើក</button>
+function SelectedProductActionBar({ product, onClear }: { product: { label: string; amountLabel: string; priceLabel: string; gameName: string; gameLogoUrl?: string }; onClear: () => void }) {
+  return <aside className="selected-product-action-bar fixed inset-x-2 bottom-2 z-40 flex items-center gap-2 rounded-2xl p-2 sm:hidden" aria-label="Selected package action bar" aria-live="polite">
+    <ProviderGameArtwork name={product.gameName} logoUrl={product.gameLogoUrl} priority className="h-11 w-11 shrink-0 rounded-xl" iconClassName="h-5 w-5" />
+    <span className="selected-product-check grid h-11 w-9 shrink-0 place-items-center rounded-xl"><SelectedPackageCheck size={25} /></span>
+    <div className="min-w-0 flex-1"><p className="truncate text-xs font-extrabold text-slate-950">{product.label}</p><p className="mt-0.5 truncate text-[10px] font-semibold text-slate-600">{product.amountLabel} · {product.priceLabel}</p></div>
+    <button type="button" onClick={onClear} className="inline-flex h-10 shrink-0 items-center rounded-xl border border-white/85 bg-white/68 px-2.5 text-[10px] font-bold text-slate-700 shadow-sm">ប្ដូរ</button>
+    <button type="button" disabled aria-disabled="true" className="inline-flex h-10 shrink-0 items-center rounded-xl bg-slate-900/10 px-2.5 text-[10px] font-bold text-slate-500">ទិញមិនទាន់បើក</button>
   </aside>;
 }

@@ -66,7 +66,7 @@ export type ProviderGameDetailsResponse =
   | { status: "unavailable"; game: null; packages: [] }
   | { status: "error"; game: null; packages: [] };
 
-export type ProviderPackageRequest = { gameId: string; fields: Record<string, string> };
+export type ProviderPackageRequest = { gameId: string; fields: Record<string, string>; idConfirmed?: boolean };
 export type ProviderPackageResponse =
   | { status: "ready"; packages: z.infer<typeof providerPackageSchema>[] }
   | { status: "verification_required"; packages: [] }
@@ -200,7 +200,8 @@ export async function fetchProviderGameDetails(gameId: string): Promise<Provider
 
 export async function fetchProviderPackages(input: ProviderPackageRequest): Promise<ProviderPackageResponse> {
   const identity = await validateProviderPlayerIdentity(input);
-  if (identity.status !== "verified") {
+  const explicitlyConfirmedUnsupportedId = identity.status === "not_supported" && input.idConfirmed === true;
+  if (identity.status !== "verified" && !explicitlyConfirmedUnsupportedId) {
     if (identity.status === "unavailable") return { status: "unavailable", packages: [] };
     return { status: "verification_required", packages: [] };
   }
