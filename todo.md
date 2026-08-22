@@ -209,3 +209,6 @@
 - [x] Integrate the owner-supplied Back-arrow animation so Back controls remain static until clicked, then play until navigation completes with an accessible reduced-motion fallback.
 - [x] Order provider game Top-up cards Cambodia/KH first, Global second, and other country or regional catalog entries last without changing provider data or visibility rules.
 - [ ] Refactor Appwrite provider catalog storage into size-safe granular offer records so full FZR/SMM synchronization and per-offer Admin pricing do not exceed document payload limits.
+- [x] Keep owner-authorized Admin catalog sync controls available while provider-status checks are still loading, with server-side configuration validation retained.
+- [x] When a provider-authorized package is selected, temporarily hide the standard mobile tab bar and show a selected-package bottom action bar using the owner-supplied Checkbox 08 animation, while leaving product purchasing disabled.
+- [x] Repair selected-package context scope so dedicated game pages and the storefront shell share the same action-bar state without runtime errors.

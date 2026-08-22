@@ -3,6 +3,7 @@ import { AnimatedGlyph } from "@/components/AnimatedGlyph";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { OutlineLoader } from "@/components/OutlineLoader";
 import { ProviderGameArtwork } from "@/components/ProviderGameIdentity";
+import { useSelectedProduct } from "@/contexts/SelectedProductContext";
 import { countryFlagForRegion, providerPackageBadge } from "@/lib/providerPresentation";
 import { trpc } from "@/lib/trpc";
 import { ArrowLeft, Check, CheckCircle2, ChevronRight, CircleAlert, Gem, ShieldAlert, UserRound, WalletCards } from "lucide-react";
@@ -29,7 +30,8 @@ export default function GameTopup() {
   const validatePlayerId = trpc.provider.validatePlayerId.useMutation();
   const [details, setDetails] = useState<Record<string, string>>({});
   const [showPackages, setShowPackages] = useState(false);
-  const [selectedPackageId, setSelectedPackageId] = useState("");
+  const [selectedPackageId, setSelectedPackageIdState] = useState("");
+  const { setSelectedProduct, clearSelectedProduct } = useSelectedProduct();
   const game = gameQuery.data?.status === "ready" ? gameQuery.data.game : null;
   const fieldsReady = Boolean(game && game.requiredFields.filter((field) => field.required).every((field) => details[field.key]?.trim()));
   const providerFields = useMemo(() => {
@@ -42,11 +44,20 @@ export default function GameTopup() {
   const canBrowsePackages = fieldsReady && identity?.status === "verified";
   const country = countryFlagForRegion(identity?.status === "verified" ? identity.region : null);
 
+  const setSelectedPackageId = (id: string) => {
+    setSelectedPackageIdState(id);
+    const selected = packages.find((item) => item.id === id);
+    if (selected) setSelectedProduct(selected);
+    else clearSelectedProduct();
+  };
+
   useEffect(() => {
     if (!validationInput) return;
     const timer = window.setTimeout(() => validatePlayerId.mutate(validationInput), 650);
     return () => window.clearTimeout(timer);
   }, [validationInput]);
+
+  useEffect(() => () => clearSelectedProduct(), []);
 
   const updateDetail = (key: string, value: string) => {
     setDetails((current) => ({ ...current, [key]: value }));
