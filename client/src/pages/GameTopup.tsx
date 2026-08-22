@@ -170,7 +170,7 @@ function isWeeklyPassPackage(item: ProviderPackage) {
 }
 
 function isBonusDiamondPackage(item: ProviderPackage) {
-  return /\bbonus\b|first\s*top[\s-]*up/.test(packageText(item));
+  return /\bbonus\b|first\s*top[\s-]*up|\+\s*\d[\d,]*\s*diamonds?\b/.test(packageText(item));
 }
 
 function isDiamondPackage(item: ProviderPackage) {
