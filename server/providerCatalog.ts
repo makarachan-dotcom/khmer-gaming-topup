@@ -13,6 +13,7 @@ export const providerGameSchema = z.object({
   id: z.string().trim().min(1).max(120),
   name: z.string().trim().min(1).max(160),
   logoUrl: z.string().url().refine((url) => url.startsWith("https://"), "Game logo must use HTTPS").optional(),
+  region: z.string().trim().min(1).max(80).optional(),
   provider: z.string().trim().min(1).max(120),
   requiredFields: z.array(providerFieldSchema).max(12),
 });
@@ -163,6 +164,14 @@ function providerPackages(categoryId: string, offers: z.infer<typeof fzrOffersSc
   return offers.filter((offer) => Boolean(offer.offer_id)).map((offer) => ({ id: `${categoryId}:${offer.offer_id}`, label: offer.name, amountLabel: offer.name, priceLabel: `$${Number(offer.price_usd).toFixed(2)}`, provider: "FZR Cards", paymentMethods: ["khqr", "bank"] as ("khqr" | "bank")[] }));
 }
 
+function providerGameRegion(name: string, note?: string) {
+  const source = `${name}\n${note ?? ""}`;
+  const notedRegion = source.match(/(?:^|\n)\s*region\s*:\s*([^\n]+)/i)?.[1]?.trim();
+  if (notedRegion) return notedRegion;
+  const bracketedRegion = name.match(/\(([^)]+)\)\s*$/)?.[1]?.trim();
+  return bracketedRegion || "Global";
+}
+
 export async function fetchProviderGames(options: { includeHidden?: boolean } = {}): Promise<ProviderGameResponse> {
   try {
     const response = await fzrRequest("/api/v2/topups");
@@ -171,7 +180,7 @@ export async function fetchProviderGames(options: { includeHidden?: boolean } = 
     const payload = fzrTopupsSchema.safeParse(response);
     if (!payload.success) return { status: "error", games: [] };
     const hidden = new Set(availability?.hiddenGameIds ?? []);
-    return { status: "ready", games: payload.data.items.filter((item) => !hidden.has(item.category_id) && !isThailandProviderProduct(`${item.category_id} ${item.name} ${item.note ?? ""}`)).map((item) => ({ id: item.category_id, name: item.name, provider: "FZR Cards", requiredFields: [] })) };
+    return { status: "ready", games: payload.data.items.filter((item) => !hidden.has(item.category_id) && !isThailandProviderProduct(`${item.category_id} ${item.name} ${item.note ?? ""}`)).map((item) => ({ id: item.category_id, name: item.name, region: providerGameRegion(item.name, item.note), provider: "FZR Cards", requiredFields: [] })) };
   } catch { return { status: "error", games: [] }; }
 }
 
@@ -185,7 +194,7 @@ export async function fetchProviderGameDetails(gameId: string): Promise<Provider
     if (!payload.success || payload.data.category_id !== gameId) return { status: "error", game: null, packages: [] };
     if (isThailandProviderProduct(`${gameId} ${payload.data.name}`)) return { status: "unavailable", game: null, packages: [] };
     const fields = providerFields(payload.data.fields);
-    return { status: "ready", game: { id: gameId, name: payload.data.name, logoUrl: payload.data.imageurl, provider: "FZR Cards", requiredFields: fields }, packages: providerPackages(gameId, payload.data.offers) };
+    return { status: "ready", game: { id: gameId, name: payload.data.name, region: providerGameRegion(payload.data.name), logoUrl: payload.data.imageurl, provider: "FZR Cards", requiredFields: fields }, packages: providerPackages(gameId, payload.data.offers) };
   } catch { return { status: "error", game: null, packages: [] }; }
 }
 
@@ -209,19 +218,87 @@ const fzrPlayerIdentitySchema = z.object({
   region: z.string().trim().min(1).max(120).nullable().optional(),
 });
 
+const externalPlayerNameSchema = z.object({ success: z.literal(true), data: z.object({ username: z.string().trim().min(1).max(180) }) });
+const isanPlayerNameSchema = z.object({ success: z.literal(true), name: z.string().trim().min(1).max(180), country: z.string().trim().min(1).max(120).optional() });
+const externalFailureSchema = z.object({ error: z.literal(true), msg: z.string().trim().max(300).optional() });
+
+function mobileLegendsIdentityFields(fields: Record<string, string>) {
+  const playerId = fields.player_id ?? fields.user_id ?? fields.id ?? "";
+  const serverId = fields.server_id ?? fields.zone_id ?? fields.server ?? "";
+  if (!/^\d{4,20}$/.test(playerId.trim()) || !/^\d{1,12}$/.test(serverId.trim())) return null;
+  return { playerId: playerId.trim(), serverId: serverId.trim() };
+}
+
+function isMobileLegendsGame(gameId: string) {
+  return /^mobile_legends(?:_|$)/i.test(gameId);
+}
+
+function emptyIdentity(status: Extract<ProviderPlayerIdentityResponse, { status: "invalid" | "not_supported" | "unavailable" | "error" }> ["status"]): ProviderPlayerIdentityResponse {
+  return { status, playerName: null, playerId: null, region: null };
+}
+
+async function validateMobileLegendsWithFallback(input: ProviderPackageRequest): Promise<ProviderPlayerIdentityResponse | null> {
+  const ids = mobileLegendsIdentityFields(input.fields);
+  if (!ids) return emptyIdentity("invalid");
+  let invalid: ProviderPlayerIdentityResponse | null = null;
+  const recordResult = (result: ProviderPlayerIdentityResponse | null) => {
+    if (result?.status === "verified") return result;
+    if (result?.status === "invalid") invalid = result;
+    return null;
+  };
+
+  const rapidApiKey = process.env.RAPIDAPI_ID_GAME_CHECKER_KEY;
+  const neferbyteKey = process.env.NEFERBYTE_API_KEY;
+  if (neferbyteKey && !rapidApiKey) {
+    try {
+      const response = await fetch(`https://api.neferbyte.com/game-id-checker/mobile-legends/${ids.playerId}/${ids.serverId}`, { headers: { "x-api-key": neferbyteKey }, signal: AbortSignal.timeout(12_000) });
+      const payload = await response.json();
+      const success = externalPlayerNameSchema.safeParse(payload);
+      const verified = success.success ? recordResult({ status: "verified", playerName: success.data.data.username, playerId: ids.playerId, region: "Global" }) : null;
+      if (verified) return verified;
+      const failure = externalFailureSchema.safeParse(payload);
+      if (response.ok && failure.success && /can.t find|not found|invalid/i.test(failure.data.msg ?? "")) invalid = emptyIdentity("invalid");
+    } catch { /* Continue to the next approved provider. */ }
+  }
+
+  if (rapidApiKey) {
+    try {
+      const response = await fetch(`https://id-game-checker.p.rapidapi.com/mobile-legends/${ids.playerId}/${ids.serverId}`, { headers: { "x-rapidapi-host": "id-game-checker.p.rapidapi.com", "x-rapidapi-key": rapidApiKey }, signal: AbortSignal.timeout(12_000) });
+      const payload = await response.json();
+      const success = externalPlayerNameSchema.safeParse(payload);
+      const verified = success.success ? recordResult({ status: "verified", playerName: success.data.data.username, playerId: ids.playerId, region: "Global" }) : null;
+      if (verified) return verified;
+      const failure = externalFailureSchema.safeParse(payload);
+      if (response.ok && failure.success && /can.t find|not found|invalid/i.test(failure.data.msg ?? "")) invalid = emptyIdentity("invalid");
+    } catch { /* Continue to the final owner-approved fallback. */ }
+  }
+
+  try {
+    const response = await fetch(`https://api.isan.eu.org/nickname/ml?id=${encodeURIComponent(ids.playerId)}&server=${encodeURIComponent(ids.serverId)}`, { signal: AbortSignal.timeout(8_000) });
+    const payload = await response.json();
+    const success = isanPlayerNameSchema.safeParse(payload);
+    const verified = success.success ? recordResult({ status: "verified", playerName: success.data.name, playerId: ids.playerId, region: success.data.country ?? "Global" }) : null;
+    if (verified) return verified;
+    if (response.ok && payload && typeof payload === "object" && "success" in payload && (payload as { success?: unknown }).success === false) invalid = emptyIdentity("invalid");
+  } catch { /* All approved providers are currently unavailable. */ }
+
+  return invalid ?? emptyIdentity("unavailable");
+}
+
 export async function validateProviderPlayerIdentity(input: ProviderPackageRequest): Promise<ProviderPlayerIdentityResponse> {
   try {
     const response = await fzrRequest("/api/v2/topups/validate-id", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ category_id: input.gameId, fields: input.fields }) });
-    if (!response) return { status: "unavailable", playerName: null, playerId: null, region: null };
+    if (!response) return isMobileLegendsGame(input.gameId) ? (await validateMobileLegendsWithFallback(input) ?? emptyIdentity("unavailable")) : emptyIdentity("unavailable");
     const payload = fzrPlayerIdentitySchema.safeParse(response);
     if (!payload.success || payload.data.category_id !== input.gameId) return { status: "error", playerName: null, playerId: null, region: null };
     if (!payload.data.valid || !payload.data.player_name) return { status: "invalid", playerName: null, playerId: null, region: null };
     return { status: "verified", playerName: payload.data.player_name, playerId: payload.data.player_id ?? null, region: payload.data.region ?? null };
   } catch (error) {
-    if (error instanceof FzrRequestError && [400, 404].includes(error.status)) return { status: "not_supported", playerName: null, playerId: null, region: null };
-    if (error instanceof FzrRequestError && error.status === 422) return { status: "invalid", playerName: null, playerId: null, region: null };
-    if (error instanceof FzrRequestError && [502, 503].includes(error.status)) return { status: "unavailable", playerName: null, playerId: null, region: null };
-    return { status: "error", playerName: null, playerId: null, region: null };
+    if (isMobileLegendsGame(input.gameId)) return await validateMobileLegendsWithFallback(input) ?? emptyIdentity("unavailable");
+    if (error instanceof FzrRequestError && [400, 404].includes(error.status)) return emptyIdentity("not_supported");
+    if (error instanceof FzrRequestError && error.status === 422) return emptyIdentity("invalid");
+    if (error instanceof FzrRequestError && [502, 503].includes(error.status)) return emptyIdentity("unavailable");
+    return emptyIdentity("error");
   }
 }
 

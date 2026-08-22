@@ -5,7 +5,7 @@ import { nanoid } from "nanoid";
 import {
   adminRoleAudits, customerWallets, gamePackages, gameProducts, gmailSenderConnections, InsertUser, marketplaceContacts, marketplaceDisclosureRequests, marketplaceEvidenceAccessLogs, marketplaceFavorites, marketplaceFraudReports, marketplaceListings, marketplaceVerificationEvidence, marketplaceVerifications, orders, orderStatusEvents, orderSupportTickets, paymentTransactions, savedPlayerIds, siteContent, smmServices, smmTiers, User, users, walletTopups, welcomeEmailDeliveries,
 } from "../drizzle/schema";
-import { createAppwriteMarketplaceListing, createAppwriteWalletTopup, deleteAppwriteMarketplaceListing, getAppwriteCustomerOrders, getAppwriteCustomerPaymentHistory, getAppwriteUserByEmail, getAppwriteUserByOpenId, getAppwriteWalletSummary, getAppwriteWalletTopup, isAppwriteStoreConfigured, listAppwriteMarketplaceListings, updateAppwriteMarketplaceListing, updateAppwriteUserDisplayName, updateAppwriteWalletTopup, upsertAppwriteUser } from "./appwriteStore";
+import { createAppwriteMarketplaceListing, createAppwriteWalletTopup, deleteAppwriteMarketplaceListing, getAppwriteCustomerOrders, getAppwriteCustomerPaymentHistory, getAppwriteProviderCatalog, getAppwriteUserByEmail, getAppwriteUserByOpenId, getAppwriteWalletSummary, getAppwriteWalletTopup, isAppwriteStoreConfigured, listAppwriteMarketplaceListings, syncAppwriteFzrCatalog, syncAppwriteSmmCatalog, updateAppwriteMarketplaceListing, updateAppwriteProviderOffer, updateAppwriteUserDisplayName, updateAppwriteWalletTopup, upsertAppwriteUser } from "./appwriteStore";
 import { buildOrderNumber, isSingleAdminEmail } from "./storefrontDomain";
 import { validateAdminRoleChange } from "./adminRoles";
 import { buildEvidenceRetentionAuditReason, canApproveMarketplaceVerification, hasOnlyOwnedMarketplaceScreenshotKeys, type DisclosureRequestStatus, type FraudReportStatus } from "./marketplaceSafety";
@@ -236,7 +236,7 @@ export async function getSmmCatalog() {
 
 export async function getAdminCatalog(): Promise<{ games: any[]; smm: any[] }> {
   const db = await getDb();
-  if (!db) return { games: [], smm: [] };
+  if (!db) return isAppwriteStoreConfigured() ? getAppwriteProviderCatalog() : { games: [], smm: [] };
   const games = await db.select().from(gameProducts).orderBy(asc(gameProducts.sortOrder));
   const packages = await db.select().from(gamePackages).orderBy(asc(gamePackages.sortOrder));
   const services = await db.select().from(smmServices).orderBy(asc(smmServices.sortOrder));
@@ -273,7 +273,10 @@ async function appendOrderStatusEvent(input: { orderId: string; eventType: strin
 
 export async function syncFzrCatalog(snapshot: Extract<FzrProviderSyncSnapshot, { status: "ready" }>) {
   const db = await getDb();
-  if (!db) throw new Error("Database unavailable");
+  if (!db) {
+    if (!isAppwriteStoreConfigured()) throw new Error("Provider catalog storage is unavailable");
+    return syncAppwriteFzrCatalog(snapshot);
+  }
   let gamesImported = 0;
   let offersImported = 0;
   for (let sortOrder = 0; sortOrder < snapshot.games.length; sortOrder += 1) {
@@ -306,7 +309,10 @@ export async function syncFzrCatalog(snapshot: Extract<FzrProviderSyncSnapshot, 
 
 export async function syncSmmCatalog(snapshot: Extract<SmmProviderCatalogResponse, { status: "ready" }>) {
   const db = await getDb();
-  if (!db) throw new Error("Database unavailable");
+  if (!db) {
+    if (!isAppwriteStoreConfigured()) throw new Error("Provider catalog storage is unavailable");
+    return syncAppwriteSmmCatalog(snapshot);
+  }
   let servicesImported = 0;
   let tiersImported = 0;
   for (let sortOrder = 0; sortOrder < snapshot.services.length; sortOrder += 1) {
@@ -822,7 +828,10 @@ function salePriceFromMargin(basePriceUsd: string, profitMarginPercent: string) 
 
 export async function updateGamePackage(input: { packageId: string; basePriceUsd: string; profitMarginPercent: string; isActive: boolean; featured: boolean }) {
   const db = await getDb();
-  if (!db) throw new Error("Database unavailable");
+  if (!db) {
+    if (!isAppwriteStoreConfigured()) throw new Error("Provider catalog storage is unavailable");
+    return updateAppwriteProviderOffer({ kind: "game", offerId: input.packageId, basePriceUsd: input.basePriceUsd, profitMarginPercent: input.profitMarginPercent, isActive: input.isActive, featured: input.featured });
+  }
   const existing = await db.select({ providerAuthorized: gamePackages.providerAuthorized }).from(gamePackages).where(eq(gamePackages.id, input.packageId)).limit(1);
   if (!existing[0]?.providerAuthorized) throw new Error("Only provider-authorized offers can be activated or repriced.");
   await db.update(gamePackages).set({ basePriceUsd: input.basePriceUsd, profitMarginPercent: input.profitMarginPercent, priceUsd: salePriceFromMargin(input.basePriceUsd, input.profitMarginPercent), isActive: input.isActive, featured: input.featured }).where(eq(gamePackages.id, input.packageId));
@@ -831,7 +840,10 @@ export async function updateGamePackage(input: { packageId: string; basePriceUsd
 
 export async function updateSmmTier(input: { tierId: string; basePriceUsd: string; profitMarginPercent: string; isActive: boolean }) {
   const db = await getDb();
-  if (!db) throw new Error("Database unavailable");
+  if (!db) {
+    if (!isAppwriteStoreConfigured()) throw new Error("Provider catalog storage is unavailable");
+    return updateAppwriteProviderOffer({ kind: "smm", offerId: input.tierId, basePriceUsd: input.basePriceUsd, profitMarginPercent: input.profitMarginPercent, isActive: input.isActive });
+  }
   const existing = await db.select({ providerAuthorized: smmTiers.providerAuthorized }).from(smmTiers).where(eq(smmTiers.id, input.tierId)).limit(1);
   if (!existing[0]?.providerAuthorized) throw new Error("Only provider-authorized offers can be activated or repriced.");
   await db.update(smmTiers).set({ basePriceUsd: input.basePriceUsd, profitMarginPercent: input.profitMarginPercent, priceUsd: salePriceFromMargin(input.basePriceUsd, input.profitMarginPercent), isActive: input.isActive }).where(eq(smmTiers.id, input.tierId));

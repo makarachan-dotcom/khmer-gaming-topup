@@ -3,7 +3,7 @@ import { AnimatedGlyph } from "@/components/AnimatedGlyph";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { OutlineLoader } from "@/components/OutlineLoader";
 import { FloatingParticles } from "@/components/FloatingParticles";
-import { ProviderGameArtwork, ProviderGameTitle } from "@/components/ProviderGameIdentity";
+import { ProviderGameArtwork, ProviderGameRegion, ProviderGameTitle } from "@/components/ProviderGameIdentity";
 import { trpc } from "@/lib/trpc";
 import { ArrowRight, Diamond, Gamepad2, Image as ImageIcon, Megaphone, ShieldAlert, ShieldCheck, Video } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -33,7 +33,7 @@ function HomepageMedia() {
   return <section className="container mt-5 sm:mt-7"><div className="flex items-end justify-between gap-3"><div><p className="text-[10px] font-bold tracking-[0.16em] text-indigo-700">ZURS UPDATE</p><h2 className="mt-1 font-display text-xl font-bold text-slate-950">ព័ត៌មាន និង Promotion</h2></div><span className="hidden text-xs font-semibold text-slate-400 sm:inline">{items.length} ធាតុ</span></div><div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{items.map((item) => { const media = item.mediaUrl?.trim() ?? ""; const video = /\.(mp4|webm|ogg)(?:$|[?#])/i.test(media); return <article key={item.id} className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-lg hover:shadow-indigo-950/8">{media ? <div className="relative aspect-[16/8] overflow-hidden bg-slate-100">{video ? <video className="h-full w-full object-cover" src={media} autoPlay={!prefersReducedMotion} loop muted playsInline controls preload="metadata" /> : <img className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]" src={media} alt={item.titleKh ?? "ZURS STORE media"} loading="lazy" />}<span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-slate-950/75 px-2 py-1 text-[9px] font-bold text-white backdrop-blur">{video ? <><Video className="h-3 w-3" />VIDEO</> : <><ImageIcon className="h-3 w-3" />PROMO</>}</span></div> : null}<div className="p-4"><p className="text-sm font-bold text-slate-900">{item.titleKh ?? "ZURS STORE"}</p>{item.bodyKh ? <p className="mt-1 text-xs leading-5 text-slate-500">{item.bodyKh}</p> : null}</div></article>; })}</div></section>;
 }
 
-function HomeGameCard({ game }: { game: { id: string; name: string; logoUrl?: string } }) {
+function HomeGameCard({ game }: { game: { id: string; name: string; region?: string; logoUrl?: string } }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
   useEffect(() => {
@@ -45,7 +45,7 @@ function HomeGameCard({ game }: { game: { id: string; name: string; logoUrl?: st
   }, []);
   const details = trpc.provider.gameDetails.useQuery({ gameId: game.id }, { enabled: visible, staleTime: 10 * 60 * 1000 });
   const logoUrl = details.data?.status === "ready" ? details.data.game.logoUrl : game.logoUrl;
-  return <div ref={cardRef}><Link href={gameTopupPath(game.id)} className="game-catalog-card group block rounded-2xl border border-slate-200 bg-white p-3 text-left transition hover:border-indigo-300"><div className="flex items-center gap-3"><ProviderGameArtwork name={game.name} logoUrl={logoUrl} className="h-11 w-11 rounded-xl" /><span className="min-w-0 flex-1"><ProviderGameTitle name={game.name} className="text-sm font-bold text-slate-900" /><span className="mt-0.5 block truncate text-[10px] text-slate-500">{details.isFetching ? "កំពុងផ្ទុករូបហ្គេម…" : "ជ្រើសរើសហ្គេម"}</span></span></div></Link></div>;
+  return <div ref={cardRef}><Link href={gameTopupPath(game.id)} className="game-catalog-card group block rounded-2xl border border-slate-200 bg-white p-3 text-left transition hover:border-indigo-300"><div className="flex items-center gap-3"><ProviderGameArtwork name={game.name} logoUrl={logoUrl} className="h-11 w-11 rounded-xl" /><span className="min-w-0 flex-1"><ProviderGameTitle name={game.name} className="text-sm font-bold text-slate-900" /><ProviderGameRegion name={game.name} region={game.region} className="mt-1" /></span></div></Link></div>;
 }
 
 function HomeTopupExperience() {

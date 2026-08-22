@@ -1,5 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
+import { OutlineLoader } from "@/components/OutlineLoader";
 import { trpc } from "@/lib/trpc";
 import { Calculator, CheckCircle2, CloudOff, Loader2, Power, RefreshCw, Save, ShieldAlert, ShieldCheck, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -20,18 +21,29 @@ function PricingWorkspace() {
   const catalog = trpc.admin.fullCatalog.useQuery();
   const availability = trpc.admin.providerAvailability.useQuery();
   const utils = trpc.useUtils();
-  const updateGame = trpc.admin.updateGamePackage.useMutation({ onSuccess: () => utils.admin.fullCatalog.invalidate() });
-  const updateSmm = trpc.admin.updateSmmTier.useMutation({ onSuccess: () => utils.admin.fullCatalog.invalidate() });
+  const [syncNotice, setSyncNotice] = useState<string | null>(null);
+  const applyOfferUpdate = (kind: "game" | "smm", offerId: string, values: { basePriceUsd: string; profitMarginPercent: string; isActive: boolean; featured?: boolean }) => {
+    const priceUsd = (Number(values.basePriceUsd) * (1 + Number(values.profitMarginPercent) / 100)).toFixed(2);
+    utils.admin.fullCatalog.setData(undefined, (current) => {
+      if (!current) return current;
+      return kind === "game"
+        ? { ...current, games: current.games.map((game) => ({ ...game, packages: game.packages?.map((offer: Offer) => offer.id === offerId ? { ...offer, ...values, priceUsd, featured: values.featured ?? offer.featured } : offer) ?? [] })) }
+        : { ...current, smm: current.smm.map((service) => ({ ...service, tiers: service.tiers?.map((offer: Offer) => offer.id === offerId ? { ...offer, ...values, priceUsd } : offer) ?? [] })) };
+    });
+  };
+  const updateGame = trpc.admin.updateGamePackage.useMutation({ onMutate: (input) => { const previous = utils.admin.fullCatalog.getData(); applyOfferUpdate("game", input.packageId, { basePriceUsd: input.basePriceUsd ?? input.priceUsd ?? "0", profitMarginPercent: input.profitMarginPercent ?? "0.00", isActive: input.isActive, featured: input.featured }); return { previous }; }, onError: (_error, _input, context) => utils.admin.fullCatalog.setData(undefined, context?.previous), onSuccess: () => utils.admin.fullCatalog.invalidate() });
+  const updateSmm = trpc.admin.updateSmmTier.useMutation({ onMutate: (input) => { const previous = utils.admin.fullCatalog.getData(); applyOfferUpdate("smm", input.tierId, { basePriceUsd: input.basePriceUsd ?? input.priceUsd ?? "0", profitMarginPercent: input.profitMarginPercent ?? "0.00", isActive: input.isActive }); return { previous }; }, onError: (_error, _input, context) => utils.admin.fullCatalog.setData(undefined, context?.previous), onSuccess: () => utils.admin.fullCatalog.invalidate() });
   const deleteGame = trpc.admin.deleteGamePackage.useMutation({ onSuccess: () => utils.admin.fullCatalog.invalidate() });
   const deleteSmm = trpc.admin.deleteSmmTier.useMutation({ onSuccess: () => utils.admin.fullCatalog.invalidate() });
   const providerStatus = trpc.admin.providerCatalogStatus.useQuery();
-  const syncTopup = trpc.admin.syncTopupCatalog.useMutation({ onSuccess: () => { utils.admin.fullCatalog.invalidate(); utils.admin.providerCatalogStatus.invalidate(); } });
-  const syncSmm = trpc.admin.syncSmmCatalog.useMutation({ onSuccess: () => { utils.admin.fullCatalog.invalidate(); utils.admin.providerCatalogStatus.invalidate(); } });
+  const syncTopup = trpc.admin.syncTopupCatalog.useMutation({ onSuccess: (result) => { setSyncNotice(`បាន Sync ហ្គេម ${result.gamesImported} និងកញ្ចប់ ${result.offersImported} រួចរាល់។ ឥឡូវអ្នកអាចកំណត់ Base USD និង Margin សម្រាប់កញ្ចប់នីមួយៗបាន។`); utils.admin.fullCatalog.invalidate(); utils.admin.providerCatalogStatus.invalidate(); } });
+  const syncSmm = trpc.admin.syncSmmCatalog.useMutation({ onSuccess: (result) => { setSyncNotice(`បាន Sync សេវា SMM ${result.servicesImported} និង offer ${result.tiersImported} រួចរាល់។ ឥឡូវអ្នកអាចកំណត់ Base USD និង Margin សម្រាប់ offer នីមួយៗបាន។`); utils.admin.fullCatalog.invalidate(); utils.admin.providerCatalogStatus.invalidate(); } });
   const toggleAvailability = trpc.admin.setProviderAvailability.useMutation({ onSuccess: () => { utils.admin.providerAvailability.invalidate(); utils.provider.games.invalidate(); utils.provider.smmServices.invalidate(); } });
   const [filter, setFilter] = useState("");
   const actionError = availability.error ?? toggleAvailability.error ?? updateGame.error ?? updateSmm.error ?? deleteGame.error ?? deleteSmm.error ?? syncTopup.error ?? syncSmm.error;
   return <main className="mx-auto max-w-6xl pb-10"><header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="text-xs font-bold tracking-[0.14em] text-indigo-700">CATALOG CONTROL</p><h1 className="mt-1 font-display text-3xl font-bold text-slate-950">គ្រប់គ្រងផលិតផល និងតម្លៃ</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">អ្នកអាចបិទ ឬបើកផលិតផលពិតពី provider បានភ្លាមៗ។ ផលិតផលដែលបិទនឹងមិនបង្ហាញនៅទំព័រអតិថិជន ឬអាចចូលតាមតំណដោយផ្ទាល់បានទេ។</p></div><a href="/admin" className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-700">ត្រឡប់ទៅ Admin</a></header>
     {actionError ? <AdminError error={actionError} /> : null}
+    {syncNotice ? <div className="mt-5 flex items-start gap-2 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-xs leading-5 text-emerald-900"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /><p>{syncNotice}</p></div> : null}
     <ProviderAvailabilityControls loading={availability.isLoading} inventory={availability.data} filter={filter} onFilter={setFilter} busy={toggleAvailability.isPending} onToggle={(kind, providerId, isActive) => toggleAvailability.mutate({ kind, providerId, isActive })} />
     <section className="mt-6 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-xs leading-6 text-amber-900"><Calculator className="mr-2 inline h-4 w-4" />ការកំណត់តម្លៃ និង Margin ខាងក្រោមប្រើសម្រាប់ records ដែលបាន sync និងមាន provider authorization ប៉ុណ្ណោះ។ មិនមានការបង្កើតផលិតផលក្លែងក្លាយដោយដៃឡើយ។</section>
     <ProviderSyncStatus loading={providerStatus.isLoading} status={providerStatus.data} onSyncTopup={() => syncTopup.mutate()} onSyncSmm={() => syncSmm.mutate()} syncingTopup={syncTopup.isPending} syncingSmm={syncSmm.isPending} />

@@ -1,16 +1,7 @@
-import { Loader2Icon } from "lucide-react";
+import { OutlineLoader } from "@/components/OutlineLoader";
 
-import { cn } from "@/lib/utils";
-
-function Spinner({ className, ...props }: React.ComponentProps<"svg">) {
-  return (
-    <Loader2Icon
-      role="status"
-      aria-label="Loading"
-      className={cn("size-4 animate-spin", className)}
-      {...props}
-    />
-  );
+function Spinner({ className }: { className?: string }) {
+  return <OutlineLoader size={16} className={className} />;
 }
 
 export { Spinner };

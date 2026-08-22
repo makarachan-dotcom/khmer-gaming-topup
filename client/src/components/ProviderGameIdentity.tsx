@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
-import { countryFlagForRegion } from "@/lib/providerPresentation";
-import { Gamepad2 } from "lucide-react";
+import { countryFlagForRegion, gameRegionMarker } from "@/lib/providerPresentation";
+import { Gamepad2, Globe2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 type ArtworkProps = {
@@ -19,6 +19,11 @@ export function ProviderGameArtwork({ name, logoUrl, className, iconClassName }:
     return <span className={cn("game-logo-frame", className)}><img src={logoUrl} alt={`${name} official logo`} className="game-logo-image" loading="lazy" /></span>;
   }
   return <span className={cn("game-logo-fallback", className)} aria-label={`${name} game icon`}><Gamepad2 className={cn("h-5 w-5", iconClassName)} /></span>;
+}
+
+export function ProviderGameRegion({ name, region, className }: { name: string; region?: string | null; className?: string }) {
+  const marker = gameRegionMarker(name, region);
+  return marker.kind === "country" ? <span className={cn("game-region-marker", className)}><span className="country-flag" aria-hidden="true">{marker.flag}</span>{marker.label}</span> : <span className={cn("game-region-marker game-region-marker--global", className)}><Globe2 className="motion-icon h-3 w-3" aria-hidden="true" />Global</span>;
 }
 
 export function ProviderGameTitle({ name, className }: { name: string; className?: string }) {

@@ -24,8 +24,21 @@ const countryFlags = [
   { matches: ["russia", "russian", "ru"], flag: "🇷🇺", label: "Russia" },
 ];
 
+const countryCodeFlags: Record<string, { flag: string; label: string }> = {
+  BD: { flag: "🇧🇩", label: "Bangladesh" }, BR: { flag: "🇧🇷", label: "Brazil" }, EU: { flag: "🇪🇺", label: "Europe" }, ID: { flag: "🇮🇩", label: "Indonesia" }, KH: { flag: "🇰🇭", label: "Cambodia" }, MY: { flag: "🇲🇾", label: "Malaysia" }, PH: { flag: "🇵🇭", label: "Philippines" }, RU: { flag: "🇷🇺", label: "Russia" }, SG: { flag: "🇸🇬", label: "Singapore" }, TR: { flag: "🇹🇷", label: "Turkey" }, US: { flag: "🇺🇸", label: "United States" }, VN: { flag: "🇻🇳", label: "Vietnam" },
+};
+
 export function countryFlagForRegion(region?: string | null) {
   if (!region) return null;
   const normalized = region.trim().toLowerCase();
   return countryFlags.find((country) => country.matches.some((match) => normalized === match || normalized.includes(match))) ?? null;
+}
+
+export function gameRegionMarker(name: string, providerRegion?: string | null) {
+  const source = `${providerRegion ?? ""} ${name}`.trim();
+  const byName = countryFlagForRegion(source);
+  if (byName) return { kind: "country" as const, ...byName };
+  const code = source.match(/\(([A-Z]{2})\)|\b([A-Z]{2})\b/)?.slice(1).find(Boolean);
+  if (code && countryCodeFlags[code]) return { kind: "country" as const, ...countryCodeFlags[code] };
+  return { kind: "global" as const, label: "Global" };
 }

@@ -189,3 +189,14 @@
 - [x] Repair seller-account request persistence so a successful customer submission is visible immediately in the protected Admin review queue.
 - [x] Repair Admin provider catalog-edit controls so availability changes have a durable backend policy and clear actionable error states.
 - [x] Add end-to-end regression coverage for seller submission, Admin review visibility, and Admin product availability changes before publication.
+- [x] Repair the Mobile Legends Player ID and Server ID validation mapping so provider-supported account-name checks can succeed before packages are revealed.
+- [x] Present verified provider account names in an accessible gold confirmation card and preserve strict package gating when validation is unavailable or fails.
+- [x] Add server-only Mobile Legends name verification with the owner-supplied primary provider and an Isan fallback, preserving timeouts, data minimization, and no browser credential exposure.
+- [x] Replace game selection with clear provider-derived region/country presentation: flag for a specific country, globe for Global, and no false region claim when absent.
+- [x] Audit the requested LottieFlow category for semantically suitable outline motion assets; avoid generic emoji/static-icon clutter and respect reduced-motion preferences.
+- [x] Validate and add the owner-supplied RapidAPI Game ID Checker credential as a server-only Mobile Legends name-check provider in the resilient lookup chain.
+- [ ] Replace shared loading states across customer and Admin pages with the owner-supplied LoadingV2 outline animation, including an accessible reduced-motion fallback.
+- [x] Repair Admin provider catalog sync and add durable per-offer price and profit-margin controls for game and SMM products, with clear actionable outcomes.
+- [x] Make overflow-only game-title marquee motion pause for five seconds between scroll cycles while respecting reduced-motion preferences.
+- [x] Update Admin product price, margin, and availability interactions optimistically so the changed record reflects immediately without a manual page refresh.
+- [ ] Verify the owner-authenticated production catalog sync and one per-offer price/margin edit after the release is published.

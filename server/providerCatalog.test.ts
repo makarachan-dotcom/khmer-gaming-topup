@@ -5,6 +5,8 @@ const originalEndpoint = process.env.FZR_CARDS_API_BASE_URL;
 const originalApiKey = process.env.FZR_CARDS_API_KEY;
 const originalSmmEndpoint = process.env.SMMGLOB_API_URL;
 const originalSmmApiKey = process.env.SMMGLOB_API_KEY;
+const originalNeferbyteApiKey = process.env.NEFERBYTE_API_KEY;
+const originalRapidApiKey = process.env.RAPIDAPI_ID_GAME_CHECKER_KEY;
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -16,6 +18,10 @@ afterEach(() => {
   else process.env.SMMGLOB_API_URL = originalSmmEndpoint;
   if (originalSmmApiKey === undefined) delete process.env.SMMGLOB_API_KEY;
   else process.env.SMMGLOB_API_KEY = originalSmmApiKey;
+  if (originalNeferbyteApiKey === undefined) delete process.env.NEFERBYTE_API_KEY;
+  else process.env.NEFERBYTE_API_KEY = originalNeferbyteApiKey;
+  if (originalRapidApiKey === undefined) delete process.env.RAPIDAPI_ID_GAME_CHECKER_KEY;
+  else process.env.RAPIDAPI_ID_GAME_CHECKER_KEY = originalRapidApiKey;
 });
 
 describe("provider catalog", () => {
@@ -38,7 +44,7 @@ describe("provider catalog", () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "server-only-key";
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "acecraft", name: "Acecraft", imageurl: "https://cdn.example.test/acecraft.png", fields: [{ key: "user_id", label: "User ID", type: "text" }], offers: [{ offer_id: "80_diamonds", name: "80 Diamonds", price_usd: "0.9864" }] }) }));
-    await expect(fetchProviderGameDetails("acecraft")).resolves.toEqual({ status: "ready", game: { id: "acecraft", name: "Acecraft", logoUrl: "https://cdn.example.test/acecraft.png", provider: "FZR Cards", requiredFields: [{ key: "user_id", label: "User ID", required: true, kind: "text" }] }, packages: [{ id: "acecraft:80_diamonds", label: "80 Diamonds", amountLabel: "80 Diamonds", priceLabel: "$0.99", provider: "FZR Cards", paymentMethods: ["khqr", "bank"] }] });
+    await expect(fetchProviderGameDetails("acecraft")).resolves.toEqual({ status: "ready", game: { id: "acecraft", name: "Acecraft", region: "Global", logoUrl: "https://cdn.example.test/acecraft.png", provider: "FZR Cards", requiredFields: [{ key: "user_id", label: "User ID", required: true, kind: "text" }] }, packages: [{ id: "acecraft:80_diamonds", label: "80 Diamonds", amountLabel: "80 Diamonds", priceLabel: "$0.99", provider: "FZR Cards", paymentMethods: ["khqr", "bank"] }] });
   });
 
   it("validates a player name only through the server-side FZR endpoint", async () => {
@@ -57,6 +63,30 @@ describe("provider catalog", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ok: true, category_id: "mobile-legends", valid: false, player_name: null }) }));
     await expect(fetchProviderPackages({ gameId: "mobile-legends", fields: { player_id: "not-valid" } })).resolves.toEqual({ status: "verification_required", packages: [] });
     expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1);
+  });
+
+  it("keeps Mobile Legends packages gated when FZR reports that name validation is unavailable for its exact category", async () => {
+    process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
+    process.env.FZR_CARDS_API_KEY = "server-only-key";
+    delete process.env.NEFERBYTE_API_KEY;
+    delete process.env.RAPIDAPI_ID_GAME_CHECKER_KEY;
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 400 }));
+    await expect(validateProviderPlayerIdentity({ gameId: "mobile_legends_global", fields: { player_id: "596323155", server_id: "10085" } })).resolves.toEqual({ status: "unavailable", playerName: null, playerId: null, region: null });
+    await expect(fetchProviderPackages({ gameId: "mobile_legends_global", fields: { player_id: "596323155", server_id: "10085" } })).resolves.toEqual({ status: "unavailable", packages: [] });
+  });
+
+  it("uses the verified server-only RapidAPI route before an inactive Neferbyte alternative for Mobile Legends", async () => {
+    process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
+    process.env.FZR_CARDS_API_KEY = "server-only-key";
+    process.env.NEFERBYTE_API_KEY = "neferbyte-server-only-key";
+    process.env.RAPIDAPI_ID_GAME_CHECKER_KEY = "rapidapi-server-only-key";
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce({ ok: false, status: 400 })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, data: { username: "Verified Player" } }) }));
+    const result = await validateProviderPlayerIdentity({ gameId: "mobile_legends_global", fields: { player_id: "596323155", server_id: "10085" } });
+    expect(result).toEqual({ status: "verified", playerName: "Verified Player", playerId: "596323155", region: "Global" });
+    expect((fetch as ReturnType<typeof vi.fn>).mock.calls[1]?.[0]).toContain("id-game-checker.p.rapidapi.com/mobile-legends");
+    expect(JSON.stringify(result)).not.toContain("rapidapi-server-only-key");
   });
 
   it("maps SMMGlob services through the server-only form request", async () => {
