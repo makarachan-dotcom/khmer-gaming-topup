@@ -20,6 +20,7 @@ describe("Appwrite provider catalog fallback", () => {
     vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
       const url = String(input);
       requests.push({ url, method: init?.method, body: String(init?.body ?? "") });
+      if (init?.method === "GET" && url.includes("queries%5B%5D=")) return new Response(JSON.stringify({ type: "general_query_invalid" }), { status: 400 });
       if (init?.method === "GET" && url.includes("/documents?")) return new Response(JSON.stringify({ documents: Array.from(records.values()), total: records.size }), { status: 200 });
       const id = url.split("/").at(-1) ?? "";
       if (init?.method === "GET") return records.has(id) ? new Response(JSON.stringify(records.get(id)), { status: 200 }) : new Response("", { status: 404 });
@@ -44,5 +45,6 @@ describe("Appwrite provider catalog fallback", () => {
     expect(updated).toMatchObject({ basePriceUsd: "1.00", profitMarginPercent: "20", priceUsd: "1.20", isActive: true, featured: true });
     expect(requests.map((request) => request.body).join(" ")).not.toContain("server-only-test-key");
     expect(requests.some((request) => request.url.includes("queries%5B%5D=limit%28100%29") && request.url.includes("queries%5B%5D=offset%280%29"))).toBe(true);
+    expect(requests.some((request) => request.url.includes("?limit=25&offset=0"))).toBe(true);
   });
 });

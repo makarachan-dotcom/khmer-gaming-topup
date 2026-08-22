@@ -204,3 +204,5 @@
 - [x] Replace the remaining rotating Admin catalog loading spinners with the shared LoadingV2 outline animation.
 - [x] Ensure Admin catalog retrieval falls back to persisted Appwrite provider offers after a successful sync when the primary catalog is empty or unavailable.
 - [ ] Correct Appwrite document-list query syntax so synchronized provider catalog records are retrieved reliably for Admin editors.
+- [ ] Add and verify an approved legacy Appwrite pagination fallback for instances that reject the query-array document-list format.
+- [ ] Add a direct Appwrite provider-catalog index so Admin can retrieve synchronized offer records without relying on document-list pagination.

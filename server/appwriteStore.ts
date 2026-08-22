@@ -11,6 +11,7 @@ type AppwritePayment = { id: string; orderId: string; provider: string; status: 
 export type AppwriteWalletTopup = { id: string; userId: number; referenceCode: string; provider: string; providerRequestId: string; providerTransactionId: string | null; status: "pending" | "paid" | "expired" | "failed"; amountKhr: string; paymentPayload: Record<string, unknown>; expiresAt: Date; paidAt: Date | null; creditedAt: Date | null; createdAt: Date; updatedAt: Date };
 export type AppwriteProviderAvailability = { hiddenGameIds: string[]; hiddenSmmServiceIds: string[]; updatedAt: Date };
 export type AppwriteProviderCatalog = { games: Array<{ id: string; providerSourceId: string; titleKh: string; titleEn: string; packages: Array<{ id: string; amountLabel: string; basePriceUsd: string; profitMarginPercent: string; priceUsd: string; isActive: boolean; featured: boolean; providerAuthorized: true; providerSource: string }> }>; smm: Array<{ id: string; providerSourceId: string; platform: string; titleKh: string; titleEn: string; tiers: Array<{ id: string; quantity: number; basePriceUsd: string; profitMarginPercent: string; priceUsd: string; isActive: boolean; providerAuthorized: true; providerSource: string }> }> };
+type AppwriteProviderCatalogIndex = { gameSourceIds: string[]; smmSourceIds: string[]; updatedAt: string };
 
 const databaseId = () => process.env.APPWRITE_DATABASE_ID || "zurs_store";
 const collectionId = "zurs_records";
@@ -29,6 +30,7 @@ function asDate(value: unknown) { return value ? new Date(String(value)) : new D
 export function isAppwriteStoreConfigured() { return Boolean(config()); }
 
 const providerAvailabilitySourceId = "global";
+const providerCatalogIndexSourceId = "global";
 
 function providerAvailabilityDocumentPath() {
   return `/databases/${databaseId()}/collections/${collectionId}/documents/${documentId(`provider_availability:${providerAvailabilitySourceId}`)}`;
@@ -74,7 +76,7 @@ function providerCatalogId(prefix: string, sourceId: string) {
   return `${prefix}-${documentId(sourceId)}`;
 }
 
-async function upsertProviderCatalogRecord(table: "provider_catalog_game" | "provider_catalog_smm", sourceId: string, payload: unknown) {
+async function upsertProviderCatalogRecord(table: "provider_catalog_game" | "provider_catalog_smm" | "provider_catalog_index", sourceId: string, payload: unknown) {
   if (!config()) throw new Error("Provider catalog storage is unavailable");
   const now = new Date();
   const path = providerCatalogDocumentPath(table, sourceId);
@@ -97,8 +99,48 @@ function asProviderSmm(record: AppwriteRecord) {
   return value && typeof value.id === "string" && Array.isArray(value.tiers) ? value : null;
 }
 
+function asProviderCatalogIndex(record: AppwriteRecord | null) {
+  const value = record ? parsePayload<Partial<AppwriteProviderCatalogIndex>>(record) : null;
+  return {
+    gameSourceIds: Array.isArray(value?.gameSourceIds) ? value.gameSourceIds.filter((id): id is string => typeof id === "string" && id.length <= 180) : [],
+    smmSourceIds: Array.isArray(value?.smmSourceIds) ? value.smmSourceIds.filter((id): id is string => typeof id === "string" && id.length <= 180) : [],
+    updatedAt: typeof value?.updatedAt === "string" ? value.updatedAt : new Date(0).toISOString(),
+  } satisfies AppwriteProviderCatalogIndex;
+}
+
+async function getAppwriteProviderCatalogIndex() {
+  if (!config()) return asProviderCatalogIndex(null);
+  const record = await request("GET", providerCatalogDocumentPath("provider_catalog_index", providerCatalogIndexSourceId)) as AppwriteRecord | null;
+  return asProviderCatalogIndex(record?.sourceTable === "provider_catalog_index" && record.sourceId === providerCatalogIndexSourceId ? record : null);
+}
+
+async function mergeAppwriteProviderCatalogIndex(input: { gameSourceIds?: string[]; smmSourceIds?: string[] }) {
+  const current = await getAppwriteProviderCatalogIndex();
+  const next: AppwriteProviderCatalogIndex = {
+    gameSourceIds: Array.from(new Set([...current.gameSourceIds, ...(input.gameSourceIds ?? [])])),
+    smmSourceIds: Array.from(new Set([...current.smmSourceIds, ...(input.smmSourceIds ?? [])])),
+    updatedAt: new Date().toISOString(),
+  };
+  await upsertProviderCatalogRecord("provider_catalog_index", providerCatalogIndexSourceId, next);
+  return next;
+}
+
+async function readIndexedProviderCatalog(index: AppwriteProviderCatalogIndex): Promise<AppwriteProviderCatalog> {
+  const games = (await mapWithConcurrency(index.gameSourceIds, 8, async (sourceId) => {
+    const record = await request("GET", providerCatalogDocumentPath("provider_catalog_game", sourceId)) as AppwriteRecord | null;
+    return record?.sourceTable === "provider_catalog_game" ? asProviderGame(record) : null;
+  })).filter((item): item is NonNullable<typeof item> => item !== null);
+  const smm = (await mapWithConcurrency(index.smmSourceIds, 8, async (sourceId) => {
+    const record = await request("GET", providerCatalogDocumentPath("provider_catalog_smm", sourceId)) as AppwriteRecord | null;
+    return record?.sourceTable === "provider_catalog_smm" ? asProviderSmm(record) : null;
+  })).filter((item): item is NonNullable<typeof item> => item !== null);
+  return { games, smm };
+}
+
 export async function getAppwriteProviderCatalog(): Promise<AppwriteProviderCatalog> {
   if (!config()) return { games: [], smm: [] };
+  const index = await getAppwriteProviderCatalogIndex();
+  if (index.gameSourceIds.length || index.smmSourceIds.length) return readIndexedProviderCatalog(index);
   const records = await allRecords();
   const games = records.filter((record) => record.sourceTable === "provider_catalog_game").map(asProviderGame).filter((item): item is NonNullable<typeof item> => item !== null);
   const smm = records.filter((record) => record.sourceTable === "provider_catalog_smm").map(asProviderSmm).filter((item): item is NonNullable<typeof item> => item !== null);
@@ -135,6 +177,7 @@ export async function syncAppwriteFzrCatalog(snapshot: Extract<FzrProviderSyncSn
     await upsertProviderCatalogRecord("provider_catalog_game", game.providerGameId, { id: gameId, providerSourceId: game.providerGameId, titleKh: game.name, titleEn: game.name, packages });
     return { games: existing ? 0 : 1, offers: game.offers.filter((offer) => !existingPackages.has(providerCatalogId("fzr-offer", `${game.providerGameId}:${offer.providerOfferId}`))).length };
   });
+  await mergeAppwriteProviderCatalogIndex({ gameSourceIds: snapshot.games.map((game) => game.providerGameId) });
   return { gamesImported: imported.reduce((total, item) => total + item.games, 0), offersImported: imported.reduce((total, item) => total + item.offers, 0), provider: "FZR Cards" as const };
 }
 
@@ -151,6 +194,7 @@ export async function syncAppwriteSmmCatalog(snapshot: Extract<SmmProviderCatalo
     await upsertProviderCatalogRecord("provider_catalog_smm", service.providerServiceId, { id: serviceId, providerSourceId: service.providerServiceId, platform: service.category, titleKh: service.name, titleEn: service.name, tiers: [{ id: tierId, quantity: Math.max(service.min, 1), basePriceUsd, profitMarginPercent, priceUsd: previous?.priceUsd ?? basePriceUsd, isActive: previous?.isActive ?? false, providerAuthorized: true as const, providerSource: "SMMGlob" }] });
     return { services: existing ? 0 : 1, tiers: previous ? 0 : 1 };
   });
+  await mergeAppwriteProviderCatalogIndex({ smmSourceIds: snapshot.services.map((service) => service.providerServiceId) });
   return { servicesImported: imported.reduce((total, item) => total + item.services, 0), tiersImported: imported.reduce((total, item) => total + item.tiers, 0), provider: "SMMGlob" as const };
 }
 
@@ -188,7 +232,11 @@ async function request(method: string, path: string, body?: unknown) {
   // or delete request must surface as an error so the UI never claims an edit or
   // seller submission was saved when it was not persisted.
   if (response.status === 404 && method === "GET") return null;
-  if (!response.ok) throw new Error(`Appwrite user store request failed with HTTP ${response.status}`);
+  if (!response.ok) {
+    const error = await response.json().catch(() => null) as { type?: unknown } | null;
+    const type = typeof error?.type === "string" && /^[a-z0-9_.-]{1,80}$/i.test(error.type) ? ` (${error.type})` : "";
+    throw new Error(`Appwrite user store request failed with HTTP ${response.status}${type}`);
+  }
   return response.status === 204 ? {} : response.json();
 }
 
@@ -220,19 +268,33 @@ function userDocumentPath(openId: string) {
   return `/databases/${databaseId()}/collections/${collectionId}/documents/${documentId(`users:${openId}`)}`;
 }
 
-async function allRecords() {
+async function pagedRecords(pageSize: number, buildPath: (offset: number) => string) {
   const records: AppwriteRecord[] = [];
-  for (let offset = 0; offset < 10_000; offset += RECORD_PAGE_SIZE) {
-    const query = new URLSearchParams();
-    query.append("queries[]", `limit(${RECORD_PAGE_SIZE})`);
-    query.append("queries[]", `offset(${offset})`);
-    query.set("total", "true");
-    const data = await request("GET", `/databases/${databaseId()}/collections/${collectionId}/documents?${query.toString()}`) as AppwriteList | null;
+  for (let offset = 0; offset < 10_000; offset += pageSize) {
+    const data = await request("GET", buildPath(offset)) as AppwriteList | null;
     const page = data?.documents ?? [];
     records.push(...page);
-    if (!data || page.length < RECORD_PAGE_SIZE || (typeof data.total === "number" && records.length >= data.total)) break;
+    if (!data || page.length < pageSize || (typeof data.total === "number" && records.length >= data.total)) break;
   }
   return records;
+}
+
+async function allRecords() {
+  const collectionPath = `/databases/${databaseId()}/collections/${collectionId}/documents`;
+  try {
+    return await pagedRecords(RECORD_PAGE_SIZE, (offset) => {
+      const query = new URLSearchParams();
+      query.append("queries[]", `limit(${RECORD_PAGE_SIZE})`);
+      query.append("queries[]", `offset(${offset})`);
+      return `${collectionPath}?${query.toString()}`;
+    });
+  } catch (error) {
+    if (!(error instanceof Error) || !error.message.includes("general_query_invalid")) throw error;
+    // Some legacy Appwrite document endpoints accept standalone pagination fields,
+    // but reject the newer query-array form. Preserve a smaller page size so the
+    // fallback can reliably retrieve the synchronized catalog without a total count.
+    return pagedRecords(25, (offset) => `${collectionPath}?limit=25&offset=${offset}`);
+  }
 }
 
 async function recordsFor(table: string) {
