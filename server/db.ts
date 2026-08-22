@@ -3,13 +3,13 @@ import { createHash, randomBytes } from "node:crypto";
 import { drizzle } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
 import {
-  adminRoleAudits, customerWallets, gamePackages, gameProducts, gmailSenderConnections, InsertUser, marketplaceContacts, marketplaceDisclosureRequests, marketplaceEvidenceAccessLogs, marketplaceFavorites, marketplaceFraudReports, marketplaceListings, marketplaceVerificationEvidence, marketplaceVerifications, orders, orderStatusEvents, orderSupportTickets, paymentTransactions, savedPlayerIds, siteContent, smmServices, smmTiers, User, users, welcomeEmailDeliveries,
+  adminRoleAudits, customerWallets, gamePackages, gameProducts, gmailSenderConnections, InsertUser, marketplaceContacts, marketplaceDisclosureRequests, marketplaceEvidenceAccessLogs, marketplaceFavorites, marketplaceFraudReports, marketplaceListings, marketplaceVerificationEvidence, marketplaceVerifications, orders, orderStatusEvents, orderSupportTickets, paymentTransactions, savedPlayerIds, siteContent, smmServices, smmTiers, User, users, walletTopups, welcomeEmailDeliveries,
 } from "../drizzle/schema";
-import { createAppwriteMarketplaceListing, deleteAppwriteMarketplaceListing, getAppwriteCustomerOrders, getAppwriteCustomerPaymentHistory, getAppwriteUserByEmail, getAppwriteUserByOpenId, isAppwriteStoreConfigured, listAppwriteMarketplaceListings, updateAppwriteMarketplaceListing, updateAppwriteUserDisplayName, upsertAppwriteUser } from "./appwriteStore";
+import { createAppwriteMarketplaceListing, createAppwriteWalletTopup, deleteAppwriteMarketplaceListing, getAppwriteCustomerOrders, getAppwriteCustomerPaymentHistory, getAppwriteUserByEmail, getAppwriteUserByOpenId, getAppwriteWalletSummary, getAppwriteWalletTopup, isAppwriteStoreConfigured, listAppwriteMarketplaceListings, updateAppwriteMarketplaceListing, updateAppwriteUserDisplayName, updateAppwriteWalletTopup, upsertAppwriteUser } from "./appwriteStore";
 import { buildOrderNumber, isSingleAdminEmail } from "./storefrontDomain";
 import { validateAdminRoleChange } from "./adminRoles";
 import { buildEvidenceRetentionAuditReason, canApproveMarketplaceVerification, hasOnlyOwnedMarketplaceScreenshotKeys, type DisclosureRequestStatus, type FraudReportStatus } from "./marketplaceSafety";
-import { requireAutomaticPaymentReady } from "./paymentReadiness";
+import { requireAutomaticPaymentReady, requireProductPurchaseEnabled } from "./paymentReadiness";
 import { checkBakongKhqrPayment, createBakongKhqrPayment } from "./bakongKhqr";
 import type { FzrProviderSyncSnapshot, SmmProviderCatalogResponse } from "./providerCatalog";
 import { submitSmmProviderOrder } from "./providerCatalog";
@@ -109,11 +109,113 @@ export async function updateUserDisplayName(input: { userId: number; openId: str
 
 export async function getCustomerWalletSummary(userId: number) {
   const db = await getDb();
-  if (!db) return { balanceKhr: "0.00", currency: "KHR" as const, available: false };
+  if (!db) return isAppwriteStoreConfigured() ? getAppwriteWalletSummary(userId) : { balanceKhr: "0.00", currency: "KHR" as const, available: false };
   const existing = await db.select().from(customerWallets).where(eq(customerWallets.userId, userId)).limit(1);
   if (existing[0]) return { balanceKhr: String(existing[0].balanceKhr), currency: "KHR" as const, available: true };
   await db.insert(customerWallets).values({ userId, balanceKhr: "0.00" }).onDuplicateKeyUpdate({ set: { userId } });
   return { balanceKhr: "0.00", currency: "KHR" as const, available: true };
+}
+
+function buildWalletTopupReference() {
+  return `WLT-${randomBytes(5).toString("hex").toUpperCase()}`;
+}
+
+function walletTopupPayload(row: typeof walletTopups.$inferSelect) {
+  const payload = row.paymentPayload && typeof row.paymentPayload === "object" ? row.paymentPayload as Record<string, unknown> : {};
+  return {
+    id: row.id,
+    referenceCode: row.referenceCode,
+    status: row.status,
+    amountKhr: String(row.amountKhr),
+    currency: "KHR" as const,
+    expiresAt: row.expiresAt,
+    paidAt: row.paidAt,
+    creditedAt: row.creditedAt,
+    qrImageDataUrl: typeof payload.qrImageDataUrl === "string" ? payload.qrImageDataUrl : null,
+    deeplink: typeof payload.deeplink === "string" ? payload.deeplink : null,
+  };
+}
+
+export async function getWalletTopupAvailability() {
+  const db = await getDb();
+  if (!db && !isAppwriteStoreConfigured()) return { available: false, reason: "verified_ledger_unavailable" as const };
+  try {
+    requireAutomaticPaymentReady();
+    return { available: true, reason: null } as const;
+  } catch {
+    return { available: false, reason: "automatic_payment_pending" as const };
+  }
+}
+
+export async function beginWalletTopup(input: { userId: number; amountKhr: string }) {
+  requireAutomaticPaymentReady();
+  const db = await getDb();
+  if (!db && !isAppwriteStoreConfigured()) throw new Error("Wallet top-up requires the verified transaction ledger. Please try again later.");
+  const amount = Number(input.amountKhr);
+  if (!Number.isInteger(amount) || amount < 500 || amount > 10_000_000) throw new Error("Wallet top-up amount must be between 500 and 10,000,000 KHR.");
+  const referenceCode = buildWalletTopupReference();
+  const generated = await createBakongKhqrPayment({ trackingCode: referenceCode, amount: String(amount), currency: "KHR" });
+  const now = new Date();
+  const record = { id: nanoid(), userId: input.userId, referenceCode, provider: "bakong_khqr", providerRequestId: generated.md5, status: "pending" as const, amountKhr: String(amount), paymentPayload: { bakongMd5: generated.md5, qrImageDataUrl: generated.qrImageDataUrl, deeplink: generated.deeplink }, expiresAt: generated.expiresAt, createdAt: now, updatedAt: now };
+  if (!db) return walletTopupPayload(await createAppwriteWalletTopup(record));
+  await db.insert(walletTopups).values(record);
+  return walletTopupPayload({ ...record, providerTransactionId: null, paidAt: null, creditedAt: null });
+}
+
+export async function getWalletTopupSession(input: { userId: number; topupId: string }) {
+  const db = await getDb();
+  if (!db) {
+    const current = isAppwriteStoreConfigured() ? await getAppwriteWalletTopup(input) : undefined;
+    if (!current) throw new Error("Wallet top-up session was not found");
+    return walletTopupPayload(current);
+  }
+  const rows = await db.select().from(walletTopups).where(and(eq(walletTopups.id, input.topupId), eq(walletTopups.userId, input.userId))).limit(1);
+  if (!rows[0]) throw new Error("Wallet top-up session was not found");
+  return walletTopupPayload(rows[0]);
+}
+
+export async function refreshWalletTopup(input: { userId: number; topupId: string }) {
+  const db = await getDb();
+  if (!db) return refreshAppwriteWalletTopup(input);
+  const rows = await db.select().from(walletTopups).where(and(eq(walletTopups.id, input.topupId), eq(walletTopups.userId, input.userId))).limit(1);
+  const current = rows[0];
+  if (!current) throw new Error("Wallet top-up session was not found");
+  if (current.status === "paid") return { topup: walletTopupPayload(current), wallet: await getCustomerWalletSummary(input.userId) };
+  if (current.status !== "pending") return { topup: walletTopupPayload(current), wallet: await getCustomerWalletSummary(input.userId) };
+  if (current.expiresAt.getTime() <= Date.now()) {
+    await db.update(walletTopups).set({ status: "expired" }).where(and(eq(walletTopups.id, current.id), eq(walletTopups.status, "pending")));
+    return { topup: await getWalletTopupSession(input), wallet: await getCustomerWalletSummary(input.userId) };
+  }
+  const payload = current.paymentPayload && typeof current.paymentPayload === "object" ? current.paymentPayload as Record<string, unknown> : {};
+  const md5 = typeof payload.bakongMd5 === "string" ? payload.bakongMd5 : null;
+  if (!md5) throw new Error("Wallet top-up payment reference is unavailable");
+  const verification = await checkBakongKhqrPayment({ md5, expectedAmount: String(current.amountKhr), expectedCurrency: "KHR" });
+  if (verification.status === "paid") {
+    await db.transaction(async (tx) => {
+      const transition = await tx.update(walletTopups).set({ status: "paid", providerTransactionId: verification.transactionHash, paidAt: new Date(), creditedAt: new Date() }).where(and(eq(walletTopups.id, current.id), eq(walletTopups.status, "pending")));
+      const affectedRows = Array.isArray(transition) ? Number((transition[0] as { affectedRows?: number } | undefined)?.affectedRows ?? 0) : 0;
+      if (affectedRows > 0) {
+        await tx.insert(customerWallets).values({ userId: input.userId, balanceKhr: String(current.amountKhr) }).onDuplicateKeyUpdate({ set: { balanceKhr: sql`${customerWallets.balanceKhr} + ${current.amountKhr}` } });
+      }
+    });
+  }
+  return { topup: await getWalletTopupSession(input), wallet: await getCustomerWalletSummary(input.userId) };
+}
+
+async function refreshAppwriteWalletTopup(input: { userId: number; topupId: string }) {
+  if (!isAppwriteStoreConfigured()) throw new Error("Wallet top-up ledger is unavailable");
+  const current = await getAppwriteWalletTopup(input);
+  if (!current) throw new Error("Wallet top-up session was not found");
+  if (current.status !== "pending") return { topup: walletTopupPayload(current), wallet: await getCustomerWalletSummary(input.userId) };
+  if (current.expiresAt.getTime() <= Date.now()) {
+    const topup = await updateAppwriteWalletTopup({ ...input, status: "expired" });
+    return { topup: walletTopupPayload(topup), wallet: await getCustomerWalletSummary(input.userId) };
+  }
+  const md5 = typeof current.paymentPayload.bakongMd5 === "string" ? current.paymentPayload.bakongMd5 : null;
+  if (!md5) throw new Error("Wallet top-up payment reference is unavailable");
+  const verification = await checkBakongKhqrPayment({ md5, expectedAmount: current.amountKhr, expectedCurrency: "KHR" });
+  const topup = verification.status === "paid" ? await updateAppwriteWalletTopup({ ...input, status: "paid", providerTransactionId: verification.transactionHash, paidAt: new Date(), creditedAt: new Date() }) : current;
+  return { topup: walletTopupPayload(topup), wallet: await getCustomerWalletSummary(input.userId) };
 }
 
 export async function getGameCatalog() {
@@ -235,7 +337,7 @@ export async function syncSmmCatalog(snapshot: Extract<SmmProviderCatalogRespons
 }
 
 export async function createTopupOrder(input: { userId: number; packageId: string; playerId: string; zoneId?: string | null; quantity: number }) {
-  requireAutomaticPaymentReady();
+  requireProductPurchaseEnabled();
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
   const result = await db.select({ game: gameProducts, package: gamePackages }).from(gamePackages).innerJoin(gameProducts, eq(gamePackages.productId, gameProducts.id)).where(and(eq(gamePackages.id, input.packageId), eq(gamePackages.isActive, true), eq(gameProducts.isActive, true))).limit(1);
@@ -250,7 +352,7 @@ export async function createTopupOrder(input: { userId: number; packageId: strin
 }
 
 export async function createSmmOrder(input: { userId: number; tierId: string; target: string }) {
-  requireAutomaticPaymentReady();
+  requireProductPurchaseEnabled();
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
   const result = await db.select({ service: smmServices, tier: smmTiers }).from(smmTiers).innerJoin(smmServices, eq(smmTiers.serviceId, smmServices.id)).where(and(eq(smmTiers.id, input.tierId), eq(smmTiers.isActive, true), eq(smmServices.isActive, true))).limit(1);
@@ -278,7 +380,7 @@ export async function getCustomerPaymentHistory(userId: number) {
 }
 
 export async function beginStagedPayment(input: { orderId: string; userId: number }) {
-  requireAutomaticPaymentReady();
+  requireProductPurchaseEnabled();
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
   const order = await db.select().from(orders).where(and(eq(orders.id, input.orderId), eq(orders.userId, input.userId))).limit(1);

@@ -1,6 +1,7 @@
 import { getBakongPaymentReadiness } from "./bakongKhqr";
 
 export type PaymentReadiness = { ready: boolean; reason: "automatic_payment_pending" | "ready" };
+export type ProductPurchaseReadiness = { ready: false; reason: "security_review" };
 
 export function getAutomaticPaymentReadiness(): PaymentReadiness {
   return getBakongPaymentReadiness();
@@ -10,4 +11,12 @@ export function requireAutomaticPaymentReady() {
   const readiness = getAutomaticPaymentReadiness();
   if (!readiness.ready) throw new Error("Automatic Cambodian payment is not available yet. Purchases are temporarily disabled.");
   return readiness;
+}
+
+export function getProductPurchaseReadiness(): ProductPurchaseReadiness {
+  return { ready: false, reason: "security_review" };
+}
+
+export function requireProductPurchaseEnabled() {
+  throw new Error("Product purchase is temporarily disabled while ZURS STORE completes its payment-security review.");
 }

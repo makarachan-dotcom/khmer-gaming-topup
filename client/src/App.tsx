@@ -13,6 +13,7 @@ import AdminMarketplaceSafety from "@/pages/AdminMarketplaceSafety";
 import MyMarketplaceListings from "@/pages/MyMarketplaceListings";
 import Account from "./pages/Account";
 import Favorites from "./pages/Favorites";
+import Wallet from "./pages/Wallet";
 import OrderStatus from "./pages/OrderStatus";
 import Admin from "./pages/Admin";
 import AdminTickets from "./pages/AdminTickets";
@@ -35,6 +36,7 @@ function Router() {
       <Route path="/marketplace/manage" component={MyMarketplaceListings} />
       <Route path={"/account"} component={Account} />
       <Route path={"/favorites"} component={Favorites} />
+      <Route path={"/wallet"} component={Wallet} />
       <Route path={"/order-status"} component={OrderStatus} />
       <Route path="/admin" component={Admin} />
       <Route path="/admin/tickets" component={AdminTickets} />

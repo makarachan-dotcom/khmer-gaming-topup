@@ -7,6 +7,7 @@ type AppwriteRecord = { $id: string; sourceTable: string; sourceId: string; payl
 type AppwriteList = { documents?: AppwriteRecord[]; total?: number };
 type AppwriteOrder = { id: string; userId: number; orderNumber: string; orderType: "topup" | "smm"; status: string; currency: string; subtotal: string; productName: string; details: unknown; createdAt: Date; updatedAt: Date };
 type AppwritePayment = { id: string; orderId: string; provider: string; status: string; amount: string; currency: string; createdAt: Date; updatedAt: Date; paidAt: Date | null; orderNumber: string; productName: string; orderStatus: string };
+export type AppwriteWalletTopup = { id: string; userId: number; referenceCode: string; provider: string; providerRequestId: string; providerTransactionId: string | null; status: "pending" | "paid" | "expired" | "failed"; amountKhr: string; paymentPayload: Record<string, unknown>; expiresAt: Date; paidAt: Date | null; creditedAt: Date | null; createdAt: Date; updatedAt: Date };
 
 const databaseId = () => process.env.APPWRITE_DATABASE_ID || "zurs_store";
 const collectionId = "zurs_records";
@@ -145,6 +146,50 @@ export async function updateAppwriteUserDisplayName(input: { openId: string; dis
   const updated: User = { ...current, displayName: input.displayName, updatedAt: new Date() };
   await request("PUT", userDocumentPath(input.openId), { data: { sourceTable: "users", sourceId: record.sourceId, payload: JSON.stringify(updated), sourceUpdatedAt: updated.updatedAt.toISOString() } });
   return { displayName: input.displayName };
+}
+
+function toWalletTopup(record: AppwriteRecord): AppwriteWalletTopup | null {
+  const value = parsePayload<Partial<AppwriteWalletTopup>>(record);
+  if (!value || typeof value.id !== "string" || typeof value.userId !== "number" || typeof value.referenceCode !== "string" || typeof value.providerRequestId !== "string") return null;
+  const status = value.status;
+  if (!status || !["pending", "paid", "expired", "failed"].includes(status)) return null;
+  const paymentPayload = value.paymentPayload && typeof value.paymentPayload === "object" && !Array.isArray(value.paymentPayload) ? value.paymentPayload as Record<string, unknown> : {};
+  return { id: value.id, userId: value.userId, referenceCode: value.referenceCode, provider: String(value.provider ?? "bakong_khqr"), providerRequestId: value.providerRequestId, providerTransactionId: value.providerTransactionId ?? null, status, amountKhr: String(value.amountKhr ?? "0"), paymentPayload, expiresAt: asDate(value.expiresAt), paidAt: value.paidAt ? asDate(value.paidAt) : null, creditedAt: value.creditedAt ? asDate(value.creditedAt) : null, createdAt: asDate(value.createdAt), updatedAt: asDate(value.updatedAt) };
+}
+
+async function allAppwriteWalletTopups() {
+  return (await recordsFor("wallet_topups")).map((record) => {
+    const topup = toWalletTopup(record);
+    return topup ? { record, topup } : null;
+  }).filter((item): item is { record: AppwriteRecord; topup: AppwriteWalletTopup } => item !== null);
+}
+
+export async function getAppwriteWalletSummary(userId: number) {
+  const paidTopups = (await allAppwriteWalletTopups()).filter(({ topup }) => topup.userId === userId && topup.status === "paid");
+  const balanceKhr = paidTopups.reduce((total, { topup }) => total + Number(topup.amountKhr), 0);
+  return { balanceKhr: balanceKhr.toFixed(2), currency: "KHR" as const, available: true };
+}
+
+export async function createAppwriteWalletTopup(input: Omit<AppwriteWalletTopup, "providerTransactionId" | "paidAt" | "creditedAt" | "createdAt" | "updatedAt">) {
+  const now = new Date();
+  const topup: AppwriteWalletTopup = { ...input, providerTransactionId: null, paidAt: null, creditedAt: null, createdAt: now, updatedAt: now };
+  await request("POST", `/databases/${databaseId()}/collections/${collectionId}/documents`, { documentId: documentId(`wallet_topups:${topup.id}`), data: { sourceTable: "wallet_topups", sourceId: topup.id, payload: JSON.stringify(topup), sourceUpdatedAt: now.toISOString() } });
+  return topup;
+}
+
+export async function getAppwriteWalletTopup(input: { userId: number; topupId: string }) {
+  const item = (await allAppwriteWalletTopups()).find(({ topup }) => topup.id === input.topupId && topup.userId === input.userId);
+  return item?.topup;
+}
+
+export async function updateAppwriteWalletTopup(input: { userId: number; topupId: string; status: AppwriteWalletTopup["status"]; providerTransactionId?: string | null; paidAt?: Date | null; creditedAt?: Date | null }) {
+  const item = (await allAppwriteWalletTopups()).find(({ topup }) => topup.id === input.topupId && topup.userId === input.userId);
+  if (!item) throw new Error("Wallet top-up session was not found");
+  if (item.topup.status !== "pending") return item.topup;
+  const now = new Date();
+  const topup: AppwriteWalletTopup = { ...item.topup, status: input.status, providerTransactionId: input.providerTransactionId ?? item.topup.providerTransactionId, paidAt: input.paidAt ?? item.topup.paidAt, creditedAt: input.creditedAt ?? item.topup.creditedAt, updatedAt: now };
+  await request("PUT", `/databases/${databaseId()}/collections/${collectionId}/documents/${item.record.$id}`, { data: { sourceTable: "wallet_topups", sourceId: topup.id, payload: JSON.stringify(topup), sourceUpdatedAt: now.toISOString() } });
+  return topup;
 }
 
 export type AppwriteMarketplaceListingInput = {

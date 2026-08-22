@@ -22,4 +22,26 @@ describe("customer wallet balance contract", () => {
     expect(header).toContain('aria-pressed={balanceVisible}');
     expect(header).toContain('balance-control--visible');
   });
+
+  it("adds wallet funds only through a verified Bakong top-up while product purchases remain locked", () => {
+    const schema = readFileSync(resolve(process.cwd(), "drizzle/schema.ts"), "utf8");
+    const db = readFileSync(resolve(process.cwd(), "server/db.ts"), "utf8");
+    const appwrite = readFileSync(resolve(process.cwd(), "server/appwriteStore.ts"), "utf8");
+    const router = readFileSync(resolve(process.cwd(), "server/routers.ts"), "utf8");
+    const readiness = readFileSync(resolve(process.cwd(), "server/paymentReadiness.ts"), "utf8");
+    const walletPage = readFileSync(resolve(process.cwd(), "client/src/pages/Wallet.tsx"), "utf8");
+    expect(schema).toContain('wallet_topups');
+    expect(schema).toContain('providerRequestId');
+    expect(db).toContain('checkBakongKhqrPayment');
+    expect(db).toContain('refreshWalletTopup');
+    expect(db).toContain('refreshAppwriteWalletTopup');
+    expect(appwrite).toContain('getAppwriteWalletSummary');
+    expect(appwrite).toContain('topup.status === "paid"');
+    expect(router).toContain('beginTopup: protectedProcedure');
+    expect(router).toContain('refreshTopup: protectedProcedure');
+    expect(walletPage).toContain('បញ្ចូលប្រាក់');
+    expect(readiness).toContain('reason: "security_review"');
+    expect(readiness).toContain('requireProductPurchaseEnabled');
+    expect(db).toContain('requireProductPurchaseEnabled();');
+  });
 });

@@ -160,7 +160,9 @@
 - [x] Verify and push all remaining validated ZURS STORE source changes and deployment-safe asset references to GitHub main.
 - [x] Remove Marketplace explanatory cards from the purchase-first screen and relocate the guidance to Account settings.
 - [x] Add private saved marketplace favorites with add/remove controls and an Account entry point next to Ticket.
-- [ ] Diagnose and repair the reported email/Google sign-in error while preserving secure OAuth state and signed sessions.
+- [x] Diagnose and repair the reported email/Google sign-in error while preserving secure OAuth state and signed sessions.
+- [x] Keep product browsing enabled while disabling all customer Buy and payment actions until payment security is fully approved.
+- [x] Add customer Balance top-up sessions that credit the wallet only after verified Bakong KHQR payment evidence.
 - [x] Remove Account Settings access and keep Ticket, Favorites, and logout on one mobile action row.
 - [x] Integrate Bakong KHQR dynamic payment creation and verified payment status using server-only credentials.
 - [x] Add a privacy-preserving bank-style Balance control at the header’s right side with click-to-reveal behavior.

@@ -12,7 +12,7 @@ import { createDiditHostedSession } from "./didit";
 import { disclosureRequestStatuses, fraudReportStatuses } from "./marketplaceSafety";
 import { deriveLocationRisk, resolveLocationCountry } from "./marketplaceLocation";
 import { getZursSessionCookieOptions, ZURS_SESSION_COOKIE } from "./zursSession";
-import { getAutomaticPaymentReadiness } from "./paymentReadiness";
+import { getProductPurchaseReadiness } from "./paymentReadiness";
 
 const marketplaceType = z.enum(["sale", "swap", "wanted"]);
 
@@ -28,10 +28,14 @@ export const appRouter = router({
     smm: publicProcedure.query(() => db.getSmmCatalog()),
   }),
   payments: router({
-    readiness: publicProcedure.query(() => getAutomaticPaymentReadiness()),
+    readiness: publicProcedure.query(() => getProductPurchaseReadiness()),
   }),
   wallet: router({
     summary: protectedProcedure.query(({ ctx }) => db.getCustomerWalletSummary(ctx.user.id)),
+    topupAvailability: protectedProcedure.query(() => db.getWalletTopupAvailability()),
+    beginTopup: protectedProcedure.input(z.object({ amountKhr: z.string().regex(/^\d+$/) })).mutation(({ ctx, input }) => db.beginWalletTopup({ userId: ctx.user.id, ...input })),
+    topupSession: protectedProcedure.input(z.object({ topupId: z.string().min(4).max(64) })).query(({ ctx, input }) => db.getWalletTopupSession({ userId: ctx.user.id, ...input })),
+    refreshTopup: protectedProcedure.input(z.object({ topupId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => db.refreshWalletTopup({ userId: ctx.user.id, ...input })),
   }),
   provider: router({
     games: publicProcedure.query(() => fetchProviderGames()),

@@ -20,6 +20,23 @@ export const customerWallets = mysqlTable("customer_wallets", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
+export const walletTopups = mysqlTable("wallet_topups", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  userId: int("userId").notNull(),
+  referenceCode: varchar("referenceCode", { length: 48 }).notNull().unique(),
+  provider: varchar("provider", { length: 64 }).default("bakong_khqr").notNull(),
+  providerRequestId: varchar("providerRequestId", { length: 160 }).notNull().unique(),
+  providerTransactionId: varchar("providerTransactionId", { length: 160 }),
+  status: mysqlEnum("status", ["pending", "paid", "expired", "failed"]).default("pending").notNull(),
+  amountKhr: decimal("amountKhr", { precision: 14, scale: 2 }).notNull(),
+  paymentPayload: json("paymentPayload").notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  paidAt: timestamp("paidAt"),
+  creditedAt: timestamp("creditedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [index("wallet_topups_user_idx").on(table.userId), index("wallet_topups_status_idx").on(table.status)]);
+
 export const adminRoleAudits = mysqlTable("admin_role_audits", {
   id: varchar("id", { length: 64 }).primaryKey(),
   actorUserId: int("actorUserId").notNull(),
