@@ -6,6 +6,8 @@ describe("Bakong KHQR payment contract", () => {
   it("keeps Bakong credentials on the server and verifies exact payment evidence before marking an order paid", () => {
     const adapter = readFileSync(resolve(process.cwd(), "server/bakongKhqr.ts"), "utf8");
     const db = readFileSync(resolve(process.cwd(), "server/db.ts"), "utf8");
+    expect(adapter).toContain('import bakongKhqr from "bakong-khqr"');
+    expect(adapter).not.toContain('createRequire(import.meta.url)');
     expect(adapter).toContain('process.env.BAKONG_API_TOKEN');
     expect(adapter).toContain('check_transaction_by_md5');
     expect(adapter).toContain('matchesAmount');

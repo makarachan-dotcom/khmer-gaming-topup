@@ -1,8 +1,7 @@
-import { createRequire } from "node:module";
+import bakongKhqr from "bakong-khqr";
 import QRCode from "qrcode";
 
-const require = createRequire(import.meta.url);
-const { BakongKHQR, IndividualInfo, khqrData } = require("bakong-khqr") as any;
+const { BakongKHQR, IndividualInfo, khqrData } = bakongKhqr as any;
 const apiBaseUrl = "https://api-bakong.nbc.gov.kh";
 const zursLogoUrl = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/kBXeVXEnNVEuNZKS.jpg";
 
