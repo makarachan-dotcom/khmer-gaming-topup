@@ -187,20 +187,32 @@ function packageText(item: ProviderPackage) {
   return `${item.label} ${item.amountLabel}`.toLowerCase();
 }
 
-function isWeeklyPassPackage(item: ProviderPackage) {
-  return /\bweekly\b/.test(packageText(item));
+function isPassPackage(item: ProviderPackage) {
+  return /\b(?:weekly|daily|monthly)\b|\b(?:membership|subscription)\b|\bpass\b/.test(packageText(item));
 }
 
-function isBonusDiamondPackage(item: ProviderPackage) {
-  return /\bbonus\b|first\s*top[\s-]*up|\+\s*\d[\d,]*\s*diamonds?\b/.test(packageText(item));
+function isBonusPackage(item: ProviderPackage) {
+  return /\bbonus\b|first\s*top[\s-]*up|\bextra\b|\+\s*\d[\d,]*(?:\s*[a-z]+)?\b/.test(packageText(item));
 }
 
-function isDiamondPackage(item: ProviderPackage) {
-  return /\bdiamond(?:s)?\b/.test(packageText(item));
+function isSpecialPackage(item: ProviderPackage) {
+  return /\b(?:promo|special|discount|sale|event|exclusive|full\s*ticket)\b/.test(packageText(item));
 }
 
-function isBaseDiamondPackage(item: ProviderPackage) {
-  return isDiamondPackage(item) && !isBonusDiamondPackage(item) && !isWeeklyPassPackage(item);
+export function groupProviderPackagesByMeaning<T extends ProviderPackage>(items: T[]) {
+  const standard: T[] = [];
+  const bonus: T[] = [];
+  const passes: T[] = [];
+  const special: T[] = [];
+
+  for (const item of sortProviderPackagesByPrice(items)) {
+    if (isPassPackage(item)) passes.push(item);
+    else if (isBonusPackage(item)) bonus.push(item);
+    else if (isSpecialPackage(item)) special.push(item);
+    else standard.push(item);
+  }
+
+  return { standard, bonus, passes, special };
 }
 
 function PackageCard({ item, selected, onSelect, gameId, gameName, gameLogoUrl }: { item: ProviderPackage; selected: boolean; onSelect: () => void; gameId: string; gameName: string; gameLogoUrl?: string }) {
@@ -219,12 +231,10 @@ function DiamondPackages({ packages, status, selectedPackageId, onSelect, gameId
   const eventContent = trpc.content.active.useQuery();
   const fullTicketEvent = (eventContent.data ?? []).find((item) => item.contentKey === "topup-event-full-ticket");
   const fullTicketPackages = fullTicketEvent ? sortProviderPackagesByPrice(packages.filter(isFullTicketPackage)) : [];
-  const standardPackages = sortProviderPackagesByPrice(fullTicketPackages.length ? packages.filter((item) => !isFullTicketPackage(item)) : packages);
+  const groupedPackages = groupProviderPackagesByMeaning(fullTicketPackages.length ? packages.filter((item) => !isFullTicketPackage(item)) : packages);
   const isMobileLegendsGlobal = isMobileLegendsGlobalGame(gameId);
-  const baseDiamondPackages = isMobileLegendsGlobal ? standardPackages.filter(isBaseDiamondPackage) : [];
-  const bonusDiamondPackages = isMobileLegendsGlobal ? standardPackages.filter((item) => isBonusDiamondPackage(item) && !isWeeklyPassPackage(item)) : [];
-  const weeklyPassPackages = isMobileLegendsGlobal ? standardPackages.filter(isWeeklyPassPackage) : [];
-  const otherPackages = isMobileLegendsGlobal ? standardPackages.filter((item) => !baseDiamondPackages.includes(item) && !bonusDiamondPackages.includes(item) && !weeklyPassPackages.includes(item)) : standardPackages;
+  const standardTitle = isMobileLegendsGlobal ? "កញ្ចប់ពេជ្យ" : "កញ្ចប់ធម្មតា";
+  const passTitle = isMobileLegendsGlobal ? "Weekly Pass និង Membership" : "Pass និង Membership";
 
-  return <div className="mt-4 border-t border-slate-100 pt-4">{status === "ready" && packages.length ? <div className="space-y-4"><PackageSection title={fullTicketEvent?.titleKh?.trim() || "កញ្ចប់ Full Ticket"} description={fullTicketEvent?.bodyKh} icon={Ticket} items={fullTicketPackages} selectedPackageId={selectedPackageId} onSelect={onSelect} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} event />{isMobileLegendsGlobal ? <><PackageSection title="កញ្ចប់ពេជ្យ" icon={Gem} items={baseDiamondPackages} selectedPackageId={selectedPackageId} onSelect={onSelect} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} /><PackageSection title="កញ្ចប់ Bonus និង First Top-Up" icon={Gem} items={bonusDiamondPackages} selectedPackageId={selectedPackageId} onSelect={onSelect} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} /><PackageSection title="Weekly Pass" icon={Ticket} items={weeklyPassPackages} selectedPackageId={selectedPackageId} onSelect={onSelect} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} /><PackageSection title="សេវា Mobile Legends ផ្សេងៗ" icon={WalletCards} items={otherPackages} selectedPackageId={selectedPackageId} onSelect={onSelect} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} /></> : <PackageSection title="កញ្ចប់ដែលមាន" icon={Gem} items={otherPackages} selectedPackageId={selectedPackageId} onSelect={onSelect} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} />}</div> : <div className="mt-3 rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-xs leading-5 text-slate-600">មិនអាចបង្ហាញកញ្ចប់សេវាសម្រាប់ពេលនេះទេ។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។</div>}</div>;
+  return <div className="mt-4 border-t border-slate-100 pt-4">{status === "ready" && packages.length ? <div className="space-y-4"><PackageSection title={fullTicketEvent?.titleKh?.trim() || "កញ្ចប់ Full Ticket"} description={fullTicketEvent?.bodyKh} icon={Ticket} items={fullTicketPackages} selectedPackageId={selectedPackageId} onSelect={onSelect} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} event /><PackageSection title={standardTitle} icon={Gem} items={groupedPackages.standard} selectedPackageId={selectedPackageId} onSelect={onSelect} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} /><PackageSection title="កញ្ចប់ Bonus និង First Top-Up" icon={Gem} items={groupedPackages.bonus} selectedPackageId={selectedPackageId} onSelect={onSelect} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} /><PackageSection title={passTitle} icon={Ticket} items={groupedPackages.passes} selectedPackageId={selectedPackageId} onSelect={onSelect} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} /><PackageSection title="កញ្ចប់ពិសេស" icon={WalletCards} items={groupedPackages.special} selectedPackageId={selectedPackageId} onSelect={onSelect} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} /></div> : <div className="mt-3 rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-xs leading-5 text-slate-600">មិនអាចបង្ហាញកញ្ចប់សេវាសម្រាប់ពេលនេះទេ។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។</div>}</div>;
 }
