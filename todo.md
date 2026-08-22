@@ -206,3 +206,5 @@
 - [ ] Correct Appwrite document-list query syntax so synchronized provider catalog records are retrieved reliably for Admin editors.
 - [ ] Add and verify an approved legacy Appwrite pagination fallback for instances that reject the query-array document-list format.
 - [ ] Add a direct Appwrite provider-catalog index so Admin can retrieve synchronized offer records without relying on document-list pagination.
+- [x] Integrate the owner-supplied Back-arrow animation so Back controls remain static until clicked, then play until navigation completes with an accessible reduced-motion fallback.
+- [x] Order provider game Top-up cards Cambodia/KH first, Global second, and other country or regional catalog entries last without changing provider data or visibility rules.

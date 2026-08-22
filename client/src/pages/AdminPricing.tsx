@@ -1,5 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
+import { AnimatedBackButton } from "@/components/AnimatedBackButton";
 import { OutlineLoader } from "@/components/OutlineLoader";
 import { trpc } from "@/lib/trpc";
 import { Calculator, CheckCircle2, CloudOff, Power, RefreshCw, Save, ShieldAlert, ShieldCheck, Trash2 } from "lucide-react";
@@ -117,7 +118,7 @@ function PricingWorkspace() {
         <h1 className="mt-1 font-display text-3xl font-bold text-slate-950">គ្រប់គ្រងផលិតផល និងតម្លៃ</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">អ្នកអាចបិទ ឬបើកផលិតផលពិតពី provider បានភ្លាមៗ។ ផលិតផលដែលបិទនឹងមិនបង្ហាញនៅទំព័រអតិថិជន ឬអាចចូលតាមតំណដោយផ្ទាល់បានទេ។</p>
       </div>
-      <a href="/admin" className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-700">ត្រឡប់ទៅ Admin</a>
+      <AnimatedBackButton href="/admin" className="h-10 justify-center rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-700">ត្រឡប់ទៅ Admin</AnimatedBackButton>
     </header>
 
     {actionError ? <AdminError error={actionError} /> : null}

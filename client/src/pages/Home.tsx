@@ -4,6 +4,7 @@ import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { OutlineLoader } from "@/components/OutlineLoader";
 import { FloatingParticles } from "@/components/FloatingParticles";
 import { ProviderGameArtwork, ProviderGameRegion, ProviderGameTitle } from "@/components/ProviderGameIdentity";
+import { orderProviderGames } from "@/lib/providerPresentation";
 import { trpc } from "@/lib/trpc";
 import { ArrowRight, Diamond, Gamepad2, Image as ImageIcon, Megaphone, ShieldAlert, ShieldCheck, Video } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -51,6 +52,6 @@ function HomeGameCard({ game }: { game: { id: string; name: string; region?: str
 function HomeTopupExperience() {
   const gamesQuery = trpc.provider.games.useQuery();
   const paymentReadiness = trpc.payments.readiness.useQuery();
-  const games = gamesQuery.data?.games ?? [];
+  const games = orderProviderGames(gamesQuery.data?.games ?? []);
   return <section id="topup-games" className="container mt-5 pb-5 sm:mt-10"><LoadingOverlay open={gamesQuery.isLoading} label="កំពុងរៀបចំបញ្ជីហ្គេម…" /><div className="surface mx-auto max-w-5xl rounded-[1.5rem] p-4 sm:p-6"><div><p className="text-[10px] font-bold tracking-[0.16em] text-indigo-700">GAME TOP-UP</p><h2 className="mt-1 font-display text-xl font-bold text-slate-950 sm:text-2xl">ជ្រើសរើសហ្គេមរបស់អ្នក</h2><p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">ជ្រើសរើសហ្គេមនៅខាងក្រោម ដើម្បីចូលទៅកាន់ទំព័រ Top-up ដាច់ដោយឡែកសម្រាប់ហ្គេមនោះ។</p></div>{!paymentReadiness.isLoading ? <div className="mt-4 flex items-start gap-2 rounded-xl border border-amber-100 bg-amber-50 p-3 text-xs leading-5 text-amber-900"><ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" /><p>អ្នកអាចជ្រើសរើសហ្គេម និងពិនិត្យកញ្ចប់បាន។ ប៊ូតុងទិញត្រូវបានបិទជាបណ្តោះអាសន្ន ខណៈហាងកំពុងពិនិត្យសុវត្ថិភាពការទូទាត់។</p></div> : null}{gamesQuery.isLoading ? <div className="mt-4 grid min-h-36 place-items-center rounded-2xl bg-slate-50 text-xs text-slate-500"><OutlineLoader size={30} color="#4f46e5" /><span className="mt-2">កំពុងរៀបចំបញ្ជីហ្គេម…</span></div> : games.length ? <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">{games.map((game) => <HomeGameCard key={game.id} game={game} />)}</div> : <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-xs leading-6 text-slate-600"><AnimatedGlyph name="settings" size={30} color="#818cf8" className="mx-auto" /><p className="mt-2">បច្ចុប្បន្នមិនទាន់មានបញ្ជីហ្គេមសម្រាប់បង្ហាញទេ។ ព័ត៌មានហ្គេមនឹងបង្ហាញនៅទីនេះនៅពេលសេវារបស់ហាងបានដំណើរការ។</p></div>}</div></section>;
 }

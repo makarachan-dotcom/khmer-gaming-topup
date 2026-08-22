@@ -27,3 +27,9 @@ Appwrite’s query documentation states that list queries are passed through a `
 The owner-authenticated Admin page for the direct-index release loaded normally with its provider availability inventory. Existing offer editors are expected to appear only after the approved FZR and SMM resync writes the new index document, so no offer edit was attempted before that resync.
 
 The approved FZR resync was attempted from the owner-authenticated production Admin page. It completed with the existing safe error state: no new catalog price record was reported as saved, no offer editor appeared, and the existing provider availability inventory was unchanged. The direct-index write path requires a final storage-compatibility diagnosis before retrying.
+
+The subsequent index-seeding release loaded successfully on the owner-authenticated production Admin page. The availability inventory and transparent LoadingV2 states rendered normally; the next approved FZR sync will create the index before attempting the longer provider import.
+
+Before that resync, the Admin offer panels remained empty as expected because no direct catalog index had yet been written. The provider availability controls continued to render independently and their state was not changed.
+
+The owner-approved FZR synchronization was then started on the index-seeding release. The Admin interface correctly entered a disabled in-progress state while the server persisted the provider index and refresh data; no customer purchase state was affected.

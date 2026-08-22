@@ -42,3 +42,16 @@ export function gameRegionMarker(name: string, providerRegion?: string | null) {
   if (code && countryCodeFlags[code]) return { kind: "country" as const, ...countryCodeFlags[code] };
   return { kind: "global" as const, label: "Global" };
 }
+
+export function orderProviderGames<T extends { id: string; name: string; region?: string | null }>(games: T[]) {
+  return [...games].sort((left, right) => {
+    const priority = (game: T) => {
+      const marker = gameRegionMarker(game.name, game.region);
+      if (marker.kind === "country" && marker.label === "Cambodia") return 0;
+      if (marker.kind === "global") return 1;
+      return 2;
+    };
+    const difference = priority(left) - priority(right);
+    return difference || left.name.localeCompare(right.name, undefined, { sensitivity: "base" }) || left.id.localeCompare(right.id);
+  });
+}
