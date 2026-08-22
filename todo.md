@@ -163,7 +163,7 @@
 - [x] Diagnose and repair the reported email/Google sign-in error while preserving secure OAuth state and signed sessions.
 - [x] Keep product browsing enabled while disabling all customer Buy and payment actions until payment security is fully approved.
 - [x] Add customer Balance top-up sessions that credit the wallet only after verified Bakong KHQR payment evidence.
-- [ ] Restore live provider-backed Game and SMM catalog visibility on zurs.vercel.app without introducing placeholder products.
+- [x] Restore live provider-backed Game and SMM catalog visibility on zurs.vercel.app without introducing placeholder products.
 - [x] Remove Account Settings access and keep Ticket, Favorites, and logout on one mobile action row.
 - [x] Integrate Bakong KHQR dynamic payment creation and verified payment status using server-only credentials.
 - [x] Add a privacy-preserving bank-style Balance control at the header’s right side with click-to-reveal behavior.
