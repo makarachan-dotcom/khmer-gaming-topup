@@ -18,6 +18,10 @@ const navigation = [
   { href: "/marketplace", label: "ទីផ្សារគណនី" },
 ];
 
+export function isProtectedMediaTarget(target: EventTarget | null) {
+  return typeof Element !== "undefined" && target instanceof Element && Boolean(target.closest("img, video"));
+}
+
 const mobileNavigation = [
   { href: "/", label: "ទំព័រដើម", icon: House, animation: "home" as const },
   { href: "/smm", label: "SMM", icon: BarChart3 },
@@ -56,6 +60,25 @@ function StorefrontShell({ children }: { children: ReactNode }) {
     window.addEventListener("scroll", updateScrollTopVisibility, { passive: true });
     return () => window.removeEventListener("scroll", updateScrollTopVisibility);
   }, [location]);
+
+  useEffect(() => {
+    const blockMediaAction = (event: Event) => {
+      if (isProtectedMediaTarget(event.target)) event.preventDefault();
+    };
+    const blockPageSave = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") event.preventDefault();
+    };
+    document.addEventListener("contextmenu", blockMediaAction, true);
+    document.addEventListener("dragstart", blockMediaAction, true);
+    document.addEventListener("copy", blockMediaAction, true);
+    window.addEventListener("keydown", blockPageSave, true);
+    return () => {
+      document.removeEventListener("contextmenu", blockMediaAction, true);
+      document.removeEventListener("dragstart", blockMediaAction, true);
+      document.removeEventListener("copy", blockMediaAction, true);
+      window.removeEventListener("keydown", blockPageSave, true);
+    };
+  }, []);
 
   const navigateToTop = () => window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
 
