@@ -232,12 +232,14 @@ function HomeGameCard({
         <div className="flex items-center gap-3">
           <ProviderGameArtwork
             name={game.name}
+            region={game.region}
             logoUrl={logoUrl}
             className="h-11 w-11 rounded-xl"
           />
           <span className="min-w-0 flex-1">
             <ProviderGameTitle
               name={game.name}
+              region={game.region}
               className="text-sm font-bold text-slate-900"
             />
             <ProviderGameRegion

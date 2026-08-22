@@ -70,6 +70,14 @@ export function gameRegionMarker(name: string, providerRegion?: string | null) {
   return { kind: "global" as const, label: "Global" };
 }
 
+/** Cambodia storefront marker for all Global titles and Singapore (SG) titles accepted for Cambodia. */
+export function cambodiaSupportMarker(name: string, providerRegion?: string | null) {
+  const marker = gameRegionMarker(name, providerRegion);
+  if (marker.kind === "global") return { flag: "🇰🇭", label: "Cambodia · Global" };
+  if (marker.kind === "country" && marker.label === "Singapore") return { flag: "🇰🇭", label: "Cambodia · SG" };
+  return null;
+}
+
 export function orderProviderGames<
   T extends { id: string; name: string; region?: string | null },
 >(games: T[]) {

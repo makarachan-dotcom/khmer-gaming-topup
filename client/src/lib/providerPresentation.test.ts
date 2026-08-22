@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  cambodiaSupportMarker,
   countryFlagForRegion,
   filterProviderGames,
   orderProviderGames,
@@ -20,6 +21,12 @@ describe("provider package presentation", () => {
   it("maps known provider regions to a small country flag", () => {
     expect(countryFlagForRegion("Indonesia")).toMatchObject({ flag: "🇮🇩" });
     expect(countryFlagForRegion("Unknown region")).toBeNull();
+  });
+
+  it("marks Global and SG game listings as Cambodia-supported without changing their catalog region", () => {
+    expect(cambodiaSupportMarker("Mobile Legends", "Global")).toEqual({ flag: "🇰🇭", label: "Cambodia · Global" });
+    expect(cambodiaSupportMarker("Free Fire (SG)", "Singapore")).toEqual({ flag: "🇰🇭", label: "Cambodia · SG" });
+    expect(cambodiaSupportMarker("Arena of Valor", "Indonesia")).toBeNull();
   });
 
   it("orders Cambodia games before Global and other provider regions", () => {

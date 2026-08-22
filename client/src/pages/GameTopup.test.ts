@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { gameIdFromTopupPath, gameTopupPath, readVerifiedPlayerEntries, saveVerifiedPlayerEntry } from "./GameTopup";
+import { gameIdFromTopupPath, gameTopupPath, readVerifiedPlayerEntries, saveVerifiedPlayerEntry, sortProviderPackagesByPrice } from "./GameTopup";
 
 describe("dedicated game top-up routes", () => {
   it("creates and reads an encoded provider game route", () => {
@@ -11,6 +11,16 @@ describe("dedicated game top-up routes", () => {
   it("rejects paths that do not contain a game identifier", () => {
     expect(gameIdFromTopupPath("/topup")).toBe("");
     expect(gameIdFromTopupPath("/smm")).toBe("");
+  });
+
+  it("sorts package presentation from the lowest price to the highest without changing package records", () => {
+    const packages = [
+      { id: "mid", label: "Mid", amountLabel: "Mid", priceLabel: "$7.35" },
+      { id: "low", label: "Low", amountLabel: "Low", priceLabel: "$0.23" },
+      { id: "high", label: "High", amountLabel: "High", priceLabel: "$17.41" },
+    ];
+    expect(sortProviderPackagesByPrice(packages).map((item) => item.id)).toEqual(["low", "mid", "high"]);
+    expect(packages.map((item) => item.id)).toEqual(["mid", "low", "high"]);
   });
 
   it("keeps only private verified ID fields in a small per-game browser history", () => {
