@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { getAppwriteProviderAvailability, isAppwriteStoreConfigured, updateAppwriteProviderAvailability } from "./appwriteStore";
+import { getAppwriteProviderAvailability, getAppwriteProviderCatalog, isAppwriteStoreConfigured, type AppwriteProviderCatalog, updateAppwriteProviderAvailability } from "./appwriteStore";
 
 export const providerFieldSchema = z.object({
   key: z.string().trim().regex(/^[a-z][a-zA-Z0-9_]{0,63}$/),
@@ -217,9 +217,33 @@ function asProviderGames(items: FzrTopupItem[]) {
   return items.filter((item) => !isThailandProviderProduct(`${item.category_id} ${item.name} ${item.note ?? ""}`)).map((item) => ({ id: item.category_id, name: item.name, region: providerGameRegion(item.name, item.note), provider: "FZR Cards", requiredFields: [] }));
 }
 
+/** During a transient FZR outage, preserve only the owner-approved public IDs from the persisted catalog. */
+export function cachedPublicProviderGames(catalog: AppwriteProviderCatalog, availability: Awaited<ReturnType<typeof providerAvailability>>) {
+  if (!availability.activeGameIds) return [];
+  const activeIds = new Set(availability.activeGameIds);
+  const hiddenIds = new Set(availability.hiddenGameIds);
+  return catalog.games.flatMap((game) => {
+    const providerId = game.providerSourceId?.trim();
+    const name = game.titleEn?.trim() || game.titleKh?.trim();
+    if (!providerId || !name || !activeIds.has(providerId) || hiddenIds.has(providerId) || isThailandProviderProduct(`${providerId} ${name}`)) return [];
+    return [{ id: providerId, name, region: providerGameRegion(name), provider: "FZR Cards" as const, requiredFields: [] }];
+  });
+}
+
+async function cachedPublicProviderGamesDuringOutage(availability: Awaited<ReturnType<typeof providerAvailability>>) {
+  if (!availability.activeGameIds?.length) return [];
+  try { return cachedPublicProviderGames(await getAppwriteProviderCatalog(), availability); } catch { return []; }
+}
+
 export async function fetchProviderGames(options: { includeInactive?: boolean } = {}): Promise<ProviderGameResponse> {
   const [catalog, availability] = await Promise.all([fetchFzrTopupCatalog(), providerAvailability()]);
-  if (catalog.status !== "ready") return { status: catalog.status, games: [] };
+  if (catalog.status !== "ready") {
+    if (!options.includeInactive) {
+      const cachedGames = await cachedPublicProviderGamesDuringOutage(availability);
+      if (cachedGames.length) return { status: "ready", games: cachedGames };
+    }
+    return { status: catalog.status, games: [] };
+  }
   const games = asProviderGames(catalog.items);
   if (options.includeInactive) return { status: "ready", games };
   const activeIds = publicProviderGameIds(availability, catalog.legacyPublicIds);
