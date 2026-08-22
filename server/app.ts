@@ -32,9 +32,10 @@ export function createApp() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   // The managed hosting integration relies on Manus-only credentials. Vercel
   // receives a portable API surface instead of routes that would redirect to
-  // an unavailable identity provider or storage proxy.
+  // an unavailable identity provider. The storage proxy remains enabled in
+  // production because it can serve Appwrite-backed marketplace media.
+  registerStorageProxy(app);
   if (!process.env.VERCEL) {
-    registerStorageProxy(app);
     registerOAuthRoutes(app);
   }
   registerGoogleAuthRoutes(app);

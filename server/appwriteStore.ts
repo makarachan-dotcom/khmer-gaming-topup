@@ -1,9 +1,10 @@
 import crypto from "node:crypto";
+import { nanoid } from "nanoid";
 import type { InsertUser, User } from "../drizzle/schema";
 import { isSingleAdminEmail } from "./storefrontDomain";
 
 type AppwriteRecord = { $id: string; sourceTable: string; sourceId: string; payload: string; sourceUpdatedAt?: string | null };
-type AppwriteList = { documents?: AppwriteRecord[] };
+type AppwriteList = { documents?: AppwriteRecord[]; total?: number };
 type AppwriteOrder = { id: string; userId: number; orderNumber: string; orderType: "topup" | "smm"; status: string; currency: string; subtotal: string; productName: string; details: unknown; createdAt: Date; updatedAt: Date };
 type AppwritePayment = { id: string; orderId: string; provider: string; status: string; amount: string; currency: string; createdAt: Date; updatedAt: Date; paidAt: Date | null; orderNumber: string; productName: string; orderStatus: string };
 
@@ -63,9 +64,21 @@ function toUser(record: AppwriteRecord): User | null {
   } catch { return null; }
 }
 
+const RECORD_PAGE_SIZE = 100;
+
+function userDocumentPath(openId: string) {
+  return `/databases/${databaseId()}/collections/${collectionId}/documents/${documentId(`users:${openId}`)}`;
+}
+
 async function allRecords() {
-  const data = await request("GET", `/databases/${databaseId()}/collections/${collectionId}/documents?limit=100&total=false`) as AppwriteList | null;
-  return data?.documents ?? [];
+  const records: AppwriteRecord[] = [];
+  for (let offset = 0; offset < 10_000; offset += RECORD_PAGE_SIZE) {
+    const data = await request("GET", `/databases/${databaseId()}/collections/${collectionId}/documents?limit=${RECORD_PAGE_SIZE}&offset=${offset}&total=true`) as AppwriteList | null;
+    const page = data?.documents ?? [];
+    records.push(...page);
+    if (!data || page.length < RECORD_PAGE_SIZE || (typeof data.total === "number" && records.length >= data.total)) break;
+  }
+  return records;
 }
 
 async function recordsFor(table: string) {
@@ -76,10 +89,14 @@ async function allUserRecords() {
   return recordsFor("users");
 }
 
+async function getAppwriteUserRecordByOpenId(openId: string) {
+  const record = await request("GET", userDocumentPath(openId)) as AppwriteRecord | null;
+  return record && record.sourceTable === "users" && record.sourceId === openId ? record : undefined;
+}
+
 export async function getAppwriteUserByOpenId(openId: string) {
-  const records = await allUserRecords();
-  const users = records.map(toUser).filter((user): user is User => user !== null);
-  return users.find((user) => user.openId === openId);
+  const record = await getAppwriteUserRecordByOpenId(openId);
+  return record ? toUser(record) ?? undefined : undefined;
 }
 
 export async function getAppwriteUserByEmail(email: string) {
@@ -108,7 +125,7 @@ export async function upsertAppwriteUser(input: InsertUser) {
   };
   const sourceId = input.openId;
   const body = { data: { sourceTable: "users", sourceId, payload: JSON.stringify(user), sourceUpdatedAt: user.updatedAt.toISOString() } };
-  const path = `/databases/${databaseId()}/collections/${collectionId}/documents/${documentId(`users:${sourceId}`)}`;
+  const path = userDocumentPath(sourceId);
   if (existing) await request("PUT", path, body);
   else {
     try {
@@ -121,14 +138,146 @@ export async function upsertAppwriteUser(input: InsertUser) {
   return user;
 }
 
-export async function updateAppwriteUserDisplayName(id: number, displayName: string) {
-  const records = await allUserRecords();
-  const record = records.find((candidate) => toUser(candidate)?.id === id);
+export async function updateAppwriteUserDisplayName(input: { openId: string; displayName: string }) {
+  const record = await getAppwriteUserRecordByOpenId(input.openId);
   const current = record ? toUser(record) : null;
-  if (!record || !current) throw new Error("Appwrite user record was not found");
-  const updated: User = { ...current, displayName, updatedAt: new Date() };
-  await request("PUT", `/databases/${databaseId()}/collections/${collectionId}/documents/${record.$id}`, { data: { sourceTable: "users", sourceId: record.sourceId, payload: JSON.stringify(updated), sourceUpdatedAt: updated.updatedAt.toISOString() } });
-  return { displayName };
+  if (!record || !current) throw new Error("Your member profile could not be found. Please sign in again.");
+  const updated: User = { ...current, displayName: input.displayName, updatedAt: new Date() };
+  await request("PUT", userDocumentPath(input.openId), { data: { sourceTable: "users", sourceId: record.sourceId, payload: JSON.stringify(updated), sourceUpdatedAt: updated.updatedAt.toISOString() } });
+  return { displayName: input.displayName };
+}
+
+export type AppwriteMarketplaceListingInput = {
+  sellerUserId: number;
+  listingType: "sale" | "swap" | "wanted";
+  game: string;
+  title: string;
+  rankLevel: string;
+  priceUsd?: string | null;
+  description: string;
+  contactMethod: string;
+  telegramUsername?: string | null;
+  screenshots?: string[];
+};
+
+export type AppwriteMarketplaceListing = AppwriteMarketplaceListingInput & {
+  id: string;
+  status: "draft" | "pending" | "approved" | "rejected" | "closed" | "sold";
+  reviewNote?: string | null;
+  reviewedByUserId?: number | null;
+  reviewedAt?: Date | null;
+  soldAt?: Date | null;
+  cleanupAt?: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+type AppwriteMarketplaceRecord = { record: AppwriteRecord; listing: AppwriteMarketplaceListing };
+
+function toMarketplaceListing(record: AppwriteRecord): AppwriteMarketplaceListing | null {
+  const value = parsePayload<Partial<AppwriteMarketplaceListing>>(record);
+  if (!value || typeof value.id !== "string" || typeof value.sellerUserId !== "number" || typeof value.title !== "string") return null;
+  const status = value.status;
+  if (!status || !["draft", "pending", "approved", "rejected", "closed", "sold"].includes(status)) return null;
+  return {
+    id: value.id,
+    sellerUserId: value.sellerUserId,
+    listingType: value.listingType === "swap" || value.listingType === "wanted" ? value.listingType : "sale",
+    status,
+    game: String(value.game ?? "Unspecified game"),
+    title: value.title,
+    rankLevel: String(value.rankLevel ?? "Unspecified"),
+    priceUsd: value.priceUsd ?? null,
+    description: String(value.description ?? ""),
+    contactMethod: String(value.contactMethod ?? "Not provided"),
+    telegramUsername: value.telegramUsername ?? null,
+    screenshots: Array.isArray(value.screenshots) ? value.screenshots.filter((key): key is string => typeof key === "string") : [],
+    reviewNote: value.reviewNote ?? null,
+    reviewedByUserId: typeof value.reviewedByUserId === "number" ? value.reviewedByUserId : null,
+    reviewedAt: value.reviewedAt ? asDate(value.reviewedAt) : null,
+    soldAt: value.soldAt ? asDate(value.soldAt) : null,
+    cleanupAt: value.cleanupAt ? asDate(value.cleanupAt) : null,
+    createdAt: asDate(value.createdAt),
+    updatedAt: asDate(value.updatedAt),
+  };
+}
+
+async function allAppwriteMarketplaceRecords() {
+  return (await recordsFor("marketplaceListings")).map((record) => {
+    const listing = toMarketplaceListing(record);
+    return listing ? { record, listing } satisfies AppwriteMarketplaceRecord : null;
+  }).filter((item): item is AppwriteMarketplaceRecord => item !== null);
+}
+
+export async function listAppwriteMarketplaceListings(status?: AppwriteMarketplaceListing["status"]) {
+  const [listingRecords, userRecords] = await Promise.all([allAppwriteMarketplaceRecords(), allUserRecords()]);
+  const sellers = new Map(userRecords.map(toUser).filter((user): user is User => user !== null).map((user) => [user.id, user]));
+  return listingRecords
+    .filter(({ listing }) => !status || listing.status === status)
+    .sort((left, right) => right.listing.createdAt.getTime() - left.listing.createdAt.getTime())
+    .map(({ listing }) => {
+      const seller = sellers.get(listing.sellerUserId);
+      return { listing, seller: seller ? { id: seller.id, name: seller.displayName ?? seller.name, email: seller.email } : null };
+    });
+}
+
+export async function updateAppwriteMarketplaceListing(input: { listingId: string; status: AppwriteMarketplaceListing["status"]; reviewNote?: string | null; reviewerUserId: number }) {
+  const item = (await allAppwriteMarketplaceRecords()).find(({ listing }) => listing.id === input.listingId);
+  if (!item) throw new Error("Marketplace listing not found");
+  const now = new Date();
+  const updated: AppwriteMarketplaceListing = {
+    ...item.listing,
+    status: input.status,
+    reviewNote: input.reviewNote?.trim() || null,
+    reviewedByUserId: input.reviewerUserId,
+    reviewedAt: now,
+    updatedAt: now,
+  };
+  await request("PUT", `/databases/${databaseId()}/collections/${collectionId}/documents/${item.record.$id}`, {
+    data: { sourceTable: "marketplaceListings", sourceId: updated.id, payload: JSON.stringify(updated), sourceUpdatedAt: now.toISOString() },
+  });
+  return { success: true };
+}
+
+export async function deleteAppwriteMarketplaceListing(listingId: string) {
+  const item = (await allAppwriteMarketplaceRecords()).find(({ listing }) => listing.id === listingId);
+  if (!item) throw new Error("Marketplace listing not found");
+  await request("DELETE", `/databases/${databaseId()}/collections/${collectionId}/documents/${item.record.$id}`);
+  return { success: true };
+}
+
+export async function createAppwriteMarketplaceListing(input: AppwriteMarketplaceListingInput) {
+  if (!config()) throw new Error("Appwrite marketplace storage is unavailable");
+  const now = new Date();
+  const id = nanoid();
+  const listing = {
+    id,
+    sellerUserId: input.sellerUserId,
+    listingType: input.listingType,
+    // Seller submissions are published immediately; administrators can still hold,
+    // remove, or close any listing from the marketplace control panel.
+    status: "approved" as const,
+    game: input.game.trim(),
+    title: input.title.trim(),
+    rankLevel: input.rankLevel.trim(),
+    priceUsd: input.priceUsd ?? null,
+    description: input.description.trim(),
+    contactMethod: input.contactMethod.trim(),
+    telegramUsername: input.telegramUsername?.trim().replace(/^@/, "") || null,
+    screenshots: input.screenshots ?? [],
+    createdAt: now,
+    updatedAt: now,
+  };
+  await request("POST", `/databases/${databaseId()}/collections/${collectionId}/documents`, {
+    documentId: documentId(`marketplaceListings:${id}`),
+    data: {
+      sourceTable: "marketplaceListings",
+      sourceId: id,
+      payload: JSON.stringify(listing),
+      sourceUpdatedAt: now.toISOString(),
+    },
+  });
+  return { id, status: "approved" as const };
 }
 
 function toOrder(record: AppwriteRecord): AppwriteOrder | null {

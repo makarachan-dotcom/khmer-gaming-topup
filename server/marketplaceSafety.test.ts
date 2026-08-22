@@ -15,6 +15,8 @@ describe("marketplace safety rules", () => {
 
   it("accepts only owner-scoped private screenshot references for a new listing", () => {
     expect(hasOnlyOwnedMarketplaceScreenshotKeys(["marketplace-listings-private/42/proof-a.webp"], 42)).toBe(true);
+    expect(hasOnlyOwnedMarketplaceScreenshotKeys(["appwrite/zurs_media/marketplace-listings-private/42/proof-a.webp/file-1"], 42)).toBe(true);
+    expect(hasOnlyOwnedMarketplaceScreenshotKeys(["appwrite/zurs_media/marketplace-listings-private/17/proof-a.webp/file-1"], 42)).toBe(false);
     expect(hasOnlyOwnedMarketplaceScreenshotKeys(["marketplace-listings-private/17/proof-a.webp"], 42)).toBe(false);
     expect(hasOnlyOwnedMarketplaceScreenshotKeys(["https://example.test/raw-public-image.webp"], 42)).toBe(false);
   });

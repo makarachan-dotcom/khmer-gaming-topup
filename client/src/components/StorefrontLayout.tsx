@@ -4,7 +4,7 @@ import { AnimatedGlyph } from "@/components/AnimatedGlyph";
 import { OutlineLoader } from "@/components/OutlineLoader";
 import { trpc } from "@/lib/trpc";
 import { animate } from "animejs";
-import { ArrowUp, BarChart3, BadgeCheck, Crown, Eye, EyeOff, House, LogIn, ShieldCheck, Store, UserRound, WalletCards } from "lucide-react";
+import { ArrowUp, BarChart3, BadgeCheck, ChevronDown, CircleDollarSign, Crown, Eye, EyeOff, House, LogIn, ShieldCheck, Sparkles, Store, UserRound, WalletCards } from "lucide-react";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 
@@ -32,7 +32,8 @@ export default function StorefrontLayout({ children }: { children: ReactNode }) 
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [balanceVisible, setBalanceVisible] = useState(false);
   const wallet = trpc.wallet.summary.useQuery(undefined, { enabled: Boolean(user) });
-  const displayBalance = Number(wallet.data?.balanceKhr ?? 0).toLocaleString("km-KH", { maximumFractionDigits: 2 });
+  const displayedBalance = Number(wallet.data?.balanceKhr ?? 0).toLocaleString("km-KH", { maximumFractionDigits: 2 });
+  const balanceCurrency = wallet.data?.currency ?? "KHR";
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -63,15 +64,15 @@ export default function StorefrontLayout({ children }: { children: ReactNode }) 
           </Link>
 
           <nav className="hidden items-center gap-1 lg:flex" aria-label="Main navigation">
-            {navigation.map((item) => <Link key={item.href} href={item.href} className={cn("rounded-lg px-3.5 py-2 text-sm font-medium transition-colors", location === item.href ? "bg-indigo-50 text-indigo-700" : "text-slate-600 hover:bg-white/80 hover:text-slate-950")}>{item.label}</Link>)}
+            {navigation.map((item) => { const Icon = item.href === "/smm" ? BarChart3 : Store; return <Link key={item.href} href={item.href} className={cn("inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition-all hover:-translate-y-0.5", location === item.href ? "bg-indigo-50 text-indigo-700 shadow-sm" : "text-slate-600 hover:bg-white/80 hover:text-slate-950")}><Icon className="h-3.5 w-3.5" />{item.label}</Link>; })}
           </nav>
 
           <div className="flex items-center gap-1.5 sm:gap-2">
-            {user ? <button type="button" aria-pressed={balanceVisible} onClick={() => setBalanceVisible((visible) => !visible)} className={cn("balance-control inline-flex h-9 min-w-[5.5rem] items-center justify-center gap-1.5 rounded-xl border border-indigo-100 bg-white/75 px-2 text-indigo-800 shadow-sm hover:border-indigo-200 hover:bg-indigo-50/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2", balanceVisible && "balance-control--visible")} title="បង្ហាញ ឬលាក់សមតុល្យ ZURS Wallet"><WalletCards className="balance-wallet-icon h-4 w-4 shrink-0" strokeWidth={2.1} /><span className="balance-amount text-[10px] font-extrabold tabular-nums sm:text-xs" aria-live="polite">{wallet.isLoading ? "…" : balanceVisible ? `៛ ${displayBalance}` : "••••"}</span>{balanceVisible ? <Eye className="h-3.5 w-3.5 shrink-0" /> : <EyeOff className="h-3.5 w-3.5 shrink-0" />}</button> : null}
+            {user ? <div className="relative"><button type="button" onClick={() => setBalanceVisible((current) => !current)} aria-expanded={balanceVisible} aria-label={balanceVisible ? "លាក់សមតុល្យ" : "បង្ហាញសមតុល្យ"} className={cn("balance-control group inline-flex h-9 items-center gap-1.5 rounded-xl border border-emerald-100 bg-emerald-50/85 px-2.5 text-emerald-800 shadow-sm transition-all hover:-translate-y-0.5 hover:border-emerald-200 hover:bg-emerald-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 sm:px-3", balanceVisible && "balance-control--visible")}><span className="grid h-5 w-5 place-items-center rounded-lg bg-white text-emerald-600 shadow-sm"><WalletCards className="balance-wallet-icon h-3.5 w-3.5 transition-transform duration-300 group-hover:rotate-[-8deg]" /></span><span className="hidden text-left sm:block"><span className="block text-[8px] font-extrabold tracking-[0.12em] text-emerald-700/80">ZURS BALANCE</span><span className="-mt-0.5 block font-mono text-xs font-extrabold tabular-nums">{wallet.isLoading ? "…" : balanceVisible ? `៛ ${displayedBalance}` : "••••"}</span></span>{balanceVisible ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}<ChevronDown className={cn("hidden h-3 w-3 transition-transform sm:block", balanceVisible && "rotate-180")} /></button>{balanceVisible && <div className="absolute right-0 top-[calc(100%+0.5rem)] w-64 overflow-hidden rounded-2xl border border-emerald-100 bg-white p-3 shadow-xl shadow-slate-950/10"><div className="flex items-start gap-2"><div className="grid h-8 w-8 place-items-center rounded-xl bg-emerald-50 text-emerald-600"><CircleDollarSign className="h-4 w-4" /></div><div><p className="text-xs font-extrabold text-slate-900">សមតុល្យ ZURS Wallet</p><p className="mt-0.5 text-[10px] leading-4 text-slate-500">សមតុល្យនេះបង្ហាញតែទិន្នន័យ Wallet ដែលបានកត់ត្រាដោយប្រព័ន្ធ។</p></div></div><div className="mt-3 flex items-center justify-between rounded-xl bg-slate-950 px-3 py-2 text-white"><span className="text-[10px] font-bold text-slate-300">Available</span><span className="font-mono text-sm font-extrabold tabular-nums">៛ {displayedBalance} {balanceCurrency}</span></div></div>}</div> : null}
             <Link href="/account" className="hidden h-9 max-w-48 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-slate-700 hover:bg-white/70 sm:inline-flex"><UserRound className="h-4 w-4" /><span className="truncate">{accountLabel}</span></Link>
             {isOwnerAdmin ? <Link href="/admin" className="hidden h-9 items-center gap-1.5 rounded-lg bg-amber-50 px-3 text-xs font-bold text-amber-800 hover:bg-amber-100 lg:inline-flex"><Crown className="h-3.5 w-3.5" />Admin</Link> : null}
             {loading ? <span className="hidden h-9 items-center gap-1.5 px-2 text-xs font-semibold text-slate-400 sm:inline-flex"><OutlineLoader size={18} color="#64748b" />កំពុងពិនិត្យ…</span> : user ? <button type="button" onClick={() => logout()} className="hidden h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-sm font-bold text-white hover:bg-slate-800 sm:inline-flex"><LogIn className="h-3.5 w-3.5" />ចេញពីគណនី</button> : <a href={googleSignInHref} className="hidden h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-sm font-bold text-white hover:bg-slate-800 sm:inline-flex"><LogIn className="h-3.5 w-3.5" />ចូលគណនី</a>}
-            <div className="glass-status hidden h-8 items-center gap-1.5 rounded-full px-2.5 text-[10px] font-bold text-emerald-700 sm:flex"><AnimatedGlyph name="activity" size={18} color="#047857" />ZURS</div>
+            <div className="glass-status hidden h-8 items-center gap-1.5 rounded-full px-2.5 text-[10px] font-bold text-emerald-700 sm:flex"><AnimatedGlyph name="activity" size={18} color="#047857" />ZURS <Sparkles className="h-3 w-3 animate-pulse text-amber-500" /></div>
           </div>
         </div>
       </header>
