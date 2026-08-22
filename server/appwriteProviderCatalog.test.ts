@@ -16,11 +16,11 @@ describe("Appwrite provider catalog fallback", () => {
     process.env.APPWRITE_PROJECT_ID = "zurs-project";
     process.env.APPWRITE_API_KEY = "server-only-test-key";
     const records = new Map<string, Record<string, unknown>>();
-    const requests: Array<{ method?: string; body?: string }> = [];
+    const requests: Array<{ url: string; method?: string; body?: string }> = [];
     vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
       const url = String(input);
-      requests.push({ method: init?.method, body: String(init?.body ?? "") });
-      if (init?.method === "GET" && url.includes("?limit=")) return new Response(JSON.stringify({ documents: Array.from(records.values()), total: records.size }), { status: 200 });
+      requests.push({ url, method: init?.method, body: String(init?.body ?? "") });
+      if (init?.method === "GET" && url.includes("/documents?")) return new Response(JSON.stringify({ documents: Array.from(records.values()), total: records.size }), { status: 200 });
       const id = url.split("/").at(-1) ?? "";
       if (init?.method === "GET") return records.has(id) ? new Response(JSON.stringify(records.get(id)), { status: 200 }) : new Response("", { status: 404 });
       const parsed = JSON.parse(String(init?.body ?? "{}")) as { documentId?: string; data?: Record<string, unknown> };
@@ -43,5 +43,6 @@ describe("Appwrite provider catalog fallback", () => {
     const updated = (await getAppwriteProviderCatalog()).games[0]?.packages[0];
     expect(updated).toMatchObject({ basePriceUsd: "1.00", profitMarginPercent: "20", priceUsd: "1.20", isActive: true, featured: true });
     expect(requests.map((request) => request.body).join(" ")).not.toContain("server-only-test-key");
+    expect(requests.some((request) => request.url.includes("queries%5B%5D=limit%28100%29") && request.url.includes("queries%5B%5D=offset%280%29"))).toBe(true);
   });
 });

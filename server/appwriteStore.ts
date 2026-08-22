@@ -223,7 +223,11 @@ function userDocumentPath(openId: string) {
 async function allRecords() {
   const records: AppwriteRecord[] = [];
   for (let offset = 0; offset < 10_000; offset += RECORD_PAGE_SIZE) {
-    const data = await request("GET", `/databases/${databaseId()}/collections/${collectionId}/documents?limit=${RECORD_PAGE_SIZE}&offset=${offset}&total=true`) as AppwriteList | null;
+    const query = new URLSearchParams();
+    query.append("queries[]", `limit(${RECORD_PAGE_SIZE})`);
+    query.append("queries[]", `offset(${offset})`);
+    query.set("total", "true");
+    const data = await request("GET", `/databases/${databaseId()}/collections/${collectionId}/documents?${query.toString()}`) as AppwriteList | null;
     const page = data?.documents ?? [];
     records.push(...page);
     if (!data || page.length < RECORD_PAGE_SIZE || (typeof data.total === "number" && records.length >= data.total)) break;
