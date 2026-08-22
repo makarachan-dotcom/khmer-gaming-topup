@@ -9,7 +9,7 @@ type AppwriteList = { documents?: AppwriteRecord[]; total?: number };
 type AppwriteOrder = { id: string; userId: number; orderNumber: string; orderType: "topup" | "smm"; status: string; currency: string; subtotal: string; productName: string; details: unknown; createdAt: Date; updatedAt: Date };
 type AppwritePayment = { id: string; orderId: string; provider: string; status: string; amount: string; currency: string; createdAt: Date; updatedAt: Date; paidAt: Date | null; orderNumber: string; productName: string; orderStatus: string };
 export type AppwriteWalletTopup = { id: string; userId: number; referenceCode: string; provider: string; providerRequestId: string; providerTransactionId: string | null; status: "pending" | "paid" | "expired" | "failed"; amountKhr: string; paymentPayload: Record<string, unknown>; expiresAt: Date; paidAt: Date | null; creditedAt: Date | null; createdAt: Date; updatedAt: Date };
-export type AppwriteProviderAvailability = { hiddenGameIds: string[]; hiddenSmmServiceIds: string[]; updatedAt: Date };
+export type AppwriteProviderAvailability = { hiddenGameIds: string[]; hiddenSmmServiceIds: string[]; activeGameIds?: string[]; updatedAt: Date };
 export type AppwriteProviderCatalog = { games: Array<{ id: string; providerSourceId: string; titleKh: string; titleEn: string; packageSourceIds?: string[]; packages: Array<{ id: string; providerOfferSourceId?: string; amountLabel: string; basePriceUsd: string; profitMarginPercent: string; priceUsd: string; isActive: boolean; featured: boolean; providerAuthorized: true; providerSource: string }> }>; smm: Array<{ id: string; providerSourceId: string; platform: string; titleKh: string; titleEn: string; tiers: Array<{ id: string; quantity: number; basePriceUsd: string; profitMarginPercent: string; priceUsd: string; isActive: boolean; providerAuthorized: true; providerSource: string }> }> };
 type AppwriteProviderCatalogIndex = { gameSourceIds: string[]; smmSourceIds: string[]; updatedAt: string };
 
@@ -41,6 +41,7 @@ function parseProviderAvailability(record: AppwriteRecord | null) {
   return {
     hiddenGameIds: Array.isArray(value?.hiddenGameIds) ? value.hiddenGameIds.filter((id): id is string => typeof id === "string" && id.length <= 120) : [],
     hiddenSmmServiceIds: Array.isArray(value?.hiddenSmmServiceIds) ? value.hiddenSmmServiceIds.filter((id): id is string => typeof id === "string" && id.length <= 120) : [],
+    activeGameIds: Array.isArray(value?.activeGameIds) ? Array.from(new Set(value.activeGameIds.filter((id): id is string => typeof id === "string" && id.length <= 120))) : undefined,
     updatedAt: value?.updatedAt ? asDate(value.updatedAt) : new Date(0),
   } satisfies AppwriteProviderAvailability;
 }
@@ -51,12 +52,14 @@ export async function getAppwriteProviderAvailability() {
   return parseProviderAvailability(record?.sourceTable === "provider_availability" && record.sourceId === providerAvailabilitySourceId ? record : null);
 }
 
-export async function updateAppwriteProviderAvailability(input: { kind: "game" | "smm"; providerId: string; isActive: boolean }) {
+export async function updateAppwriteProviderAvailability(input: { kind: "game" | "smm"; providerId: string; isActive: boolean; legacyActiveGameIds?: string[] }) {
   if (!config()) throw new Error("Provider availability storage is unavailable");
   const current = await getAppwriteProviderAvailability();
   const source = input.kind === "game" ? current.hiddenGameIds : current.hiddenSmmServiceIds;
   const nextSource = input.isActive ? source.filter((id) => id !== input.providerId) : Array.from(new Set([...source, input.providerId]));
-  const next: AppwriteProviderAvailability = input.kind === "game" ? { ...current, hiddenGameIds: nextSource, updatedAt: new Date() } : { ...current, hiddenSmmServiceIds: nextSource, updatedAt: new Date() };
+  const currentActiveGames = current.activeGameIds ?? input.legacyActiveGameIds ?? [];
+  const nextActiveGames = input.kind === "game" ? (input.isActive ? Array.from(new Set([...currentActiveGames, input.providerId])) : currentActiveGames.filter((id) => id !== input.providerId)) : currentActiveGames;
+  const next: AppwriteProviderAvailability = input.kind === "game" ? { ...current, hiddenGameIds: nextSource, activeGameIds: nextActiveGames, updatedAt: new Date() } : { ...current, hiddenSmmServiceIds: nextSource, activeGameIds: current.activeGameIds, updatedAt: new Date() };
   const body = { data: { sourceTable: "provider_availability", sourceId: providerAvailabilitySourceId, payload: JSON.stringify(next), sourceUpdatedAt: next.updatedAt.toISOString() } };
   const path = providerAvailabilityDocumentPath();
   const existing = await request("GET", path) as AppwriteRecord | null;

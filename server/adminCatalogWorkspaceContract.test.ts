@@ -10,12 +10,12 @@ describe("admin catalog workspace", () => {
     const topup = fs.readFileSync(path.join(projectRoot, "client/src/pages/GameTopup.tsx"), "utf8");
 
     expect(pricing).toContain("CatalogInventoryControls");
-    expect(pricing).toContain("គ្រប់គ្រងផលិតផលទាំងអស់");
+    expect(pricing).toContain("បញ្ជីហ្គេម FazerCards ទាំងអស់");
+    expect(pricing).toContain("បន្ថែមចូលហាង");
     expect(pricing).toContain("onSetSelectedVisibility");
     expect(pricing).toContain("updateAvailabilityCache");
-    expect(pricing).toContain('useState<"all" | "active" | "hidden">("active")');
-    expect(pricing).toContain("បានដក product ចេញពីហាង និងរក្សាទុករួចរាល់");
-    expect(pricing).toContain("ដកចេញពីហាង");
+    expect(pricing).toContain('useState<"all" | "active" | "hidden">("all")');
+    expect(pricing).toContain("មិនទាន់ Add");
     expect(pricing).toContain("topup-event-full-ticket");
     expect(pricing).toContain("កំណត់តម្លៃ និង Margin លម្អិត");
     expect(pricing).not.toContain("slice(0, 60)");
