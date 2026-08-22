@@ -77,7 +77,10 @@ async function request(method: string, path: string, body?: unknown) {
     body: body === undefined ? undefined : JSON.stringify(body),
     signal: AbortSignal.timeout(20_000),
   });
-  if (response.status === 404) return null;
+  // A missing document is an expected read result. A 404 from a create, update,
+  // or delete request must surface as an error so the UI never claims an edit or
+  // seller submission was saved when it was not persisted.
+  if (response.status === 404 && method === "GET") return null;
   if (!response.ok) throw new Error(`Appwrite user store request failed with HTTP ${response.status}`);
   return response.status === 204 ? {} : response.json();
 }

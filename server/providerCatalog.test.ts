@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { balanceSocialProviderServices, fetchProviderGameDetails, fetchProviderGames, fetchProviderPackages, fetchSmmProviderServices, getProviderCatalogStatus, submitSmmProviderOrder, validateProviderPlayerIdentity } from "./providerCatalog";
+import { balanceSocialProviderServices, fetchProviderGameDetails, fetchProviderGames, fetchProviderPackages, fetchSmmProviderServices, getProviderCatalogStatus, isThailandProviderProduct, submitSmmProviderOrder, validateProviderPlayerIdentity } from "./providerCatalog";
 
 const originalEndpoint = process.env.FZR_CARDS_API_BASE_URL;
 const originalApiKey = process.env.FZR_CARDS_API_KEY;
@@ -81,6 +81,12 @@ describe("provider catalog", () => {
   it("balances real social categories instead of filling the visible catalog with one platform", () => {
     const services = balanceSocialProviderServices([{ name: "Facebook Likes A", category: "Facebook" }, { name: "Facebook Likes B", category: "Facebook" }, { name: "TikTok Views", category: "TikTok" }, { name: "Instagram Followers", category: "Instagram" }], 4);
     expect(services.map((service) => service.category)).toEqual(["Facebook", "Instagram", "TikTok", "Facebook"]);
+  });
+
+  it("recognizes Thailand markers for exclusion without matching unrelated records", () => {
+    expect(isThailandProviderProduct("Arena of Valor (TH) Region: Thailand")).toBe(true);
+    expect(isThailandProviderProduct("บริการ ไทย Facebook followers")).toBe(true);
+    expect(isThailandProviderProduct("Arena of Valor (ID) Region: Indonesia")).toBe(false);
   });
 
   it("submits a paid SMM fulfillment request only through the server-side SMMGlob add action", async () => {

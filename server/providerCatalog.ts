@@ -88,6 +88,10 @@ export type ProviderAvailabilityCatalog = { games: Array<{ id: string; name: str
 
 const socialPlatformOrder = ["facebook", "instagram", "tiktok", "youtube", "telegram"] as const;
 
+export function isThailandProviderProduct(text: string) {
+  return /(?:\bthailand\b|\bthai\b|ไทย|ประเทศไทย|🇹🇭|(?:^|[_\s(])th(?:$|[_\s)]))/i.test(text);
+}
+
 export function balanceSocialProviderServices<T extends { name: string; category: string }>(services: T[], limit = 120) {
   const buckets = new Map<string, T[]>(socialPlatformOrder.map((platform) => [platform, []]));
   const fallback: T[] = [];
@@ -167,7 +171,7 @@ export async function fetchProviderGames(options: { includeHidden?: boolean } = 
     const payload = fzrTopupsSchema.safeParse(response);
     if (!payload.success) return { status: "error", games: [] };
     const hidden = new Set(availability?.hiddenGameIds ?? []);
-    return { status: "ready", games: payload.data.items.filter((item) => !hidden.has(item.category_id)).map((item) => ({ id: item.category_id, name: item.name, provider: "FZR Cards", requiredFields: [] })) };
+    return { status: "ready", games: payload.data.items.filter((item) => !hidden.has(item.category_id) && !isThailandProviderProduct(`${item.category_id} ${item.name} ${item.note ?? ""}`)).map((item) => ({ id: item.category_id, name: item.name, provider: "FZR Cards", requiredFields: [] })) };
   } catch { return { status: "error", games: [] }; }
 }
 
@@ -179,6 +183,7 @@ export async function fetchProviderGameDetails(gameId: string): Promise<Provider
     if (availability.hiddenGameIds.includes(gameId)) return { status: "unavailable", game: null, packages: [] };
     const payload = fzrOffersSchema.safeParse(response);
     if (!payload.success || payload.data.category_id !== gameId) return { status: "error", game: null, packages: [] };
+    if (isThailandProviderProduct(`${gameId} ${payload.data.name}`)) return { status: "unavailable", game: null, packages: [] };
     const fields = providerFields(payload.data.fields);
     return { status: "ready", game: { id: gameId, name: payload.data.name, logoUrl: payload.data.imageurl, provider: "FZR Cards", requiredFields: fields }, packages: providerPackages(gameId, payload.data.offers) };
   } catch { return { status: "error", game: null, packages: [] }; }
@@ -228,7 +233,7 @@ export async function fetchSmmProviderServices(options: { includeHidden?: boolea
     const payload = z.array(z.unknown()).max(20_000).safeParse(response);
     if (!payload.success) return { status: "error", services: [] };
     const hidden = new Set(availability?.hiddenSmmServiceIds ?? []);
-    const services = balanceSocialProviderServices(payload.data.map((item) => smmGlobServiceSchema.safeParse(item)).filter((item): item is z.ZodSafeParseSuccess<z.infer<typeof smmGlobServiceSchema>> => item.success).map((item) => item.data).filter((service) => /(facebook|instagram|tiktok|youtube|telegram)/i.test(`${service.category} ${service.name}`) && !hidden.has(service.service)));
+    const services = balanceSocialProviderServices(payload.data.map((item) => smmGlobServiceSchema.safeParse(item)).filter((item): item is z.ZodSafeParseSuccess<z.infer<typeof smmGlobServiceSchema>> => item.success).map((item) => item.data).filter((service) => /(facebook|instagram|tiktok|youtube|telegram)/i.test(`${service.category} ${service.name}`) && !isThailandProviderProduct(`${service.category} ${service.name}`) && !hidden.has(service.service)));
     return { status: "ready", services: services.map((service) => ({ providerServiceId: service.service, name: service.name, category: service.category, serviceType: service.type, rateUsdPerThousand: Number(service.rate).toFixed(4), min: service.min, max: service.max, refill: Boolean(service.refill), cancel: Boolean(service.cancel), dripfeed: Boolean(service.dripfeed) })) };
   } catch { return { status: "error", services: [] }; }
 }
@@ -280,7 +285,7 @@ export async function fetchFzrProviderSyncSnapshot(): Promise<FzrProviderSyncSna
     if (!response) return { status: "unavailable", games: [] };
     const catalog = fzrTopupsSchema.safeParse(response);
     if (!catalog.success) return { status: "error", games: [] };
-    const details = await mapWithConcurrency(catalog.data.items, 6, async (item) => {
+    const details = await mapWithConcurrency(catalog.data.items.filter((item) => !isThailandProviderProduct(`${item.category_id} ${item.name} ${item.note ?? ""}`)), 6, async (item) => {
       const offerResponse = await fzrRequest(`/api/v2/topups/offers?category_id=${encodeURIComponent(item.category_id)}&include_ui=1`);
       const offers = fzrOffersSchema.safeParse(offerResponse);
       if (!offers.success || offers.data.category_id !== item.category_id) return null;

@@ -182,3 +182,10 @@
 - [x] Add clear, reliable administrator controls to deactivate and reactivate authorized game and SMM products, with accurate customer visibility.
 - [x] Clarify boost-service captions and confirmation copy using only provider-backed service details.
 - [x] Test and repair the protected account-sale submission request flow, retaining pending-admin review before a listing becomes public.
+- [x] Replace generic SMM platform glyphs with official platform brand marks and verify their rendering on mobile.
+- [x] Populate provider game-list cards with provider-approved official artwork, and apply accessible right-to-left marquee motion only to overflowing game titles.
+- [x] Exclude all Thailand-related provider Game and SMM products from both customer and Admin catalog views without adding replacement products.
+- [ ] Verify the branded, filtered catalog release on zurs.vercel.app after publication.
+- [x] Repair seller-account request persistence so a successful customer submission is visible immediately in the protected Admin review queue.
+- [x] Repair Admin provider catalog-edit controls so availability changes have a durable backend policy and clear actionable error states.
+- [x] Add end-to-end regression coverage for seller submission, Admin review visibility, and Admin product availability changes before publication.

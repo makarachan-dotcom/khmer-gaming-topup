@@ -23,13 +23,15 @@ export function ProviderGameArtwork({ name, logoUrl, className, iconClassName }:
 
 export function ProviderGameTitle({ name, className }: { name: string; className?: string }) {
   const ref = useRef<HTMLSpanElement>(null);
+  const measureRef = useRef<HTMLSpanElement>(null);
   const [overflows, setOverflows] = useState(false);
   const country = countryFlagForRegion(name);
 
   useEffect(() => {
     const node = ref.current;
-    if (!node) return;
-    const checkOverflow = () => setOverflows(node.scrollWidth > node.clientWidth + 1);
+    const measure = measureRef.current;
+    if (!node || !measure) return;
+    const checkOverflow = () => setOverflows(measure.scrollWidth > node.clientWidth + 1);
     checkOverflow();
     const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(checkOverflow);
     observer?.observe(node);
@@ -37,6 +39,6 @@ export function ProviderGameTitle({ name, className }: { name: string; className
     return () => { observer?.disconnect(); window.removeEventListener("resize", checkOverflow); };
   }, [name]);
 
-  const title = <><span className="inline-flex items-center gap-1">{country ? <span className="country-flag" aria-hidden="true">{country.flag}</span> : null}<span>{name}</span></span></>;
-  return <span ref={ref} title={name} aria-label={name} className={cn("game-title-marquee-wrap block min-w-0 overflow-hidden whitespace-nowrap", className)}>{overflows ? <span className="game-title-marquee-track"><span>{title}</span><span aria-hidden="true">{title}</span></span> : <span className="block truncate">{title}</span>}</span>;
+  const title = <span className="inline-flex items-center gap-1">{country ? <span className="country-flag" aria-hidden="true">{country.flag}</span> : null}<span>{name}</span></span>;
+  return <span ref={ref} title={name} aria-label={name} className={cn("game-title-marquee-wrap relative block min-w-0 overflow-hidden whitespace-nowrap", className)}><span ref={measureRef} aria-hidden="true" className="game-title-measure">{title}</span>{overflows ? <span className="game-title-marquee-track"><span>{title}</span><span aria-hidden="true">{title}</span></span> : <span className="block truncate">{title}</span>}</span>;
 }
