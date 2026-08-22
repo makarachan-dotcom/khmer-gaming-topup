@@ -10,7 +10,7 @@ describe("provider game identity", () => {
   });
 
   it("uses the managed copy of provider-supplied Mobile Legends artwork when its origin blocks browser rendering", () => {
-    expect(resolveProviderGameLogo("Mobile Legends (Global)", "https://reseller.fazercards.com/blocked.webp")).toBe("/manus-storage/fzr-mobile-legends-global_d1d5e868.webp");
+    expect(resolveProviderGameLogo("Mobile Legends (Global)", "https://reseller.fazercards.com/blocked.webp")).toBe("https://khmergame-girzfgts.manus.space/manus-storage/fzr-mobile-legends-global_d1d5e868.webp");
     expect(resolveProviderGameLogo("Acecraft", "https://provider.example/acecraft.png")).toBe("https://provider.example/acecraft.png");
   });
 

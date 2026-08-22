@@ -217,3 +217,4 @@
 - [x] Require a successful server-side RapidAPI-supported player-ID check before packages can be browsed; retain strict blocking on lookup error or not-found, while allowing unsupported providers only after clear no-refund ID-confirmation safeguards.
 - [x] Save successfully verified player IDs, provide a safe selector for multiple previous IDs, and animate only user-confirmed autofill without exposing verified player names or enabling purchase.
 - [x] Recheck and repair shared LoadingV2 outline animation rendering across loading states, including transparent presentation, non-stuck completion behavior, and reduced-motion fallback.
+- [ ] Verify the exact production deployment and cache path serving zurs.vercel.app, then correct any mismatch preventing the latest selected-package, artwork, verified-ID, saved-ID, or LoadingV2 updates from being visible to the owner.

@@ -12,7 +12,7 @@ type ArtworkProps = {
 };
 
 const managedProviderArtwork: Array<{ matches: RegExp; url: string }> = [
-  { matches: /^mobile legends/i, url: "/manus-storage/fzr-mobile-legends-global_d1d5e868.webp" },
+  { matches: /^mobile legends/i, url: "https://khmergame-girzfgts.manus.space/manus-storage/fzr-mobile-legends-global_d1d5e868.webp" },
 ];
 
 export function hasProviderApprovedGameLogo(logoUrl?: string) {
