@@ -59,17 +59,17 @@ describe("provider catalog", () => {
     expect(games).toEqual([{ id: "public-game", name: "Public Game", region: "Global", provider: "FZR Cards", requiredFields: [] }]);
   });
 
-  it("shows the complete paginated FazerCards inventory only to admin while preserving legacy public games until they are added", async () => {
+  it("shows complete paginated FazerCards inventory only to admin and never automatically publicizes the first provider page", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "server-only-key";
     vi.stubGlobal("fetch", vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, kind: "topup", items: [{ category_id: "legacy-game", name: "Legacy Game" }], meta: { next_cursor: "page-2", has_more: true } }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, kind: "topup", items: [{ category_id: "8_ball_pool", name: "8 Ball Pool" }], meta: { next_cursor: "page-2", has_more: true } }) })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, kind: "topup", items: [{ category_id: "new-pubg", name: "PUBG Mobile" }], meta: { next_cursor: null, has_more: false } }) })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, kind: "topup", items: [{ category_id: "legacy-game", name: "Legacy Game" }], meta: { next_cursor: "page-2", has_more: true } }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, kind: "topup", items: [{ category_id: "8_ball_pool", name: "8 Ball Pool" }], meta: { next_cursor: "page-2", has_more: true } }) })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, kind: "topup", items: [{ category_id: "new-pubg", name: "PUBG Mobile" }], meta: { next_cursor: null, has_more: false } }) }));
 
-    await expect(fetchProviderGames()).resolves.toEqual({ status: "ready", games: [{ id: "legacy-game", name: "Legacy Game", region: "Global", provider: "FZR Cards", requiredFields: [] }] });
-    await expect(getProviderAvailabilityCatalog()).resolves.toMatchObject({ games: [{ id: "legacy-game", isActive: true }, { id: "new-pubg", isActive: false }] });
+    await expect(fetchProviderGames()).resolves.toEqual({ status: "ready", games: [{ id: "8_ball_pool", name: "8 Ball Pool", region: "Global", provider: "FZR Cards", requiredFields: [] }] });
+    await expect(getProviderAvailabilityCatalog()).resolves.toMatchObject({ games: [{ id: "8_ball_pool", isActive: true }, { id: "new-pubg", isActive: false }] });
   });
 
   it("returns provider-required fields and official game imagery only after a selected game is requested", async () => {
@@ -78,7 +78,7 @@ describe("provider catalog", () => {
     vi.stubGlobal("fetch", vi.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, kind: "topup", items: [{ category_id: "acecraft", name: "Acecraft" }], meta: { next_cursor: null, has_more: false } }) })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "acecraft", name: "Acecraft", imageurl: "https://cdn.example.test/acecraft.png", fields: [{ key: "user_id", label: "User ID", type: "text" }], offers: [{ offer_id: "80_diamonds", name: "80 Diamonds", price_usd: "0.9864" }] }) }));
-    await expect(fetchProviderGameDetails("acecraft")).resolves.toEqual({ status: "ready", game: { id: "acecraft", name: "Acecraft", region: "Global", logoUrl: "https://cdn.example.test/acecraft.png", provider: "FZR Cards", requiredFields: [{ key: "user_id", label: "User ID", required: true, kind: "text" }] }, packages: [{ id: "acecraft:80_diamonds", label: "80 Diamonds", amountLabel: "80 Diamonds", priceLabel: "$0.99", provider: "FZR Cards", paymentMethods: ["khqr", "bank"] }] });
+    await expect(fetchProviderGameDetails("acecraft", { includeInactive: true })).resolves.toEqual({ status: "ready", game: { id: "acecraft", name: "Acecraft", region: "Global", logoUrl: "https://cdn.example.test/acecraft.png", provider: "FZR Cards", requiredFields: [{ key: "user_id", label: "User ID", required: true, kind: "text" }] }, packages: [{ id: "acecraft:80_diamonds", label: "80 Diamonds", amountLabel: "80 Diamonds", priceLabel: "$0.99", provider: "FZR Cards", paymentMethods: ["khqr", "bank"] }] });
   });
 
   it("returns authorized package UI for an admin preview without submitting a player identity", async () => {

@@ -209,8 +209,25 @@ async function fetchFzrTopupCatalog(): Promise<FzrTopupCatalog> {
   } catch { return { status: "error", items: [], legacyPublicIds: [] }; }
 }
 
-function publicProviderGameIds(availability: Awaited<ReturnType<typeof providerAvailability>>, legacyPublicIds: string[]) {
-  return new Set(availability.activeGameIds ?? legacyPublicIds.filter((id) => !availability.hiddenGameIds.includes(id)));
+/** Initial storefront baseline from the owner-approved public catalog before the Admin allowlist was persisted. */
+export const initialApprovedPublicGameIds = [
+  "8_ball_pool",
+  "blood_strike",
+  "eafc_mobile_kh",
+  "frag_pro_shooter",
+  "free_fire_my_sg",
+  "honor_of_kings",
+  "magic_chess_gogo_global",
+  "mobile_legends_global",
+  "mobile_legends_promo",
+  "mobile_legends_special",
+  "pubg_mobile_auto",
+  "pubg_mobile_fast",
+] as const;
+
+function publicProviderGameIds(availability: Awaited<ReturnType<typeof providerAvailability>>) {
+  const approvedIds = availability.activeGameIds ?? initialApprovedPublicGameIds;
+  return new Set(approvedIds.filter((id) => !availability.hiddenGameIds.includes(id)));
 }
 
 function asProviderGames(items: FzrTopupItem[]) {
@@ -219,8 +236,7 @@ function asProviderGames(items: FzrTopupItem[]) {
 
 /** During a transient FZR outage, preserve only the owner-approved public IDs from the persisted catalog. */
 export function cachedPublicProviderGames(catalog: AppwriteProviderCatalog, availability: Awaited<ReturnType<typeof providerAvailability>>) {
-  if (!availability.activeGameIds) return [];
-  const activeIds = new Set(availability.activeGameIds);
+  const activeIds = publicProviderGameIds(availability);
   const hiddenIds = new Set(availability.hiddenGameIds);
   return catalog.games.flatMap((game) => {
     const providerId = game.providerSourceId?.trim();
@@ -231,7 +247,7 @@ export function cachedPublicProviderGames(catalog: AppwriteProviderCatalog, avai
 }
 
 async function cachedPublicProviderGamesDuringOutage(availability: Awaited<ReturnType<typeof providerAvailability>>) {
-  if (!availability.activeGameIds?.length) return [];
+  if (!publicProviderGameIds(availability).size) return [];
   try { return cachedPublicProviderGames(await getAppwriteProviderCatalog(), availability); } catch { return []; }
 }
 
@@ -246,7 +262,7 @@ export async function fetchProviderGames(options: { includeInactive?: boolean } 
   }
   const games = asProviderGames(catalog.items);
   if (options.includeInactive) return { status: "ready", games };
-  const activeIds = publicProviderGameIds(availability, catalog.legacyPublicIds);
+  const activeIds = publicProviderGameIds(availability);
   return { status: "ready", games: games.filter((game) => activeIds.has(game.id) && !availability.hiddenGameIds.includes(game.id)) };
 }
 
@@ -389,7 +405,7 @@ export async function fetchSmmProviderServices(options: { includeHidden?: boolea
 
 export async function getProviderAvailabilityCatalog(): Promise<ProviderAvailabilityCatalog> {
   const [catalog, smmResponse, availability] = await Promise.all([fetchFzrTopupCatalog(), fetchSmmProviderServices({ includeHidden: true }), providerAvailability()]);
-  const activeGames = catalog.status === "ready" ? publicProviderGameIds(availability, catalog.legacyPublicIds) : new Set<string>();
+  const activeGames = catalog.status === "ready" ? publicProviderGameIds(availability) : new Set<string>();
   const hiddenSmm = new Set(availability.hiddenSmmServiceIds);
   return {
     games: catalog.status === "ready" ? asProviderGames(catalog.items).map((game) => ({ id: game.id, name: game.name, isActive: activeGames.has(game.id) && !availability.hiddenGameIds.includes(game.id) })) : [],
@@ -404,7 +420,7 @@ export async function setProviderAvailability(input: { kind: "game" | "smm"; pro
   if (catalog.status !== "ready") throw new Error("FZR Cards catalog is currently unavailable");
   const validGameIds = new Set(asProviderGames(catalog.items).map((game) => game.id));
   if (!validGameIds.has(input.providerId)) throw new Error("Selected game is not available from FZR Cards");
-  const legacyActiveGameIds = availability.activeGameIds ?? catalog.legacyPublicIds.filter((id) => !availability.hiddenGameIds.includes(id));
+  const legacyActiveGameIds = availability.activeGameIds ?? initialApprovedPublicGameIds.filter((id) => !availability.hiddenGameIds.includes(id));
   return updateAppwriteProviderAvailability({ ...input, legacyActiveGameIds });
 }
 
