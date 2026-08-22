@@ -2,7 +2,6 @@ import StorefrontLayout from "@/components/StorefrontLayout";
 import { AnimatedGlyph } from "@/components/AnimatedGlyph";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { OutlineLoader } from "@/components/OutlineLoader";
-import { FloatingParticles } from "@/components/FloatingParticles";
 import {
   ProviderGameArtwork,
   ProviderGameRegion,
@@ -15,14 +14,9 @@ import {
 } from "@/lib/providerPresentation";
 import { trpc } from "@/lib/trpc";
 import {
-  ArrowRight,
-  Diamond,
-  Gamepad2,
   Image as ImageIcon,
-  Megaphone,
   Search,
   ShieldAlert,
-  ShieldCheck,
   Video,
   X,
 } from "lucide-react";
@@ -30,69 +24,20 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
 import { gameTopupPath } from "./GameTopup";
 
-const categories = [
-  { icon: Diamond, label: "ពេជ្យ / Diamonds" },
-  { icon: Gamepad2, label: "Game Top-up" },
-  { icon: Megaphone, label: "SMM Services" },
-  { icon: ShieldCheck, label: "Verified Game Accounts" },
-];
-
 export default function Home() {
   return (
     <StorefrontLayout>
       <main>
         <section className="container pt-5 sm:pt-10">
-          <div className="homepage-hero premium-shine relative overflow-hidden rounded-[1.5rem] bg-slate-950 px-5 py-8 text-white shadow-[0_24px_70px_-34px_rgba(15,23,42,0.82)] sm:rounded-[2rem] sm:px-10 sm:py-14">
-            <div
-              aria-hidden="true"
-              className="homepage-orb absolute -right-20 -top-24 h-64 w-64 rounded-full bg-indigo-500/25 blur-3xl"
+          <div className="homepage-banner overflow-hidden rounded-[1.5rem] bg-transparent sm:rounded-[2rem]">
+            <img
+              src="/zurs-banner.png"
+              alt="ZURS STORE — Topup Diamond and SMM"
+              className="block h-auto w-full"
+              loading="eager"
+              fetchPriority="high"
+              decoding="async"
             />
-            <div
-              aria-hidden="true"
-              className="homepage-orb-delayed absolute -bottom-24 left-[38%] h-48 w-48 rounded-full bg-violet-500/15 blur-3xl"
-            />
-            <FloatingParticles />
-            <div className="relative max-w-3xl">
-              <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.07] px-3 py-1.5 text-[10px] font-bold tracking-[0.14em] text-indigo-100">
-                <ShieldCheck className="h-3.5 w-3.5 text-indigo-200" />
-                ZURS STORE · GAMING &amp; DIGITAL
-              </p>
-              <h1 className="mt-4 font-display text-[2rem] font-bold leading-[1.12] tracking-tight sm:text-5xl">
-                ទិញពេជ្យ និង{" "}
-                <span className="text-indigo-200">Top-up ហ្គេម</span>
-                <br className="hidden sm:block" /> របស់អ្នកនៅទីនេះ។
-              </h1>
-              <p className="mt-4 max-w-2xl text-[13px] leading-6 text-slate-300 sm:text-base sm:leading-7">
-                ZURS STORE ជាហាងសេវាឌីជីថលសម្រាប់អ្នកលេងហ្គេមនៅកម្ពុជា។
-                ជ្រើសហ្គេម បំពេញព័ត៌មានគណនីឲ្យត្រឹមត្រូវ
-                និងពិនិត្យកញ្ចប់សេវាមុនបន្តការទូទាត់។
-              </p>
-              <div className="mt-5 flex flex-wrap gap-2">
-                {categories.map(({ icon: Icon, label }) => (
-                  <span
-                    key={label}
-                    className="hero-chip inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.08] px-3 py-1.5 text-[11px] font-semibold text-indigo-50"
-                  >
-                    <Icon className="hero-chip-icon h-3.5 w-3.5 text-indigo-200" />
-                    {label}
-                  </span>
-                ))}
-              </div>
-              <div className="mt-6 flex flex-wrap gap-3">
-                <a
-                  href="#topup-games"
-                  className="homepage-primary-action inline-flex h-11 items-center gap-2 rounded-xl bg-white px-4 text-sm font-bold text-slate-950"
-                >
-                  ជ្រើសហ្គេម Top-up <ArrowRight className="h-4 w-4" />
-                </a>
-                <Link
-                  href="/marketplace"
-                  className="inline-flex h-11 items-center rounded-xl border border-white/20 bg-white/[0.05] px-4 text-sm font-semibold text-white transition-colors hover:bg-white/[0.12]"
-                >
-                  មើលទីផ្សារគណនី
-                </Link>
-              </div>
-            </div>
           </div>
         </section>
         <HomepageMedia />
