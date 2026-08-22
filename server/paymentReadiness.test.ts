@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { getAutomaticPaymentReadiness, requireAutomaticPaymentReady } from "./paymentReadiness";
 
-const keys = ["TOANCHETPAY_MERCHANT_ID", "TOANCHETPAY_API_KEY", "TOANCHETPAY_API_URL", "TOANCHETPAY_WEBHOOK_SECRET"] as const;
+const keys = ["BAKONG_API_TOKEN", "BAKONG_ACCOUNT_ID", "BAKONG_MERCHANT_NAME", "BAKONG_MERCHANT_CITY", "BAKONG_MERCHANT_PHONE", "BAKONG_STORE_LABEL"] as const;
 const original = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
 
 afterEach(() => {
@@ -15,11 +15,13 @@ describe("automatic payment readiness", () => {
     expect(() => requireAutomaticPaymentReady()).toThrow("Purchases are temporarily disabled");
   });
 
-  it("reports ready only when the complete automatic-payment credential set exists", () => {
-    process.env.TOANCHETPAY_MERCHANT_ID = "merchant";
-    process.env.TOANCHETPAY_API_KEY = "key";
-    process.env.TOANCHETPAY_API_URL = "https://payment.example.test";
-    process.env.TOANCHETPAY_WEBHOOK_SECRET = "webhook";
+  it("reports ready only when the complete Bakong merchant configuration exists", () => {
+    process.env.BAKONG_API_TOKEN = "token";
+    process.env.BAKONG_ACCOUNT_ID = "merchant@bkrt";
+    process.env.BAKONG_MERCHANT_NAME = "ZURS STORE";
+    process.env.BAKONG_MERCHANT_CITY = "Phnom Penh";
+    process.env.BAKONG_MERCHANT_PHONE = "099383360";
+    process.env.BAKONG_STORE_LABEL = "ZURS";
     expect(getAutomaticPaymentReadiness()).toEqual({ ready: true, reason: "ready" });
   });
 });

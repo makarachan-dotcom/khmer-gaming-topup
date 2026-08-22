@@ -3,13 +3,14 @@ import { createHash, randomBytes } from "node:crypto";
 import { drizzle } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
 import {
-  adminRoleAudits, gamePackages, gameProducts, gmailSenderConnections, InsertUser, marketplaceContacts, marketplaceDisclosureRequests, marketplaceEvidenceAccessLogs, marketplaceFavorites, marketplaceFraudReports, marketplaceListings, marketplaceVerificationEvidence, marketplaceVerifications, orders, orderStatusEvents, orderSupportTickets, paymentTransactions, savedPlayerIds, siteContent, smmServices, smmTiers, User, users, welcomeEmailDeliveries,
+  adminRoleAudits, customerWallets, gamePackages, gameProducts, gmailSenderConnections, InsertUser, marketplaceContacts, marketplaceDisclosureRequests, marketplaceEvidenceAccessLogs, marketplaceFavorites, marketplaceFraudReports, marketplaceListings, marketplaceVerificationEvidence, marketplaceVerifications, orders, orderStatusEvents, orderSupportTickets, paymentTransactions, savedPlayerIds, siteContent, smmServices, smmTiers, User, users, welcomeEmailDeliveries,
 } from "../drizzle/schema";
 import { getAppwriteCustomerOrders, getAppwriteCustomerPaymentHistory, getAppwriteUserByEmail, getAppwriteUserByOpenId, isAppwriteStoreConfigured, updateAppwriteUserDisplayName, upsertAppwriteUser } from "./appwriteStore";
 import { buildOrderNumber, isSingleAdminEmail } from "./storefrontDomain";
 import { validateAdminRoleChange } from "./adminRoles";
 import { buildEvidenceRetentionAuditReason, canApproveMarketplaceVerification, hasOnlyOwnedMarketplaceScreenshotKeys, type DisclosureRequestStatus, type FraudReportStatus } from "./marketplaceSafety";
 import { requireAutomaticPaymentReady } from "./paymentReadiness";
+import { checkBakongKhqrPayment, createBakongKhqrPayment } from "./bakongKhqr";
 import type { FzrProviderSyncSnapshot, SmmProviderCatalogResponse } from "./providerCatalog";
 import { submitSmmProviderOrder } from "./providerCatalog";
 
@@ -104,6 +105,15 @@ export async function updateUserDisplayName(input: { userId: number; displayName
   if (!db) { if (isAppwriteStoreConfigured()) return updateAppwriteUserDisplayName(input.userId, input.displayName); throw new Error("Database unavailable"); }
   await db.update(users).set({ displayName: input.displayName }).where(eq(users.id, input.userId));
   return { displayName: input.displayName };
+}
+
+export async function getCustomerWalletSummary(userId: number) {
+  const db = await getDb();
+  if (!db) return { balanceKhr: "0.00", currency: "KHR" as const, available: false };
+  const existing = await db.select().from(customerWallets).where(eq(customerWallets.userId, userId)).limit(1);
+  if (existing[0]) return { balanceKhr: String(existing[0].balanceKhr), currency: "KHR" as const, available: true };
+  await db.insert(customerWallets).values({ userId, balanceKhr: "0.00" }).onDuplicateKeyUpdate({ set: { userId } });
+  return { balanceKhr: "0.00", currency: "KHR" as const, available: true };
 }
 
 export async function getGameCatalog() {
@@ -274,12 +284,17 @@ export async function beginStagedPayment(input: { orderId: string; userId: numbe
   const order = await db.select().from(orders).where(and(eq(orders.id, input.orderId), eq(orders.userId, input.userId))).limit(1);
   if (!order[0]) throw new Error("Order not found");
   if (["paid", "delivered", "failed", "expired", "refunded"].includes(order[0].status)) throw new Error("This order cannot begin a payment session");
-  const existing = await db.select().from(paymentTransactions).where(eq(paymentTransactions.orderId, input.orderId)).limit(1);
-  const transaction = existing[0] ?? { id: nanoid(), orderId: input.orderId, provider: "toanchetpay_staged", status: "pending" as const, amount: order[0].subtotal, currency: order[0].currency, checkoutUrl: `/checkout/${input.orderId}` };
-  if (!existing[0]) await db.insert(paymentTransactions).values(transaction);
+  const existing = await db.select().from(paymentTransactions).where(and(eq(paymentTransactions.orderId, input.orderId), eq(paymentTransactions.provider, "bakong_khqr"))).orderBy(desc(paymentTransactions.createdAt)).limit(1);
+  const existingData = existing[0]?.callbackPayload && typeof existing[0].callbackPayload === "object" ? existing[0].callbackPayload as Record<string, unknown> : null;
+  const canReuse = existing[0] && existing[0].status === "pending" && existing[0].expiresAt && existing[0].expiresAt.getTime() > Date.now() && typeof existingData?.qrImageDataUrl === "string" && typeof existingData.bakongMd5 === "string";
+  const currency = order[0].currency === "KHR" ? "KHR" : "USD" as const;
+  const generated = canReuse ? null : await createBakongKhqrPayment({ trackingCode: order[0].trackingCode, amount: String(order[0].subtotal), currency });
+  const transaction = existing[0] && canReuse ? existing[0] : { id: nanoid(), orderId: input.orderId, provider: "bakong_khqr", providerRequestId: generated!.md5, status: "pending" as const, amount: order[0].subtotal, currency, checkoutUrl: generated!.deeplink ?? `/checkout/${input.orderId}`, callbackPayload: { bakongMd5: generated!.md5, qrImageDataUrl: generated!.qrImageDataUrl, deeplink: generated!.deeplink }, expiresAt: generated!.expiresAt };
+  if (!canReuse) await db.insert(paymentTransactions).values(transaction);
   if (order[0].status !== "awaiting_payment") await appendOrderStatusEvent({ orderId: input.orderId, eventType: "payment_session_created", status: "awaiting_payment", actorType: "system", messageKh: statusMessageKh("awaiting_payment") });
   await db.update(orders).set({ status: "awaiting_payment" }).where(eq(orders.id, input.orderId));
-  return { order: { id: order[0].id, orderNumber: order[0].orderNumber, trackingCode: order[0].trackingCode, productName: order[0].productName, subtotal: order[0].subtotal, status: "awaiting_payment" as const }, payment: { id: transaction.id, provider: transaction.provider, status: transaction.status, checkoutUrl: transaction.checkoutUrl } };
+  const payload = transaction.callbackPayload && typeof transaction.callbackPayload === "object" ? transaction.callbackPayload as Record<string, unknown> : {};
+  return { order: { id: order[0].id, orderNumber: order[0].orderNumber, trackingCode: order[0].trackingCode, productName: order[0].productName, subtotal: order[0].subtotal, status: "awaiting_payment" as const }, payment: { id: transaction.id, provider: transaction.provider, status: transaction.status, checkoutUrl: transaction.checkoutUrl, qrImageDataUrl: typeof payload.qrImageDataUrl === "string" ? payload.qrImageDataUrl : null, deeplink: typeof payload.deeplink === "string" ? payload.deeplink : null, expiresAt: transaction.expiresAt } };
 }
 
 export async function getCustomerPaymentSession(input: { orderId: string; userId: number }) {
@@ -288,7 +303,28 @@ export async function getCustomerPaymentSession(input: { orderId: string; userId
   const order = await db.select().from(orders).where(and(eq(orders.id, input.orderId), eq(orders.userId, input.userId))).limit(1);
   if (!order[0]) throw new Error("Order not found");
   const payment = await db.select().from(paymentTransactions).where(eq(paymentTransactions.orderId, input.orderId)).orderBy(desc(paymentTransactions.createdAt)).limit(1);
-  return { order: order[0], payment: payment[0] ?? null };
+  const current = payment[0];
+  const payload = current?.callbackPayload && typeof current.callbackPayload === "object" ? current.callbackPayload as Record<string, unknown> : {};
+  return { order: order[0], payment: current ? { id: current.id, provider: current.provider, status: current.status, amount: current.amount, currency: current.currency, checkoutUrl: current.checkoutUrl, expiresAt: current.expiresAt, paidAt: current.paidAt, qrImageDataUrl: typeof payload.qrImageDataUrl === "string" ? payload.qrImageDataUrl : null, deeplink: typeof payload.deeplink === "string" ? payload.deeplink : null } : null };
+}
+
+export async function refreshBakongPayment(input: { orderId: string; userId: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const order = await db.select().from(orders).where(and(eq(orders.id, input.orderId), eq(orders.userId, input.userId))).limit(1);
+  if (!order[0]) throw new Error("Order not found");
+  const payment = await db.select().from(paymentTransactions).where(and(eq(paymentTransactions.orderId, input.orderId), eq(paymentTransactions.provider, "bakong_khqr"))).orderBy(desc(paymentTransactions.createdAt)).limit(1);
+  const current = payment[0];
+  if (!current) throw new Error("Bakong payment session not found");
+  if (current.status === "paid") return getCustomerPaymentSession(input);
+  if (current.expiresAt && current.expiresAt.getTime() <= Date.now()) { await db.update(paymentTransactions).set({ status: "expired" }).where(eq(paymentTransactions.id, current.id)); await updateOrderStatus({ orderId: input.orderId, status: "expired" }); return getCustomerPaymentSession(input); }
+  const payload = current.callbackPayload && typeof current.callbackPayload === "object" ? current.callbackPayload as Record<string, unknown> : {};
+  const md5 = typeof payload.bakongMd5 === "string" ? payload.bakongMd5 : null;
+  if (!md5) throw new Error("Bakong payment reference is unavailable");
+  const currency = current.currency === "KHR" ? "KHR" : "USD" as const;
+  const result = await checkBakongKhqrPayment({ md5, expectedAmount: String(current.amount), expectedCurrency: currency });
+  if (result.status === "paid") { await db.update(paymentTransactions).set({ status: "paid", providerTransactionId: result.transactionHash, paidAt: new Date(), callbackPayload: { ...payload, verifiedAt: new Date().toISOString(), transactionHash: result.transactionHash } }).where(eq(paymentTransactions.id, current.id)); await updateOrderStatus({ orderId: input.orderId, status: "paid" }); }
+  return getCustomerPaymentSession(input);
 }
 
 export async function getCustomerOrderTracking(input: { userId: number; trackingCode: string }) {
@@ -484,6 +520,12 @@ export async function createMarketplaceFraudReport(input: { listingId: string; r
   if (!listing[0]) throw new Error("Listing not found");
   const id = nanoid(); await db.insert(marketplaceFraudReports).values({ id, listingId: input.listingId, reporterUserId: input.reporterUserId, details: input.details.trim() });
   return { id, status: "received" as const };
+}
+
+export async function getPublicSiteContent() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(siteContent).where(eq(siteContent.isActive, true)).orderBy(desc(siteContent.updatedAt));
 }
 
 export async function getAdminOverview() {

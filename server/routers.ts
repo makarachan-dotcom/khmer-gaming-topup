@@ -6,7 +6,7 @@ import { adminProcedure, ownerProcedure, protectedProcedure, publicProcedure, ro
 import * as db from "./db";
 import { fetchFzrProviderSyncSnapshot, fetchProviderGameDetails, fetchProviderGames, fetchProviderPackages, fetchSmmProviderServices, getProviderCatalogStatus } from "./providerCatalog";
 import { buildZursMemberDisplayName } from "./storefrontDomain";
-import { uploadMarketplaceScreenshot, uploadMarketplaceVerificationEvidence } from "./uploads";
+import { uploadAdminMediaImage, uploadMarketplaceScreenshot, uploadMarketplaceVerificationEvidence } from "./uploads";
 import { storageGet } from "./storage";
 import { createDiditHostedSession } from "./didit";
 import { disclosureRequestStatuses, fraudReportStatuses } from "./marketplaceSafety";
@@ -29,6 +29,9 @@ export const appRouter = router({
   }),
   payments: router({
     readiness: publicProcedure.query(() => getAutomaticPaymentReadiness()),
+  }),
+  wallet: router({
+    summary: protectedProcedure.query(({ ctx }) => db.getCustomerWalletSummary(ctx.user.id)),
   }),
   provider: router({
     games: publicProcedure.query(() => fetchProviderGames()),
@@ -57,12 +60,17 @@ export const appRouter = router({
   }),
   uploads: router({
     marketplaceScreenshot: protectedProcedure.input(z.object({ fileName: z.string().trim().min(1).max(180), contentType: z.enum(["image/jpeg", "image/png", "image/webp"]), dataUrl: z.string().min(50).max(7_000_000) })).mutation(async ({ ctx, input }) => { const upload = await uploadMarketplaceScreenshot({ userId: ctx.user.id, ...input }); return { key: upload.key }; }),
+    adminMediaImage: adminProcedure.input(z.object({ fileName: z.string().trim().min(1).max(180), contentType: z.enum(["image/jpeg", "image/png", "image/webp"]), dataUrl: z.string().min(50).max(7_000_000) })).mutation(async ({ ctx, input }) => uploadAdminMediaImage({ adminUserId: ctx.user.id, ...input })),
+  }),
+  content: router({
+    active: publicProcedure.query(() => db.getPublicSiteContent()),
   }),
   orders: router({
     createTopup: protectedProcedure.input(z.object({ packageId: z.string().min(4).max(64), playerId: z.string().trim().min(2).max(128), zoneId: z.string().trim().min(1).max(128).optional(), quantity: z.number().int().min(1).max(9) })).mutation(({ ctx, input }) => db.createTopupOrder({ userId: ctx.user.id, ...input })),
     createSmm: protectedProcedure.input(z.object({ tierId: z.string().min(4).max(64), target: z.string().trim().min(3).max(500) })).mutation(({ ctx, input }) => db.createSmmOrder({ userId: ctx.user.id, ...input })),
     beginPayment: protectedProcedure.input(z.object({ orderId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => db.beginStagedPayment({ userId: ctx.user.id, ...input })),
     paymentSession: protectedProcedure.input(z.object({ orderId: z.string().min(4).max(64) })).query(({ ctx, input }) => db.getCustomerPaymentSession({ userId: ctx.user.id, ...input })),
+    refreshPayment: protectedProcedure.input(z.object({ orderId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => db.refreshBakongPayment({ userId: ctx.user.id, ...input })),
     tracking: protectedProcedure.input(z.object({ trackingCode: z.string().trim().min(12).max(48) })).query(({ ctx, input }) => db.getCustomerOrderTracking({ userId: ctx.user.id, ...input })),
     createTicket: protectedProcedure.input(z.object({ trackingCode: z.string().trim().min(12).max(48), subject: z.string().trim().min(4).max(180), message: z.string().trim().min(10).max(5000) })).mutation(({ ctx, input }) => db.createOrderSupportTicket({ userId: ctx.user.id, ...input })),
     mine: protectedProcedure.query(({ ctx }) => db.getCustomerOrders(ctx.user.id)),
@@ -105,7 +113,7 @@ export const appRouter = router({
     roleAudits: ownerProcedure.query(() => db.getAdminRoleAudits()),
     setUserRole: ownerProcedure.input(z.object({ targetUserId: z.number().int().positive(), nextRole: z.enum(["user", "admin"]), confirmationEmail: z.string().trim().email().max(320), reason: z.string().trim().min(10).max(500) })).mutation(({ ctx, input }) => db.setAdminUserRole({ actorUserId: ctx.user.id, ...input })),
     content: adminProcedure.query(() => db.getSiteContent()),
-    saveContent: adminProcedure.input(z.object({ contentKey: z.string().trim().min(2).max(100), titleKh: z.string().trim().max(240).optional(), bodyKh: z.string().trim().max(5000).optional(), mediaUrl: z.string().url().max(2048).optional(), isActive: z.boolean() })).mutation(({ ctx, input }) => db.saveSiteContent({ updatedByUserId: ctx.user.id, ...input })),
+    saveContent: adminProcedure.input(z.object({ contentKey: z.string().trim().min(2).max(100), titleKh: z.string().trim().max(240).optional(), bodyKh: z.string().trim().max(5000).optional(), mediaUrl: z.string().trim().max(2048).refine((value) => value.startsWith("/manus-storage/") || /^https?:\/\//i.test(value), "Use a secure media URL").optional(), isActive: z.boolean() })).mutation(({ ctx, input }) => db.saveSiteContent({ updatedByUserId: ctx.user.id, ...input })),
   }),
 });
 

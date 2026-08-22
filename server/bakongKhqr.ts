@@ -1,0 +1,63 @@
+import { createRequire } from "node:module";
+import QRCode from "qrcode";
+
+const require = createRequire(import.meta.url);
+const { BakongKHQR, IndividualInfo, khqrData } = require("bakong-khqr") as any;
+const apiBaseUrl = "https://api-bakong.nbc.gov.kh";
+const zursLogoUrl = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/kBXeVXEnNVEuNZKS.jpg";
+
+type Currency = "USD" | "KHR";
+type BakongConfig = { token: string; accountId: string; merchantName: string; merchantCity: string; merchantPhone: string; storeLabel: string };
+
+function getConfig(): BakongConfig | null {
+  const token = process.env.BAKONG_API_TOKEN?.trim();
+  const accountId = process.env.BAKONG_ACCOUNT_ID?.trim();
+  const merchantName = process.env.BAKONG_MERCHANT_NAME?.trim();
+  const merchantCity = process.env.BAKONG_MERCHANT_CITY?.trim();
+  const merchantPhone = process.env.BAKONG_MERCHANT_PHONE?.trim();
+  const storeLabel = process.env.BAKONG_STORE_LABEL?.trim();
+  if (!token || !accountId || !merchantName || !merchantCity || !merchantPhone || !storeLabel) return null;
+  return { token, accountId, merchantName, merchantCity, merchantPhone, storeLabel };
+}
+
+export function getBakongPaymentReadiness() {
+  return getConfig() ? { ready: true, reason: "ready" as const } : { ready: false, reason: "automatic_payment_pending" as const };
+}
+
+function currencyCode(currency: Currency) { return currency === "KHR" ? khqrData.currency.khr : khqrData.currency.usd; }
+function validAmount(amount: string) { const value = Number(amount); if (!Number.isFinite(value) || value <= 0) throw new Error("Invalid payment amount"); return value; }
+
+export async function createBakongKhqrPayment(input: { trackingCode: string; amount: string; currency: Currency }) {
+  const config = getConfig();
+  if (!config) throw new Error("Bakong KHQR is not configured");
+  const amount = validAmount(input.amount);
+  const expiry = new Date(Date.now() + 15 * 60 * 1000);
+  const info = new IndividualInfo(config.accountId, config.merchantName, config.merchantCity, {
+    currency: currencyCode(input.currency), amount, mobileNumber: config.merchantPhone, billNumber: input.trackingCode.slice(0, 35), storeLabel: config.storeLabel, terminalLabel: "ZURS", expirationTimestamp: expiry.getTime(),
+  });
+  const generated = new BakongKHQR().generateIndividual(info);
+  const qr = generated?.data?.qr as string | undefined;
+  const md5 = generated?.data?.md5 as string | undefined;
+  if (!qr || !md5) throw new Error("Bakong KHQR payload could not be created");
+  const qrImageDataUrl = await QRCode.toDataURL(qr, { errorCorrectionLevel: "M", margin: 1, width: 560, color: { dark: "#121429", light: "#ffffff" } });
+  let deeplink: string | null = null;
+  try {
+    const response = await fetch(`${apiBaseUrl}/v1/generate_deeplink_by_qr`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ qr, sourceInfo: { appIconUrl: zursLogoUrl, appName: "ZURS STORE", appDeepLinkCallback: "https://khmergame-girzfgts.manus.space/order-status" } }) });
+    const payload = await response.json() as { responseCode?: number; data?: { shortLink?: string } };
+    if (response.ok && payload.responseCode === 0 && payload.data?.shortLink) deeplink = payload.data.shortLink;
+  } catch { /* A scannable KHQR remains available if the optional deeplink service is unavailable. */ }
+  return { md5, qrImageDataUrl, deeplink, expiresAt: expiry };
+}
+
+export async function checkBakongKhqrPayment(input: { md5: string; expectedAmount: string; expectedCurrency: Currency }) {
+  const config = getConfig();
+  if (!config) throw new Error("Bakong KHQR is not configured");
+  const response = await fetch(`${apiBaseUrl}/v1/check_transaction_by_md5`, { method: "POST", headers: { Authorization: `Bearer ${config.token}`, "Content-Type": "application/json" }, body: JSON.stringify({ md5: input.md5 }) });
+  const payload = await response.json() as { responseCode?: number; errorCode?: number; data?: { hash?: string; amount?: string | number; currency?: string; toAccountId?: string } };
+  if (!response.ok || payload.responseCode !== 0 || !payload.data) return { status: payload.errorCode === 1 ? "unpaid" as const : "unavailable" as const };
+  const matchesAmount = Math.abs(Number(payload.data.amount) - Number(input.expectedAmount)) < 0.00001;
+  const matchesCurrency = payload.data.currency === input.expectedCurrency;
+  const matchesReceiver = payload.data.toAccountId?.trim().toLowerCase() === config.accountId.toLowerCase();
+  if (!matchesAmount || !matchesCurrency || !matchesReceiver || !payload.data.hash) return { status: "unavailable" as const };
+  return { status: "paid" as const, transactionHash: payload.data.hash };
+}

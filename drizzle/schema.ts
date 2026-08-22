@@ -13,6 +13,13 @@ export const users = mysqlTable("users", {
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
 }, (table) => [uniqueIndex("users_email_unique").on(table.email)]);
 
+export const customerWallets = mysqlTable("customer_wallets", {
+  userId: int("userId").primaryKey(),
+  balanceKhr: decimal("balanceKhr", { precision: 14, scale: 2 }).default("0.00").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
 export const adminRoleAudits = mysqlTable("admin_role_audits", {
   id: varchar("id", { length: 64 }).primaryKey(),
   actorUserId: int("actorUserId").notNull(),

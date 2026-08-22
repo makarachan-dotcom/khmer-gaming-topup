@@ -13,11 +13,12 @@ describe("animated glyph integration", () => {
     expect(source).not.toContain("notification");
   });
 
-  it("uses the owner-provided outline loader for activity states with safe fallbacks", () => {
+  it("uses the approved non-rotating outline-and-dots loader for activity states", () => {
     const source = readFileSync(resolve(process.cwd(), "client/src/components/OutlineLoader.tsx"), "utf8");
-    expect(source).toContain("https://khmergame-girzfgts.manus.space/manus-storage/zurs-outline-loader_3529c2fb.json");
-    expect(source).toContain('import("lottie-web")');
-    expect(source).toContain("prefers-reduced-motion: reduce");
-    expect(source).toContain("LoaderCircle");
+    expect(source).toContain('strokeLinecap="round"');
+    expect(source).toContain("outline-loader-dot--one");
+    expect(source).toContain("outline-loader-dot--two");
+    expect(source).toContain("outline-loader-dot--three");
+    expect(source).not.toContain("animate-spin");
   });
 });

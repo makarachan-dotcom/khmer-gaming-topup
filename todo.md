@@ -162,3 +162,8 @@
 - [x] Add private saved marketplace favorites with add/remove controls and an Account entry point next to Ticket.
 - [ ] Diagnose and repair the reported email/Google sign-in error while preserving secure OAuth state and signed sessions.
 - [x] Remove Account Settings access and keep Ticket, Favorites, and logout on one mobile action row.
+- [x] Integrate Bakong KHQR dynamic payment creation and verified payment status using server-only credentials.
+- [x] Add a privacy-preserving bank-style Balance control at the header’s right side with click-to-reveal behavior.
+- [x] Refine purposeful animated icons and loading/success motion throughout the storefront without visual clutter.
+- [x] Enable multiple admin-managed Khmer banners, promotions, and announcements with secure image upload, image URL, and auto-looping video support.
+- [x] Replace remaining solid spinner loading indicators with the owner-approved outline loader across customer and administrator views.

@@ -1,8 +1,10 @@
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { AnimatedGlyph } from "@/components/AnimatedGlyph";
+import { OutlineLoader } from "@/components/OutlineLoader";
+import { trpc } from "@/lib/trpc";
 import { animate } from "animejs";
-import { ArrowUp, BarChart3, BadgeCheck, Crown, House, LogIn, ShieldCheck, Store, UserRound } from "lucide-react";
+import { ArrowUp, BarChart3, BadgeCheck, Crown, Eye, EyeOff, House, LogIn, ShieldCheck, Store, UserRound, WalletCards } from "lucide-react";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 
@@ -28,6 +30,9 @@ export default function StorefrontLayout({ children }: { children: ReactNode }) 
   const googleSignInHref = `/api/auth/google?returnTo=${encodeURIComponent(location)}`;
   const shellRef = useRef<HTMLDivElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [balanceVisible, setBalanceVisible] = useState(false);
+  const wallet = trpc.wallet.summary.useQuery(undefined, { enabled: Boolean(user) });
+  const displayBalance = Number(wallet.data?.balanceKhr ?? 0).toLocaleString("km-KH", { maximumFractionDigits: 2 });
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -62,9 +67,10 @@ export default function StorefrontLayout({ children }: { children: ReactNode }) 
           </nav>
 
           <div className="flex items-center gap-1.5 sm:gap-2">
+            {user ? <button type="button" aria-pressed={balanceVisible} onClick={() => setBalanceVisible((visible) => !visible)} className={cn("balance-control inline-flex h-9 min-w-[5.5rem] items-center justify-center gap-1.5 rounded-xl border border-indigo-100 bg-white/75 px-2 text-indigo-800 shadow-sm hover:border-indigo-200 hover:bg-indigo-50/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2", balanceVisible && "balance-control--visible")} title="បង្ហាញ ឬលាក់សមតុល្យ ZURS Wallet"><WalletCards className="balance-wallet-icon h-4 w-4 shrink-0" strokeWidth={2.1} /><span className="balance-amount text-[10px] font-extrabold tabular-nums sm:text-xs" aria-live="polite">{wallet.isLoading ? "…" : balanceVisible ? `៛ ${displayBalance}` : "••••"}</span>{balanceVisible ? <Eye className="h-3.5 w-3.5 shrink-0" /> : <EyeOff className="h-3.5 w-3.5 shrink-0" />}</button> : null}
             <Link href="/account" className="hidden h-9 max-w-48 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-slate-700 hover:bg-white/70 sm:inline-flex"><UserRound className="h-4 w-4" /><span className="truncate">{accountLabel}</span></Link>
             {isOwnerAdmin ? <Link href="/admin" className="hidden h-9 items-center gap-1.5 rounded-lg bg-amber-50 px-3 text-xs font-bold text-amber-800 hover:bg-amber-100 lg:inline-flex"><Crown className="h-3.5 w-3.5" />Admin</Link> : null}
-            {loading ? <span className="hidden h-9 items-center gap-1.5 px-2 text-xs font-semibold text-slate-400 sm:inline-flex"><AnimatedGlyph name="activity" size={18} color="#64748b" />កំពុងពិនិត្យ…</span> : user ? <button type="button" onClick={() => logout()} className="hidden h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-sm font-bold text-white hover:bg-slate-800 sm:inline-flex"><LogIn className="h-3.5 w-3.5" />ចេញពីគណនី</button> : <a href={googleSignInHref} className="hidden h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-sm font-bold text-white hover:bg-slate-800 sm:inline-flex"><LogIn className="h-3.5 w-3.5" />ចូលគណនី</a>}
+            {loading ? <span className="hidden h-9 items-center gap-1.5 px-2 text-xs font-semibold text-slate-400 sm:inline-flex"><OutlineLoader size={18} color="#64748b" />កំពុងពិនិត្យ…</span> : user ? <button type="button" onClick={() => logout()} className="hidden h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-sm font-bold text-white hover:bg-slate-800 sm:inline-flex"><LogIn className="h-3.5 w-3.5" />ចេញពីគណនី</button> : <a href={googleSignInHref} className="hidden h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-sm font-bold text-white hover:bg-slate-800 sm:inline-flex"><LogIn className="h-3.5 w-3.5" />ចូលគណនី</a>}
             <div className="glass-status hidden h-8 items-center gap-1.5 rounded-full px-2.5 text-[10px] font-bold text-emerald-700 sm:flex"><AnimatedGlyph name="activity" size={18} color="#047857" />ZURS</div>
           </div>
         </div>

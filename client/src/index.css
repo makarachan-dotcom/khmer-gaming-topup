@@ -126,6 +126,15 @@ button, input, textarea, select { font: inherit; }
 }
 .animated-glyph { display: inline-grid; place-items: center; flex: 0 0 auto; transition: transform 180ms cubic-bezier(0.23, 1, 0.32, 1); }
 .animated-glyph > div { display: grid; place-items: center; }
+.balance-control { transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), border-color 180ms cubic-bezier(0.23, 1, 0.32, 1), background-color 180ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 180ms cubic-bezier(0.23, 1, 0.32, 1); }
+.balance-control:hover { transform: translateY(-1px); box-shadow: 0 8px 18px oklch(0.42 0.12 270 / 0.12); }
+.balance-amount { min-width: 2.8rem; text-align: right; }
+@media (prefers-reduced-motion: no-preference) { .balance-control--visible .balance-wallet-icon { animation: balance-wallet-reveal 280ms cubic-bezier(0.23, 1, 0.32, 1) both; } }
+@keyframes balance-wallet-reveal { 0% { transform: scale(0.9) rotate(-8deg); } 60% { transform: scale(1.14) rotate(5deg); } 100% { transform: scale(1) rotate(0deg); } }
+@media (prefers-reduced-motion: no-preference) { .outline-loader-dot { transform-box: fill-box; transform-origin: center; animation: outline-loader-dot-pulse 1.05s ease-in-out infinite; } .outline-loader-dot--two { animation-delay: 120ms; } .outline-loader-dot--three { animation-delay: 240ms; } }
+@keyframes outline-loader-dot-pulse { 0%, 100% { opacity: 0.3; transform: scale(0.72); } 45% { opacity: 1; transform: scale(1); } }
+.animate-spin { animation: outline-loader-static-pulse 1.1s ease-in-out infinite alternate !important; }
+@keyframes outline-loader-static-pulse { from { opacity: 0.42; } to { opacity: 0.9; } }
 @keyframes glass-sweep { 0%, 60% { transform: translateX(-115%); } 78%, 100% { transform: translateX(115%); } }
 @keyframes motion-status { 0%, 76%, 100% { transform: scale(1); opacity: 1; } 86% { transform: scale(1.12); opacity: 0.82; } }
 @keyframes motion-reveal { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
