@@ -146,6 +146,29 @@ describe("provider catalog", () => {
     await expect(fetchProviderPackages({ gameId: "acecraft", fields: { user_id: "123456" } })).resolves.toEqual({ status: "verification_required", packages: [] });
   });
 
+  it("uses the owner-approved Free Fire API only server-side when FZR does not support name validation", async () => {
+    process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
+    process.env.FZR_CARDS_API_KEY = "server-only-key";
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce({ ok: false, status: 404, json: async () => ({}) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, game: "Garena Free Fire", id: "redacted", name: "Verified Player" }) }));
+
+    await expect(validateProviderPlayerIdentity({ gameId: "free_fire_my_sg", fields: { player_id: "12345678" } })).resolves.toEqual({ status: "verified", playerName: "Verified Player", playerId: "12345678", region: "Global" });
+    expect((fetch as ReturnType<typeof vi.fn>).mock.calls[1]?.[0]).toContain("/nickname/ff?");
+    expect(JSON.stringify((fetch as ReturnType<typeof vi.fn>).mock.calls[1]?.[0])).not.toContain("server-only-key");
+  });
+
+  it("uses the owner-approved 8 Ball Pool response schema when FZR does not support name validation", async () => {
+    process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
+    process.env.FZR_CARDS_API_KEY = "server-only-key";
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce({ ok: false, status: 404, json: async () => ({}) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ status: true, nickname: "Verified Player", message: "Success" }) }));
+
+    await expect(validateProviderPlayerIdentity({ gameId: "8_ball_pool", fields: { user_id: "12345678" } })).resolves.toEqual({ status: "verified", playerName: "Verified Player", playerId: "12345678", region: "Global" });
+    expect((fetch as ReturnType<typeof vi.fn>).mock.calls[1]?.[0]).toContain("type_name=eight_ball_pool");
+  });
+
   it("reveals an unsupported non-ML/HOK package list only after explicit ID confirmation", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "server-only-key";

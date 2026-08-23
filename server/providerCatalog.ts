@@ -359,6 +359,7 @@ const fzrPlayerIdentitySchema = z.object({
 
 const externalPlayerNameSchema = z.object({ success: z.literal(true), data: z.object({ username: z.string().trim().min(1).max(180) }) });
 const isanPlayerNameSchema = z.object({ success: z.literal(true), name: z.string().trim().min(1).max(180), country: z.string().trim().min(1).max(120).optional() });
+const eightBallPoolPlayerNameSchema = z.object({ status: z.literal(true), nickname: z.string().trim().min(1).max(180) });
 const externalFailureSchema = z.object({ error: z.literal(true), msg: z.string().trim().max(300).optional() });
 const vpsWorkerVerifiedIdentitySchema = z.object({
   ok: z.literal(true),
@@ -387,6 +388,58 @@ function isHonorOfKingsGame(gameId: string) {
 
 function usesVpsWorkerIdentityCheck(gameId: string) {
   return isMobileLegendsGame(gameId) || isHonorOfKingsGame(gameId);
+}
+
+type OwnerApprovedFreeIdentityRequest = { kind: "isan" | "eight_ball_pool"; url: string; playerId: string } | { kind: "invalid" };
+
+function ownerApprovedFreeIdentityRequest(input: ProviderPackageRequest): OwnerApprovedFreeIdentityRequest | null {
+  if (isMobileLegendsGame(input.gameId) || isHonorOfKingsGame(input.gameId)) return null;
+  const gameId = input.gameId.trim().toLowerCase();
+  const game = /^free_fire(?:_|$)/.test(gameId) ? "ff" as const
+    : /^magic_chess(?:_|$)/.test(gameId) ? "mcgg" as const
+      : /^call_of_duty(?:_|$)/.test(gameId) ? "cod" as const
+        : /^arena_of_valor(?:_|$)/.test(gameId) ? "aov" as const
+          : /^8_ball_pool(?:_|$)/.test(gameId) ? "eight_ball_pool" as const
+            : null;
+  if (!game) return null;
+  const playerId = (input.fields.player_id ?? input.fields.user_id ?? input.fields.account_id ?? input.fields.id ?? "").trim();
+  const serverId = (input.fields.server_id ?? input.fields.zone_id ?? input.fields.server ?? "").trim();
+  if (!/^\d{4,20}$/.test(playerId)) return { kind: "invalid" };
+  const isanUrl = (game: "ff" | "mcgg" | "cod" | "aov", requiresServer = false) => {
+    if (requiresServer && !/^\d{1,12}$/.test(serverId)) return { kind: "invalid" } as const;
+    const query = new URLSearchParams({ id: playerId });
+    if (requiresServer) query.set("server", serverId);
+    return { kind: "isan" as const, url: `https://api.isan.eu.org/nickname/${game}?${query.toString()}`, playerId };
+  };
+  if (game === "ff") return isanUrl("ff");
+  if (game === "mcgg") return isanUrl("mcgg", true);
+  if (game === "cod") return isanUrl("cod");
+  if (game === "aov") return isanUrl("aov");
+  if (game === "eight_ball_pool") {
+    const query = new URLSearchParams({ type_name: "eight_ball_pool", userId: playerId, zoneId: "" });
+    return { kind: "eight_ball_pool", url: `https://api-cek-id-game-ten.vercel.app/api/check-id-game?${query.toString()}`, playerId };
+  }
+  return null;
+}
+
+async function validateWithOwnerApprovedFreeApi(input: ProviderPackageRequest): Promise<ProviderPlayerIdentityResponse | null> {
+  const request = ownerApprovedFreeIdentityRequest(input);
+  if (!request) return null;
+  if (request.kind === "invalid") return emptyIdentity("invalid");
+  try {
+    const response = await fetch(request.url, { signal: AbortSignal.timeout(8_000) });
+    const payload = await response.json().catch(() => null);
+    if (request.kind === "isan") {
+      const success = isanPlayerNameSchema.safeParse(payload);
+      if (response.ok && success.success) return { status: "verified", playerName: success.data.name, playerId: request.playerId, region: success.data.country ?? "Global" };
+      if (response.ok && payload && typeof payload === "object" && "success" in payload && (payload as { success?: unknown }).success === false) return emptyIdentity("invalid");
+    } else {
+      const success = eightBallPoolPlayerNameSchema.safeParse(payload);
+      if (response.ok && success.success) return { status: "verified", playerName: success.data.nickname, playerId: request.playerId, region: "Global" };
+      if (response.ok && payload && typeof payload === "object" && "status" in payload && (payload as { status?: unknown }).status === false) return emptyIdentity("invalid");
+    }
+  } catch { /* A public free API is optional; the existing ID-accuracy confirmation handles unsupported checks. */ }
+  return emptyIdentity("not_supported");
 }
 
 function vpsWorkerIdentityInput(input: ProviderPackageRequest): { game: string; playerId: string; serverId: string } | null {
@@ -511,15 +564,22 @@ export async function validateProviderPlayerIdentity(input: ProviderPackageReque
     const response = await fzrRequest("/api/v2/topups/validate-id", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ category_id: providerGameId, fields: input.fields }) });
     if (!response) {
       if (isMobileLegendsGame(input.gameId)) return await validateMobileLegendsWithFallback(input, { workerAlreadyTried: Boolean(workerInput) }) ?? emptyIdentity("unavailable");
+      const freeApiResult = await validateWithOwnerApprovedFreeApi(input);
+      if (freeApiResult) return freeApiResult;
       if (isHonorOfKingsGame(input.gameId)) return emptyIdentity("unavailable");
       return emptyIdentity("unavailable");
     }
     const payload = fzrPlayerIdentitySchema.safeParse(response);
-    if (!payload.success || payload.data.category_id !== providerGameId) return { status: "error", playerName: null, playerId: null, region: null };
+    if (!payload.success || payload.data.category_id !== providerGameId) {
+      const freeApiResult = await validateWithOwnerApprovedFreeApi(input);
+      return freeApiResult ?? emptyIdentity("error");
+    }
     if (!payload.data.valid || !payload.data.player_name) return { status: "invalid", playerName: null, playerId: null, region: null };
     return { status: "verified", playerName: payload.data.player_name, playerId: payload.data.player_id ?? null, region: payload.data.region ?? null };
   } catch (error) {
     if (isMobileLegendsGame(input.gameId)) return await validateMobileLegendsWithFallback(input, { workerAlreadyTried: Boolean(workerInput) }) ?? emptyIdentity("unavailable");
+    const freeApiResult = await validateWithOwnerApprovedFreeApi(input);
+    if (freeApiResult) return freeApiResult;
     if (isHonorOfKingsGame(input.gameId)) return emptyIdentity("unavailable");
     if (error instanceof FzrRequestError && [400, 404].includes(error.status)) return emptyIdentity("not_supported");
     if (error instanceof FzrRequestError && error.status === 422) return emptyIdentity("invalid");
