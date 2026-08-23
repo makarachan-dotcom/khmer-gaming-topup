@@ -19,3 +19,7 @@ The current production cache release completed the Home catalog state with **9 /
 The production browser console was empty during the Free Fire check. The public SMM route rendered its platform filters and bounded loading state without a browser runtime error while awaiting provider service data; purchase controls remain disabled by the page policy.
 
 A follow-up production check confirmed that the SMM service list completed loading. Platform filters and provider-supplied service cards rendered, and every visible purchase control remained disabled.
+
+## 2026-08-23: Mobile layout review
+
+Mobile previews showed no visible horizontal overflow on Marketplace, Privacy Policy, or Terms of Service. The storefront and provider pages use a lightweight outline loading state during the initial catalog/detail request; subsequent production browser checks confirmed those states resolve to the authorized catalog or form.

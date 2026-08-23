@@ -7,6 +7,7 @@ import { registerOAuthRoutes } from "./_core/oauth";
 import { registerStorageProxy } from "./_core/storageProxy";
 import { sdk } from "./_core/sdk";
 import { cleanupExpiredSoldMarketplaceListings } from "./db";
+import { fetchProviderGames, fetchSmmProviderServices } from "./providerCatalog";
 import { deriveProviderNetworkRisk } from "./providerNetworkRisk";
 import { registerProviderArtworkRoutes } from "./providerArtwork";
 import crypto from "node:crypto";
@@ -49,6 +50,25 @@ export function createApp() {
       return res.json({ ok: true });
     } catch (error) {
       return res.status(500).json({ error: error instanceof Error ? error.message : "cleanup failed", timestamp: new Date().toISOString() });
+    }
+  });
+  app.post("/api/scheduled/bank-review-readiness", async (req, res) => {
+    try {
+      const user = await sdk.authenticateRequest(req);
+      if (!user.isCron || !user.taskUid) return res.status(403).json({ error: "cron-only" });
+      const [games, smm] = await Promise.all([fetchProviderGames(), fetchSmmProviderServices()]);
+      const report = {
+        gameCatalog: games.status,
+        gameCount: games.status === "ready" ? games.games.length : 0,
+        smmCatalog: smm.status,
+        smmServiceCount: smm.status === "ready" ? smm.services.length : 0,
+        paymentMode: "disabled-by-policy",
+        timestamp: new Date().toISOString(),
+      };
+      if (games.status !== "ready" || smm.status !== "ready") return res.status(503).json({ ok: false, error: "provider_catalog_not_ready", report });
+      return res.json({ ok: true, report });
+    } catch (error) {
+      return res.status(500).json({ error: error instanceof Error ? error.message : "readiness check failed", timestamp: new Date().toISOString() });
     }
   });
   app.use(
