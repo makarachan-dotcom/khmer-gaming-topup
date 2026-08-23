@@ -443,10 +443,12 @@ async function validateWithOwnerApprovedFreeApi(input: ProviderPackageRequest): 
       const success = isanPlayerNameSchema.safeParse(payload);
       if (response.ok && success.success) return { status: "verified", playerName: success.data.name, playerId: request.playerId, region: success.data.country ?? "Global" };
       if (response.ok && payload && typeof payload === "object" && "success" in payload && (payload as { success?: unknown }).success === false) return emptyIdentity("invalid");
+      if (response.ok && payload && typeof payload === "object" && "success" in payload && (payload as { success?: unknown }).success === true) return emptyIdentity("invalid");
     } else {
       const success = eightBallPoolPlayerNameSchema.safeParse(payload);
       if (response.ok && success.success) return { status: "verified", playerName: success.data.nickname, playerId: request.playerId, region: "Global" };
       if (response.ok && payload && typeof payload === "object" && "status" in payload && (payload as { status?: unknown }).status === false) return emptyIdentity("invalid");
+      if (response.ok && payload && typeof payload === "object" && "status" in payload && (payload as { status?: unknown }).status === true) return emptyIdentity("invalid");
     }
   } catch { /* A public free API is optional; the existing ID-accuracy confirmation handles unsupported checks. */ }
   return emptyIdentity("unavailable");

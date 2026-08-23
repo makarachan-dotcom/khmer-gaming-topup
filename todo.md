@@ -247,4 +247,4 @@
 - [x] Add and schedule a one-time cron-authenticated readiness callback before 10:00 AM to verify provider catalog availability and the payment-disabled state without handling customer data.
 - [x] Add attractive artwork to every provider-authorized diamond package, initially show only 10 diamond packages per game, and add an accessible animated “មើលបន្ថែម” control without affecting Pass or Special package sections.
 - [x] Align Check-ID to the owner's final matrix: server-only free validation for Free Fire, Mobile Legends, Magic Chess, 8 Ball Pool, Call of Duty Mobile, and Arena of Valor only; explicit customer ID confirmation for unsupported games with no false username or rotating fallback attempts.
-- [ ] Audit the deployed diamond-package logo/artwork and the final six-game Check-ID flow; correct any missing artwork, failed image handling, or validation mismatch without exposing player data or enabling purchases.
+- [x] Audit the deployed diamond-package logo/artwork and the final six-game Check-ID flow; correct any missing artwork, failed image handling, or validation mismatch without exposing player data or enabling purchases.

@@ -168,6 +168,15 @@ describe("provider catalog", () => {
     expect(JSON.stringify((fetch as ReturnType<typeof vi.fn>).mock.calls[0]?.[0])).not.toContain("server-only-key");
   });
 
+  it("treats a malformed successful Free Fire response without a username as invalid", async () => {
+    process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
+    process.env.FZR_CARDS_API_KEY = "server-only-key";
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ success: true, game: "Garena Free Fire" }) }));
+
+    await expect(validateProviderPlayerIdentity({ gameId: "free_fire_my_sg", fields: { player_id: "12345678" } })).resolves.toEqual({ status: "invalid", playerName: null, playerId: null, region: null });
+    expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1);
+  });
+
   it("uses the owner-approved 8 Ball Pool response schema when FZR does not support name validation", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "server-only-key";
