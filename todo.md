@@ -225,3 +225,5 @@
 - [ ] Diagnose the Appwrite `limit_database_reads_exceeded` outage and confirm its effect on catalog and account reads across zurs.vercel.app and zurs.me.
 - [ ] Restore provider-authorized Diamond and SMM catalog visibility through a low-read resilient path that preserves real provider data and does not create placeholders.
 - [ ] Replace raw Appwrite quota errors in customer views with concise Khmer recovery guidance while retaining administrator diagnostics.
+- [ ] Merge the owner’s Google sign-in recovery with the Appwrite catalog-resilience work without discarding either change.
+- [ ] Migrate the server and public Appwrite endpoint/project configuration to the newly supplied Singapore Appwrite project through managed secrets, then verify the connection without exposing credentials.

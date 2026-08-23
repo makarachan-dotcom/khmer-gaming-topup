@@ -268,6 +268,9 @@ async function cachedPublicProviderGamesDuringOutage(availability: Awaited<Retur
 }
 
 export async function fetchProviderGames(options: { includeInactive?: boolean } = {}): Promise<ProviderGameResponse> {
+  if (!process.env.FZR_CARDS_API_BASE_URL || !process.env.FZR_CARDS_API_KEY) {
+    return { status: "unavailable", games: [] };
+  }
   const [catalog, availability] = await Promise.all([fetchFzrTopupCatalog(), providerAvailability()]);
   if (catalog.status !== "ready") {
     if (!options.includeInactive) {
