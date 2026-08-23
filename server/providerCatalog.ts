@@ -191,8 +191,11 @@ function providerGameRegion(name: string, note?: string) {
 
 type FzrTopupItem = z.infer<typeof fzrTopupsSchema>["items"][number];
 type FzrTopupCatalog = { status: "ready"; items: FzrTopupItem[]; legacyPublicIds: string[] } | { status: "unavailable" | "error"; items: []; legacyPublicIds: [] };
+const FZR_TOPUP_CATALOG_CACHE_MS = 60_000;
+let fzrTopupCatalogCache: { expiresAt: number; value: Extract<FzrTopupCatalog, { status: "ready" }> } | null = null;
+let fzrTopupCatalogInFlight: Promise<FzrTopupCatalog> | null = null;
 
-async function fetchFzrTopupCatalog(): Promise<FzrTopupCatalog> {
+async function fetchFzrTopupCatalogUncached(): Promise<FzrTopupCatalog> {
   try {
     const firstResponse = await fzrRequest("/api/v2/topups");
     if (!firstResponse) return { status: "unavailable", items: [], legacyPublicIds: [] };
@@ -223,6 +226,26 @@ async function fetchFzrTopupCatalog(): Promise<FzrTopupCatalog> {
 
     return { status: "ready", items, legacyPublicIds };
   } catch { return { status: "error", items: [], legacyPublicIds: [] }; }
+}
+
+async function fetchFzrTopupCatalog(): Promise<FzrTopupCatalog> {
+  const now = Date.now();
+  if (fzrTopupCatalogCache && now < fzrTopupCatalogCache.expiresAt) return fzrTopupCatalogCache.value;
+  if (fzrTopupCatalogInFlight) return fzrTopupCatalogInFlight;
+  const request = fetchFzrTopupCatalogUncached();
+  fzrTopupCatalogInFlight = request;
+  try {
+    const catalog = await request;
+    if (catalog.status === "ready") fzrTopupCatalogCache = { expiresAt: Date.now() + FZR_TOPUP_CATALOG_CACHE_MS, value: catalog };
+    return catalog;
+  } finally {
+    if (fzrTopupCatalogInFlight === request) fzrTopupCatalogInFlight = null;
+  }
+}
+
+export function resetProviderCatalogCacheForTests() {
+  fzrTopupCatalogCache = null;
+  fzrTopupCatalogInFlight = null;
 }
 
 /** Initial storefront baseline from the owner-approved public catalog before the Admin allowlist was persisted. */

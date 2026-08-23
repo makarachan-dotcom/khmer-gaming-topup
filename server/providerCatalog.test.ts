@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { balanceSocialProviderServices, cachedPublicProviderGames, fetchProviderGameDetails, fetchProviderGames, fetchProviderPackages, fetchProviderPreviewPackages, fetchSmmProviderServices, getProviderAvailabilityCatalog, getProviderCatalogStatus, isThailandProviderProduct, submitSmmProviderOrder, validateProviderPlayerIdentity } from "./providerCatalog";
+import { balanceSocialProviderServices, cachedPublicProviderGames, fetchProviderGameDetails, fetchProviderGames, fetchProviderPackages, fetchProviderPreviewPackages, fetchSmmProviderServices, getProviderAvailabilityCatalog, getProviderCatalogStatus, isThailandProviderProduct, resetProviderCatalogCacheForTests, submitSmmProviderOrder, validateProviderPlayerIdentity } from "./providerCatalog";
 
 const originalEndpoint = process.env.FZR_CARDS_API_BASE_URL;
 const originalApiKey = process.env.FZR_CARDS_API_KEY;
@@ -11,6 +11,7 @@ const originalWorkerUrl = process.env.VPS_WORKER_URL;
 const originalWorkerSecret = process.env.WORKER_SECRET;
 
 beforeEach(() => {
+  resetProviderCatalogCacheForTests();
   delete process.env.VPS_WORKER_URL;
   delete process.env.WORKER_SECRET;
   vi.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -83,6 +84,16 @@ describe("provider catalog", () => {
 
     await expect(fetchProviderGames()).resolves.toEqual({ status: "ready", games: [{ id: "8_ball_pool", name: "8 Ball Pool", region: "Global", provider: "FZR Cards", requiredFields: [] }] });
     await expect(getProviderAvailabilityCatalog()).resolves.toMatchObject({ games: [{ id: "8_ball_pool", isActive: true }, { id: "new-pubg", isActive: false }] });
+  });
+
+  it("reuses a brief ready catalog cache for consecutive storefront reads", async () => {
+    process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
+    process.env.FZR_CARDS_API_KEY = "server-only-key";
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ok: true, kind: "topup", items: [{ category_id: "8_ball_pool", name: "8 Ball Pool" }], meta: { next_cursor: null, has_more: false } }) }));
+
+    await expect(fetchProviderGames()).resolves.toMatchObject({ status: "ready" });
+    await expect(fetchProviderGames()).resolves.toMatchObject({ status: "ready" });
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
 
   it("returns provider-required fields and official game imagery only after a selected game is requested", async () => {
@@ -167,6 +178,31 @@ describe("provider catalog", () => {
 
     await expect(validateProviderPlayerIdentity({ gameId: "8_ball_pool", fields: { user_id: "12345678" } })).resolves.toEqual({ status: "verified", playerName: "Verified Player", playerId: "12345678", region: "Global" });
     expect((fetch as ReturnType<typeof vi.fn>).mock.calls[1]?.[0]).toContain("type_name=eight_ball_pool");
+  });
+
+  it("maps Magic Chess, Call of Duty, and Arena of Valor to their owner-approved Isan endpoints", async () => {
+    process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
+    process.env.FZR_CARDS_API_KEY = "server-only-key";
+    for (const [gameId, expectedPath, fields] of [
+      ["magic_chess_gogo_global", "/nickname/mcgg?", { user_id: "12345678", server_id: "123" }],
+      ["call_of_duty_mobile", "/nickname/cod?", { user_id: "12345678" }],
+      ["arena_of_valor", "/nickname/aov?", { user_id: "12345678" }],
+    ] as const) {
+      vi.stubGlobal("fetch", vi.fn()
+        .mockResolvedValueOnce({ ok: false, status: 404, json: async () => ({}) })
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, name: "Verified Player", country: "Global" }) }));
+      await expect(validateProviderPlayerIdentity({ gameId, fields })).resolves.toMatchObject({ status: "verified", playerId: "12345678" });
+      expect((fetch as ReturnType<typeof vi.fn>).mock.calls[1]?.[0]).toContain(expectedPath);
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("does not call Magic Chess free validation until both ID and zone are complete", async () => {
+    process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
+    process.env.FZR_CARDS_API_KEY = "server-only-key";
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 404, json: async () => ({}) }));
+    await expect(validateProviderPlayerIdentity({ gameId: "magic_chess_gogo_global", fields: { user_id: "12345678" } })).resolves.toEqual({ status: "invalid", playerName: null, playerId: null, region: null });
+    expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1);
   });
 
   it("reveals an unsupported non-ML/HOK package list only after explicit ID confirmation", async () => {
