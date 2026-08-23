@@ -23,3 +23,7 @@ A follow-up production check confirmed that the SMM service list completed loadi
 ## 2026-08-23: Mobile layout review
 
 Mobile previews showed no visible horizontal overflow on Marketplace, Privacy Policy, or Terms of Service. The storefront and provider pages use a lightweight outline loading state during the initial catalog/detail request; subsequent production browser checks confirmed those states resolve to the authorized catalog or form.
+
+## Scheduled final verification
+
+A project-level readiness callback is scheduled for **09:45 GMT+7 on 2026-08-24** (02:45 UTC) at `/api/scheduled/bank-review-readiness`. The job checks only aggregate provider catalog status/counts and the disabled-by-policy payment mode; it does not handle customer data. The recorded task UID is `cJ4hDmBN2vK6PRwLXtGxKx` and should be deleted after the intended run because the dated cron expression would otherwise recur annually.

@@ -244,4 +244,4 @@
 - [x] Organize the unified Mobile Legends package list into provider-derived Diamonds, Elite Pass, and other special-package sections without inventing products or creating separate game cards.
 - [ ] Complete an overnight bank-review readiness pass through 10:00 AM: verify public routes, mobile scrolling, loading states, safe customer wording, provider error handling, production runtime errors, and disabled payment/Buy controls; schedule one final pre-review verification.
 - [x] Add server-only adapters for the owner-supplied free game-name APIs covering Free Fire, Mobile Legends, Magic Chess, 8 Ball Pool, Call of Duty Mobile, and Arena of Valor; preserve safe failure behavior and no client exposure of player IDs or provider responses.
-- [ ] Add and schedule a one-time cron-authenticated readiness callback before 10:00 AM to verify provider catalog availability and the payment-disabled state without handling customer data.
+- [x] Add and schedule a one-time cron-authenticated readiness callback before 10:00 AM to verify provider catalog availability and the payment-disabled state without handling customer data.
