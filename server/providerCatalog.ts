@@ -349,7 +349,19 @@ function isMobileLegendsGame(gameId: string) {
   return /^mobile_legends(?:_|$)/i.test(gameId);
 }
 
-function vpsWorkerIdentityInput(input: ProviderPackageRequest): { game: "mobilelegend" | "honor-of-kings"; playerId: string; serverId: string } | null {
+function vpsWorkerGameKey(gameId: string) {
+  const normalized = gameId.trim().toLowerCase();
+  if (/^mobile_legends(?:_|$)/.test(normalized)) return "mobilelegend";
+  if (/^honor_of_kings(?:_|$)/.test(normalized)) return "honor-of-kings";
+  if (/^free_fire(?:_|$)/.test(normalized)) return "free-fire";
+  if (/^pubg_mobile(?:_|$)/.test(normalized)) return "pubg-mobile";
+  if (/^genshin_impact(?:_|$)/.test(normalized)) return "genshin-impact";
+  if (/^blood_strike(?:_|$)/.test(normalized)) return "blood-strike";
+  if (/^roblox(?:_|$)/.test(normalized)) return "roblox";
+  return normalized.replace(/_(?:global|kh|my_sg|promo|special|auto|fast)$/i, "").replace(/_/g, "-");
+}
+
+function vpsWorkerIdentityInput(input: ProviderPackageRequest): { game: string; playerId: string; serverId: string } | null {
   const playerId = (input.fields.player_id ?? input.fields.user_id ?? input.fields.id ?? "").trim();
   const serverId = (input.fields.server_id ?? input.fields.zone_id ?? input.fields.server ?? "").trim();
   if (!/^\d{4,20}$/.test(playerId)) return null;
@@ -357,11 +369,10 @@ function vpsWorkerIdentityInput(input: ProviderPackageRequest): { game: "mobilel
     if (!/^\d{1,12}$/.test(serverId)) return null;
     return { game: "mobilelegend", playerId, serverId };
   }
-  if (/^honor_of_kings(?:_|$)/i.test(input.gameId)) return { game: "honor-of-kings", playerId, serverId: /^\d{1,12}$/.test(serverId) ? serverId : "" };
-  return null;
+  return { game: vpsWorkerGameKey(input.gameId), playerId, serverId: /^\d{1,12}$/.test(serverId) ? serverId : "" };
 }
 
-async function validateWithVpsWorker(input: { game: "mobilelegend" | "honor-of-kings"; playerId: string; serverId: string }): Promise<ProviderPlayerIdentityResponse | null> {
+async function validateWithVpsWorker(input: { game: string; playerId: string; serverId: string }): Promise<ProviderPlayerIdentityResponse | null> {
   const endpoint = process.env.VPS_WORKER_URL?.trim();
   const secret = process.env.WORKER_SECRET;
   if (!endpoint || !secret) {
@@ -403,7 +414,7 @@ function mobileLegendsFallbackSignal(deadline: number) {
   return remaining > 0 ? AbortSignal.timeout(Math.min(MOBILE_LEGENDS_FALLBACK_REQUEST_MS, remaining)) : null;
 }
 
-async function validateMobileLegendsWithFallback(input: ProviderPackageRequest): Promise<ProviderPlayerIdentityResponse | null> {
+async function validateMobileLegendsWithFallback(input: ProviderPackageRequest, options: { workerAlreadyTried?: boolean } = {}): Promise<ProviderPlayerIdentityResponse | null> {
   const ids = mobileLegendsIdentityFields(input.fields);
   if (!ids) return emptyIdentity("invalid");
   const deadline = Date.now() + MOBILE_LEGENDS_FALLBACK_DEADLINE_MS;
@@ -414,9 +425,11 @@ async function validateMobileLegendsWithFallback(input: ProviderPackageRequest):
     return null;
   };
 
-  const workerInput = vpsWorkerIdentityInput(input);
-  const workerResult = workerInput ? await validateWithVpsWorker(workerInput) : null;
-  if (workerResult) return workerResult;
+  if (!options.workerAlreadyTried) {
+    const workerInput = vpsWorkerIdentityInput(input);
+    const workerResult = workerInput ? await validateWithVpsWorker(workerInput) : null;
+    if (workerResult) return workerResult;
+  }
 
   const rapidApiKey = process.env.RAPIDAPI_ID_GAME_CHECKER_KEY;
   const neferbyteKey = process.env.NEFERBYTE_API_KEY;
@@ -460,22 +473,22 @@ async function validateMobileLegendsWithFallback(input: ProviderPackageRequest):
 }
 
 export async function validateProviderPlayerIdentity(input: ProviderPackageRequest): Promise<ProviderPlayerIdentityResponse> {
+  const workerInput = vpsWorkerIdentityInput(input);
+  const workerResult = workerInput ? await validateWithVpsWorker(workerInput) : null;
+  if (workerResult) return workerResult;
+
   try {
     const response = await fzrRequest("/api/v2/topups/validate-id", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ category_id: input.gameId, fields: input.fields }) });
     if (!response) {
-      if (isMobileLegendsGame(input.gameId)) return await validateMobileLegendsWithFallback(input) ?? emptyIdentity("unavailable");
-      const workerInput = vpsWorkerIdentityInput(input);
-      return workerInput ? (await validateWithVpsWorker(workerInput) ?? emptyIdentity("unavailable")) : emptyIdentity("unavailable");
+      if (isMobileLegendsGame(input.gameId)) return await validateMobileLegendsWithFallback(input, { workerAlreadyTried: Boolean(workerInput) }) ?? emptyIdentity("unavailable");
+      return emptyIdentity("unavailable");
     }
     const payload = fzrPlayerIdentitySchema.safeParse(response);
     if (!payload.success || payload.data.category_id !== input.gameId) return { status: "error", playerName: null, playerId: null, region: null };
     if (!payload.data.valid || !payload.data.player_name) return { status: "invalid", playerName: null, playerId: null, region: null };
     return { status: "verified", playerName: payload.data.player_name, playerId: payload.data.player_id ?? null, region: payload.data.region ?? null };
   } catch (error) {
-    if (isMobileLegendsGame(input.gameId)) return await validateMobileLegendsWithFallback(input) ?? emptyIdentity("unavailable");
-    const workerInput = vpsWorkerIdentityInput(input);
-    const workerResult = workerInput ? await validateWithVpsWorker(workerInput) : null;
-    if (workerResult) return workerResult;
+    if (isMobileLegendsGame(input.gameId)) return await validateMobileLegendsWithFallback(input, { workerAlreadyTried: Boolean(workerInput) }) ?? emptyIdentity("unavailable");
     if (error instanceof FzrRequestError && [400, 404].includes(error.status)) return emptyIdentity("not_supported");
     if (error instanceof FzrRequestError && error.status === 422) return emptyIdentity("invalid");
     if (error instanceof FzrRequestError && [502, 503].includes(error.status)) return emptyIdentity("unavailable");

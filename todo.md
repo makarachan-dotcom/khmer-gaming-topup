@@ -238,3 +238,4 @@
 - [x] Extend VPS Worker Check-ID validation to supported games such as Honor of Kings, then redeploy and verify zurs.me while keeping Buy and payment disabled.
 - [x] Diagnose and repair the live Honor of Kings Check-ID fallback so verified worker usernames unlock package selection without enabling payment or Buy actions.
 - [x] Confirm the latest safe main release is deployed to zurs.me and verify the custom-domain storefront.
+- [ ] Expand server-only Check-ID verification to every top-up game with identifier fields, requiring a verified username before package access while keeping Buy and payment disabled.

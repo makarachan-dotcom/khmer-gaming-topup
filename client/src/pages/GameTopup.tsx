@@ -81,13 +81,14 @@ export default function GameTopup() {
     if (!game || !fieldsReady) return null;
     return Object.fromEntries(game.requiredFields.filter((field) => field.required || Boolean(details[field.key]?.trim())).map((field) => [field.key, details[field.key]!.trim()]));
   }, [details, fieldsReady, game]);
-  const validationInput = useMemo(() => game && providerFields ? { gameId: game.id, fields: providerFields } : null, [game, providerFields]);
+  const identityRequired = requiresPlayerIdentityCheck(game?.requiredFields ?? []);
+  const validationInput = useMemo(() => game && providerFields && identityRequired ? { gameId: game.id, fields: providerFields } : null, [game, identityRequired, providerFields]);
   const adminPreviewActive = isOwnerAdmin && adminPreviewEnabled;
   const adminPreview = trpc.admin.previewGamePackages.useQuery({ gameId }, { enabled: Boolean(gameId) && adminPreviewActive, staleTime: 60_000 });
   const packages = adminPreviewActive ? adminPreview.data?.packages ?? [] : providerPackages.data?.packages ?? [];
   const packageStatus = adminPreviewActive ? adminPreview.data?.status : providerPackages.data?.status;
   const identity = validatePlayerId.data;
-  const canBrowsePackages = canBrowseTopupPackages(fieldsReady, identity?.status, adminPreviewActive);
+  const canBrowsePackages = canBrowseTopupPackages(fieldsReady, identity?.status, adminPreviewActive, identityRequired);
   const country = countryFlagForRegion(identity?.status === "verified" ? identity.region : null);
 
   const setSelectedPackageId = (id: string) => {
@@ -156,8 +157,12 @@ export function canBrowseVerifiedPackages(fieldsReady: boolean, status?: string)
   return fieldsReady && status === "verified";
 }
 
-export function canBrowseTopupPackages(fieldsReady: boolean, status: string | undefined, adminPreviewActive: boolean) {
-  return adminPreviewActive || canBrowseVerifiedPackages(fieldsReady, status);
+export function requiresPlayerIdentityCheck(fields: GameField[]) {
+  return fields.some((field) => /(?:player|user|account|game|zone|server|uid).*\bid\b|\bid\b.*(?:player|user|account|game|zone|server)|(?:^|[_\s-])(?:player|user|account|zone|server|uid)(?:[_\s-]|$)/i.test(`${field.key} ${field.label}`));
+}
+
+export function canBrowseTopupPackages(fieldsReady: boolean, status: string | undefined, adminPreviewActive: boolean, identityRequired = true) {
+  return adminPreviewActive || (identityRequired ? canBrowseVerifiedPackages(fieldsReady, status) : fieldsReady);
 }
 
 function IdentityStatus({ identity, pending, country }: { identity: ReturnType<typeof trpc.provider.validatePlayerId.useMutation>["data"]; pending: boolean; country: ReturnType<typeof countryFlagForRegion> }) {

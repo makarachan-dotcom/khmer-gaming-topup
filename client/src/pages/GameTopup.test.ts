@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canBrowseTopupPackages, canBrowseVerifiedPackages, gameIdFromTopupPath, gameTopupPath, groupProviderPackagesByMeaning, partitionProviderPackagesForFullTicketEvent, readVerifiedPlayerEntries, saveVerifiedPlayerEntry, sortProviderPackagesByPrice } from "./GameTopup";
+import { canBrowseTopupPackages, canBrowseVerifiedPackages, gameIdFromTopupPath, gameTopupPath, groupProviderPackagesByMeaning, partitionProviderPackagesForFullTicketEvent, readVerifiedPlayerEntries, requiresPlayerIdentityCheck, saveVerifiedPlayerEntry, sortProviderPackagesByPrice } from "./GameTopup";
 
 describe("dedicated game top-up routes", () => {
   it("creates and reads an encoded provider game route", () => {
@@ -67,6 +67,14 @@ describe("dedicated game top-up routes", () => {
     expect(canBrowseTopupPackages(false, "invalid", false)).toBe(false);
     expect(canBrowseTopupPackages(true, "not_supported", false)).toBe(false);
     expect(canBrowseTopupPackages(false, undefined, true)).toBe(true);
+    expect(canBrowseTopupPackages(true, undefined, false, false)).toBe(true);
+  });
+
+  it("requires a verified Check-ID result for Player ID, Zone ID, and account-ID game forms only", () => {
+    expect(requiresPlayerIdentityCheck([{ key: "player_id", label: "Player ID", required: true, kind: "text" }])).toBe(true);
+    expect(requiresPlayerIdentityCheck([{ key: "zone_id", label: "Zone ID", required: true, kind: "text" }])).toBe(true);
+    expect(requiresPlayerIdentityCheck([{ key: "account_id", label: "Account ID", required: true, kind: "text" }])).toBe(true);
+    expect(requiresPlayerIdentityCheck([{ key: "email", label: "Email", required: true, kind: "email" }])).toBe(false);
   });
 
   it("keeps only private verified ID fields in a small per-game browser history", () => {

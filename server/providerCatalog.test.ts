@@ -166,17 +166,16 @@ describe("provider catalog", () => {
     delete process.env.NEFERBYTE_API_KEY;
     delete process.env.RAPIDAPI_ID_GAME_CHECKER_KEY;
     vi.stubGlobal("fetch", vi.fn()
-      .mockResolvedValueOnce({ ok: false, status: 400 })
       .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ok: true, username: "Verified Worker Player", userId: "596323155", zoneId: "10085", game: "mobilelegend", status: "valid" }) }));
 
     const result = await validateProviderPlayerIdentity({ gameId: "mobile_legends_global", fields: { player_id: "596323155", server_id: "10085" } });
 
     expect(result).toEqual({ status: "verified", playerName: "Verified Worker Player", playerId: "596323155", region: "Global" });
-    const workerCall = (fetch as ReturnType<typeof vi.fn>).mock.calls[1];
+    const workerCall = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(workerCall?.[0]).toBe("https://worker.example.test/api/check-id");
     expect(workerCall?.[1]).toMatchObject({ method: "POST", headers: { authorization: "Bearer worker-server-only-secret", "content-type": "application/json" } });
     expect(JSON.parse(String(workerCall?.[1]?.body))).toEqual({ game: "mobilelegend", id: "596323155", serverId: "10085" });
-    expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(2);
+    expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1);
     expect(JSON.stringify(result)).not.toContain("worker-server-only-secret");
   });
 
@@ -186,15 +185,29 @@ describe("provider catalog", () => {
     process.env.VPS_WORKER_URL = "https://worker.example.test/api/check-id";
     process.env.WORKER_SECRET = "worker-server-only-secret";
     vi.stubGlobal("fetch", vi.fn()
-      .mockResolvedValueOnce({ ok: false, status: 400 })
       .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ok: true, username: "Verified Honor Player", userId: "8329784098348463649", zoneId: null, game: "honor-of-kings", status: "valid" }) }));
 
     const result = await validateProviderPlayerIdentity({ gameId: "honor_of_kings", fields: { player_id: "8329784098348463649" } });
 
     expect(result).toEqual({ status: "verified", playerName: "Verified Honor Player", playerId: "8329784098348463649", region: "Global" });
-    const workerCall = (fetch as ReturnType<typeof vi.fn>).mock.calls[1];
+    const workerCall = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(JSON.parse(String(workerCall?.[1]?.body))).toEqual({ game: "honor-of-kings", id: "8329784098348463649", serverId: "" });
-    expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(2);
+    expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1);
+  });
+
+  it("uses the worker first for other identifier-based games and normalizes a Free Fire provider category", async () => {
+    process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
+    process.env.FZR_CARDS_API_KEY = "provider-server-only-key";
+    process.env.VPS_WORKER_URL = "https://worker.example.test/api/check-id";
+    process.env.WORKER_SECRET = "worker-server-only-secret";
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ok: true, username: "Verified Free Fire Player", userId: "12345678", game: "free-fire", status: "valid" }) }));
+
+    const result = await validateProviderPlayerIdentity({ gameId: "free_fire_my_sg", fields: { player_id: "12345678" } });
+
+    expect(result.status).toBe("verified");
+    const workerCall = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(JSON.parse(String(workerCall?.[1]?.body))).toEqual({ game: "free-fire", id: "12345678", serverId: "" });
+    expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1);
   });
 
   it("stops after the finite authorized fallback chain without changing catalog or payment behavior", async () => {
