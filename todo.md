@@ -231,7 +231,7 @@
 - [x] Route and verify the latest published ZURS STORE release on the zurs.me domain.
 - [x] Diagnose and repair the reported mobile Account onboarding/backend error, with regression tests and live custom-domain verification.
 - [x] Harden server-only Game ID/name checking with bounded authorized fallbacks that never affect catalog, products, payment, and disabled Buy controls.
-- [ ] Review remote repository branches and merge eligible changes safely into main, with validation before publication.
-- [ ] Publish the current safe main release to zurs.me and verify the live custom-domain storefront.
+- [x] Review remote repository branches and merge eligible changes safely into main, with validation before publication.
+- [x] Publish the current safe main release to zurs.me and verify the live custom-domain storefront.
 - [ ] Diagnose and repair the Connect with Gmail flow on zurs.me, with secure callback and signed-session regression validation.
 - [x] Integrate the authorized VPS Worker as a server-only Game ID/name validation source, preserving catalog, payment, and disabled Buy controls.
