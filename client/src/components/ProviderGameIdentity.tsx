@@ -10,6 +10,7 @@ type ArtworkProps = {
   iconClassName?: string;
   priority?: boolean;
   region?: string | null;
+  showCountryFlag?: boolean;
 };
 
 const managedProviderArtwork: Array<{ matches: RegExp; url: string }> = [
@@ -28,22 +29,22 @@ export function canRenderProviderArtwork(url?: string) {
   return hasProviderApprovedGameLogo(url) || url?.startsWith("/manus-storage/") || url?.startsWith("/api/provider-artwork/");
 }
 
-export function ProviderGameArtwork({ name, logoUrl, className, iconClassName, priority = false, region }: ArtworkProps) {
+export function ProviderGameArtwork({ name, logoUrl, className, iconClassName, priority = false, region, showCountryFlag = true }: ArtworkProps) {
   const [imageFailed, setImageFailed] = useState(false);
   const resolvedLogoUrl = resolveProviderGameLogo(name, logoUrl);
   const cambodiaSupport = cambodiaSupportMarker(name, region);
   useEffect(() => setImageFailed(false), [resolvedLogoUrl]);
   if (canRenderProviderArtwork(resolvedLogoUrl) && !imageFailed) {
-    return <span className={cn("game-logo-frame", className)}><img src={resolvedLogoUrl} alt={`${name} official logo`} className="game-logo-image" loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : "auto"} decoding="async" referrerPolicy="no-referrer" onError={() => setImageFailed(true)} />{cambodiaSupport ? <span className="game-logo-cambodia-flag" aria-label={`${cambodiaSupport.label} support`}>{cambodiaSupport.flag}</span> : null}</span>;
+    return <span className={cn("game-logo-frame", className)}><img src={resolvedLogoUrl} alt={`${name} official logo`} className="game-logo-image" loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : "auto"} decoding="async" referrerPolicy="no-referrer" onError={() => setImageFailed(true)} />{showCountryFlag && cambodiaSupport ? <span className="game-logo-cambodia-flag" aria-label={`${cambodiaSupport.label} support`}>{cambodiaSupport.flag}</span> : null}</span>;
   }
-  return <span className={cn("game-logo-fallback", className)} aria-label={`${name} game icon`}><Gamepad2 className={cn("h-5 w-5", iconClassName)} />{cambodiaSupport ? <span className="game-logo-cambodia-flag" aria-label={`${cambodiaSupport.label} support`}>{cambodiaSupport.flag}</span> : null}</span>;
+  return <span className={cn("game-logo-fallback", className)} aria-label={`${name} game icon`}><Gamepad2 className={cn("h-5 w-5", iconClassName)} />{showCountryFlag && cambodiaSupport ? <span className="game-logo-cambodia-flag" aria-label={`${cambodiaSupport.label} support`}>{cambodiaSupport.flag}</span> : null}</span>;
 }
 
-export function ProviderGameRegion({ name, region, className }: { name: string; region?: string | null; className?: string }) {
+export function ProviderGameRegion({ name, region, className, showFlag = true }: { name: string; region?: string | null; className?: string; showFlag?: boolean }) {
   const cambodiaSupport = cambodiaSupportMarker(name, region);
   const marker = gameRegionMarker(name, region);
-  if (cambodiaSupport) return <span className={cn("game-region-marker", className)}><span className="country-flag" aria-hidden="true">{cambodiaSupport.flag}</span>{cambodiaSupport.label}</span>;
-  return marker.kind === "country" ? <span className={cn("game-region-marker", className)}><span className="country-flag" aria-hidden="true">{marker.flag}</span>{marker.label}</span> : <span className={cn("game-region-marker game-region-marker--global", className)}><Globe2 className="motion-icon h-3 w-3" aria-hidden="true" />Global</span>;
+  if (cambodiaSupport) return <span className={cn("game-region-marker", className)}>{showFlag ? <span className="country-flag" aria-hidden="true">{cambodiaSupport.flag}</span> : null}{cambodiaSupport.label}</span>;
+  return marker.kind === "country" ? <span className={cn("game-region-marker", className)}>{showFlag ? <span className="country-flag" aria-hidden="true">{marker.flag}</span> : null}{marker.label}</span> : <span className={cn("game-region-marker game-region-marker--global", className)}>{showFlag ? <Globe2 className="motion-icon h-3 w-3" aria-hidden="true" /> : null}Global</span>;
 }
 
 export function ProviderGameTitle({ name, className }: { name: string; className?: string }) {

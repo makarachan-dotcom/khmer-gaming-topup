@@ -9,3 +9,7 @@ The recovery bypasses optional account-store resolution only for public provider
 ## Package-layout follow-up
 
 The Mobile Legends game detail rendered provider-approved game artwork, verified the supplied ID fields server-side, and retained saved-ID masking without recording an account name in this note. During the local visual check, the subsequent live provider package request returned no usable package list, so no product selection or purchase was attempted. The ticket-style grouping, active-Admin-event gate, provider-art fallback, and compact selected-bar contracts are covered by automated tests; real package cards remain dependent on the provider response.
+
+## Home catalog clarity follow-up
+
+The local Home catalog rendered 12 real provider game cards after the public catalog recovery. Home cards now retain one Cambodia marker over the provider game artwork, with plain text regional metadata below the title. Group headers do not add a second flag, and long titles use overflow-only marquee behavior.

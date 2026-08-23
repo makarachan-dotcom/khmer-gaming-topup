@@ -227,3 +227,4 @@
 - [x] Replace raw Appwrite quota errors in customer views with concise Khmer recovery guidance while retaining administrator diagnostics.
 - [x] Merge the owner’s Google sign-in recovery with the Appwrite catalog-resilience work without discarding either change.
 - [x] Migrate the server and public Appwrite endpoint/project configuration to the newly supplied Singapore Appwrite project through managed secrets, then verify the connection without exposing credentials.
+- [x] Simplify Home provider-product cards into a clean, low-clutter hierarchy and render a relevant country flag only once per card rather than repeating it in multiple labels.
