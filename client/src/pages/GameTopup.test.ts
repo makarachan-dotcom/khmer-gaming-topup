@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canBrowseTopupPackages, canBrowseVerifiedPackages, gameIdFromTopupPath, gameTopupPath, groupProviderPackagesByMeaning, readVerifiedPlayerEntries, saveVerifiedPlayerEntry, sortProviderPackagesByPrice } from "./GameTopup";
+import { canBrowseTopupPackages, canBrowseVerifiedPackages, gameIdFromTopupPath, gameTopupPath, groupProviderPackagesByMeaning, partitionProviderPackagesForFullTicketEvent, readVerifiedPlayerEntries, saveVerifiedPlayerEntry, sortProviderPackagesByPrice } from "./GameTopup";
 
 describe("dedicated game top-up routes", () => {
   it("creates and reads an encoded provider game route", () => {
@@ -46,6 +46,21 @@ describe("dedicated game top-up routes", () => {
     expect(canBrowseVerifiedPackages(true, "not_supported")).toBe(false);
     expect(canBrowseVerifiedPackages(true, "unavailable")).toBe(false);
     expect(canBrowseVerifiedPackages(true, "verified")).toBe(true);
+  });
+
+  it("shows Full Ticket offers only while the administrator has an active event", () => {
+    const packages = [
+      { id: "ticket", label: "Full Ticket", amountLabel: "Full Ticket x1", priceLabel: "$4.00" },
+      { id: "diamonds", label: "100 Diamonds", amountLabel: "100 Diamonds", priceLabel: "$0.90" },
+    ];
+
+    const inactive = partitionProviderPackagesForFullTicketEvent(packages, false);
+    expect(inactive.eventPackages).toEqual([]);
+    expect(inactive.storefrontPackages.map((item) => item.id)).toEqual(["diamonds"]);
+
+    const active = partitionProviderPackagesForFullTicketEvent(packages, true);
+    expect(active.eventPackages.map((item) => item.id)).toEqual(["ticket"]);
+    expect(active.storefrontPackages.map((item) => item.id)).toEqual(["diamonds"]);
   });
 
   it("allows package UI without player fields only when the protected Admin preview mode is active", () => {

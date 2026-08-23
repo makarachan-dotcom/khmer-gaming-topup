@@ -217,6 +217,14 @@ export function groupProviderPackagesByMeaning<T extends ProviderPackage>(items:
   return { standard, bonus, passes, special };
 }
 
+export function partitionProviderPackagesForFullTicketEvent<T extends ProviderPackage>(items: T[], eventIsActive: boolean) {
+  const eventPackages = sortProviderPackagesByPrice(items.filter(isFullTicketPackage));
+  return {
+    eventPackages: eventIsActive ? eventPackages : [],
+    storefrontPackages: eventIsActive ? items.filter((item) => !isFullTicketPackage(item)) : items.filter((item) => !isFullTicketPackage(item)),
+  };
+}
+
 function PackageCard({ item, selected, onSelect, gameId, gameName, gameLogoUrl }: { item: ProviderPackage; selected: boolean; onSelect: () => void; gameId: string; gameName: string; gameLogoUrl?: string }) {
   const badge = providerPackageBadge(item.label);
   const mobileLegends = isMobileLegendsGlobalGame(gameId);
@@ -231,14 +239,14 @@ function PackageCard({ item, selected, onSelect, gameId, gameName, gameLogoUrl }
 
 function PackageSection({ title, description, icon: Icon, items, selectedPackageId, onSelect, gameId, gameName, gameLogoUrl, event }: { title: string; description?: string | null; icon: typeof Gem; items: ProviderPackage[]; selectedPackageId: string; onSelect: (id: string) => void; gameId: string; gameName: string; gameLogoUrl?: string; event?: boolean }) {
   if (!items.length) return null;
-  return <section className={event ? "package-event-group rounded-2xl p-3" : ""}><div className="flex items-center gap-2"><span className={event ? "package-event-title-icon" : "diamond-title-icon"}><Icon className="h-3.5 w-3.5" /></span><div className="min-w-0"><p className="text-xs font-extrabold text-slate-950">{title}</p>{description ? <p className="mt-0.5 text-[10px] leading-4 text-slate-500">{description}</p> : null}</div></div><div className={items.length === 1 ? "mx-auto mt-2 grid w-full max-w-[11.5rem] grid-cols-1 gap-2" : "mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3"}>{items.map((item) => <PackageCard key={item.id} item={item} selected={selectedPackageId === item.id} onSelect={() => onSelect(item.id)} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} />)}</div></section>;
+  return <section className={`package-section ${event ? "package-event-group" : ""}`}><div className="package-section-header flex items-center gap-2"><span className={event ? "package-event-title-icon" : "diamond-title-icon"}><Icon className="h-3.5 w-3.5" /></span><div className="min-w-0"><p className="text-xs font-extrabold text-slate-950">{title}</p>{description ? <p className="mt-0.5 text-[10px] leading-4 text-slate-500">{description}</p> : null}</div><span className="ml-auto shrink-0 rounded-full bg-white/75 px-2 py-0.5 text-[9px] font-bold text-slate-500">{items.length}</span></div><div className={items.length === 1 ? "mx-auto mt-3 grid w-full max-w-[11.5rem] grid-cols-1 gap-2" : "mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3"}>{items.map((item) => <PackageCard key={item.id} item={item} selected={selectedPackageId === item.id} onSelect={() => onSelect(item.id)} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} />)}</div></section>;
 }
 
 function DiamondPackages({ packages, status, selectedPackageId, onSelect, gameId, gameName, gameLogoUrl }: { packages: ProviderPackage[]; status?: "ready" | "unavailable" | "error" | "verification_required"; selectedPackageId: string; onSelect: (id: string) => void; gameId: string; gameName: string; gameLogoUrl?: string }) {
   const eventContent = trpc.content.active.useQuery();
   const fullTicketEvent = (eventContent.data ?? []).find((item) => item.contentKey === "topup-event-full-ticket");
-  const fullTicketPackages = fullTicketEvent ? sortProviderPackagesByPrice(packages.filter(isFullTicketPackage)) : [];
-  const groupedPackages = groupProviderPackagesByMeaning(fullTicketPackages.length ? packages.filter((item) => !isFullTicketPackage(item)) : packages);
+  const { eventPackages: fullTicketPackages, storefrontPackages } = partitionProviderPackagesForFullTicketEvent(packages, Boolean(fullTicketEvent));
+  const groupedPackages = groupProviderPackagesByMeaning(storefrontPackages);
   const isMobileLegendsGlobal = isMobileLegendsGlobalGame(gameId);
   const standardTitle = isMobileLegendsGlobal ? "កញ្ចប់ពេជ្យ" : "កញ្ចប់ធម្មតា";
   const passTitle = isMobileLegendsGlobal ? "Weekly Pass និង Membership" : "Pass និង Membership";
