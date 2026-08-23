@@ -13,10 +13,12 @@ const originalWorkerSecret = process.env.WORKER_SECRET;
 beforeEach(() => {
   delete process.env.VPS_WORKER_URL;
   delete process.env.WORKER_SECRET;
+  vi.spyOn(console, "warn").mockImplementation(() => undefined);
 });
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
   if (originalEndpoint === undefined) delete process.env.FZR_CARDS_API_BASE_URL;
   else process.env.FZR_CARDS_API_BASE_URL = originalEndpoint;
   if (originalApiKey === undefined) delete process.env.FZR_CARDS_API_KEY;

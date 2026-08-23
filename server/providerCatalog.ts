@@ -364,7 +364,10 @@ function vpsWorkerIdentityInput(input: ProviderPackageRequest): { game: "mobilel
 async function validateWithVpsWorker(input: { game: "mobilelegend" | "honor-of-kings"; playerId: string; serverId: string }): Promise<ProviderPlayerIdentityResponse | null> {
   const endpoint = process.env.VPS_WORKER_URL?.trim();
   const secret = process.env.WORKER_SECRET;
-  if (!endpoint || !secret) return null;
+  if (!endpoint || !secret) {
+    console.warn("[VPS Worker] Check-ID configuration is unavailable");
+    return null;
+  }
 
   try {
     const response = await fetch(endpoint, {
@@ -380,7 +383,11 @@ async function validateWithVpsWorker(input: { game: "mobilelegend" | "honor-of-k
     }
     const invalid = vpsWorkerInvalidIdentitySchema.safeParse(payload);
     if (response.ok && invalid.success) return emptyIdentity("invalid");
-  } catch { /* Continue to the next authorized fallback. */ }
+    console.warn(`[VPS Worker] Check-ID response was not usable (HTTP ${response.status})`);
+  } catch (error) {
+    const errorName = error instanceof Error ? error.name : "UnknownError";
+    console.warn(`[VPS Worker] Check-ID request failed (${errorName})`);
+  }
   return null;
 }
 
