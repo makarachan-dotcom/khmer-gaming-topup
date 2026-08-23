@@ -233,5 +233,5 @@
 - [x] Harden server-only Game ID/name checking with bounded authorized fallbacks that never affect catalog, products, payment, and disabled Buy controls.
 - [x] Review remote repository branches and merge eligible changes safely into main, with validation before publication.
 - [x] Publish the current safe main release to zurs.me and verify the live custom-domain storefront.
-- [ ] Diagnose and repair the Connect with Gmail flow on zurs.me, with secure callback and signed-session regression validation.
+- [x] Diagnose and repair the Connect with Gmail flow on zurs.me, with secure callback and signed-session regression validation.
 - [x] Integrate the authorized VPS Worker as a server-only Game ID/name validation source, preserving catalog, payment, and disabled Buy controls.
