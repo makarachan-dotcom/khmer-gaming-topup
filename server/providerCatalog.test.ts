@@ -7,7 +7,6 @@ const originalSmmEndpoint = process.env.SMMGLOB_API_URL;
 const originalSmmApiKey = process.env.SMMGLOB_API_KEY;
 const originalNeferbyteApiKey = process.env.NEFERBYTE_API_KEY;
 const originalRapidApiKey = process.env.RAPIDAPI_ID_GAME_CHECKER_KEY;
-const originalZyteApiKey = process.env.ZYTE_API_KEY;
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -23,8 +22,6 @@ afterEach(() => {
   else process.env.NEFERBYTE_API_KEY = originalNeferbyteApiKey;
   if (originalRapidApiKey === undefined) delete process.env.RAPIDAPI_ID_GAME_CHECKER_KEY;
   else process.env.RAPIDAPI_ID_GAME_CHECKER_KEY = originalRapidApiKey;
-  if (originalZyteApiKey === undefined) delete process.env.ZYTE_API_KEY;
-  else process.env.ZYTE_API_KEY = originalZyteApiKey;
 });
 
 describe("provider catalog", () => {
@@ -126,7 +123,6 @@ describe("provider catalog", () => {
     process.env.FZR_CARDS_API_KEY = "server-only-key";
     delete process.env.NEFERBYTE_API_KEY;
     delete process.env.RAPIDAPI_ID_GAME_CHECKER_KEY;
-    delete process.env.ZYTE_API_KEY;
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 400 }));
     await expect(validateProviderPlayerIdentity({ gameId: "mobile_legends_global", fields: { player_id: "596323155", server_id: "10085" } })).resolves.toEqual({ status: "unavailable", playerName: null, playerId: null, region: null });
     await expect(fetchProviderPackages({ gameId: "mobile_legends_global", fields: { player_id: "596323155", server_id: "10085" } })).resolves.toEqual({ status: "unavailable", packages: [] });
@@ -154,60 +150,14 @@ describe("provider catalog", () => {
     process.env.FZR_CARDS_API_KEY = "server-only-key";
     process.env.NEFERBYTE_API_KEY = "neferbyte-server-only-key";
     process.env.RAPIDAPI_ID_GAME_CHECKER_KEY = "rapidapi-server-only-key";
-    process.env.ZYTE_API_KEY = "zyte-server-only-key";
     vi.stubGlobal("fetch", vi.fn()
       .mockResolvedValueOnce({ ok: false, status: 400 })
       .mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({ success: false }) })
       .mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({ success: false }) })
-      .mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({ success: false }) })
-      .mockResolvedValue({ ok: false, status: 503, json: async () => ({}) }));
+      .mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({ success: false }) }));
 
     await expect(validateProviderPlayerIdentity({ gameId: "mobile_legends_global", fields: { player_id: "596323155", server_id: "10085" } })).resolves.toEqual({ status: "unavailable", playerName: null, playerId: null, region: null });
-    // FZR + RapidAPI + Neferbyte + Isan + one bounded Zyte retry (2 attempts) — nothing more.
-    expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(6);
-    expect(JSON.stringify((fetch as ReturnType<typeof vi.fn>).mock.calls)).not.toContain('"zyte-server-only-key"');
-  });
-
-  it("rotates once to the owner-approved Zyte browser check as the final Mobile Legends fallback", async () => {
-    process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
-    process.env.FZR_CARDS_API_KEY = "server-only-key";
-    process.env.NEFERBYTE_API_KEY = "neferbyte-server-only-key";
-    process.env.RAPIDAPI_ID_GAME_CHECKER_KEY = "rapidapi-server-only-key";
-    process.env.ZYTE_API_KEY = "zyte-server-only-key";
-    const zyteHtml = `<!doctype html><html><body><pre id="ncs-check-result">NCS:${encodeURIComponent(JSON.stringify({ httpStatus: 200, body: JSON.stringify({ status: 1, data: { username: "Zyte Verified Player" } }) }))}</pre></body></html>`;
-    vi.stubGlobal("fetch", vi.fn()
-      .mockResolvedValueOnce({ ok: false, status: 400 })
-      .mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({ success: false }) })
-      .mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({ success: false }) })
-      .mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({ success: false }) })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ statusCode: 200, browserHtml: zyteHtml }) }));
-    const result = await validateProviderPlayerIdentity({ gameId: "mobile_legends_global", fields: { player_id: "596323155", server_id: "10085" } });
-    expect(result).toEqual({ status: "verified", playerName: "Zyte Verified Player", playerId: "596323155", region: "Global" });
-    const zyteCall = (fetch as ReturnType<typeof vi.fn>).mock.calls[4] as [string, RequestInit];
-    expect(zyteCall[0]).toBe("https://api.zyte.com/v1/extract");
-    expect(JSON.stringify(result)).not.toContain("zyte-server-only-key");
-  });
-
-  it("rotates a non-Mobile-Legends id check to the owner-approved Zyte fallback when the primary provider is unavailable", async () => {
-    process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
-    process.env.FZR_CARDS_API_KEY = "server-only-key";
-    process.env.ZYTE_API_KEY = "zyte-server-only-key";
-    const zyteHtml = `<!doctype html><html><body><pre id="ncs-check-result">NCS:${encodeURIComponent(JSON.stringify({ httpStatus: 200, body: JSON.stringify({ status: 1, data: { username: "FF Player" } }) }))}</pre></body></html>`;
-    vi.stubGlobal("fetch", vi.fn()
-      .mockResolvedValueOnce({ ok: false, status: 503 })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ statusCode: 200, browserHtml: zyteHtml }) }));
-    const result = await validateProviderPlayerIdentity({ gameId: "free_fire_my_sg", fields: { player_id: "5099999999" } });
-    expect(result).toEqual({ status: "verified", playerName: "FF Player", playerId: "5099999999", region: "Global" });
-    expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(2);
-  });
-
-  it("keeps provider categories outside the approved Zyte map locked when the primary provider cannot check them", async () => {
-    process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
-    process.env.FZR_CARDS_API_KEY = "server-only-key";
-    process.env.ZYTE_API_KEY = "zyte-server-only-key";
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce({ ok: false, status: 400 }));
-    await expect(validateProviderPlayerIdentity({ gameId: "blood_strike", fields: { player_id: "123456" } })).resolves.toEqual({ status: "not_supported", playerName: null, playerId: null, region: null });
-    expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1);
+    expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(4);
   });
 
   it("maps SMMGlob services through the server-only form request", async () => {

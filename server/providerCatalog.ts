@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getAppwriteProviderAvailability, getAppwriteProviderCatalog, isAppwriteStoreConfigured, type AppwriteProviderCatalog, updateAppwriteProviderAvailability } from "./appwriteStore";
-import { checkProviderGameIdViaZyte } from "./zyteGameIdChecker";
 
 export const providerFieldSchema = z.object({
   key: z.string().trim().regex(/^[a-z][a-zA-Z0-9_]{0,63}$/),
@@ -402,59 +401,22 @@ async function validateMobileLegendsWithFallback(input: ProviderPackageRequest):
     } catch { /* The finite authorized fallback chain is unavailable. */ }
   }
 
-  // Final owner-approved step: the nevercrystore check through the Zyte browser.
-  // Zyte browser unblocking takes longer than an HTTP probe, so this step runs
-  // under its own fixed timeout (bounded inside the module) rather than the
-  // shared 18-second deadline above; the chain still cannot rotate indefinitely.
-  if (process.env.ZYTE_API_KEY) {
-    try {
-      const zyte = await checkProviderGameIdViaZyte(input.gameId, input.fields);
-      const verified = zyte.status === "verified" ? recordResult({ status: "verified", playerName: zyte.playerName, playerId: ids.playerId, region: "Global" }) : null;
-      if (verified) return verified;
-      if (zyte.status === "invalid") invalid = emptyIdentity("invalid");
-    } catch { /* The finite authorized fallback chain is unavailable. */ }
-  }
-
   return invalid ?? emptyIdentity("unavailable");
-}
-
-/**
- * Owner-approved rotation for non-Mobile-Legends games: when the primary FZR
- * route cannot check an id at all (unavailable or unsupported category), try
- * the nevercrystore/Zyte check once for games it covers. Returns null when the
- * game is outside the approved map or Zyte is not configured, so callers keep
- * their existing status semantics. An authoritative FZR verdict (valid /
- * invalid player) is never overridden — rotation only covers "cannot check".
- */
-async function validateWithNevercrystoreZyte(input: ProviderPackageRequest): Promise<ProviderPlayerIdentityResponse | null> {
-  if (!process.env.ZYTE_API_KEY) return null;
-  try {
-    const zyte = await checkProviderGameIdViaZyte(input.gameId, input.fields);
-    if (zyte.status === "verified") {
-      const playerId = (input.fields.player_id ?? input.fields.user_id ?? input.fields.id ?? "").trim();
-      return { status: "verified", playerName: zyte.playerName, playerId: playerId || null, region: "Global" };
-    }
-    if (zyte.status === "invalid") return emptyIdentity("invalid");
-  } catch { /* Rotation stays optional and bounded. */ }
-  return null;
 }
 
 export async function validateProviderPlayerIdentity(input: ProviderPackageRequest): Promise<ProviderPlayerIdentityResponse> {
   try {
     const response = await fzrRequest("/api/v2/topups/validate-id", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ category_id: input.gameId, fields: input.fields }) });
-    if (!response) {
-      if (isMobileLegendsGame(input.gameId)) return (await validateMobileLegendsWithFallback(input)) ?? emptyIdentity("unavailable");
-      return (await validateWithNevercrystoreZyte(input)) ?? emptyIdentity("unavailable");
-    }
+    if (!response) return isMobileLegendsGame(input.gameId) ? (await validateMobileLegendsWithFallback(input) ?? emptyIdentity("unavailable")) : emptyIdentity("unavailable");
     const payload = fzrPlayerIdentitySchema.safeParse(response);
     if (!payload.success || payload.data.category_id !== input.gameId) return { status: "error", playerName: null, playerId: null, region: null };
     if (!payload.data.valid || !payload.data.player_name) return { status: "invalid", playerName: null, playerId: null, region: null };
     return { status: "verified", playerName: payload.data.player_name, playerId: payload.data.player_id ?? null, region: payload.data.region ?? null };
   } catch (error) {
     if (isMobileLegendsGame(input.gameId)) return await validateMobileLegendsWithFallback(input) ?? emptyIdentity("unavailable");
-    if (error instanceof FzrRequestError && [400, 404].includes(error.status)) return (await validateWithNevercrystoreZyte(input)) ?? emptyIdentity("not_supported");
+    if (error instanceof FzrRequestError && [400, 404].includes(error.status)) return emptyIdentity("not_supported");
     if (error instanceof FzrRequestError && error.status === 422) return emptyIdentity("invalid");
-    if (error instanceof FzrRequestError && [502, 503].includes(error.status)) return (await validateWithNevercrystoreZyte(input)) ?? emptyIdentity("unavailable");
+    if (error instanceof FzrRequestError && [502, 503].includes(error.status)) return emptyIdentity("unavailable");
     return emptyIdentity("error");
   }
 }

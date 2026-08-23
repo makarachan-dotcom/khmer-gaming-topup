@@ -231,4 +231,3 @@
 - [x] Route and verify the latest published ZURS STORE release on the zurs.me domain.
 - [x] Diagnose and repair the reported mobile Account onboarding/backend error, with regression tests and live custom-domain verification.
 - [x] Harden server-only Game ID/name checking with bounded authorized fallbacks that never affect catalog, products, payment, or Buy controls.
-- [x] Extend server-only Game ID/name checks with the owner-approved nevercrystore-via-Zyte rotation step (Mobile Legends final fallback plus Free Fire, PUBG Mobile, Honor of Kings, and Magic Chess coverage when FZR cannot check), without touching catalog, products, payment, or Buy controls.
