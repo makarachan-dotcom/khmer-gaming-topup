@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canBrowseTopupPackages, canBrowseVerifiedPackages, gameIdFromTopupPath, gameTopupPath, groupProviderPackagesByMeaning, partitionProviderPackagesForFullTicketEvent, readVerifiedPlayerEntries, requiresPlayerIdentityCheck, saveVerifiedPlayerEntry, sortProviderPackagesByPrice } from "./GameTopup";
+import { canBrowseTopupPackages, canBrowseVerifiedPackages, gameIdFromTopupPath, gameTopupPath, groupProviderPackagesByMeaning, initialDiamondPackageLimit, partitionProviderPackagesForFullTicketEvent, readVerifiedPlayerEntries, requiresPlayerIdentityCheck, saveVerifiedPlayerEntry, sortProviderPackagesByPrice, visibleDiamondPackageItems } from "./GameTopup";
 
 describe("dedicated game top-up routes", () => {
   it("creates and reads an encoded provider game route", () => {
@@ -39,6 +39,13 @@ describe("dedicated game top-up routes", () => {
     expect(grouped.bonus.map(item => item.id)).toEqual(["pubg-uc-bonus"]);
     expect(grouped.passes.map(item => item.id)).toEqual(["ff-weekly", "pubg-monthly", "ml-elite"]);
     expect(grouped.special.map(item => item.id)).toEqual(["ff-special"]);
+  });
+
+  it("shows ten diamond packages first and reveals the provider-authorized remainder only after expansion", () => {
+    const packages = Array.from({ length: 12 }, (_, index) => ({ id: `diamond-${index + 1}`, label: `${index + 1} Diamonds`, amountLabel: `${index + 1} Diamonds`, priceLabel: `$${index + 1}` }));
+    expect(initialDiamondPackageLimit).toBe(10);
+    expect(visibleDiamondPackageItems(packages, false).map((item) => item.id)).toEqual(packages.slice(0, 10).map((item) => item.id));
+    expect(visibleDiamondPackageItems(packages, true)).toEqual(packages);
   });
 
   it("locks package browsing for invalid and unavailable username checks", () => {
