@@ -23,7 +23,7 @@ describe("dedicated game top-up routes", () => {
     expect(packages.map((item) => item.id)).toEqual(["mid", "low", "high"]);
   });
 
-  it("groups Free Fire, PUBG, and other provider packages by their genuine meaning", () => {
+  it("groups provider packages by their genuine meaning, including Elite Pass", () => {
     const packages = [
       { id: "ff-weekly", label: "Weekly Membership", amountLabel: "Weekly Membership", priceLabel: "$2.20" },
       { id: "pubg-uc-bonus", label: "60 UC + 5 UC", amountLabel: "65 UC", priceLabel: "$0.80" },
@@ -31,12 +31,13 @@ describe("dedicated game top-up routes", () => {
       { id: "ff-special", label: "Promo Crate", amountLabel: "1 Crate", priceLabel: "$1.10" },
       { id: "ff-diamonds", label: "100 Diamonds", amountLabel: "100 Diamonds", priceLabel: "$0.95" },
       { id: "pubg-monthly", label: "Monthly Pass", amountLabel: "Monthly Pass", priceLabel: "$4.50" },
+      { id: "ml-elite", label: "Elite Pass", amountLabel: "Elite Pass", priceLabel: "$5.00" },
     ];
 
     const grouped = groupProviderPackagesByMeaning(packages);
     expect(grouped.standard.map(item => item.id)).toEqual(["pubg-uc", "ff-diamonds"]);
     expect(grouped.bonus.map(item => item.id)).toEqual(["pubg-uc-bonus"]);
-    expect(grouped.passes.map(item => item.id)).toEqual(["ff-weekly", "pubg-monthly"]);
+    expect(grouped.passes.map(item => item.id)).toEqual(["ff-weekly", "pubg-monthly", "ml-elite"]);
     expect(grouped.special.map(item => item.id)).toEqual(["ff-special"]);
   });
 
