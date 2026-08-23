@@ -11,16 +11,36 @@ import { storageGet } from "./storage";
 import { createDiditHostedSession } from "./didit";
 import { disclosureRequestStatuses, fraudReportStatuses } from "./marketplaceSafety";
 import { deriveLocationRisk, resolveLocationCountry } from "./marketplaceLocation";
-import { getZursSessionCookieOptions, ZURS_SESSION_COOKIE } from "./zursSession";
+import { createZursSession, getZursSessionCookieOptions, ZURS_SESSION_COOKIE } from "./zursSession";
 import { getProductPurchaseReadiness } from "./paymentReadiness";
 
 const marketplaceType = z.enum(["sale", "swap", "wanted"]);
+
+function isTransientAccountStoreQuotaError(error: unknown) {
+  const message = error instanceof Error ? error.message : "";
+  return /Appwrite user store request failed with HTTP (?:402|429)|limit[_\s-]*databases?_reads_exceeded/i.test(message);
+}
 
 export const appRouter = router({
   system: systemRouter,
   auth: router({
     me: publicProcedure.query((opts) => opts.ctx.user),
-    setMemberDisplayName: protectedProcedure.input(z.object({ name: z.string().trim().max(120).optional() })).mutation(({ ctx, input }) => db.updateUserDisplayName({ userId: ctx.user.id, openId: ctx.user.openId, displayName: buildZursMemberDisplayName(input.name) })),
+    setMemberDisplayName: protectedProcedure.input(z.object({ name: z.string().trim().max(120).optional() })).mutation(async ({ ctx, input }) => {
+      const displayName = buildZursMemberDisplayName(input.name);
+      let persisted = true;
+      try {
+        await db.updateUserDisplayName({ user: ctx.user, displayName });
+      } catch (error) {
+        if (!isTransientAccountStoreQuotaError(error)) throw error;
+        persisted = false;
+        console.warn("[Account] Profile persistence deferred while Appwrite is rate-limited");
+      }
+      if (ctx.user.email) {
+        const session = await createZursSession(ctx.user.openId, { email: ctx.user.email, name: ctx.user.name, displayName, loginMethod: ctx.user.loginMethod });
+        ctx.res.cookie(ZURS_SESSION_COOKIE, session, getZursSessionCookieOptions(ctx.req));
+      }
+      return { displayName, persisted };
+    }),
     logout: publicProcedure.mutation(({ ctx }) => { const cookieOptions = getSessionCookieOptions(ctx.req); ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 }); ctx.res.clearCookie(ZURS_SESSION_COOKIE, { ...getZursSessionCookieOptions(ctx.req), maxAge: -1 }); return { success: true } as const; }),
   }),
   catalog: router({

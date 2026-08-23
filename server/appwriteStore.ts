@@ -375,12 +375,19 @@ export async function upsertAppwriteUser(input: InsertUser) {
   return user;
 }
 
-export async function updateAppwriteUserDisplayName(input: { openId: string; displayName: string }) {
-  const record = await getAppwriteUserRecordByOpenId(input.openId);
-  const current = record ? toUser(record) : null;
-  if (!record || !current) throw new Error("Your member profile could not be found. Please sign in again.");
-  const updated: User = { ...current, displayName: input.displayName, updatedAt: new Date() };
-  await request("PUT", userDocumentPath(input.openId), { data: { sourceTable: "users", sourceId: record.sourceId, payload: JSON.stringify(updated), sourceUpdatedAt: updated.updatedAt.toISOString() } });
+export async function updateAppwriteUserDisplayName(input: { user: User; displayName: string }) {
+  const updated: User = { ...input.user, displayName: input.displayName, updatedAt: new Date() };
+  const sourceId = input.user.openId;
+  const body = { data: { sourceTable: "users", sourceId, payload: JSON.stringify(updated), sourceUpdatedAt: updated.updatedAt.toISOString() } };
+  // Profile updates run while the user is already authenticated. Create first and
+  // update on a deterministic-document conflict so a quota-limited read can never
+  // block Account onboarding.
+  try {
+    await request("POST", `/databases/${databaseId()}/collections/${collectionId}/documents`, { documentId: documentId(`users:${sourceId}`), ...body });
+  } catch (error) {
+    if (!shouldRetryAppwriteCreateAsUpdate(error)) throw error;
+    await request("PUT", userDocumentPath(sourceId), body);
+  }
   return { displayName: input.displayName };
 }
 

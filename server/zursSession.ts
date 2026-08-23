@@ -8,7 +8,7 @@ import { isSingleAdminEmail } from "./storefrontDomain";
 export const ZURS_SESSION_COOKIE = "zurs_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 365;
 
-type FallbackProfileInput = { openId: string; email: string; name?: string | null; loginMethod?: string | null };
+type FallbackProfileInput = { openId: string; email: string; name?: string | null; displayName?: string | null; loginMethod?: string | null };
 type SessionClaims = { openId?: unknown; fallbackProfile?: unknown };
 
 function fallbackUserId(openId: string) {
@@ -22,7 +22,7 @@ function fallbackProfile(input: FallbackProfileInput): User {
     id: fallbackUserId(input.openId),
     openId: input.openId,
     name: input.name ?? null,
-    displayName: null,
+    displayName: input.displayName ?? null,
     email,
     loginMethod: input.loginMethod ?? "google",
     role: isSingleAdminEmail(email) ? "admin" : "user",
@@ -36,7 +36,7 @@ function sessionFallbackProfile(value: unknown): User | null {
   if (!value || typeof value !== "object") return null;
   const candidate = value as Partial<FallbackProfileInput>;
   if (typeof candidate.openId !== "string" || typeof candidate.email !== "string") return null;
-  return fallbackProfile({ openId: candidate.openId, email: candidate.email, name: typeof candidate.name === "string" ? candidate.name : null, loginMethod: typeof candidate.loginMethod === "string" ? candidate.loginMethod : "google" });
+  return fallbackProfile({ openId: candidate.openId, email: candidate.email, name: typeof candidate.name === "string" ? candidate.name : null, displayName: typeof candidate.displayName === "string" ? candidate.displayName : null, loginMethod: typeof candidate.loginMethod === "string" ? candidate.loginMethod : "google" });
 }
 
 function sessionKey(env = process.env) {
@@ -52,7 +52,7 @@ export function getZursSessionCookieOptions(req: Pick<Request, "protocol" | "hea
 }
 
 export async function createZursSession(openId: string, fallback?: Omit<FallbackProfileInput, "openId">) {
-  const fallbackProfileClaim = fallback ? { openId, email: fallback.email.trim().toLowerCase(), name: fallback.name ?? null, loginMethod: fallback.loginMethod ?? "google" } : undefined;
+  const fallbackProfileClaim = fallback ? { openId, email: fallback.email.trim().toLowerCase(), name: fallback.name ?? null, displayName: fallback.displayName ?? null, loginMethod: fallback.loginMethod ?? "google" } : undefined;
   return new SignJWT({ openId, ...(fallbackProfileClaim ? { fallbackProfile: fallbackProfileClaim } : {}) }).setProtectedHeader({ alg: "HS256", typ: "JWT" }).setIssuedAt().setExpirationTime(`${SESSION_TTL_SECONDS}s`).sign(sessionKey());
 }
 

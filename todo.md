@@ -229,3 +229,4 @@
 - [x] Migrate the server and public Appwrite endpoint/project configuration to the newly supplied Singapore Appwrite project through managed secrets, then verify the connection without exposing credentials.
 - [x] Simplify Home provider-product cards into a clean, low-clutter hierarchy and render a relevant country flag only once per card rather than repeating it in multiple labels.
 - [x] Route and verify the latest published ZURS STORE release on the zurs.me domain.
+- [x] Diagnose and repair the reported mobile Account onboarding/backend error, with regression tests and live custom-domain verification.

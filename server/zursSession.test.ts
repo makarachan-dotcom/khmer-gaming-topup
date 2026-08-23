@@ -33,4 +33,17 @@ describe("standalone ZURS session", () => {
       role: "user",
     });
   });
+
+  it("restores a profile display name from an updated signed fallback session", async () => {
+    const token = await createZursSession("google:subject-456", {
+      email: "Member@Example.com",
+      name: "Member",
+      displayName: "Makara ZURS Member",
+      loginMethod: "google",
+    });
+
+    await expect(readZursSessionFallbackProfile({ headers: { cookie: `zurs_session=${token}` } })).resolves.toMatchObject({
+      displayName: "Makara ZURS Member",
+    });
+  });
 });
