@@ -332,7 +332,7 @@ const vpsWorkerVerifiedIdentitySchema = z.object({
   ok: z.literal(true),
   username: z.string().trim().min(1).max(180),
   userId: z.string().trim().min(1).max(180).optional(),
-  zoneId: z.string().trim().min(1).max(120).optional(),
+  zoneId: z.string().trim().min(1).max(120).nullable().optional(),
   game: z.string().trim().min(1).max(120).optional(),
   status: z.literal("valid"),
 });

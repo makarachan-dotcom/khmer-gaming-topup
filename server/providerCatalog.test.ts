@@ -187,7 +187,7 @@ describe("provider catalog", () => {
     process.env.WORKER_SECRET = "worker-server-only-secret";
     vi.stubGlobal("fetch", vi.fn()
       .mockResolvedValueOnce({ ok: false, status: 400 })
-      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ok: true, username: "Verified Honor Player", userId: "8329784098348463649", game: "honor-of-kings", status: "valid" }) }));
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ok: true, username: "Verified Honor Player", userId: "8329784098348463649", zoneId: null, game: "honor-of-kings", status: "valid" }) }));
 
     const result = await validateProviderPlayerIdentity({ gameId: "honor_of_kings", fields: { player_id: "8329784098348463649" } });
 
