@@ -178,6 +178,23 @@ describe("provider catalog", () => {
     expect(JSON.stringify(result)).not.toContain("worker-server-only-secret");
   });
 
+  it("uses the VPS Worker for supported Honor of Kings ID validation after FZR declines the category", async () => {
+    process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
+    process.env.FZR_CARDS_API_KEY = "provider-server-only-key";
+    process.env.VPS_WORKER_URL = "https://worker.example.test/api/check-id";
+    process.env.WORKER_SECRET = "worker-server-only-secret";
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce({ ok: false, status: 400 })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ok: true, username: "Verified Honor Player", userId: "8329784098348463649", game: "honor-of-kings", status: "valid" }) }));
+
+    const result = await validateProviderPlayerIdentity({ gameId: "honor_of_kings", fields: { player_id: "8329784098348463649" } });
+
+    expect(result).toEqual({ status: "verified", playerName: "Verified Honor Player", playerId: "8329784098348463649", region: "Global" });
+    const workerCall = (fetch as ReturnType<typeof vi.fn>).mock.calls[1];
+    expect(JSON.parse(String(workerCall?.[1]?.body))).toEqual({ game: "honor-of-kings", id: "8329784098348463649", serverId: "" });
+    expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(2);
+  });
+
   it("stops after the finite authorized fallback chain without changing catalog or payment behavior", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "server-only-key";

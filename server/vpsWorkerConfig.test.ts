@@ -16,7 +16,7 @@ describe("VPS Worker credential configuration", () => {
         authorization: `Bearer ${secret}`,
         "content-type": "application/json",
       },
-      body: JSON.stringify({ game: "mobilelegend", id: "12345678", serverId: "1234" }),
+      body: JSON.stringify({ game: "honor-of-kings", id: "8329784098348463649", serverId: "" }),
       signal: AbortSignal.timeout(15_000),
     });
 

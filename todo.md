@@ -235,3 +235,4 @@
 - [x] Publish the current safe main release to zurs.me and verify the live custom-domain storefront.
 - [x] Diagnose and repair the Connect with Gmail flow on zurs.me, with secure callback and signed-session regression validation.
 - [x] Integrate the authorized VPS Worker as a server-only Game ID/name validation source, preserving catalog, payment, and disabled Buy controls.
+- [x] Extend VPS Worker Check-ID validation to supported games such as Honor of Kings, then redeploy and verify zurs.me while keeping Buy and payment disabled.

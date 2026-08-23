@@ -349,7 +349,19 @@ function isMobileLegendsGame(gameId: string) {
   return /^mobile_legends(?:_|$)/i.test(gameId);
 }
 
-async function validateMobileLegendsWithVpsWorker(ids: { playerId: string; serverId: string }): Promise<ProviderPlayerIdentityResponse | null> {
+function vpsWorkerIdentityInput(input: ProviderPackageRequest): { game: "mobilelegend" | "honor-of-kings"; playerId: string; serverId: string } | null {
+  const playerId = (input.fields.player_id ?? input.fields.user_id ?? input.fields.id ?? "").trim();
+  const serverId = (input.fields.server_id ?? input.fields.zone_id ?? input.fields.server ?? "").trim();
+  if (!/^\d{4,20}$/.test(playerId)) return null;
+  if (isMobileLegendsGame(input.gameId)) {
+    if (!/^\d{1,12}$/.test(serverId)) return null;
+    return { game: "mobilelegend", playerId, serverId };
+  }
+  if (/^honor_of_kings(?:_|$)/i.test(input.gameId)) return { game: "honor-of-kings", playerId, serverId: /^\d{1,12}$/.test(serverId) ? serverId : "" };
+  return null;
+}
+
+async function validateWithVpsWorker(input: { game: "mobilelegend" | "honor-of-kings"; playerId: string; serverId: string }): Promise<ProviderPlayerIdentityResponse | null> {
   const endpoint = process.env.VPS_WORKER_URL?.trim();
   const secret = process.env.WORKER_SECRET;
   if (!endpoint || !secret) return null;
@@ -358,13 +370,13 @@ async function validateMobileLegendsWithVpsWorker(ids: { playerId: string; serve
     const response = await fetch(endpoint, {
       method: "POST",
       headers: { authorization: `Bearer ${secret}`, "content-type": "application/json" },
-      body: JSON.stringify({ game: "mobilelegend", id: ids.playerId, serverId: ids.serverId }),
+      body: JSON.stringify({ game: input.game, id: input.playerId, serverId: input.serverId }),
       signal: AbortSignal.timeout(8_000),
     });
     const payload = await response.json().catch(() => null);
     const verified = vpsWorkerVerifiedIdentitySchema.safeParse(payload);
     if (response.ok && verified.success) {
-      return { status: "verified", playerName: verified.data.username, playerId: verified.data.userId ?? ids.playerId, region: "Global" };
+      return { status: "verified", playerName: verified.data.username, playerId: verified.data.userId ?? input.playerId, region: "Global" };
     }
     const invalid = vpsWorkerInvalidIdentitySchema.safeParse(payload);
     if (response.ok && invalid.success) return emptyIdentity("invalid");
@@ -395,7 +407,8 @@ async function validateMobileLegendsWithFallback(input: ProviderPackageRequest):
     return null;
   };
 
-  const workerResult = await validateMobileLegendsWithVpsWorker(ids);
+  const workerInput = vpsWorkerIdentityInput(input);
+  const workerResult = workerInput ? await validateWithVpsWorker(workerInput) : null;
   if (workerResult) return workerResult;
 
   const rapidApiKey = process.env.RAPIDAPI_ID_GAME_CHECKER_KEY;
@@ -442,13 +455,20 @@ async function validateMobileLegendsWithFallback(input: ProviderPackageRequest):
 export async function validateProviderPlayerIdentity(input: ProviderPackageRequest): Promise<ProviderPlayerIdentityResponse> {
   try {
     const response = await fzrRequest("/api/v2/topups/validate-id", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ category_id: input.gameId, fields: input.fields }) });
-    if (!response) return isMobileLegendsGame(input.gameId) ? (await validateMobileLegendsWithFallback(input) ?? emptyIdentity("unavailable")) : emptyIdentity("unavailable");
+    if (!response) {
+      if (isMobileLegendsGame(input.gameId)) return await validateMobileLegendsWithFallback(input) ?? emptyIdentity("unavailable");
+      const workerInput = vpsWorkerIdentityInput(input);
+      return workerInput ? (await validateWithVpsWorker(workerInput) ?? emptyIdentity("unavailable")) : emptyIdentity("unavailable");
+    }
     const payload = fzrPlayerIdentitySchema.safeParse(response);
     if (!payload.success || payload.data.category_id !== input.gameId) return { status: "error", playerName: null, playerId: null, region: null };
     if (!payload.data.valid || !payload.data.player_name) return { status: "invalid", playerName: null, playerId: null, region: null };
     return { status: "verified", playerName: payload.data.player_name, playerId: payload.data.player_id ?? null, region: payload.data.region ?? null };
   } catch (error) {
     if (isMobileLegendsGame(input.gameId)) return await validateMobileLegendsWithFallback(input) ?? emptyIdentity("unavailable");
+    const workerInput = vpsWorkerIdentityInput(input);
+    const workerResult = workerInput ? await validateWithVpsWorker(workerInput) : null;
+    if (workerResult) return workerResult;
     if (error instanceof FzrRequestError && [400, 404].includes(error.status)) return emptyIdentity("not_supported");
     if (error instanceof FzrRequestError && error.status === 422) return emptyIdentity("invalid");
     if (error instanceof FzrRequestError && [502, 503].includes(error.status)) return emptyIdentity("unavailable");
