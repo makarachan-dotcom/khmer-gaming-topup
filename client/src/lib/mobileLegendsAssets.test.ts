@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { isMobileLegendsGlobalGame, mobileLegendsDiamondAmount, mobileLegendsDiamondLabel } from "./mobileLegendsAssets";
 
 describe("Mobile Legends package presentation", () => {
-  it("targets only the provider Mobile Legends Global game ID", () => {
+  it("targets the unified Mobile Legends family route and its primary provider variant", () => {
+    expect(isMobileLegendsGlobalGame("mobile_legends")).toBe(true);
     expect(isMobileLegendsGlobalGame("mobile_legends_global")).toBe(true);
     expect(isMobileLegendsGlobalGame("MOBILE_LEGENDS_GLOBAL")).toBe(true);
     expect(isMobileLegendsGlobalGame("mobile_legends_brazil")).toBe(false);

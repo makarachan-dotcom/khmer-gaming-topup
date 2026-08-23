@@ -205,6 +205,9 @@ type CatalogGame = { id: string; name: string; region?: string; logoUrl?: string
 function ProviderGameCatalogGroup({ baseName, games }: { baseName: string; games: CatalogGame[] }) {
   const primary = games[0];
   if (!primary) return null;
+  if (baseName.trim().toLowerCase() === "mobile legends") {
+    return <HomeGameCard game={{ ...primary, id: "mobile_legends", name: "Mobile Legends" }} displayName="Mobile Legends" />;
+  }
   return <section className="col-span-full rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/80 via-white to-cyan-50/80 p-3 shadow-sm"><div className="flex items-center gap-2"><ProviderGameArtwork name={primary.name} region={primary.region} logoUrl={primary.logoUrl} className="h-9 w-9 rounded-xl" showCountryFlag={false} /><div className="min-w-0"><OverflowMarquee text={baseName} className="block text-sm font-extrabold text-slate-950" /><p className="mt-0.5 text-[10px] font-semibold text-indigo-700">គាំទ្រសម្រាប់កម្ពុជា · ជ្រើសរើសប្រភេទ top-up</p></div></div><div className={games.length === 1 ? "mx-auto mt-3 grid w-full max-w-[12rem] grid-cols-1 gap-3" : "mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"}>{games.map(game => <HomeGameCard key={game.id} game={game} displayName={providerGameVariantLabel(game)} />)}</div></section>;
 }
 
@@ -252,8 +255,8 @@ function HomeTopupExperience() {
               className="text-xs font-semibold text-slate-500"
               aria-live="polite"
             >
-              បង្ហាញ {visibleGames.length.toLocaleString()} /{" "}
-              {games.length.toLocaleString()} ហ្គេម
+              បង្ហាញ {catalogGroups.length.toLocaleString()} /{" "}
+              {groupProviderGamesByBaseName(games).length.toLocaleString()} ហ្គេម
             </p>
           ) : null}
         </div>

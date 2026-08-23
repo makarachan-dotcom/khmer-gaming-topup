@@ -241,6 +241,13 @@ export const initialApprovedPublicGameIds = [
   "pubg_mobile_fast",
 ] as const;
 
+export const mobileLegendsFamilyGameId = "mobile_legends";
+const mobileLegendsFamilyVariantIds = ["mobile_legends_global", "mobile_legends_promo", "mobile_legends_special"] as const;
+
+function isMobileLegendsFamilyGame(gameId: string) {
+  return gameId.trim().toLowerCase() === mobileLegendsFamilyGameId;
+}
+
 function publicProviderGameIds(availability: Awaited<ReturnType<typeof providerAvailability>>) {
   const approvedIds = availability.activeGameIds ?? initialApprovedPublicGameIds;
   return new Set(approvedIds.filter((id) => !availability.hiddenGameIds.includes(id)));
@@ -288,7 +295,21 @@ export async function fetchProviderGames(options: { includeInactive?: boolean } 
 export async function fetchProviderGameDetails(gameId: string, options: { includeInactive?: boolean } = {}): Promise<ProviderGameDetailsResponse> {
   try {
     const availableGames = await fetchProviderGames({ includeInactive: options.includeInactive });
-    if (availableGames.status !== "ready" || !availableGames.games.some((game) => game.id === gameId)) return { status: availableGames.status === "error" ? "error" : "unavailable", game: null, packages: [] };
+    if (availableGames.status !== "ready") return { status: availableGames.status === "error" ? "error" : "unavailable", game: null, packages: [] };
+    if (isMobileLegendsFamilyGame(gameId)) {
+      const activeVariants = mobileLegendsFamilyVariantIds.filter((variantId) => availableGames.games.some((game) => game.id === variantId));
+      if (!activeVariants.length) return { status: "unavailable", game: null, packages: [] };
+      const variantDetails = await Promise.all(activeVariants.map((variantId) => fetchProviderGameDetails(variantId, options)));
+      const readyVariants = variantDetails.filter((details): details is Extract<ProviderGameDetailsResponse, { status: "ready" }> => details.status === "ready");
+      if (!readyVariants.length) return { status: variantDetails.some((details) => details.status === "error") ? "error" : "unavailable", game: null, packages: [] };
+      const primary = readyVariants.find((details) => details.game.id === "mobile_legends_global") ?? readyVariants[0]!;
+      return {
+        status: "ready",
+        game: { ...primary.game, id: mobileLegendsFamilyGameId, name: "Mobile Legends" },
+        packages: readyVariants.flatMap((details) => details.packages),
+      };
+    }
+    if (!availableGames.games.some((game) => game.id === gameId)) return { status: "unavailable", game: null, packages: [] };
     const response = await fzrRequest(`/api/v2/topups/offers?category_id=${encodeURIComponent(gameId)}&include_ui=1`);
     if (!response) return { status: "unavailable", game: null, packages: [] };
     const payload = fzrOffersSchema.safeParse(response);
@@ -486,14 +507,15 @@ export async function validateProviderPlayerIdentity(input: ProviderPackageReque
   if (workerResult) return workerResult;
 
   try {
-    const response = await fzrRequest("/api/v2/topups/validate-id", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ category_id: input.gameId, fields: input.fields }) });
+    const providerGameId = isMobileLegendsFamilyGame(input.gameId) ? "mobile_legends_global" : input.gameId;
+    const response = await fzrRequest("/api/v2/topups/validate-id", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ category_id: providerGameId, fields: input.fields }) });
     if (!response) {
       if (isMobileLegendsGame(input.gameId)) return await validateMobileLegendsWithFallback(input, { workerAlreadyTried: Boolean(workerInput) }) ?? emptyIdentity("unavailable");
       if (isHonorOfKingsGame(input.gameId)) return emptyIdentity("unavailable");
       return emptyIdentity("unavailable");
     }
     const payload = fzrPlayerIdentitySchema.safeParse(response);
-    if (!payload.success || payload.data.category_id !== input.gameId) return { status: "error", playerName: null, playerId: null, region: null };
+    if (!payload.success || payload.data.category_id !== providerGameId) return { status: "error", playerName: null, playerId: null, region: null };
     if (!payload.data.valid || !payload.data.player_name) return { status: "invalid", playerName: null, playerId: null, region: null };
     return { status: "verified", playerName: payload.data.player_name, playerId: payload.data.player_id ?? null, region: payload.data.region ?? null };
   } catch (error) {

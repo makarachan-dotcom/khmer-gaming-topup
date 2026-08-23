@@ -240,3 +240,4 @@
 - [x] Confirm the latest safe main release is deployed to zurs.me and verify the custom-domain storefront.
 - [x] Superseded at the owner's request: expand server-only Check-ID verification to every top-up game with identifier fields; the revised policy below limits VPS username checks to Mobile Legends and Honor of Kings.
 - [x] Keep each game's public and special packages in one clear per-game product list without combining Mobile Legends, PUBG Mobile, Free Fire, or other separate games; use VPS username checks only for Mobile Legends and Honor of Kings, and require an explicit ID-accuracy confirmation when other games cannot be name-checked by FZR.
+- [x] Consolidate equivalent provider variants under one customer-facing game card and page, beginning with Mobile Legends, so Global, Promo, and Special are retrieved as one unified package list without child variant cards.

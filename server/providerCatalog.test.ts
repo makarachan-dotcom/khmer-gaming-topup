@@ -94,6 +94,21 @@ describe("provider catalog", () => {
     await expect(fetchProviderGameDetails("acecraft", { includeInactive: true })).resolves.toEqual({ status: "ready", game: { id: "acecraft", name: "Acecraft", region: "Global", logoUrl: "https://cdn.example.test/acecraft.png", provider: "FZR Cards", requiredFields: [{ key: "user_id", label: "User ID", required: true, kind: "text" }] }, packages: [{ id: "acecraft:80_diamonds", label: "80 Diamonds", amountLabel: "80 Diamonds", priceLabel: "$0.99", provider: "FZR Cards", paymentMethods: ["khqr", "bank"] }] });
   });
 
+  it("merges active Mobile Legends Global, Promo, and Special variants into one family page", async () => {
+    process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
+    process.env.FZR_CARDS_API_KEY = "server-only-key";
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (url.includes("/offers?category_id=mobile_legends_global")) return { ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "mobile_legends_global", name: "Mobile Legends (Global)", fields: [{ key: "player_id", label: "Player ID", type: "text" }, { key: "server_id", label: "Server ID", type: "text" }], offers: [{ offer_id: "global", name: "86 Diamonds", price_usd: "1.00" }] }) };
+      if (url.includes("/offers?category_id=mobile_legends_promo")) return { ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "mobile_legends_promo", name: "Mobile Legends (Promo)", fields: [{ key: "player_id", label: "Player ID", type: "text" }, { key: "server_id", label: "Server ID", type: "text" }], offers: [{ offer_id: "promo", name: "Promo Pass", price_usd: "2.00" }] }) };
+      if (url.includes("/offers?category_id=mobile_legends_special")) return { ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "mobile_legends_special", name: "Mobile Legends (Special)", fields: [{ key: "player_id", label: "Player ID", type: "text" }, { key: "server_id", label: "Server ID", type: "text" }], offers: [{ offer_id: "special", name: "Special Pack", price_usd: "3.00" }] }) };
+      return { ok: true, json: async () => ({ ok: true, kind: "topup", items: [{ category_id: "mobile_legends_global", name: "Mobile Legends (Global)" }, { category_id: "mobile_legends_promo", name: "Mobile Legends (Promo)" }, { category_id: "mobile_legends_special", name: "Mobile Legends (Special)" }], meta: { next_cursor: null, has_more: false } }) };
+    }));
+
+    const result = await fetchProviderGameDetails("mobile_legends");
+    expect(result).toMatchObject({ status: "ready", game: { id: "mobile_legends", name: "Mobile Legends" } });
+    if (result.status === "ready") expect(result.packages.map((item) => item.id)).toEqual(["mobile_legends_global:global", "mobile_legends_promo:promo", "mobile_legends_special:special"]);
+  });
+
   it("returns authorized package UI for an admin preview without submitting a player identity", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "server-only-key";
