@@ -1,8 +1,9 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
 import { trpc } from "@/lib/trpc";
-import { CheckCircle2, LifeBuoy, Loader2, MessageSquareText, ShieldAlert } from "lucide-react";
+import { CheckCircle2, LifeBuoy, MessageSquareText, ShieldAlert } from "lucide-react";
 import { useState } from "react";
+import { LoadingV2 } from "@/components/OutlineLoader";
 
 const ticketLabels: Record<string, string> = { open: "Ticket ថ្មី", reviewing: "កំពុងពិនិត្យ", resolved: "បានដោះស្រាយ", closed: "បានបិទ" };
 
@@ -18,7 +19,7 @@ function TicketList() {
   const tickets = trpc.admin.orderSupportTickets.useQuery();
   const utils = trpc.useUtils();
   const review = trpc.admin.reviewOrderSupportTicket.useMutation({ onSuccess: () => utils.admin.orderSupportTickets.invalidate() });
-  if (tickets.isLoading) return <div className="mt-6 grid min-h-40 place-items-center rounded-2xl border border-slate-200 bg-white"><Loader2 className="h-5 w-5 animate-spin text-indigo-600" /></div>;
+  if (tickets.isLoading) return <div className="mt-6 grid min-h-40 place-items-center rounded-2xl border border-slate-200 bg-white"><LoadingV2 size={20} color="#4f46e5" className="h-5 w-5 text-indigo-600" /></div>;
   if (!tickets.data?.length) return <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-xs text-slate-500">មិនទាន់មាន ticket ពីអតិថិជនទេ។</div>;
   return <section className="mt-6 space-y-3">{tickets.data.map(({ ticket, order, customer }) => <TicketCard key={ticket.id} ticket={ticket} order={order} customer={customer} pending={review.isPending} onSave={(status, adminReply) => review.mutate({ ticketId: ticket.id, status, adminReply })} />)}</section>;
 }

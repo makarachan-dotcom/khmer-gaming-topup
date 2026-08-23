@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { getAppwriteProviderAvailability, isAppwriteStoreConfigured, updateAppwriteProviderAvailability } from "./appwriteStore";
+import { getAppwriteProviderAvailability, getAppwriteProviderCatalog, isAppwriteStoreConfigured, type AppwriteProviderCatalog, updateAppwriteProviderAvailability } from "./appwriteStore";
 
 export const providerFieldSchema = z.object({
   key: z.string().trim().regex(/^[a-z][a-zA-Z0-9_]{0,63}$/),
@@ -31,6 +31,7 @@ const fzrTopupsSchema = z.object({
   ok: z.literal(true),
   kind: z.literal("topup"),
   items: z.array(z.object({ category_id: z.string().trim().min(1).max(120), name: z.string().trim().min(1).max(160), note: z.string().optional() })).max(500),
+  meta: z.object({ next_cursor: z.string().trim().min(1).nullable().optional(), has_more: z.boolean().optional() }).optional(),
 });
 
 const fzrOffersSchema = z.object({
@@ -66,7 +67,7 @@ export type ProviderGameDetailsResponse =
   | { status: "unavailable"; game: null; packages: [] }
   | { status: "error"; game: null; packages: [] };
 
-export type ProviderPackageRequest = { gameId: string; fields: Record<string, string>; idConfirmed?: boolean };
+export type ProviderPackageRequest = { gameId: string; fields: Record<string, string> };
 export type ProviderPackageResponse =
   | { status: "ready"; packages: z.infer<typeof providerPackageSchema>[] }
   | { status: "verification_required"; packages: [] }
@@ -88,7 +89,8 @@ export type SmmProviderCatalogResponse =
 export type ProviderAvailabilityCatalog = { games: Array<{ id: string; name: string; isActive: boolean }>; smm: Array<{ id: string; name: string; category: string; isActive: boolean }> };
 
 const socialPlatformOrder = ["facebook", "instagram", "tiktok", "youtube", "telegram"] as const;
-let providerAvailabilitySnapshot: { hiddenGameIds: string[]; hiddenSmmServiceIds: string[] } | null = null;
+type ProviderAvailabilitySnapshot = { hiddenGameIds: string[]; hiddenSmmServiceIds: string[]; activeGameIds?: string[] };
+let providerAvailabilitySnapshot: ProviderAvailabilitySnapshot | null = null;
 let providerAvailabilityRetryAt = 0;
 
 export function isThailandProviderProduct(text: string) {
@@ -143,7 +145,7 @@ async function fzrRequest(path: string, init: RequestInit = {}) {
 }
 
 async function providerAvailability() {
-  if (!isAppwriteStoreConfigured()) return { hiddenGameIds: [] as string[], hiddenSmmServiceIds: [] as string[] };
+  if (!isAppwriteStoreConfigured()) return { hiddenGameIds: [] as string[], hiddenSmmServiceIds: [] as string[], activeGameIds: undefined as string[] | undefined };
   const now = Date.now();
   if (providerAvailabilitySnapshot && now < providerAvailabilityRetryAt) return providerAvailabilitySnapshot;
   try {
@@ -154,7 +156,7 @@ async function providerAvailability() {
   } catch {
     // Keep the last known restrictions where possible and back off retrying when
     // Appwrite has exhausted its read allowance. This keeps provider catalogs browsable.
-    providerAvailabilitySnapshot ??= { hiddenGameIds: [], hiddenSmmServiceIds: [] };
+    providerAvailabilitySnapshot ??= { hiddenGameIds: [], hiddenSmmServiceIds: [], activeGameIds: undefined };
     providerAvailabilityRetryAt = now + 5 * 60_000;
     return providerAvailabilitySnapshot;
   }
@@ -187,24 +189,105 @@ function providerGameRegion(name: string, note?: string) {
   return bracketedRegion || "Global";
 }
 
-export async function fetchProviderGames(options: { includeHidden?: boolean } = {}): Promise<ProviderGameResponse> {
+type FzrTopupItem = z.infer<typeof fzrTopupsSchema>["items"][number];
+type FzrTopupCatalog = { status: "ready"; items: FzrTopupItem[]; legacyPublicIds: string[] } | { status: "unavailable" | "error"; items: []; legacyPublicIds: [] };
+
+async function fetchFzrTopupCatalog(): Promise<FzrTopupCatalog> {
   try {
-    const response = await fzrRequest("/api/v2/topups");
-    if (!response) return { status: "unavailable", games: [] };
-    const availability = options.includeHidden ? null : await providerAvailability();
-    const payload = fzrTopupsSchema.safeParse(response);
-    if (!payload.success) return { status: "error", games: [] };
-    const hidden = new Set(availability?.hiddenGameIds ?? []);
-    return { status: "ready", games: payload.data.items.filter((item) => !hidden.has(item.category_id) && !isThailandProviderProduct(`${item.category_id} ${item.name} ${item.note ?? ""}`)).map((item) => ({ id: item.category_id, name: item.name, region: providerGameRegion(item.name, item.note), provider: "FZR Cards", requiredFields: [] })) };
-  } catch { return { status: "error", games: [] }; }
+    const firstResponse = await fzrRequest("/api/v2/topups");
+    if (!firstResponse) return { status: "unavailable", items: [], legacyPublicIds: [] };
+    const firstPayload = fzrTopupsSchema.safeParse(firstResponse);
+    if (!firstPayload.success) return { status: "error", items: [], legacyPublicIds: [] };
+
+    const legacyPublicIds = firstPayload.data.items.map((item) => item.category_id);
+    const items = [...firstPayload.data.items];
+    const knownIds = new Set(legacyPublicIds);
+    const seenCursors = new Set<string>();
+    let cursor = firstPayload.data.meta?.next_cursor ?? null;
+
+    for (let page = 0; cursor && page < 20 && !seenCursors.has(cursor); page += 1) {
+      seenCursors.add(cursor);
+      const query = new URLSearchParams({ limit: "100", cursor });
+      const response = await fzrRequest(`/api/v2/topups?${query.toString()}`);
+      if (!response) return { status: "unavailable", items: [], legacyPublicIds: [] };
+      const payload = fzrTopupsSchema.safeParse(response);
+      if (!payload.success) return { status: "error", items: [], legacyPublicIds: [] };
+      for (const item of payload.data.items) {
+        if (!knownIds.has(item.category_id)) {
+          knownIds.add(item.category_id);
+          items.push(item);
+        }
+      }
+      cursor = payload.data.meta?.next_cursor ?? null;
+    }
+
+    return { status: "ready", items, legacyPublicIds };
+  } catch { return { status: "error", items: [], legacyPublicIds: [] }; }
 }
 
-export async function fetchProviderGameDetails(gameId: string): Promise<ProviderGameDetailsResponse> {
+/** Initial storefront baseline from the owner-approved public catalog before the Admin allowlist was persisted. */
+export const initialApprovedPublicGameIds = [
+  "8_ball_pool",
+  "blood_strike",
+  "eafc_mobile_kh",
+  "frag_pro_shooter",
+  "free_fire_my_sg",
+  "honor_of_kings",
+  "magic_chess_gogo_global",
+  "mobile_legends_global",
+  "mobile_legends_promo",
+  "mobile_legends_special",
+  "pubg_mobile_auto",
+  "pubg_mobile_fast",
+] as const;
+
+function publicProviderGameIds(availability: Awaited<ReturnType<typeof providerAvailability>>) {
+  const approvedIds = availability.activeGameIds ?? initialApprovedPublicGameIds;
+  return new Set(approvedIds.filter((id) => !availability.hiddenGameIds.includes(id)));
+}
+
+function asProviderGames(items: FzrTopupItem[]) {
+  return items.filter((item) => !isThailandProviderProduct(`${item.category_id} ${item.name} ${item.note ?? ""}`)).map((item) => ({ id: item.category_id, name: item.name, region: providerGameRegion(item.name, item.note), provider: "FZR Cards", requiredFields: [] }));
+}
+
+/** During a transient FZR outage, preserve only the owner-approved public IDs from the persisted catalog. */
+export function cachedPublicProviderGames(catalog: AppwriteProviderCatalog, availability: Awaited<ReturnType<typeof providerAvailability>>) {
+  const activeIds = publicProviderGameIds(availability);
+  const hiddenIds = new Set(availability.hiddenGameIds);
+  return catalog.games.flatMap((game) => {
+    const providerId = game.providerSourceId?.trim();
+    const name = game.titleEn?.trim() || game.titleKh?.trim();
+    if (!providerId || !name || !activeIds.has(providerId) || hiddenIds.has(providerId) || isThailandProviderProduct(`${providerId} ${name}`)) return [];
+    return [{ id: providerId, name, region: providerGameRegion(name), provider: "FZR Cards" as const, requiredFields: [] }];
+  });
+}
+
+async function cachedPublicProviderGamesDuringOutage(availability: Awaited<ReturnType<typeof providerAvailability>>) {
+  if (!publicProviderGameIds(availability).size) return [];
+  try { return cachedPublicProviderGames(await getAppwriteProviderCatalog(), availability); } catch { return []; }
+}
+
+export async function fetchProviderGames(options: { includeInactive?: boolean } = {}): Promise<ProviderGameResponse> {
+  const [catalog, availability] = await Promise.all([fetchFzrTopupCatalog(), providerAvailability()]);
+  if (catalog.status !== "ready") {
+    if (!options.includeInactive) {
+      const cachedGames = await cachedPublicProviderGamesDuringOutage(availability);
+      if (cachedGames.length) return { status: "ready", games: cachedGames };
+    }
+    return { status: catalog.status, games: [] };
+  }
+  const games = asProviderGames(catalog.items);
+  if (options.includeInactive) return { status: "ready", games };
+  const activeIds = publicProviderGameIds(availability);
+  return { status: "ready", games: games.filter((game) => activeIds.has(game.id) && !availability.hiddenGameIds.includes(game.id)) };
+}
+
+export async function fetchProviderGameDetails(gameId: string, options: { includeInactive?: boolean } = {}): Promise<ProviderGameDetailsResponse> {
   try {
+    const availableGames = await fetchProviderGames({ includeInactive: options.includeInactive });
+    if (availableGames.status !== "ready" || !availableGames.games.some((game) => game.id === gameId)) return { status: availableGames.status === "error" ? "error" : "unavailable", game: null, packages: [] };
     const response = await fzrRequest(`/api/v2/topups/offers?category_id=${encodeURIComponent(gameId)}&include_ui=1`);
     if (!response) return { status: "unavailable", game: null, packages: [] };
-    const availability = await providerAvailability();
-    if (availability.hiddenGameIds.includes(gameId)) return { status: "unavailable", game: null, packages: [] };
     const payload = fzrOffersSchema.safeParse(response);
     if (!payload.success || payload.data.category_id !== gameId) return { status: "error", game: null, packages: [] };
     if (isThailandProviderProduct(`${gameId} ${payload.data.name}`)) return { status: "unavailable", game: null, packages: [] };
@@ -213,13 +296,18 @@ export async function fetchProviderGameDetails(gameId: string): Promise<Provider
   } catch { return { status: "error", game: null, packages: [] }; }
 }
 
+/** Admin-only callers use this to inspect authorized package UI without supplying a customer identity. */
+export async function fetchProviderPreviewPackages(gameId: string): Promise<ProviderPackageResponse> {
+  const details = await fetchProviderGameDetails(gameId, { includeInactive: true });
+  if (details.status !== "ready") return { status: details.status, packages: [] };
+  return { status: "ready", packages: details.packages };
+}
+
 export async function fetchProviderPackages(input: ProviderPackageRequest): Promise<ProviderPackageResponse> {
   const identity = await validateProviderPlayerIdentity(input);
-  const explicitlyConfirmedUnsupportedId = identity.status === "not_supported" && input.idConfirmed === true;
-  if (identity.status !== "verified" && !explicitlyConfirmedUnsupportedId) {
-    if (identity.status === "unavailable") return { status: "unavailable", packages: [] };
-    return { status: "verification_required", packages: [] };
-  }
+  if (identity.status === "unavailable") return { status: "unavailable", packages: [] };
+  if (identity.status === "error") return { status: "error", packages: [] };
+  if (identity.status !== "verified") return { status: "verification_required", packages: [] };
   const details = await fetchProviderGameDetails(input.gameId);
   if (details.status !== "ready") return { status: details.status, packages: [] };
   return { status: "ready", packages: details.packages };
@@ -332,18 +420,24 @@ export async function fetchSmmProviderServices(options: { includeHidden?: boolea
 }
 
 export async function getProviderAvailabilityCatalog(): Promise<ProviderAvailabilityCatalog> {
-  const [gamesResponse, smmResponse, availability] = await Promise.all([fetchProviderGames({ includeHidden: true }), fetchSmmProviderServices({ includeHidden: true }), providerAvailability()]);
-  const hiddenGames = new Set(availability.hiddenGameIds);
+  const [catalog, smmResponse, availability] = await Promise.all([fetchFzrTopupCatalog(), fetchSmmProviderServices({ includeHidden: true }), providerAvailability()]);
+  const activeGames = catalog.status === "ready" ? publicProviderGameIds(availability) : new Set<string>();
   const hiddenSmm = new Set(availability.hiddenSmmServiceIds);
   return {
-    games: gamesResponse.status === "ready" ? gamesResponse.games.map((game) => ({ id: game.id, name: game.name, isActive: !hiddenGames.has(game.id) })) : [],
+    games: catalog.status === "ready" ? asProviderGames(catalog.items).map((game) => ({ id: game.id, name: game.name, isActive: activeGames.has(game.id) && !availability.hiddenGameIds.includes(game.id) })) : [],
     smm: smmResponse.status === "ready" ? smmResponse.services.map((service) => ({ id: service.providerServiceId, name: service.name, category: service.category, isActive: !hiddenSmm.has(service.providerServiceId) })) : [],
   };
 }
 
 export async function setProviderAvailability(input: { kind: "game" | "smm"; providerId: string; isActive: boolean }) {
   if (!isAppwriteStoreConfigured()) throw new Error("Provider availability control is not configured");
-  return updateAppwriteProviderAvailability(input);
+  if (input.kind !== "game") return updateAppwriteProviderAvailability(input);
+  const [catalog, availability] = await Promise.all([fetchFzrTopupCatalog(), providerAvailability()]);
+  if (catalog.status !== "ready") throw new Error("FZR Cards catalog is currently unavailable");
+  const validGameIds = new Set(asProviderGames(catalog.items).map((game) => game.id));
+  if (!validGameIds.has(input.providerId)) throw new Error("Selected game is not available from FZR Cards");
+  const legacyActiveGameIds = availability.activeGameIds ?? initialApprovedPublicGameIds.filter((id) => !availability.hiddenGameIds.includes(id));
+  return updateAppwriteProviderAvailability({ ...input, legacyActiveGameIds });
 }
 
 const smmGlobOrderSchema = z.object({ order: z.union([z.string(), z.number()]).transform(String).pipe(z.string().trim().min(1).max(120)) });
