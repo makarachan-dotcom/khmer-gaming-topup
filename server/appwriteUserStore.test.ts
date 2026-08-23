@@ -59,7 +59,7 @@ describe("Appwrite user store", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("updates a member profile through the deterministic Appwrite document path", async () => {
+  it("updates a member profile without consuming an Appwrite read", async () => {
     process.env.APPWRITE_ENDPOINT = "https://appwrite.example/v1";
     process.env.APPWRITE_PROJECT_ID = "zurs-project";
     process.env.APPWRITE_API_KEY = "server-only-test-key";
@@ -72,24 +72,21 @@ describe("Appwrite user store", () => {
       email: "member@example.com",
       loginMethod: "google",
       role: "user",
-      createdAt: new Date("2026-08-21T00:00:00.000Z").toISOString(),
-      updatedAt: new Date("2026-08-21T00:00:00.000Z").toISOString(),
-      lastSignedIn: new Date("2026-08-21T00:00:00.000Z").toISOString(),
+      createdAt: new Date("2026-08-21T00:00:00.000Z"),
+      updatedAt: new Date("2026-08-21T00:00:00.000Z"),
+      lastSignedIn: new Date("2026-08-21T00:00:00.000Z"),
     };
     const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
       const url = String(input);
-      expect(url).toContain("/databases/zurs_store/collections/zurs_records/documents/");
-      if ((init?.method ?? "GET") === "GET") {
-        return new Response(JSON.stringify({ $id: "user-document", sourceTable: "users", sourceId: openId, payload: JSON.stringify(currentUser) }), { status: 200 });
-      }
-      expect(init?.method).toBe("PUT");
+      expect(url).toContain("/databases/zurs_store/collections/zurs_records/documents");
+      expect(init?.method).toBe("POST");
       expect(JSON.parse(String(init?.body))).toMatchObject({ data: { sourceTable: "users", sourceId: openId } });
-      return new Response(JSON.stringify({}), { status: 200 });
+      return new Response(JSON.stringify({}), { status: 201 });
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(updateAppwriteUserDisplayName({ openId, displayName: "Makara ZURS Member" })).resolves.toEqual({ displayName: "Makara ZURS Member" });
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    await expect(updateAppwriteUserDisplayName({ user: currentUser, displayName: "Makara ZURS Member" })).resolves.toEqual({ displayName: "Makara ZURS Member" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("recognizes the owner email as the single ZURS STORE administrator", () => {

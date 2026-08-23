@@ -13,7 +13,10 @@ describe("selected package mobile action bar", () => {
     expect(layout).toContain("disabled aria-disabled=\"true\"");
     expect(layout).toContain("ProviderGameArtwork");
     expect(layout).toContain("selected-product-action-bar");
+    expect(layout).toContain("OverflowMarquee");
+    expect(layout).not.toContain("onClear={clearSelectedProduct}");
     expect(check).toContain("lottieflow-checkbox-08_3f50ebb9.json");
+    expect(check).toContain("text-slate-950");
     expect(check).toContain("prefers-reduced-motion");
   });
 });

@@ -1,8 +1,9 @@
-import { BadgeAlert, Landmark, QrCode } from "lucide-react";
+import { BadgeAlert, Landmark } from "lucide-react";
+import { khqrLogoUrl } from "@/lib/mobileLegendsAssets";
 
 export function PaymentMethods() {
   return <section className="mt-5"><div className="flex items-center justify-between gap-3"><div><p className="text-sm font-bold text-slate-900">វិធីសាស្រ្តទូទាត់</p><p className="mt-0.5 text-xs text-slate-500">ជម្រើសទូទាត់នឹងបង្ហាញនៅពេលប្រព័ន្ធទូទាត់របស់ហាងបានដំណើរការ។</p></div></div><div className="mt-3 grid gap-2"><PaymentOption icon={<KhqrMark />} title="KHQR" copy="ទូទាត់ដោយស្កេនតាមកម្មវិធីធនាគារ ឬ Bakong ដែលគាំទ្រ" /><PaymentOption icon={<Landmark className="h-5 w-5" />} title="ធនាគារកម្ពុជា" copy="ប្រើប្រាស់តាមធនាគារ ឬស្ថាប័នហិរញ្ញវត្ថុដែលគាំទ្រការទូទាត់ KHQR" /></div><div className="mt-3 flex items-start gap-2 rounded-xl border border-amber-100 bg-amber-50 p-3 text-[11px] leading-5 text-amber-900"><BadgeAlert className="mt-0.5 h-4 w-4 shrink-0" /><p>ដើម្បីសុវត្ថិភាព សូមកុំផ្ទេរប្រាក់តាមព័ត៌មានក្រៅពីលេខកូដ KHQR ឬប៊ូតុងទូទាត់ដែលបង្ហាញក្នុងប្រព័ន្ធ ZURS STORE។</p></div></section>;
 }
 
 function PaymentOption({ icon, title, copy }: { icon: React.ReactNode; title: string; copy: string }) { return <button type="button" disabled className="flex min-h-14 w-full items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 text-left opacity-70"><span className="grid h-9 w-9 place-items-center rounded-lg bg-white text-indigo-700 shadow-sm">{icon}</span><span className="min-w-0 flex-1"><span className="block text-xs font-bold text-slate-800">{title}</span><span className="mt-0.5 block text-[11px] leading-4 text-slate-500">{copy}</span></span><span className="rounded-full bg-slate-200 px-2 py-1 text-[9px] font-bold text-slate-600">មិនទាន់បើកប្រើ</span></button>; }
-function KhqrMark() { return <span className="relative grid h-5 w-5 grid-cols-3 gap-px rounded-sm bg-indigo-700 p-0.5"><span className="col-span-2 row-span-2 rounded-[1px] border-2 border-white" /><span className="rounded-[1px] bg-white" /><span className="rounded-[1px] bg-white" /><span className="rounded-[1px] bg-white" /><QrCode className="absolute -bottom-1 -right-1 h-3 w-3 rounded bg-white p-px text-indigo-700" /></span>; }
+function KhqrMark() { return <img src={khqrLogoUrl} alt="KHQR" className="h-6 w-6 object-contain" />; }

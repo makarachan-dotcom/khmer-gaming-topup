@@ -4,23 +4,43 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, ownerProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import * as db from "./db";
-import { fetchFzrProviderSyncSnapshot, fetchProviderGameDetails, fetchProviderGames, fetchProviderPackages, fetchSmmProviderServices, getProviderAvailabilityCatalog, getProviderCatalogStatus, setProviderAvailability, validateProviderPlayerIdentity } from "./providerCatalog";
+import { fetchFzrProviderSyncSnapshot, fetchProviderGameDetails, fetchProviderGames, fetchProviderPackages, fetchProviderPreviewPackages, fetchSmmProviderServices, getProviderAvailabilityCatalog, getProviderCatalogStatus, setProviderAvailability, validateProviderPlayerIdentity } from "./providerCatalog";
 import { buildZursMemberDisplayName } from "./storefrontDomain";
 import { uploadAdminMediaImage, uploadMarketplaceScreenshot, uploadMarketplaceVerificationEvidence } from "./uploads";
 import { storageGet } from "./storage";
 import { createDiditHostedSession } from "./didit";
 import { disclosureRequestStatuses, fraudReportStatuses } from "./marketplaceSafety";
 import { deriveLocationRisk, resolveLocationCountry } from "./marketplaceLocation";
-import { getZursSessionCookieOptions, ZURS_SESSION_COOKIE } from "./zursSession";
+import { createZursSession, getZursSessionCookieOptions, ZURS_SESSION_COOKIE } from "./zursSession";
 import { getProductPurchaseReadiness } from "./paymentReadiness";
 
 const marketplaceType = z.enum(["sale", "swap", "wanted"]);
+
+function isTransientAccountStoreQuotaError(error: unknown) {
+  const message = error instanceof Error ? error.message : "";
+  return /Appwrite user store request failed with HTTP (?:402|429)|limit[_\s-]*databases?_reads_exceeded/i.test(message);
+}
 
 export const appRouter = router({
   system: systemRouter,
   auth: router({
     me: publicProcedure.query((opts) => opts.ctx.user),
-    setMemberDisplayName: protectedProcedure.input(z.object({ name: z.string().trim().max(120).optional() })).mutation(({ ctx, input }) => db.updateUserDisplayName({ userId: ctx.user.id, openId: ctx.user.openId, displayName: buildZursMemberDisplayName(input.name) })),
+    setMemberDisplayName: protectedProcedure.input(z.object({ name: z.string().trim().max(120).optional() })).mutation(async ({ ctx, input }) => {
+      const displayName = buildZursMemberDisplayName(input.name);
+      let persisted = true;
+      try {
+        await db.updateUserDisplayName({ user: ctx.user, displayName });
+      } catch (error) {
+        if (!isTransientAccountStoreQuotaError(error)) throw error;
+        persisted = false;
+        console.warn("[Account] Profile persistence deferred while Appwrite is rate-limited");
+      }
+      if (ctx.user.email) {
+        const session = await createZursSession(ctx.user.openId, { email: ctx.user.email, name: ctx.user.name, displayName, loginMethod: ctx.user.loginMethod });
+        ctx.res.cookie(ZURS_SESSION_COOKIE, session, getZursSessionCookieOptions(ctx.req));
+      }
+      return { displayName, persisted };
+    }),
     logout: publicProcedure.mutation(({ ctx }) => { const cookieOptions = getSessionCookieOptions(ctx.req); ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 }); ctx.res.clearCookie(ZURS_SESSION_COOKIE, { ...getZursSessionCookieOptions(ctx.req), maxAge: -1 }); return { success: true } as const; }),
   }),
   catalog: router({
@@ -40,7 +60,7 @@ export const appRouter = router({
   provider: router({
     games: publicProcedure.query(() => fetchProviderGames()),
     gameDetails: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120) })).query(({ input }) => fetchProviderGameDetails(input.gameId)),
-    packages: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120), fields: z.record(z.string().trim().max(64), z.string().trim().min(1).max(256)).refine((fields) => Object.keys(fields).length <= 12, "Too many provider fields"), idConfirmed: z.boolean().optional() })).mutation(({ input }) => fetchProviderPackages(input)),
+    packages: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120), fields: z.record(z.string().trim().max(64), z.string().trim().min(1).max(256)).refine((fields) => Object.keys(fields).length <= 12, "Too many provider fields") })).mutation(({ input }) => fetchProviderPackages(input)),
     validatePlayerId: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120), fields: z.record(z.string().trim().max(64), z.string().trim().min(1).max(256)).refine((fields) => Object.keys(fields).length <= 12, "Too many provider fields") })).mutation(({ input }) => validateProviderPlayerIdentity(input)),
     smmServices: publicProcedure.query(() => fetchSmmProviderServices()),
   }),
@@ -109,6 +129,8 @@ export const appRouter = router({
     catalog: adminProcedure.query(async () => ({ games: await db.getGameCatalog(), smm: await db.getSmmCatalog() })),
     fullCatalog: adminProcedure.query(() => db.getAdminCatalog()),
     providerCatalogStatus: adminProcedure.query(() => getProviderCatalogStatus()),
+    previewGamePackages: adminProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120) })).query(({ input }) => fetchProviderPreviewPackages(input.gameId)),
+    previewSmmServices: adminProcedure.query(() => fetchSmmProviderServices({ includeHidden: true })),
     providerAvailability: adminProcedure.query(() => getProviderAvailabilityCatalog()),
     setProviderAvailability: adminProcedure.input(z.object({ kind: z.enum(["game", "smm"]), providerId: z.string().trim().min(1).max(120), isActive: z.boolean() })).mutation(({ input }) => setProviderAvailability(input)),
     syncTopupCatalog: adminProcedure.mutation(async () => { const snapshot = await fetchFzrProviderSyncSnapshot(); if (snapshot.status !== "ready") throw new Error("FZR Cards catalog is currently unavailable"); return db.syncFzrCatalog(snapshot); }),

@@ -218,10 +218,19 @@
 - [x] Save successfully verified player IDs, provide a safe selector for multiple previous IDs, and animate only user-confirmed autofill without exposing verified player names or enabling purchase.
 - [x] Recheck and repair shared LoadingV2 outline animation rendering across loading states, including transparent presentation, non-stuck completion behavior, and reduced-motion fallback.
 - [x] Verify the exact production deployment and cache path serving zurs.vercel.app, then correct any mismatch preventing the latest selected-package, artwork, verified-ID, saved-ID, or LoadingV2 updates from being visible to the owner.
-- [ ] Add Admin-controlled provider-package event grouping, including an optional Full Ticket section that only appears when the administrator assigns provider-authorized offers to an active event.
-- [ ] Rebuild the game package browser as clean, responsive grouped ticket-style sections without fabricating offers, discounts, or event inventory.
-- [ ] Ensure each provider-authorized package renders its available game or package logo, with a neutral semantic fallback only where the provider supplies no permitted artwork.
-- [ ] Remove the empty selected-package action-bar region, show package title and amount in full where possible, and use a reduced-motion-safe right-to-left marquee only when selected text overflows.
+- [x] Add Admin-controlled provider-package event grouping, including an optional Full Ticket section that only appears when the administrator assigns provider-authorized offers to an active event.
+- [x] Rebuild the game package browser as clean, responsive grouped ticket-style sections without fabricating offers, discounts, or event inventory.
+- [x] Ensure each provider-authorized package renders its available game or package logo, with a neutral semantic fallback only where the provider supplies no permitted artwork.
+- [x] Remove the empty selected-package action-bar region, show package title and amount in full where possible, and use a reduced-motion-safe right-to-left marquee only when selected text overflows.
+- [x] Diagnose the Appwrite `limit_database_reads_exceeded` outage and confirm its effect on catalog and account reads across zurs.vercel.app and zurs.me.
+- [x] Restore provider-authorized Diamond and SMM catalog visibility through a low-read resilient path that preserves real provider data and does not create placeholders.
+- [x] Replace raw Appwrite quota errors in customer views with concise Khmer recovery guidance while retaining administrator diagnostics.
+- [x] Merge the owner’s Google sign-in recovery with the Appwrite catalog-resilience work without discarding either change.
+- [x] Migrate the server and public Appwrite endpoint/project configuration to the newly supplied Singapore Appwrite project through managed secrets, then verify the connection without exposing credentials.
+- [x] Simplify Home provider-product cards into a clean, low-clutter hierarchy and render a relevant country flag only once per card rather than repeating it in multiple labels.
+- [x] Route and verify the latest published ZURS STORE release on the zurs.me domain.
+- [x] Diagnose and repair the reported mobile Account onboarding/backend error, with regression tests and live custom-domain verification.
+- [x] Harden server-only Game ID/name checking with bounded authorized fallbacks that never affect catalog, products, payment, and disabled Buy controls.
 - [ ] Review remote repository branches and merge eligible changes safely into main, with validation before publication.
 - [ ] Publish the current safe main release to zurs.me and verify the live custom-domain storefront.
 - [ ] Diagnose and repair the Connect with Gmail flow on zurs.me, with secure callback and signed-session regression validation.

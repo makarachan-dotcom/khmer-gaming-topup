@@ -1,8 +1,9 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
 import { trpc } from "@/lib/trpc";
-import { AlertTriangle, Check, ExternalLink, FileKey2, FolderLock, Gavel, ListChecks, Loader2, ShieldCheck, Trash2, X } from "lucide-react";
+import { AlertTriangle, Check, ExternalLink, FileKey2, FolderLock, Gavel, ListChecks, ShieldCheck, Trash2, X } from "lucide-react";
 import { useMemo, useState } from "react";
+import { LoadingV2 } from "@/components/OutlineLoader";
 
 const adminEmail = "chanmakara672@gmail.com";
 const fraudStatuses = ["received", "reviewing", "resolved", "closed"] as const;
@@ -65,7 +66,7 @@ function SafetyWorkspace() {
 }
 
 function SectionHeading({ icon: Icon, title, copy }: { icon: typeof FileKey2; title: string; copy: string }) { return <div className="border-b border-slate-100 p-4"><div className="flex items-center gap-2"><Icon className="h-4 w-4 text-indigo-600" /><h2 className="text-sm font-bold text-slate-900">{title}</h2></div><p className="mt-1 text-xs leading-5 text-slate-500">{copy}</p></div>; }
-function Loading() { return <div className="grid h-28 place-items-center"><Loader2 className="h-5 w-5 animate-spin text-indigo-600" /></div>; }
+function Loading() { return <div className="grid h-28 place-items-center"><LoadingV2 size={20} color="#4f46e5" className="h-5 w-5 text-indigo-600" /></div>; }
 function Empty({ text }: { text: string }) { return <div className="p-8 text-center text-xs text-slate-500">{text}</div>; }
 function formatDate(value: Date | string | null | undefined) { return value ? new Date(value).toLocaleString("km-KH") : "Not recorded"; }
 function formatBytes(value: number) { return value < 1024 * 1024 ? `${Math.max(1, Math.round(value / 1024))} KB` : `${(value / (1024 * 1024)).toFixed(1)} MB`; }
