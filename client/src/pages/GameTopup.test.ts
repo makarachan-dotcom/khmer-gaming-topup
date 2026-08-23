@@ -40,7 +40,7 @@ describe("dedicated game top-up routes", () => {
     expect(grouped.special.map(item => item.id)).toEqual(["ff-special"]);
   });
 
-  it("locks package browsing for invalid, unavailable, and unsupported username checks", () => {
+  it("locks package browsing for invalid and unavailable username checks", () => {
     expect(canBrowseVerifiedPackages(false, "verified")).toBe(false);
     expect(canBrowseVerifiedPackages(true, "invalid")).toBe(false);
     expect(canBrowseVerifiedPackages(true, "not_supported")).toBe(false);
@@ -66,6 +66,8 @@ describe("dedicated game top-up routes", () => {
   it("allows package UI without player fields only when the protected Admin preview mode is active", () => {
     expect(canBrowseTopupPackages(false, "invalid", false)).toBe(false);
     expect(canBrowseTopupPackages(true, "not_supported", false)).toBe(false);
+    expect(canBrowseTopupPackages(true, "not_supported", false, true, true)).toBe(true);
+    expect(canBrowseTopupPackages(true, "unavailable", false, true, true)).toBe(false);
     expect(canBrowseTopupPackages(false, undefined, true)).toBe(true);
     expect(canBrowseTopupPackages(true, undefined, false, false)).toBe(true);
   });

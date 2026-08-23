@@ -238,4 +238,5 @@
 - [x] Extend VPS Worker Check-ID validation to supported games such as Honor of Kings, then redeploy and verify zurs.me while keeping Buy and payment disabled.
 - [x] Diagnose and repair the live Honor of Kings Check-ID fallback so verified worker usernames unlock package selection without enabling payment or Buy actions.
 - [x] Confirm the latest safe main release is deployed to zurs.me and verify the custom-domain storefront.
-- [ ] Expand server-only Check-ID verification to every top-up game with identifier fields, requiring a verified username before package access while keeping Buy and payment disabled.
+- [x] Superseded at the owner's request: expand server-only Check-ID verification to every top-up game with identifier fields; the revised policy below limits VPS username checks to Mobile Legends and Honor of Kings.
+- [x] Keep each game's public and special packages in one clear per-game product list without combining Mobile Legends, PUBG Mobile, Free Fire, or other separate games; use VPS username checks only for Mobile Legends and Honor of Kings, and require an explicit ID-accuracy confirmation when other games cannot be name-checked by FZR.

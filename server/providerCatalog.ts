@@ -67,7 +67,7 @@ export type ProviderGameDetailsResponse =
   | { status: "unavailable"; game: null; packages: [] }
   | { status: "error"; game: null; packages: [] };
 
-export type ProviderPackageRequest = { gameId: string; fields: Record<string, string> };
+export type ProviderPackageRequest = { gameId: string; fields: Record<string, string>; idAccuracyConfirmed?: boolean };
 export type ProviderPackageResponse =
   | { status: "ready"; packages: z.infer<typeof providerPackageSchema>[] }
   | { status: "verification_required"; packages: [] }
@@ -306,11 +306,22 @@ export async function fetchProviderPreviewPackages(gameId: string): Promise<Prov
   return { status: "ready", packages: details.packages };
 }
 
+function hasProviderIdentityField(fields: Record<string, string>) {
+  return Object.keys(fields).some((key) => {
+    const normalized = key.toLowerCase().replace(/[^a-z0-9]/g, "");
+    return /^(?:player|user|account|game|zone|server|uid)(?:id|number)?$/.test(normalized) || normalized === "id";
+  });
+}
+
 export async function fetchProviderPackages(input: ProviderPackageRequest): Promise<ProviderPackageResponse> {
+  if (!hasProviderIdentityField(input.fields)) {
+    const details = await fetchProviderGameDetails(input.gameId);
+    return details.status === "ready" ? { status: "ready", packages: details.packages } : { status: details.status, packages: [] };
+  }
   const identity = await validateProviderPlayerIdentity(input);
   if (identity.status === "unavailable") return { status: "unavailable", packages: [] };
   if (identity.status === "error") return { status: "error", packages: [] };
-  if (identity.status !== "verified") return { status: "verification_required", packages: [] };
+  if (identity.status !== "verified" && !(identity.status === "not_supported" && input.idAccuracyConfirmed)) return { status: "verification_required", packages: [] };
   const details = await fetchProviderGameDetails(input.gameId);
   if (details.status !== "ready") return { status: details.status, packages: [] };
   return { status: "ready", packages: details.packages };
@@ -349,16 +360,12 @@ function isMobileLegendsGame(gameId: string) {
   return /^mobile_legends(?:_|$)/i.test(gameId);
 }
 
-function vpsWorkerGameKey(gameId: string) {
-  const normalized = gameId.trim().toLowerCase();
-  if (/^mobile_legends(?:_|$)/.test(normalized)) return "mobilelegend";
-  if (/^honor_of_kings(?:_|$)/.test(normalized)) return "honor-of-kings";
-  if (/^free_fire(?:_|$)/.test(normalized)) return "free-fire";
-  if (/^pubg_mobile(?:_|$)/.test(normalized)) return "pubg-mobile";
-  if (/^genshin_impact(?:_|$)/.test(normalized)) return "genshin-impact";
-  if (/^blood_strike(?:_|$)/.test(normalized)) return "blood-strike";
-  if (/^roblox(?:_|$)/.test(normalized)) return "roblox";
-  return normalized.replace(/_(?:global|kh|my_sg|promo|special|auto|fast)$/i, "").replace(/_/g, "-");
+function isHonorOfKingsGame(gameId: string) {
+  return /^honor_of_kings(?:_|$)/i.test(gameId);
+}
+
+function usesVpsWorkerIdentityCheck(gameId: string) {
+  return isMobileLegendsGame(gameId) || isHonorOfKingsGame(gameId);
 }
 
 function vpsWorkerIdentityInput(input: ProviderPackageRequest): { game: string; playerId: string; serverId: string } | null {
@@ -369,7 +376,8 @@ function vpsWorkerIdentityInput(input: ProviderPackageRequest): { game: string; 
     if (!/^\d{1,12}$/.test(serverId)) return null;
     return { game: "mobilelegend", playerId, serverId };
   }
-  return { game: vpsWorkerGameKey(input.gameId), playerId, serverId: /^\d{1,12}$/.test(serverId) ? serverId : "" };
+  if (isHonorOfKingsGame(input.gameId)) return { game: "honor-of-kings", playerId, serverId: /^\d{1,12}$/.test(serverId) ? serverId : "" };
+  return null;
 }
 
 async function validateWithVpsWorker(input: { game: string; playerId: string; serverId: string }): Promise<ProviderPlayerIdentityResponse | null> {
@@ -473,7 +481,7 @@ async function validateMobileLegendsWithFallback(input: ProviderPackageRequest, 
 }
 
 export async function validateProviderPlayerIdentity(input: ProviderPackageRequest): Promise<ProviderPlayerIdentityResponse> {
-  const workerInput = vpsWorkerIdentityInput(input);
+  const workerInput = usesVpsWorkerIdentityCheck(input.gameId) ? vpsWorkerIdentityInput(input) : null;
   const workerResult = workerInput ? await validateWithVpsWorker(workerInput) : null;
   if (workerResult) return workerResult;
 
@@ -481,6 +489,7 @@ export async function validateProviderPlayerIdentity(input: ProviderPackageReque
     const response = await fzrRequest("/api/v2/topups/validate-id", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ category_id: input.gameId, fields: input.fields }) });
     if (!response) {
       if (isMobileLegendsGame(input.gameId)) return await validateMobileLegendsWithFallback(input, { workerAlreadyTried: Boolean(workerInput) }) ?? emptyIdentity("unavailable");
+      if (isHonorOfKingsGame(input.gameId)) return emptyIdentity("unavailable");
       return emptyIdentity("unavailable");
     }
     const payload = fzrPlayerIdentitySchema.safeParse(response);
@@ -489,6 +498,7 @@ export async function validateProviderPlayerIdentity(input: ProviderPackageReque
     return { status: "verified", playerName: payload.data.player_name, playerId: payload.data.player_id ?? null, region: payload.data.region ?? null };
   } catch (error) {
     if (isMobileLegendsGame(input.gameId)) return await validateMobileLegendsWithFallback(input, { workerAlreadyTried: Boolean(workerInput) }) ?? emptyIdentity("unavailable");
+    if (isHonorOfKingsGame(input.gameId)) return emptyIdentity("unavailable");
     if (error instanceof FzrRequestError && [400, 404].includes(error.status)) return emptyIdentity("not_supported");
     if (error instanceof FzrRequestError && error.status === 422) return emptyIdentity("invalid");
     if (error instanceof FzrRequestError && [502, 503].includes(error.status)) return emptyIdentity("unavailable");

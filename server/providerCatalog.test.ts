@@ -124,11 +124,36 @@ describe("provider catalog", () => {
     expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1);
   });
 
-  it("keeps an unsupported provider category locked until a username can be verified", async () => {
+  it("allows an unsupported non-ML/HOK category only after the customer confirms the exact ID", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "server-only-key";
     vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce({ ok: false, status: 400 }));
     await expect(fetchProviderPackages({ gameId: "acecraft", fields: { user_id: "123456" } })).resolves.toEqual({ status: "verification_required", packages: [] });
+  });
+
+  it("reveals an unsupported non-ML/HOK package list only after explicit ID confirmation", async () => {
+    process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
+    process.env.FZR_CARDS_API_KEY = "server-only-key";
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (url.includes("/validate-id")) return { ok: false, status: 400 };
+      if (url.includes("/offers?")) return { ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "8_ball_pool", name: "8 Ball Pool", fields: [{ key: "user_id", label: "User ID", type: "text" }], offers: [{ offer_id: "starter", name: "Starter Pack", price_usd: "1.25" }] }) };
+      return { ok: true, json: async () => ({ ok: true, kind: "topup", items: [{ category_id: "8_ball_pool", name: "8 Ball Pool" }], meta: { next_cursor: null, has_more: false } }) };
+    }));
+
+    await expect(fetchProviderPackages({ gameId: "8_ball_pool", fields: { user_id: "123456" }, idAccuracyConfirmed: true })).resolves.toEqual({ status: "ready", packages: [{ id: "8_ball_pool:starter", label: "Starter Pack", amountLabel: "Starter Pack", priceLabel: "$1.25", provider: "FZR Cards", paymentMethods: ["khqr", "bank"] }] });
+    expect((fetch as ReturnType<typeof vi.fn>).mock.calls.every(([url]) => !String(url).includes("worker.example.test"))).toBe(true);
+  });
+
+  it("reveals packages for a provider form with no ID-style field without making an identity request", async () => {
+    process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
+    process.env.FZR_CARDS_API_KEY = "server-only-key";
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (url.includes("/offers?")) return { ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "8_ball_pool", name: "8 Ball Pool", fields: [{ key: "email", label: "Email", type: "text" }], offers: [{ offer_id: "starter", name: "Starter Pack", price_usd: "1.25" }] }) };
+      return { ok: true, json: async () => ({ ok: true, kind: "topup", items: [{ category_id: "8_ball_pool", name: "8 Ball Pool" }], meta: { next_cursor: null, has_more: false } }) };
+    }));
+
+    await expect(fetchProviderPackages({ gameId: "8_ball_pool", fields: { email: "customer@example.test" } })).resolves.toMatchObject({ status: "ready", packages: [{ id: "8_ball_pool:starter" }] });
+    expect((fetch as ReturnType<typeof vi.fn>).mock.calls.every(([url]) => !String(url).includes("/validate-id"))).toBe(true);
   });
 
   it("keeps Mobile Legends packages gated when FZR reports that name validation is unavailable for its exact category", async () => {
@@ -179,7 +204,7 @@ describe("provider catalog", () => {
     expect(JSON.stringify(result)).not.toContain("worker-server-only-secret");
   });
 
-  it("uses the VPS Worker for supported Honor of Kings ID validation after FZR declines the category", async () => {
+  it("uses the VPS Worker first for supported Honor of Kings ID validation", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "provider-server-only-key";
     process.env.VPS_WORKER_URL = "https://worker.example.test/api/check-id";
@@ -195,18 +220,18 @@ describe("provider catalog", () => {
     expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1);
   });
 
-  it("uses the worker first for other identifier-based games and normalizes a Free Fire provider category", async () => {
+  it("uses FZR only for other identifier-based games and never sends Free Fire IDs to the VPS Worker", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "provider-server-only-key";
     process.env.VPS_WORKER_URL = "https://worker.example.test/api/check-id";
     process.env.WORKER_SECRET = "worker-server-only-secret";
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ok: true, username: "Verified Free Fire Player", userId: "12345678", game: "free-fire", status: "valid" }) }));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ok: true, category_id: "free_fire_my_sg", valid: false, player_name: null }) }));
 
     const result = await validateProviderPlayerIdentity({ gameId: "free_fire_my_sg", fields: { player_id: "12345678" } });
 
-    expect(result.status).toBe("verified");
-    const workerCall = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(JSON.parse(String(workerCall?.[1]?.body))).toEqual({ game: "free-fire", id: "12345678", serverId: "" });
+    expect(result.status).toBe("invalid");
+    const fzrCall = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(fzrCall?.[0]).toContain("/api/v2/topups/validate-id");
     expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1);
   });
 
