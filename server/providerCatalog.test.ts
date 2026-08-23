@@ -132,52 +132,49 @@ describe("provider catalog", () => {
     expect((fetch as ReturnType<typeof vi.fn>).mock.calls[1]?.[0]).toContain("/offers?category_id=preview-only-game");
   });
 
-  it("validates a player name only through the server-side FZR endpoint", async () => {
+  it("validates Mobile Legends only through the documented server-side free endpoint", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "server-only-key";
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ok: true, category_id: "mobile-legends", valid: true, player_name: "ZURS Member", player_id: "123456", region: "Indonesia" }) }));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ success: true, name: "ZURS Member", country: "Indonesia" }) }));
     const result = await validateProviderPlayerIdentity({ gameId: "mobile-legends", fields: { player_id: "123456", zone_id: "4567" } });
     expect(result).toEqual({ status: "verified", playerName: "ZURS Member", playerId: "123456", region: "Indonesia" });
-    expect((fetch as ReturnType<typeof vi.fn>).mock.calls[0]?.[1]).toMatchObject({ method: "POST" });
+    expect((fetch as ReturnType<typeof vi.fn>).mock.calls[0]?.[0]).toContain("/nickname/ml?");
     expect(JSON.stringify(result)).not.toContain("server-only-key");
   });
 
   it("requires a verified player name before revealing provider packages", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "server-only-key";
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ok: true, category_id: "mobile-legends", valid: false, player_name: null }) }));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ success: false }) }));
     await expect(fetchProviderPackages({ gameId: "mobile-legends", fields: { player_id: "not-valid" } })).resolves.toEqual({ status: "verification_required", packages: [] });
-    expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1);
+    expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(0);
   });
 
-  it("allows an unsupported non-ML/HOK category only after the customer confirms the exact ID", async () => {
+  it("marks an unsupported category as not supported without any provider validation request", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "server-only-key";
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce({ ok: false, status: 400 }));
-    await expect(fetchProviderPackages({ gameId: "acecraft", fields: { user_id: "123456" } })).resolves.toEqual({ status: "verification_required", packages: [] });
+    vi.stubGlobal("fetch", vi.fn());
+    await expect(validateProviderPlayerIdentity({ gameId: "acecraft", fields: { user_id: "123456" } })).resolves.toEqual({ status: "not_supported", playerName: null, playerId: null, region: null });
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it("uses the owner-approved Free Fire API only server-side when FZR does not support name validation", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "server-only-key";
-    vi.stubGlobal("fetch", vi.fn()
-      .mockResolvedValueOnce({ ok: false, status: 404, json: async () => ({}) })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, game: "Garena Free Fire", id: "redacted", name: "Verified Player" }) }));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ success: true, game: "Garena Free Fire", id: "redacted", name: "Verified Player" }) }));
 
     await expect(validateProviderPlayerIdentity({ gameId: "free_fire_my_sg", fields: { player_id: "12345678" } })).resolves.toEqual({ status: "verified", playerName: "Verified Player", playerId: "12345678", region: "Global" });
-    expect((fetch as ReturnType<typeof vi.fn>).mock.calls[1]?.[0]).toContain("/nickname/ff?");
-    expect(JSON.stringify((fetch as ReturnType<typeof vi.fn>).mock.calls[1]?.[0])).not.toContain("server-only-key");
+    expect((fetch as ReturnType<typeof vi.fn>).mock.calls[0]?.[0]).toContain("/nickname/ff?");
+    expect(JSON.stringify((fetch as ReturnType<typeof vi.fn>).mock.calls[0]?.[0])).not.toContain("server-only-key");
   });
 
   it("uses the owner-approved 8 Ball Pool response schema when FZR does not support name validation", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "server-only-key";
-    vi.stubGlobal("fetch", vi.fn()
-      .mockResolvedValueOnce({ ok: false, status: 404, json: async () => ({}) })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ status: true, nickname: "Verified Player", message: "Success" }) }));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ status: true, nickname: "Verified Player", message: "Success" }) }));
 
     await expect(validateProviderPlayerIdentity({ gameId: "8_ball_pool", fields: { user_id: "12345678" } })).resolves.toEqual({ status: "verified", playerName: "Verified Player", playerId: "12345678", region: "Global" });
-    expect((fetch as ReturnType<typeof vi.fn>).mock.calls[1]?.[0]).toContain("type_name=eight_ball_pool");
+    expect((fetch as ReturnType<typeof vi.fn>).mock.calls[0]?.[0]).toContain("type_name=eight_ball_pool");
   });
 
   it("maps Magic Chess, Call of Duty, and Arena of Valor to their owner-approved Isan endpoints", async () => {
@@ -189,10 +186,9 @@ describe("provider catalog", () => {
       ["arena_of_valor", "/nickname/aov?", { user_id: "12345678" }],
     ] as const) {
       vi.stubGlobal("fetch", vi.fn()
-        .mockResolvedValueOnce({ ok: false, status: 404, json: async () => ({}) })
         .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, name: "Verified Player", country: "Global" }) }));
       await expect(validateProviderPlayerIdentity({ gameId, fields })).resolves.toMatchObject({ status: "verified", playerId: "12345678" });
-      expect((fetch as ReturnType<typeof vi.fn>).mock.calls[1]?.[0]).toContain(expectedPath);
+      expect((fetch as ReturnType<typeof vi.fn>).mock.calls[0]?.[0]).toContain(expectedPath);
       vi.unstubAllGlobals();
     }
   });
@@ -200,22 +196,21 @@ describe("provider catalog", () => {
   it("does not call Magic Chess free validation until both ID and zone are complete", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "server-only-key";
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 404, json: async () => ({}) }));
+    vi.stubGlobal("fetch", vi.fn());
     await expect(validateProviderPlayerIdentity({ gameId: "magic_chess_gogo_global", fields: { user_id: "12345678" } })).resolves.toEqual({ status: "invalid", playerName: null, playerId: null, region: null });
-    expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1);
+    expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(0);
   });
 
-  it("reveals an unsupported non-ML/HOK package list only after explicit ID confirmation", async () => {
+  it("reveals an unsupported package list only after explicit ID confirmation", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "server-only-key";
     vi.stubGlobal("fetch", vi.fn(async (url: string) => {
-      if (url.includes("/validate-id")) return { ok: false, status: 400 };
-      if (url.includes("/offers?")) return { ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "8_ball_pool", name: "8 Ball Pool", fields: [{ key: "user_id", label: "User ID", type: "text" }], offers: [{ offer_id: "starter", name: "Starter Pack", price_usd: "1.25" }] }) };
-      return { ok: true, json: async () => ({ ok: true, kind: "topup", items: [{ category_id: "8_ball_pool", name: "8 Ball Pool" }], meta: { next_cursor: null, has_more: false } }) };
+      if (url.includes("/offers?")) return { ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "blood_strike", name: "Blood Strike", fields: [{ key: "user_id", label: "User ID", type: "text" }], offers: [{ offer_id: "starter", name: "Starter Pack", price_usd: "1.25" }] }) };
+      return { ok: true, json: async () => ({ ok: true, kind: "topup", items: [{ category_id: "blood_strike", name: "Blood Strike" }], meta: { next_cursor: null, has_more: false } }) };
     }));
 
-    await expect(fetchProviderPackages({ gameId: "8_ball_pool", fields: { user_id: "123456" }, idAccuracyConfirmed: true })).resolves.toEqual({ status: "ready", packages: [{ id: "8_ball_pool:starter", label: "Starter Pack", amountLabel: "Starter Pack", priceLabel: "$1.25", provider: "FZR Cards", paymentMethods: ["khqr", "bank"] }] });
-    expect((fetch as ReturnType<typeof vi.fn>).mock.calls.every(([url]) => !String(url).includes("worker.example.test"))).toBe(true);
+    await expect(fetchProviderPackages({ gameId: "blood_strike", fields: { user_id: "123456" }, idAccuracyConfirmed: true })).resolves.toEqual({ status: "ready", packages: [{ id: "blood_strike:starter", label: "Starter Pack", amountLabel: "Starter Pack", priceLabel: "$1.25", provider: "FZR Cards", paymentMethods: ["khqr", "bank"] }] });
+    expect((fetch as ReturnType<typeof vi.fn>).mock.calls.every(([url]) => !String(url).includes("validate-id"))).toBe(true);
   });
 
   it("reveals packages for a provider form with no ID-style field without making an identity request", async () => {
@@ -230,98 +225,73 @@ describe("provider catalog", () => {
     expect((fetch as ReturnType<typeof vi.fn>).mock.calls.every(([url]) => !String(url).includes("/validate-id"))).toBe(true);
   });
 
-  it("keeps Mobile Legends packages gated when FZR reports that name validation is unavailable for its exact category", async () => {
+  it("keeps Mobile Legends packages gated when its documented free API is unavailable", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "server-only-key";
-    delete process.env.NEFERBYTE_API_KEY;
-    delete process.env.RAPIDAPI_ID_GAME_CHECKER_KEY;
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 400 }));
     await expect(validateProviderPlayerIdentity({ gameId: "mobile_legends_global", fields: { player_id: "596323155", server_id: "10085" } })).resolves.toEqual({ status: "unavailable", playerName: null, playerId: null, region: null });
     await expect(fetchProviderPackages({ gameId: "mobile_legends_global", fields: { player_id: "596323155", server_id: "10085" } })).resolves.toEqual({ status: "unavailable", packages: [] });
   });
 
-  it("rotates once from RapidAPI to the configured Neferbyte fallback for Mobile Legends name checks only", async () => {
+  it("uses one documented free Mobile Legends request without rotating to paid providers", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "server-only-key";
-    process.env.NEFERBYTE_API_KEY = "neferbyte-server-only-key";
-    process.env.RAPIDAPI_ID_GAME_CHECKER_KEY = "rapidapi-server-only-key";
-    vi.stubGlobal("fetch", vi.fn()
-      .mockResolvedValueOnce({ ok: false, status: 400 })
-      .mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({ success: false, msg: "temporarily unavailable" }) })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, data: { username: "Verified Player" } }) }));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ success: true, name: "Verified Player", country: "Global" }) }));
     const result = await validateProviderPlayerIdentity({ gameId: "mobile_legends_global", fields: { player_id: "596323155", server_id: "10085" } });
     expect(result).toEqual({ status: "verified", playerName: "Verified Player", playerId: "596323155", region: "Global" });
-    expect((fetch as ReturnType<typeof vi.fn>).mock.calls[1]?.[0]).toContain("id-game-checker.p.rapidapi.com/mobile-legends");
-    expect((fetch as ReturnType<typeof vi.fn>).mock.calls[2]?.[0]).toContain("api.neferbyte.com/game-id-checker/mobile-legends");
-    expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(3);
-    expect(JSON.stringify(result)).not.toContain("rapidapi-server-only-key");
+    expect((fetch as ReturnType<typeof vi.fn>).mock.calls[0]?.[0]).toContain("/nickname/ml?");
+    expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1);
   });
 
-  it("uses the server-only VPS Worker as a bounded Mobile Legends fallback without changing catalog or payment calls", async () => {
+  it("does not use the VPS Worker for Mobile Legends after the final free-API policy", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "provider-server-only-key";
     process.env.VPS_WORKER_URL = "https://worker.example.test/api/check-id";
     process.env.WORKER_SECRET = "worker-server-only-secret";
-    delete process.env.NEFERBYTE_API_KEY;
-    delete process.env.RAPIDAPI_ID_GAME_CHECKER_KEY;
-    vi.stubGlobal("fetch", vi.fn()
-      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ok: true, username: "Verified Worker Player", userId: "596323155", zoneId: "10085", game: "mobilelegend", status: "valid" }) }));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ success: true, name: "Verified Player" }) }));
 
     const result = await validateProviderPlayerIdentity({ gameId: "mobile_legends_global", fields: { player_id: "596323155", server_id: "10085" } });
 
-    expect(result).toEqual({ status: "verified", playerName: "Verified Worker Player", playerId: "596323155", region: "Global" });
-    const workerCall = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(workerCall?.[0]).toBe("https://worker.example.test/api/check-id");
-    expect(workerCall?.[1]).toMatchObject({ method: "POST", headers: { authorization: "Bearer worker-server-only-secret", "content-type": "application/json" } });
-    expect(JSON.parse(String(workerCall?.[1]?.body))).toEqual({ game: "mobilelegend", id: "596323155", serverId: "10085" });
+    expect(result).toEqual({ status: "verified", playerName: "Verified Player", playerId: "596323155", region: "Global" });
+    expect((fetch as ReturnType<typeof vi.fn>).mock.calls[0]?.[0]).toContain("/nickname/ml?");
     expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1);
-    expect(JSON.stringify(result)).not.toContain("worker-server-only-secret");
   });
 
-  it("uses the VPS Worker first for supported Honor of Kings ID validation", async () => {
+  it("treats Honor of Kings as unsupported without calling the VPS Worker", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "provider-server-only-key";
     process.env.VPS_WORKER_URL = "https://worker.example.test/api/check-id";
     process.env.WORKER_SECRET = "worker-server-only-secret";
-    vi.stubGlobal("fetch", vi.fn()
-      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ok: true, username: "Verified Honor Player", userId: "8329784098348463649", zoneId: null, game: "honor-of-kings", status: "valid" }) }));
+    vi.stubGlobal("fetch", vi.fn());
 
     const result = await validateProviderPlayerIdentity({ gameId: "honor_of_kings", fields: { player_id: "8329784098348463649" } });
 
-    expect(result).toEqual({ status: "verified", playerName: "Verified Honor Player", playerId: "8329784098348463649", region: "Global" });
-    const workerCall = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(JSON.parse(String(workerCall?.[1]?.body))).toEqual({ game: "honor-of-kings", id: "8329784098348463649", serverId: "" });
-    expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1);
+    expect(result).toEqual({ status: "not_supported", playerName: null, playerId: null, region: null });
+    expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("uses FZR only for other identifier-based games and never sends Free Fire IDs to the VPS Worker", async () => {
+  it("uses the documented Free Fire endpoint and never sends IDs to the VPS Worker", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "provider-server-only-key";
     process.env.VPS_WORKER_URL = "https://worker.example.test/api/check-id";
     process.env.WORKER_SECRET = "worker-server-only-secret";
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ok: true, category_id: "free_fire_my_sg", valid: false, player_name: null }) }));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ success: false }) }));
 
     const result = await validateProviderPlayerIdentity({ gameId: "free_fire_my_sg", fields: { player_id: "12345678" } });
 
     expect(result.status).toBe("invalid");
-    const fzrCall = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(fzrCall?.[0]).toContain("/api/v2/topups/validate-id");
+    const freeApiCall = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(freeApiCall?.[0]).toContain("/nickname/ff?");
     expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1);
   });
 
-  it("stops after the finite authorized fallback chain without changing catalog or payment behavior", async () => {
+  it("stops after one unavailable free API request without rotating fallback providers", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "server-only-key";
-    process.env.NEFERBYTE_API_KEY = "neferbyte-server-only-key";
-    process.env.RAPIDAPI_ID_GAME_CHECKER_KEY = "rapidapi-server-only-key";
-    vi.stubGlobal("fetch", vi.fn()
-      .mockResolvedValueOnce({ ok: false, status: 400 })
-      .mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({ success: false }) })
-      .mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({ success: false }) })
-      .mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({ success: false }) }));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 503, json: async () => ({ success: false }) }));
 
     await expect(validateProviderPlayerIdentity({ gameId: "mobile_legends_global", fields: { player_id: "596323155", server_id: "10085" } })).resolves.toEqual({ status: "unavailable", playerName: null, playerId: null, region: null });
-    expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(4);
+    expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1);
   });
 
   it("maps SMMGlob services through the server-only form request", async () => {

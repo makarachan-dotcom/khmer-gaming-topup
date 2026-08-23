@@ -358,6 +358,7 @@ function hasProviderIdentityField(fields: Record<string, string>) {
 }
 
 export async function fetchProviderPackages(input: ProviderPackageRequest): Promise<ProviderPackageResponse> {
+  if (!process.env.FZR_CARDS_API_BASE_URL || !process.env.FZR_CARDS_API_KEY) return { status: "unavailable", packages: [] };
   if (!hasProviderIdentityField(input.fields)) {
     const details = await fetchProviderGameDetails(input.gameId);
     return details.status === "ready" ? { status: "ready", packages: details.packages } : { status: details.status, packages: [] };
@@ -380,19 +381,8 @@ const fzrPlayerIdentitySchema = z.object({
   region: z.string().trim().min(1).max(120).nullable().optional(),
 });
 
-const externalPlayerNameSchema = z.object({ success: z.literal(true), data: z.object({ username: z.string().trim().min(1).max(180) }) });
 const isanPlayerNameSchema = z.object({ success: z.literal(true), name: z.string().trim().min(1).max(180), country: z.string().trim().min(1).max(120).optional() });
 const eightBallPoolPlayerNameSchema = z.object({ status: z.literal(true), nickname: z.string().trim().min(1).max(180) });
-const externalFailureSchema = z.object({ error: z.literal(true), msg: z.string().trim().max(300).optional() });
-const vpsWorkerVerifiedIdentitySchema = z.object({
-  ok: z.literal(true),
-  username: z.string().trim().min(1).max(180),
-  userId: z.string().trim().min(1).max(180).optional(),
-  zoneId: z.string().trim().min(1).max(120).nullable().optional(),
-  game: z.string().trim().min(1).max(120).optional(),
-  status: z.literal("valid"),
-});
-const vpsWorkerInvalidIdentitySchema = z.object({ ok: z.literal(false), status: z.literal("invalid") });
 
 function mobileLegendsIdentityFields(fields: Record<string, string>) {
   const playerId = fields.player_id ?? fields.user_id ?? fields.id ?? "";
@@ -402,39 +392,36 @@ function mobileLegendsIdentityFields(fields: Record<string, string>) {
 }
 
 function isMobileLegendsGame(gameId: string) {
-  return /^mobile_legends(?:_|$)/i.test(gameId);
+  return /^mobile[_-]legends(?:[_-]|$)/i.test(gameId);
 }
 
 function isHonorOfKingsGame(gameId: string) {
   return /^honor_of_kings(?:_|$)/i.test(gameId);
 }
 
-function usesVpsWorkerIdentityCheck(gameId: string) {
-  return isMobileLegendsGame(gameId) || isHonorOfKingsGame(gameId);
-}
-
 type OwnerApprovedFreeIdentityRequest = { kind: "isan" | "eight_ball_pool"; url: string; playerId: string } | { kind: "invalid" };
 
 function ownerApprovedFreeIdentityRequest(input: ProviderPackageRequest): OwnerApprovedFreeIdentityRequest | null {
-  if (isMobileLegendsGame(input.gameId) || isHonorOfKingsGame(input.gameId)) return null;
   const gameId = input.gameId.trim().toLowerCase();
   const game = /^free_fire(?:_|$)/.test(gameId) ? "ff" as const
-    : /^magic_chess(?:_|$)/.test(gameId) ? "mcgg" as const
-      : /^call_of_duty(?:_|$)/.test(gameId) ? "cod" as const
-        : /^arena_of_valor(?:_|$)/.test(gameId) ? "aov" as const
-          : /^8_ball_pool(?:_|$)/.test(gameId) ? "eight_ball_pool" as const
-            : null;
+    : isMobileLegendsGame(gameId) ? "ml" as const
+      : /^magic_chess(?:_|$)/.test(gameId) ? "mcgg" as const
+        : /^call_of_duty(?:_|$)/.test(gameId) ? "cod" as const
+          : /^arena_of_valor(?:_|$)/.test(gameId) ? "aov" as const
+            : /^8_ball_pool(?:_|$)/.test(gameId) ? "eight_ball_pool" as const
+              : null;
   if (!game) return null;
   const playerId = (input.fields.player_id ?? input.fields.user_id ?? input.fields.account_id ?? input.fields.id ?? "").trim();
   const serverId = (input.fields.server_id ?? input.fields.zone_id ?? input.fields.server ?? "").trim();
   if (!/^\d{4,20}$/.test(playerId)) return { kind: "invalid" };
-  const isanUrl = (game: "ff" | "mcgg" | "cod" | "aov", requiresServer = false) => {
+  const isanUrl = (game: "ff" | "ml" | "mcgg" | "cod" | "aov", requiresServer = false) => {
     if (requiresServer && !/^\d{1,12}$/.test(serverId)) return { kind: "invalid" } as const;
     const query = new URLSearchParams({ id: playerId });
     if (requiresServer) query.set("server", serverId);
     return { kind: "isan" as const, url: `https://api.isan.eu.org/nickname/${game}?${query.toString()}`, playerId };
   };
   if (game === "ff") return isanUrl("ff");
+  if (game === "ml") return isanUrl("ml", true);
   if (game === "mcgg") return isanUrl("mcgg", true);
   if (game === "cod") return isanUrl("cod");
   if (game === "aov") return isanUrl("aov");
@@ -462,153 +449,16 @@ async function validateWithOwnerApprovedFreeApi(input: ProviderPackageRequest): 
       if (response.ok && payload && typeof payload === "object" && "status" in payload && (payload as { status?: unknown }).status === false) return emptyIdentity("invalid");
     }
   } catch { /* A public free API is optional; the existing ID-accuracy confirmation handles unsupported checks. */ }
-  return emptyIdentity("not_supported");
-}
-
-function vpsWorkerIdentityInput(input: ProviderPackageRequest): { game: string; playerId: string; serverId: string } | null {
-  const playerId = (input.fields.player_id ?? input.fields.user_id ?? input.fields.id ?? "").trim();
-  const serverId = (input.fields.server_id ?? input.fields.zone_id ?? input.fields.server ?? "").trim();
-  if (!/^\d{4,20}$/.test(playerId)) return null;
-  if (isMobileLegendsGame(input.gameId)) {
-    if (!/^\d{1,12}$/.test(serverId)) return null;
-    return { game: "mobilelegend", playerId, serverId };
-  }
-  if (isHonorOfKingsGame(input.gameId)) return { game: "honor-of-kings", playerId, serverId: /^\d{1,12}$/.test(serverId) ? serverId : "" };
-  return null;
-}
-
-async function validateWithVpsWorker(input: { game: string; playerId: string; serverId: string }): Promise<ProviderPlayerIdentityResponse | null> {
-  const endpoint = process.env.VPS_WORKER_URL?.trim();
-  const secret = process.env.WORKER_SECRET;
-  if (!endpoint || !secret) {
-    console.warn("[VPS Worker] Check-ID configuration is unavailable");
-    return null;
-  }
-
-  try {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: { authorization: `Bearer ${secret}`, "content-type": "application/json" },
-      body: JSON.stringify({ game: input.game, id: input.playerId, serverId: input.serverId }),
-      signal: AbortSignal.timeout(8_000),
-    });
-    const payload = await response.json().catch(() => null);
-    const verified = vpsWorkerVerifiedIdentitySchema.safeParse(payload);
-    if (response.ok && verified.success) {
-      return { status: "verified", playerName: verified.data.username, playerId: verified.data.userId ?? input.playerId, region: "Global" };
-    }
-    const invalid = vpsWorkerInvalidIdentitySchema.safeParse(payload);
-    if (response.ok && invalid.success) return emptyIdentity("invalid");
-    console.warn(`[VPS Worker] Check-ID response was not usable (HTTP ${response.status})`);
-  } catch (error) {
-    const errorName = error instanceof Error ? error.name : "UnknownError";
-    console.warn(`[VPS Worker] Check-ID request failed (${errorName})`);
-  }
-  return null;
+  return emptyIdentity("unavailable");
 }
 
 function emptyIdentity(status: Extract<ProviderPlayerIdentityResponse, { status: "invalid" | "not_supported" | "unavailable" | "error" }> ["status"]): ProviderPlayerIdentityResponse {
   return { status, playerName: null, playerId: null, region: null };
 }
 
-const MOBILE_LEGENDS_FALLBACK_DEADLINE_MS = 18_000;
-const MOBILE_LEGENDS_FALLBACK_REQUEST_MS = 7_000;
-
-function mobileLegendsFallbackSignal(deadline: number) {
-  const remaining = deadline - Date.now();
-  return remaining > 0 ? AbortSignal.timeout(Math.min(MOBILE_LEGENDS_FALLBACK_REQUEST_MS, remaining)) : null;
-}
-
-async function validateMobileLegendsWithFallback(input: ProviderPackageRequest, options: { workerAlreadyTried?: boolean } = {}): Promise<ProviderPlayerIdentityResponse | null> {
-  const ids = mobileLegendsIdentityFields(input.fields);
-  if (!ids) return emptyIdentity("invalid");
-  const deadline = Date.now() + MOBILE_LEGENDS_FALLBACK_DEADLINE_MS;
-  let invalid: ProviderPlayerIdentityResponse | null = null;
-  const recordResult = (result: ProviderPlayerIdentityResponse | null) => {
-    if (result?.status === "verified") return result;
-    if (result?.status === "invalid") invalid = result;
-    return null;
-  };
-
-  if (!options.workerAlreadyTried) {
-    const workerInput = vpsWorkerIdentityInput(input);
-    const workerResult = workerInput ? await validateWithVpsWorker(workerInput) : null;
-    if (workerResult) return workerResult;
-  }
-
-  const rapidApiKey = process.env.RAPIDAPI_ID_GAME_CHECKER_KEY;
-  const neferbyteKey = process.env.NEFERBYTE_API_KEY;
-  if (rapidApiKey && mobileLegendsFallbackSignal(deadline)) {
-    try {
-      const response = await fetch(`https://id-game-checker.p.rapidapi.com/mobile-legends/${ids.playerId}/${ids.serverId}`, { headers: { "x-rapidapi-host": "id-game-checker.p.rapidapi.com", "x-rapidapi-key": rapidApiKey }, signal: mobileLegendsFallbackSignal(deadline)! });
-      const payload = await response.json();
-      const success = externalPlayerNameSchema.safeParse(payload);
-      const verified = success.success ? recordResult({ status: "verified", playerName: success.data.data.username, playerId: ids.playerId, region: "Global" }) : null;
-      if (verified) return verified;
-      const failure = externalFailureSchema.safeParse(payload);
-      if (response.ok && failure.success && /can.t find|not found|invalid/i.test(failure.data.msg ?? "")) invalid = emptyIdentity("invalid");
-    } catch { /* Continue once to the next approved provider within the shared deadline. */ }
-  }
-
-  if (neferbyteKey && mobileLegendsFallbackSignal(deadline)) {
-    try {
-      const response = await fetch(`https://api.neferbyte.com/game-id-checker/mobile-legends/${ids.playerId}/${ids.serverId}`, { headers: { "x-api-key": neferbyteKey }, signal: mobileLegendsFallbackSignal(deadline)! });
-      const payload = await response.json();
-      const success = externalPlayerNameSchema.safeParse(payload);
-      const verified = success.success ? recordResult({ status: "verified", playerName: success.data.data.username, playerId: ids.playerId, region: "Global" }) : null;
-      if (verified) return verified;
-      const failure = externalFailureSchema.safeParse(payload);
-      if (response.ok && failure.success && /can.t find|not found|invalid/i.test(failure.data.msg ?? "")) invalid = emptyIdentity("invalid");
-    } catch { /* Continue once to the final owner-approved fallback within the shared deadline. */ }
-  }
-
-  const isanSignal = mobileLegendsFallbackSignal(deadline);
-  if (isanSignal) {
-    try {
-      const response = await fetch(`https://api.isan.eu.org/nickname/ml?id=${encodeURIComponent(ids.playerId)}&server=${encodeURIComponent(ids.serverId)}`, { signal: isanSignal });
-      const payload = await response.json();
-      const success = isanPlayerNameSchema.safeParse(payload);
-      const verified = success.success ? recordResult({ status: "verified", playerName: success.data.name, playerId: ids.playerId, region: success.data.country ?? "Global" }) : null;
-      if (verified) return verified;
-      if (response.ok && payload && typeof payload === "object" && "success" in payload && (payload as { success?: unknown }).success === false) invalid = emptyIdentity("invalid");
-    } catch { /* The finite authorized fallback chain is unavailable. */ }
-  }
-
-  return invalid ?? emptyIdentity("unavailable");
-}
-
 export async function validateProviderPlayerIdentity(input: ProviderPackageRequest): Promise<ProviderPlayerIdentityResponse> {
-  const workerInput = usesVpsWorkerIdentityCheck(input.gameId) ? vpsWorkerIdentityInput(input) : null;
-  const workerResult = workerInput ? await validateWithVpsWorker(workerInput) : null;
-  if (workerResult) return workerResult;
-
-  try {
-    const providerGameId = isMobileLegendsFamilyGame(input.gameId) ? "mobile_legends_global" : input.gameId;
-    const response = await fzrRequest("/api/v2/topups/validate-id", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ category_id: providerGameId, fields: input.fields }) });
-    if (!response) {
-      if (isMobileLegendsGame(input.gameId)) return await validateMobileLegendsWithFallback(input, { workerAlreadyTried: Boolean(workerInput) }) ?? emptyIdentity("unavailable");
-      const freeApiResult = await validateWithOwnerApprovedFreeApi(input);
-      if (freeApiResult) return freeApiResult;
-      if (isHonorOfKingsGame(input.gameId)) return emptyIdentity("unavailable");
-      return emptyIdentity("unavailable");
-    }
-    const payload = fzrPlayerIdentitySchema.safeParse(response);
-    if (!payload.success || payload.data.category_id !== providerGameId) {
-      const freeApiResult = await validateWithOwnerApprovedFreeApi(input);
-      return freeApiResult ?? emptyIdentity("error");
-    }
-    if (!payload.data.valid || !payload.data.player_name) return { status: "invalid", playerName: null, playerId: null, region: null };
-    return { status: "verified", playerName: payload.data.player_name, playerId: payload.data.player_id ?? null, region: payload.data.region ?? null };
-  } catch (error) {
-    if (isMobileLegendsGame(input.gameId)) return await validateMobileLegendsWithFallback(input, { workerAlreadyTried: Boolean(workerInput) }) ?? emptyIdentity("unavailable");
-    const freeApiResult = await validateWithOwnerApprovedFreeApi(input);
-    if (freeApiResult) return freeApiResult;
-    if (isHonorOfKingsGame(input.gameId)) return emptyIdentity("unavailable");
-    if (error instanceof FzrRequestError && [400, 404].includes(error.status)) return emptyIdentity("not_supported");
-    if (error instanceof FzrRequestError && error.status === 422) return emptyIdentity("invalid");
-    if (error instanceof FzrRequestError && [502, 503].includes(error.status)) return emptyIdentity("unavailable");
-    return emptyIdentity("error");
-  }
+  const freeApiResult = await validateWithOwnerApprovedFreeApi(input);
+  return freeApiResult ?? emptyIdentity("not_supported");
 }
 
 export async function fetchSmmProviderServices(options: { includeHidden?: boolean } = {}): Promise<SmmProviderCatalogResponse> {
