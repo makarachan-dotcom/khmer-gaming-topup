@@ -88,6 +88,8 @@ export type SmmProviderCatalogResponse =
 export type ProviderAvailabilityCatalog = { games: Array<{ id: string; name: string; isActive: boolean }>; smm: Array<{ id: string; name: string; category: string; isActive: boolean }> };
 
 const socialPlatformOrder = ["facebook", "instagram", "tiktok", "youtube", "telegram"] as const;
+let providerAvailabilitySnapshot: { hiddenGameIds: string[]; hiddenSmmServiceIds: string[] } | null = null;
+let providerAvailabilityRetryAt = 0;
 
 export function isThailandProviderProduct(text: string) {
   return /(?:\bthailand\b|\bthai\b|ไทย|ประเทศไทย|🇹🇭|(?:^|[_\s(])th(?:$|[_\s)]))/i.test(text);
@@ -142,7 +144,20 @@ async function fzrRequest(path: string, init: RequestInit = {}) {
 
 async function providerAvailability() {
   if (!isAppwriteStoreConfigured()) return { hiddenGameIds: [] as string[], hiddenSmmServiceIds: [] as string[] };
-  try { return await getAppwriteProviderAvailability(); } catch { return { hiddenGameIds: [] as string[], hiddenSmmServiceIds: [] as string[] }; }
+  const now = Date.now();
+  if (providerAvailabilitySnapshot && now < providerAvailabilityRetryAt) return providerAvailabilitySnapshot;
+  try {
+    const availability = await getAppwriteProviderAvailability();
+    providerAvailabilitySnapshot = availability;
+    providerAvailabilityRetryAt = now + 60_000;
+    return availability;
+  } catch {
+    // Keep the last known restrictions where possible and back off retrying when
+    // Appwrite has exhausted its read allowance. This keeps provider catalogs browsable.
+    providerAvailabilitySnapshot ??= { hiddenGameIds: [], hiddenSmmServiceIds: [] };
+    providerAvailabilityRetryAt = now + 5 * 60_000;
+    return providerAvailabilitySnapshot;
+  }
 }
 
 async function smmGlobRequest(action: string, parameters: Record<string, string> = {}) {

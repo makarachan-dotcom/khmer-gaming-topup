@@ -4,6 +4,7 @@ import { CompactDisclosure } from "@/components/CompactDisclosure";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { OutlineLoader } from "@/components/OutlineLoader";
 import { getAccountDashboardState } from "@/lib/accountDashboardState";
+import { accountRecoveryMessage } from "@/lib/accountRecovery";
 import { trpc } from "@/lib/trpc";
 import { ArrowRight, Check, ChevronDown, Crown, Heart, LogOut, Mail, ReceiptText, ShieldCheck, ShoppingBag, UserRound, Ticket } from "lucide-react";
 import React, { useState, type ReactNode } from "react";
@@ -23,7 +24,7 @@ export default function Account() {
   const transactions = trpc.orders.paymentHistory.useQuery(undefined, { enabled: Boolean(user) });
   const save = (skip = false) => saveName.mutate({ name: skip ? undefined : name });
   const dashboardState = getAccountDashboardState(user);
-  const onboarding = dashboardState.needsDisplayName ? <OnboardingCard name={name} onNameChange={setName} pending={saveName.isPending} error={saveName.error?.message} onSave={() => save(false)} onSkip={() => save(true)} /> : null;
+  const onboarding = dashboardState.needsDisplayName ? <OnboardingCard name={name} onNameChange={setName} pending={saveName.isPending} error={accountRecoveryMessage(saveName.error?.message)} onSave={() => save(false)} onSkip={() => save(true)} /> : null;
 
   return <StorefrontLayout><LoadingOverlay open={loading} label="កំពុងរៀបចំគណនី…" /><main className="container py-6 sm:py-10"><section className="glass-panel relative mx-auto w-full max-w-4xl overflow-hidden rounded-[1.5rem] p-5 sm:p-9"><img src={sparklesEmoji} alt="" aria-hidden="true" className="emoji-asset float-emoji absolute right-8 top-7 h-7 w-7" /><div className="relative"><p className="text-[10px] font-bold tracking-[0.16em] text-indigo-700">ZURS MEMBER</p><h1 className="mt-2 font-display text-2xl font-bold leading-tight text-slate-950 sm:text-4xl">គណនីរបស់អ្នក</h1>{loading ? <LoadingPanel /> : !user ? <SignedOutCard /> : <MemberDashboard name={user.displayName ?? "ZURS Member"} isAdmin={dashboardState.isAdmin} onLogout={logout} logoutPending={loading} onboarding={onboarding} orders={orders.data ?? []} ordersLoading={orders.isLoading} transactions={transactions.data ?? []} transactionsLoading={transactions.isLoading} />}</div></section><AccountHelp /></main></StorefrontLayout>;
 }

@@ -17,9 +17,16 @@ export async function createContext(
 
   try {
     user = await sdk.authenticateRequest(opts.req);
-  } catch (error) {
-    const openId = await readZursSession(opts.req);
-    user = openId ? await getUserByOpenId(openId) ?? null : null;
+  } catch {
+    try {
+      const openId = await readZursSession(opts.req);
+      user = openId ? await getUserByOpenId(openId) ?? null : null;
+    } catch (error) {
+      // A temporary fallback-account-store failure must not make public provider
+      // catalog routes fail for an otherwise anonymous request.
+      console.warn("[Auth] Optional fallback session lookup unavailable", error instanceof Error ? error.message : error);
+      user = null;
+    }
   }
 
   return {
