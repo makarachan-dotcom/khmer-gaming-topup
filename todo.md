@@ -218,3 +218,11 @@
 - [x] Save successfully verified player IDs, provide a safe selector for multiple previous IDs, and animate only user-confirmed autofill without exposing verified player names or enabling purchase.
 - [x] Recheck and repair shared LoadingV2 outline animation rendering across loading states, including transparent presentation, non-stuck completion behavior, and reduced-motion fallback.
 - [x] Verify the exact production deployment and cache path serving zurs.vercel.app, then correct any mismatch preventing the latest selected-package, artwork, verified-ID, saved-ID, or LoadingV2 updates from being visible to the owner.
+- [ ] Add Admin-controlled provider-package event grouping, including an optional Full Ticket section that only appears when the administrator assigns provider-authorized offers to an active event.
+- [ ] Rebuild the game package browser as clean, responsive grouped ticket-style sections without fabricating offers, discounts, or event inventory.
+- [ ] Ensure each provider-authorized package renders its available game or package logo, with a neutral semantic fallback only where the provider supplies no permitted artwork.
+- [ ] Remove the empty selected-package action-bar region, show package title and amount in full where possible, and use a reduced-motion-safe right-to-left marquee only when selected text overflows.
+- [ ] Review remote repository branches and merge eligible changes safely into main, with validation before publication.
+- [ ] Publish the current safe main release to zurs.me and verify the live custom-domain storefront.
+- [ ] Diagnose and repair the Connect with Gmail flow on zurs.me, with secure callback and signed-session regression validation.
+- [x] Integrate the authorized VPS Worker as a server-only Game ID/name validation source, preserving catalog, payment, and disabled Buy controls.

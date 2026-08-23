@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { balanceSocialProviderServices, fetchProviderGameDetails, fetchProviderGames, fetchProviderPackages, fetchSmmProviderServices, getProviderCatalogStatus, isThailandProviderProduct, submitSmmProviderOrder, validateProviderPlayerIdentity } from "./providerCatalog";
 
 const originalEndpoint = process.env.FZR_CARDS_API_BASE_URL;
@@ -7,6 +7,13 @@ const originalSmmEndpoint = process.env.SMMGLOB_API_URL;
 const originalSmmApiKey = process.env.SMMGLOB_API_KEY;
 const originalNeferbyteApiKey = process.env.NEFERBYTE_API_KEY;
 const originalRapidApiKey = process.env.RAPIDAPI_ID_GAME_CHECKER_KEY;
+const originalWorkerUrl = process.env.VPS_WORKER_URL;
+const originalWorkerSecret = process.env.WORKER_SECRET;
+
+beforeEach(() => {
+  delete process.env.VPS_WORKER_URL;
+  delete process.env.WORKER_SECRET;
+});
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -22,6 +29,10 @@ afterEach(() => {
   else process.env.NEFERBYTE_API_KEY = originalNeferbyteApiKey;
   if (originalRapidApiKey === undefined) delete process.env.RAPIDAPI_ID_GAME_CHECKER_KEY;
   else process.env.RAPIDAPI_ID_GAME_CHECKER_KEY = originalRapidApiKey;
+  if (originalWorkerUrl === undefined) delete process.env.VPS_WORKER_URL;
+  else process.env.VPS_WORKER_URL = originalWorkerUrl;
+  if (originalWorkerSecret === undefined) delete process.env.WORKER_SECRET;
+  else process.env.WORKER_SECRET = originalWorkerSecret;
 });
 
 describe("provider catalog", () => {
@@ -96,6 +107,28 @@ describe("provider catalog", () => {
     expect(result).toEqual({ status: "verified", playerName: "Verified Player", playerId: "596323155", region: "Global" });
     expect((fetch as ReturnType<typeof vi.fn>).mock.calls[1]?.[0]).toContain("id-game-checker.p.rapidapi.com/mobile-legends");
     expect(JSON.stringify(result)).not.toContain("rapidapi-server-only-key");
+  });
+
+  it("uses the server-only VPS Worker as a bounded Mobile Legends fallback without changing catalog or payment calls", async () => {
+    process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
+    process.env.FZR_CARDS_API_KEY = "provider-server-only-key";
+    process.env.VPS_WORKER_URL = "https://worker.example.test/api/check-id";
+    process.env.WORKER_SECRET = "worker-server-only-secret";
+    delete process.env.NEFERBYTE_API_KEY;
+    delete process.env.RAPIDAPI_ID_GAME_CHECKER_KEY;
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce({ ok: false, status: 400 })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ ok: true, username: "Verified Worker Player", userId: "596323155", zoneId: "10085", game: "mobilelegend", status: "valid" }) }));
+
+    const result = await validateProviderPlayerIdentity({ gameId: "mobile_legends_global", fields: { player_id: "596323155", server_id: "10085" } });
+
+    expect(result).toEqual({ status: "verified", playerName: "Verified Worker Player", playerId: "596323155", region: "Global" });
+    const workerCall = (fetch as ReturnType<typeof vi.fn>).mock.calls[1];
+    expect(workerCall?.[0]).toBe("https://worker.example.test/api/check-id");
+    expect(workerCall?.[1]).toMatchObject({ method: "POST", headers: { authorization: "Bearer worker-server-only-secret", "content-type": "application/json" } });
+    expect(JSON.parse(String(workerCall?.[1]?.body))).toEqual({ game: "mobilelegend", id: "596323155", serverId: "10085" });
+    expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(2);
+    expect(JSON.stringify(result)).not.toContain("worker-server-only-secret");
   });
 
   it("maps SMMGlob services through the server-only form request", async () => {
