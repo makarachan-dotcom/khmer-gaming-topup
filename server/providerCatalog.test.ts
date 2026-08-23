@@ -128,18 +128,36 @@ describe("provider catalog", () => {
     await expect(fetchProviderPackages({ gameId: "mobile_legends_global", fields: { player_id: "596323155", server_id: "10085" } })).resolves.toEqual({ status: "unavailable", packages: [] });
   });
 
-  it("uses the verified server-only RapidAPI route before an inactive Neferbyte alternative for Mobile Legends", async () => {
+  it("rotates once from RapidAPI to the configured Neferbyte fallback for Mobile Legends name checks only", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "server-only-key";
     process.env.NEFERBYTE_API_KEY = "neferbyte-server-only-key";
     process.env.RAPIDAPI_ID_GAME_CHECKER_KEY = "rapidapi-server-only-key";
     vi.stubGlobal("fetch", vi.fn()
       .mockResolvedValueOnce({ ok: false, status: 400 })
+      .mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({ success: false, msg: "temporarily unavailable" }) })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, data: { username: "Verified Player" } }) }));
     const result = await validateProviderPlayerIdentity({ gameId: "mobile_legends_global", fields: { player_id: "596323155", server_id: "10085" } });
     expect(result).toEqual({ status: "verified", playerName: "Verified Player", playerId: "596323155", region: "Global" });
     expect((fetch as ReturnType<typeof vi.fn>).mock.calls[1]?.[0]).toContain("id-game-checker.p.rapidapi.com/mobile-legends");
+    expect((fetch as ReturnType<typeof vi.fn>).mock.calls[2]?.[0]).toContain("api.neferbyte.com/game-id-checker/mobile-legends");
+    expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(3);
     expect(JSON.stringify(result)).not.toContain("rapidapi-server-only-key");
+  });
+
+  it("stops after the finite authorized fallback chain without changing catalog or payment behavior", async () => {
+    process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
+    process.env.FZR_CARDS_API_KEY = "server-only-key";
+    process.env.NEFERBYTE_API_KEY = "neferbyte-server-only-key";
+    process.env.RAPIDAPI_ID_GAME_CHECKER_KEY = "rapidapi-server-only-key";
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce({ ok: false, status: 400 })
+      .mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({ success: false }) })
+      .mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({ success: false }) })
+      .mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({ success: false }) }));
+
+    await expect(validateProviderPlayerIdentity({ gameId: "mobile_legends_global", fields: { player_id: "596323155", server_id: "10085" } })).resolves.toEqual({ status: "unavailable", playerName: null, playerId: null, region: null });
+    expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(4);
   });
 
   it("maps SMMGlob services through the server-only form request", async () => {

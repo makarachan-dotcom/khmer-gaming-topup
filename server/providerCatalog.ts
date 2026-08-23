@@ -344,9 +344,18 @@ function emptyIdentity(status: Extract<ProviderPlayerIdentityResponse, { status:
   return { status, playerName: null, playerId: null, region: null };
 }
 
+const MOBILE_LEGENDS_FALLBACK_DEADLINE_MS = 18_000;
+const MOBILE_LEGENDS_FALLBACK_REQUEST_MS = 7_000;
+
+function mobileLegendsFallbackSignal(deadline: number) {
+  const remaining = deadline - Date.now();
+  return remaining > 0 ? AbortSignal.timeout(Math.min(MOBILE_LEGENDS_FALLBACK_REQUEST_MS, remaining)) : null;
+}
+
 async function validateMobileLegendsWithFallback(input: ProviderPackageRequest): Promise<ProviderPlayerIdentityResponse | null> {
   const ids = mobileLegendsIdentityFields(input.fields);
   if (!ids) return emptyIdentity("invalid");
+  const deadline = Date.now() + MOBILE_LEGENDS_FALLBACK_DEADLINE_MS;
   let invalid: ProviderPlayerIdentityResponse | null = null;
   const recordResult = (result: ProviderPlayerIdentityResponse | null) => {
     if (result?.status === "verified") return result;
@@ -356,38 +365,41 @@ async function validateMobileLegendsWithFallback(input: ProviderPackageRequest):
 
   const rapidApiKey = process.env.RAPIDAPI_ID_GAME_CHECKER_KEY;
   const neferbyteKey = process.env.NEFERBYTE_API_KEY;
-  if (neferbyteKey && !rapidApiKey) {
+  if (rapidApiKey && mobileLegendsFallbackSignal(deadline)) {
     try {
-      const response = await fetch(`https://api.neferbyte.com/game-id-checker/mobile-legends/${ids.playerId}/${ids.serverId}`, { headers: { "x-api-key": neferbyteKey }, signal: AbortSignal.timeout(12_000) });
+      const response = await fetch(`https://id-game-checker.p.rapidapi.com/mobile-legends/${ids.playerId}/${ids.serverId}`, { headers: { "x-rapidapi-host": "id-game-checker.p.rapidapi.com", "x-rapidapi-key": rapidApiKey }, signal: mobileLegendsFallbackSignal(deadline)! });
       const payload = await response.json();
       const success = externalPlayerNameSchema.safeParse(payload);
       const verified = success.success ? recordResult({ status: "verified", playerName: success.data.data.username, playerId: ids.playerId, region: "Global" }) : null;
       if (verified) return verified;
       const failure = externalFailureSchema.safeParse(payload);
       if (response.ok && failure.success && /can.t find|not found|invalid/i.test(failure.data.msg ?? "")) invalid = emptyIdentity("invalid");
-    } catch { /* Continue to the next approved provider. */ }
+    } catch { /* Continue once to the next approved provider within the shared deadline. */ }
   }
 
-  if (rapidApiKey) {
+  if (neferbyteKey && mobileLegendsFallbackSignal(deadline)) {
     try {
-      const response = await fetch(`https://id-game-checker.p.rapidapi.com/mobile-legends/${ids.playerId}/${ids.serverId}`, { headers: { "x-rapidapi-host": "id-game-checker.p.rapidapi.com", "x-rapidapi-key": rapidApiKey }, signal: AbortSignal.timeout(12_000) });
+      const response = await fetch(`https://api.neferbyte.com/game-id-checker/mobile-legends/${ids.playerId}/${ids.serverId}`, { headers: { "x-api-key": neferbyteKey }, signal: mobileLegendsFallbackSignal(deadline)! });
       const payload = await response.json();
       const success = externalPlayerNameSchema.safeParse(payload);
       const verified = success.success ? recordResult({ status: "verified", playerName: success.data.data.username, playerId: ids.playerId, region: "Global" }) : null;
       if (verified) return verified;
       const failure = externalFailureSchema.safeParse(payload);
       if (response.ok && failure.success && /can.t find|not found|invalid/i.test(failure.data.msg ?? "")) invalid = emptyIdentity("invalid");
-    } catch { /* Continue to the final owner-approved fallback. */ }
+    } catch { /* Continue once to the final owner-approved fallback within the shared deadline. */ }
   }
 
-  try {
-    const response = await fetch(`https://api.isan.eu.org/nickname/ml?id=${encodeURIComponent(ids.playerId)}&server=${encodeURIComponent(ids.serverId)}`, { signal: AbortSignal.timeout(8_000) });
-    const payload = await response.json();
-    const success = isanPlayerNameSchema.safeParse(payload);
-    const verified = success.success ? recordResult({ status: "verified", playerName: success.data.name, playerId: ids.playerId, region: success.data.country ?? "Global" }) : null;
-    if (verified) return verified;
-    if (response.ok && payload && typeof payload === "object" && "success" in payload && (payload as { success?: unknown }).success === false) invalid = emptyIdentity("invalid");
-  } catch { /* All approved providers are currently unavailable. */ }
+  const isanSignal = mobileLegendsFallbackSignal(deadline);
+  if (isanSignal) {
+    try {
+      const response = await fetch(`https://api.isan.eu.org/nickname/ml?id=${encodeURIComponent(ids.playerId)}&server=${encodeURIComponent(ids.serverId)}`, { signal: isanSignal });
+      const payload = await response.json();
+      const success = isanPlayerNameSchema.safeParse(payload);
+      const verified = success.success ? recordResult({ status: "verified", playerName: success.data.name, playerId: ids.playerId, region: success.data.country ?? "Global" }) : null;
+      if (verified) return verified;
+      if (response.ok && payload && typeof payload === "object" && "success" in payload && (payload as { success?: unknown }).success === false) invalid = emptyIdentity("invalid");
+    } catch { /* The finite authorized fallback chain is unavailable. */ }
+  }
 
   return invalid ?? emptyIdentity("unavailable");
 }

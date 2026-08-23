@@ -230,3 +230,4 @@
 - [x] Simplify Home provider-product cards into a clean, low-clutter hierarchy and render a relevant country flag only once per card rather than repeating it in multiple labels.
 - [x] Route and verify the latest published ZURS STORE release on the zurs.me domain.
 - [x] Diagnose and repair the reported mobile Account onboarding/backend error, with regression tests and live custom-domain verification.
+- [x] Harden server-only Game ID/name checking with bounded authorized fallbacks that never affect catalog, products, payment, or Buy controls.
