@@ -15,3 +15,5 @@ The Mobile Legends game detail rendered provider-approved game artwork, verified
 The local Home catalog rendered 12 real provider game cards after the public catalog recovery. Home cards now retain one Cambodia marker over the provider game artwork, with plain text regional metadata below the title. Group headers do not add a second flag, and long titles use overflow-only marquee behavior.
 
 The published `zurs.vercel.app` Home route was checked with the cache-busting release value for checkpoint `2f97d920`. It rendered 12 provider game entries with purchase controls still inactive. The visual card hierarchy kept the regional flag in the artwork and text-only regional metadata outside it; browser accessibility text can include image-overlay content and should not be used to infer a visible duplicate flag.
+
+The attached Vercel project lists both `zurs.me` and `www.zurs.me` and its latest production deployment was `READY`. The custom domain was directly checked with release value `7b50d5f7`; it redirected to `www.zurs.me`, rendered the current Home page, loaded 12 provider game cards, and retained inactive purchase controls.
