@@ -253,3 +253,5 @@
 - [x] Consolidate PUBG Mobile Auto and PUBG Mobile Fast into one customer-facing PUBG Mobile card and page, combining only their provider-authorized packages and retaining the existing Check-ID confirmation policy.
 - [x] Repair the interrupted package-artwork release so zurs.me no longer renders question-mark previews for Level Up and other provider packages without official images.
 - [x] Replace repeated game-cover preview backgrounds with varied artwork driven by each provider package title/type, including Deal, BC, Lucky Bag, Pre-order, Pass, and special packages.
+- [x] Replace generic package symbols with original game-themed package artwork for Season Pass, Level Up, Elite Pass, Premium Pass, Deals, BC, Lucky Bag, Pre-order, and Special packages; retain only provider-approved official game logos/covers and exact provider data.
+- [x] Add the requested pure-CSS `fx-contour` wireframe SVG effect in the ZURS STORE top area with exact tokens, dash motion, and reduced-motion fallback.

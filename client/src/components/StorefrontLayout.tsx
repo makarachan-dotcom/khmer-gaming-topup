@@ -94,6 +94,8 @@ function StorefrontShell({ children }: { children: ReactNode }) {
             </div>
           </Link>
 
+          <div className="hidden text-slate-950 xl:block"><svg className="fx-contour" viewBox="0 0 260 56" role="img" aria-label="OUTLINE"><text x="50%" y="50%" dominant-baseline="central" text-anchor="middle">OUTLINE</text></svg></div>
+
           <nav className="hidden items-center gap-1 lg:flex" aria-label="Main navigation">
             {navigation.map((item) => { const Icon = item.href === "/smm" ? BarChart3 : Store; return <Link key={item.href} href={item.href} className={cn("inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition-all hover:-translate-y-0.5", location === item.href ? "bg-indigo-50 text-indigo-700 shadow-sm" : "text-slate-600 hover:bg-white/80 hover:text-slate-950")}><Icon className="h-3.5 w-3.5" />{item.label}</Link>; })}
           </nav>

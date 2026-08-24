@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canBrowseTopupPackages, canBrowseVerifiedPackages, gameIdFromTopupPath, gameTopupPath, groupProviderPackagesByMeaning, initialDiamondPackageLimit, partitionProviderPackagesForFullTicketEvent, readVerifiedPlayerEntries, requiresPlayerIdentityCheck, saveVerifiedPlayerEntry, sortProviderPackagesByPrice, visibleDiamondPackageItems } from "./GameTopup";
+import { canBrowseTopupPackages, canBrowseVerifiedPackages, gameIdFromTopupPath, gameThemedArtworkForPackage, gameTopupPath, groupProviderPackagesByMeaning, initialDiamondPackageLimit, partitionProviderPackagesForFullTicketEvent, readVerifiedPlayerEntries, requiresPlayerIdentityCheck, saveVerifiedPlayerEntry, sortProviderPackagesByPrice, visibleDiamondPackageItems } from "./GameTopup";
 
 describe("dedicated game top-up routes", () => {
   it("creates and reads an encoded provider game route", () => {
@@ -39,6 +39,17 @@ describe("dedicated game top-up routes", () => {
     expect(grouped.bonus.map(item => item.id)).toEqual(["pubg-uc-bonus"]);
     expect(grouped.passes.map(item => item.id)).toEqual(["ff-weekly", "pubg-monthly", "ml-elite"]);
     expect(grouped.special.map(item => item.id)).toEqual(["ff-special"]);
+  });
+
+  it("uses original game-themed artwork for Blood Strike Pass packages and keeps other games on their official-game fallback", () => {
+    expect(gameThemedArtworkForPackage("blood_strike", "Season Pass", "Season Pass")).toContain("bloodstrike-season-pass-art");
+    expect(gameThemedArtworkForPackage("blood_strike", "Level Up Pass", "Level Up Pass")).toContain("bloodstrike-level-up-art");
+    expect(gameThemedArtworkForPackage("blood_strike", "Strike Pass Elite", "Strike Pass Elite")).toContain("bloodstrike-elite-pass-art");
+    expect(gameThemedArtworkForPackage("blood_strike", "Strike Pass Premium", "Strike Pass Premium")).toContain("bloodstrike-premium-pass-art");
+    expect(gameThemedArtworkForPackage("blood_strike", "51 BC", "51 BC")).toContain("bloodstrike-level-up-art");
+    expect(gameThemedArtworkForPackage("blood_strike", "Lucky Bag Week", "Lucky Bag Week")).toContain("bloodstrike-elite-pass-art");
+    expect(gameThemedArtworkForPackage("blood_strike", "Bloodstrike Pre-order Item", "Bloodstrike Pre-order Item")).toContain("bloodstrike-premium-pass-art");
+    expect(gameThemedArtworkForPackage("mobile_legends", "Weekly Pass", "Weekly Pass")).toBeNull();
   });
 
   it("shows ten diamond packages first and reveals the provider-authorized remainder only after expansion", () => {
