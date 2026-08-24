@@ -29,3 +29,17 @@ The repaired package grid loads without any generated-image failure placeholder.
 ## Final Development Checks
 
 Desktop review confirmed that Deal, Lucky Bag/Chest, BC, Pre-order, and Special package cards now show distinct type-specific visual symbols, without a failed artwork indicator and without the game cover as the package image. A repeated mobile screenshot review at a 375 px viewport confirmed the responsive game detail and account-gate layout load cleanly after the initial route request. The package grid itself was verified on desktop because the browser-owned test state is not shared with the separate mobile preview session. Purchase controls remain disabled.
+
+## Official-Domain Route Check
+
+The cache-fresh official `www.zurs.me` Blood Strike route loaded with the current authenticated owner session and exposed the protected Admin Preview control. The normal public account-gate and disabled-purchase policy remained in place. The final published package-grid artwork review proceeds through that protected preview without entering player data.
+
+The first official Admin Preview response loaded the older generated-image package-card markup rather than the new resilient internal visual markup, even with the checkpoint cache key. The official-domain final approval is therefore blocked pending a cache-fresh retry that must show the updated title-specific symbol cards and contain no generated package-art image element.
+
+The Vercel API reports that the latest READY production deployment is aliased to `www.zurs.me`, `zurs.me`, and `zurs.vercel.app` at the new checkpoint revision. However, DOM inspection on the current official browser tab confirms it still has the older generated-image markup loaded. The remaining verification step is to compare the direct latest deployment URL and then force a cache-busting official-domain request; no user data, credentials, raw provider response, or order flow is involved.
+
+The direct latest deployment route loaded normally. Its final markup check is the next step; this isolates whether the issue is a build artifact or only the custom-domain browser cache.
+
+Direct latest-deployment bundle inspection confirmed the resilient symbol markup is present and the legacy generated-image markup is absent. A fresh cache-busting official-domain route then loaded successfully with the protected Admin Preview available. The final task is to open that preview and confirm the current official DOM uses the new symbol treatment.
+
+The final cache-fresh `www.zurs.me` Admin Preview completed successfully. Deal, Lucky Bag/Chest, BC, Pre-order, and Special cards visibly render distinct title-specific icons on their package visual surfaces. There is no question-mark preview, no generated-image failure placeholder, and no reused game-cover artwork within the package visuals. Provider labels, exact provider amounts, progressive disclosure, separate Pass cards, and disabled purchase/order behavior remain unchanged.
