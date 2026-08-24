@@ -75,6 +75,10 @@ const suppliedArtworkByGameAndAmount = {
     "6048 Diamonds": "https://webstorages.sgp1.cdn.digitaloceanspaces.com/web/01K86GEFPS0NBCDGHC2HX70EKZ.png",
     "9288 Diamonds": "https://webstorages.sgp1.cdn.digitaloceanspaces.com/web/01K86GH77D6T30PPNC175AYC5B.png"
   },
+  "mobile_legends": {
+    "Weekly Pass": "/manus-storage/01KJ809BB0VGX2QWEG33342T5B_f1b44a2f.png",
+    "Twilight Pass": "/manus-storage/01KJ82DHRY9DYRG4XCCCSRZ3R1_58a2df9f.png"
+  },
   "pubg_mobile": {
     "60 UC": "https://webstorages.sgp1.cdn.digitaloceanspaces.com/web/01K4QSDYN8NTH9HESDG3GB5EG5.png",
     "120 UC": "https://webstorages.sgp1.cdn.digitaloceanspaces.com/web/01K4QSQHK60W5B4WPVGCDPQVDM.png",

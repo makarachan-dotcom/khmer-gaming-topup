@@ -16,3 +16,13 @@ export function mobileLegendsDiamondLabel(label: string, amountLabel: string) {
   const amount = mobileLegendsDiamondAmount(label, amountLabel);
   return amount ? `${amount.toLocaleString("en-US")} Diamonds` : amountLabel || label;
 }
+
+export type MobileLegendsPackageTone = "diamonds" | "bonus" | "pass" | "special";
+
+export function mobileLegendsPackageTone(label: string, amountLabel: string): MobileLegendsPackageTone {
+  const packageCopy = `${label} ${amountLabel}`.toLowerCase();
+  if (/\b(?:weekly|monthly|twilight)\b.*\b(?:elite\s*)?pack\b|\b(?:weekly|monthly|twilight)\s+pass\b/.test(packageCopy)) return "pass";
+  if (/\bfirst\s*top[\s-]*up\b|\bbonus\b/.test(packageCopy)) return "bonus";
+  if (/\b(?:promo|special|event|exclusive)\b/.test(packageCopy)) return "special";
+  return "diamonds";
+}

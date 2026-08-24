@@ -270,3 +270,7 @@
 - [x] Fix the generated-art fallback renderer so it uses its category-specific asset instead of repeating a game-cover logo behind package cards.
 - [x] Remove the GAMING & DIGITAL top gap and center it exactly beneath ZURS STORE on desktop and mobile.
 - [x] Reduce the ZURS STORE Topographic brand text to the previous compact size while retaining subtitle centering.
+- [ ] Verify the existing account for zaz998016@gmail.com and promote only that account to admin.
+- [x] Inspect uploaded MLBB package data and image assets without executing the uploaded widget script.
+- [x] Map only verified uploaded MLBB artwork to matching provider package names/amounts and apply package-type color treatments without changing package data.
+- [ ] Await the requested email account's first sign-in before a secure audited admin promotion can be completed.

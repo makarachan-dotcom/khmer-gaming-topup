@@ -16,7 +16,14 @@ describe("supplied product artwork", () => {
     expect(suppliedProductArtworkForPackage("pubg_mobile_fast", "8100 UC")).toContain("01K4QT0F51DD5ZR7XM57E2VKDW.png");
   });
 
+  it("uses only the strictly matched uploaded MLBB pass artwork and never maps an approximate diamond amount", () => {
+    expect(suppliedProductArtworkForPackage("mobile_legends", "Weekly Pass")).toContain("01KJ809BB0VGX2QWEG33342T5B");
+    expect(suppliedProductArtworkForPackage("mobile_legends", "Twilight Pass")).toContain("01KJ82DHRY9DYRG4XCCCSRZ3R1");
+    expect(suppliedProductArtworkForPackage("mobile_legends", "Weekly Pass x2")).toBeNull();
+    expect(suppliedProductArtworkForPackage("mobile_legends", "250 + 25 Diamonds (First Top-Up Bonus)")).toBeNull();
+  });
+
   it("contains only the product image entries supplied by the owner", () => {
-    expect(suppliedProductArtworkAmountCount()).toBe(77);
+    expect(suppliedProductArtworkAmountCount()).toBe(79);
   });
 });

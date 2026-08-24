@@ -73,6 +73,12 @@ describe("dedicated game top-up routes", () => {
     expect(usesMobileLegendsDiamondChestArtwork("blood_strike", "86 Diamonds", "86 Diamonds")).toBe(false);
   });
 
+  it("keeps the official game-logo overlay on any newly supplied MLBB pass artwork", () => {
+    const source = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
+    expect(source).toContain("supplied-package-art__logo");
+    expect(source).toContain("package-choice--mlbb-${mobileLegendsTone}");
+  });
+
   it("shows ten diamond packages first and reveals the provider-authorized remainder only after expansion", () => {
     const packages = Array.from({ length: 12 }, (_, index) => ({ id: `diamond-${index + 1}`, label: `${index + 1} Diamonds`, amountLabel: `${index + 1} Diamonds`, priceLabel: `$${index + 1}` }));
     expect(initialDiamondPackageLimit).toBe(10);

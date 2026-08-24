@@ -154,6 +154,10 @@ button, input, textarea, select { font: inherit; }
 .package-choice--selected .package-choice-surface { margin: 1px; border-radius: calc(0.8rem - 1px); }
 .package-choice--clean .package-choice-surface { min-height: 10.55rem; }
 .package-choice--gold { border-color: oklch(0.82 0.13 82 / 0.78); }
+.package-choice--mlbb-diamonds { border-color: oklch(0.82 0.13 82 / 0.78); background: linear-gradient(145deg, oklch(0.77 0.16 78), oklch(0.94 0.12 92), oklch(0.69 0.14 70)); }
+.package-choice--mlbb-bonus { border-color: oklch(0.65 0.15 158 / 0.72); background: linear-gradient(145deg, oklch(0.56 0.15 157), oklch(0.82 0.16 140), oklch(0.64 0.15 169)); box-shadow: 0 12px 24px oklch(0.54 0.13 158 / 0.18); }
+.package-choice--mlbb-pass { border-color: oklch(0.63 0.13 244 / 0.70); background: linear-gradient(145deg, oklch(0.50 0.14 250), oklch(0.76 0.14 222), oklch(0.52 0.15 274)); box-shadow: 0 12px 24px oklch(0.42 0.13 252 / 0.20); }
+.package-choice--mlbb-special { border-color: oklch(0.67 0.14 327 / 0.70); background: linear-gradient(145deg, oklch(0.52 0.15 325), oklch(0.79 0.15 308), oklch(0.66 0.15 68)); box-shadow: 0 12px 24px oklch(0.47 0.13 322 / 0.20); }
 .public-package-art { position: relative; overflow: hidden; min-height: 3.25rem; background: radial-gradient(circle at 42% 8%, oklch(1 0.12 98 / 0.52), transparent 42%), linear-gradient(135deg, oklch(0.53 0.13 64), oklch(0.77 0.16 85) 55%, oklch(0.94 0.10 93)); box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.42), 0 5px 10px oklch(0.54 0.13 69 / 0.18); }
 .public-package-art::after { content: ""; position: absolute; inset: auto -1rem -1.6rem auto; height: 4rem; width: 4rem; border-radius: 999px; background: oklch(1 0.12 98 / 0.30); filter: blur(4px); }
 .public-package-art > * { position: relative; z-index: 1; }
@@ -483,6 +487,7 @@ video {
 }
 
 .supplied-package-art {
+  position: relative;
   display: block;
   height: 3.35rem;
   overflow: hidden;
@@ -496,3 +501,7 @@ video {
   width: 100%;
   object-fit: contain;
 }
+
+.supplied-package-art--mlbb-pass { background: radial-gradient(circle at 72% 18%, oklch(0.88 0.14 231 / 0.58), transparent 40%), linear-gradient(135deg, oklch(0.27 0.11 266), oklch(0.48 0.15 245), oklch(0.66 0.13 225)); }
+.supplied-package-art--mlbb-special { background: radial-gradient(circle at 72% 18%, oklch(0.88 0.14 328 / 0.52), transparent 40%), linear-gradient(135deg, oklch(0.34 0.12 315), oklch(0.58 0.15 329), oklch(0.73 0.14 72)); }
+.supplied-package-art__logo { position: absolute; left: 0.42rem; top: 0.42rem; overflow: hidden; border: 1px solid oklch(1 0 0 / 0.55); background: oklch(1 0 0 / 0.16); box-shadow: 0 3px 8px oklch(0.10 0.03 268 / 0.38); }
