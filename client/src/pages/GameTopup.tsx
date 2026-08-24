@@ -11,9 +11,9 @@ import { countryFlagForRegion, providerPackageBadge } from "@/lib/providerPresen
 import { isMobileLegendsGlobalGame, mobileLegendsDiamondLabel } from "@/lib/mobileLegendsAssets";
 import { isPubgTopupGame, pubgUcArtworkForAmount, pubgUcDisplayAmount, pubgUcFallbackArtwork } from "@/lib/pubgUcAssets";
 import { suppliedProductArtworkForPackage } from "@/lib/suppliedProductArtwork";
-import { generatedPackageArtworkForPackage } from "@/lib/generatedPackageArtwork";
+import { generatedPackageArtworkForPackage, type GeneratedPackageArtworkKind } from "@/lib/generatedPackageArtwork";
 import { trpc } from "@/lib/trpc";
-import { ArrowLeft, CheckCircle2, ChevronDown, ChevronRight, CircleAlert, Eye, Gem, History, ShieldAlert, UserRound, WalletCards } from "lucide-react";
+import { ArrowLeft, BadgePercent, Box, CalendarClock, CheckCircle2, ChevronDown, ChevronRight, CircleAlert, Crown, Eye, Gem, Gift, History, ShieldAlert, Sparkles, TrendingUp, UserRound, WalletCards } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 
@@ -192,6 +192,22 @@ function isFullTicketPackage(item: ProviderPackage) {
   return /\bfull\s*ticket\b/i.test(`${item.label} ${item.amountLabel}`);
 }
 
+const generatedArtworkIconByKind: Record<GeneratedPackageArtworkKind, typeof Gem> = {
+  diamonds: Gem,
+  pass: Crown,
+  "level-up": TrendingUp,
+  special: Sparkles,
+  deal: BadgePercent,
+  bc: Box,
+  "lucky-bag": Gift,
+  preorder: CalendarClock,
+};
+
+function GeneratedPackageArtworkVisual({ kind, amount, gameName, gameLogoUrl }: { kind: GeneratedPackageArtworkKind; amount: string; gameName: string; gameLogoUrl?: string }) {
+  const Icon = generatedArtworkIconByKind[kind];
+  return <span className={`generated-package-art generated-package-art--${kind} mt-1.5 block`}><span aria-hidden="true" className="generated-package-art__flare" /><span aria-hidden="true" className="generated-package-art__symbol"><Icon className="h-7 w-7" strokeWidth={1.7} /></span><ProviderGameArtwork name={gameName} logoUrl={gameLogoUrl} priority showCountryFlag={false} className="generated-package-art__logo h-8 w-8 rounded-lg" iconClassName="h-4 w-4" /><span className="generated-package-art__amount">{amount}</span></span>;
+}
+
 function packageText(item: ProviderPackage) {
   return `${item.label} ${item.amountLabel}`.toLowerCase();
 }
@@ -244,10 +260,9 @@ function PackageCard({ item, selected, onSelect, gameId, gameName, gameLogoUrl }
   const suppliedArtwork = suppliedProductArtworkForPackage(gameId, item.amountLabel);
   const pubgArtwork = pubg ? pubgUcArtworkForAmount(item.amountLabel) : null;
   const generatedArtwork = generatedPackageArtworkForPackage(item.label, item.amountLabel);
-  const packageArtwork = suppliedArtwork ?? pubgArtwork ?? generatedArtwork.url;
   const packageAmount = mobileLegends ? diamondLabel : pubg ? pubgUcDisplayAmount(item.amountLabel) : item.amountLabel;
-  const usesArtCard = Boolean(packageArtwork);
-  return <article className="min-w-0"><button type="button" aria-pressed={selected} onClick={onSelect} className={`package-choice package-choice--clean package-choice--gold w-full text-left ${selected ? "package-choice--selected" : ""}`}><span className="package-choice-surface block rounded-[0.7rem] p-2.5"><span className="flex items-start justify-between gap-2"><span className="flex min-w-0 items-center gap-1.5"><span className={`package-badge ${badge ? `package-badge--${badge.tone}` : "package-badge--gold"}`}>{badge?.label ?? (mobileLegends ? "MLBB · GOLD" : pubg ? "PUBG UC" : "TOP-UP")}</span></span>{selected ? <SelectedPackageCheck size={19} className="package-choice-check" /> : <Gem className="package-gem h-3.5 w-3.5 text-amber-600" />}</span>{suppliedArtwork ? <span className="supplied-package-art mt-1.5 block"><img src={suppliedArtwork} alt={`${gameName} ${item.amountLabel}`} className="supplied-package-art__image" loading="eager" fetchPriority="high" decoding="async" draggable={false} /></span> : pubgArtwork ? <span className="pubg-uc-art mt-1.5 block"><img src={pubgArtwork} alt={`${gameName} ${item.amountLabel}`} className="pubg-uc-art__image" loading="eager" fetchPriority="high" decoding="async" draggable={false} /><span className="pubg-uc-art__amount">{packageAmount}</span></span> : <span className={`generated-package-art generated-package-art--${generatedArtwork.kind} mt-1.5 block`}><img src={packageArtwork} alt={`${gameName} ${item.amountLabel}`} className="generated-package-art__image" loading="lazy" decoding="async" draggable={false} /><ProviderGameArtwork name={gameName} logoUrl={gameLogoUrl} priority className="generated-package-art__logo h-8 w-8 rounded-lg" iconClassName="h-4 w-4" /><span className="generated-package-art__amount">{packageAmount}</span></span>}<OverflowMarquee text={item.label} className={`${usesArtCard ? "mt-1" : "mt-2"} text-xs font-extrabold leading-4 text-slate-950`} /><OverflowMarquee text={mobileLegends ? "🇰🇭 Cambodia · Global" : `🇰🇭 Cambodia · ${item.amountLabel}`} className="mt-0.5 text-[10px] font-medium text-slate-500" /><span className="mt-1.5 block text-sm font-extrabold text-amber-800">{item.priceLabel}</span></span></button></article>;
+  const usesArtCard = Boolean(suppliedArtwork ?? pubgArtwork) || Boolean(generatedArtwork.kind);
+  return <article className="min-w-0"><button type="button" aria-pressed={selected} onClick={onSelect} className={`package-choice package-choice--clean package-choice--gold w-full text-left ${selected ? "package-choice--selected" : ""}`}><span className="package-choice-surface block rounded-[0.7rem] p-2.5"><span className="flex items-start justify-between gap-2"><span className="flex min-w-0 items-center gap-1.5"><span className={`package-badge ${badge ? `package-badge--${badge.tone}` : "package-badge--gold"}`}>{badge?.label ?? (mobileLegends ? "MLBB · GOLD" : pubg ? "PUBG UC" : "TOP-UP")}</span></span>{selected ? <SelectedPackageCheck size={19} className="package-choice-check" /> : <Gem className="package-gem h-3.5 w-3.5 text-amber-600" />}</span>{suppliedArtwork ? <span className="supplied-package-art mt-1.5 block"><img src={suppliedArtwork} alt={`${gameName} ${item.amountLabel}`} className="supplied-package-art__image" loading="eager" fetchPriority="high" decoding="async" draggable={false} /></span> : pubgArtwork ? <span className="pubg-uc-art mt-1.5 block"><img src={pubgArtwork} alt={`${gameName} ${item.amountLabel}`} className="pubg-uc-art__image" loading="eager" fetchPriority="high" decoding="async" draggable={false} /><span className="pubg-uc-art__amount">{packageAmount}</span></span> : <GeneratedPackageArtworkVisual kind={generatedArtwork.kind} amount={packageAmount} gameName={gameName} gameLogoUrl={gameLogoUrl} />}<OverflowMarquee text={item.label} className={`${usesArtCard ? "mt-1" : "mt-2"} text-xs font-extrabold leading-4 text-slate-950`} /><OverflowMarquee text={mobileLegends ? "🇰🇭 Cambodia · Global" : `🇰🇭 Cambodia · ${item.amountLabel}`} className="mt-0.5 text-[10px] font-medium text-slate-500" /><span className="mt-1.5 block text-sm font-extrabold text-amber-800">{item.priceLabel}</span></span></button></article>;
 }
 
 function PackageSection({ title, description, icon: Icon, items, selectedPackageId, onSelect, gameId, gameName, gameLogoUrl, progressive = false }: { title: string; description?: string | null; icon: typeof Gem; items: ProviderPackage[]; selectedPackageId: string; onSelect: (id: string) => void; gameId: string; gameName: string; gameLogoUrl?: string; progressive?: boolean }) {
