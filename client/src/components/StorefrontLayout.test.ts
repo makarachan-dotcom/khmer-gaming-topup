@@ -31,7 +31,7 @@ describe("storefront media protection", () => {
     const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
     expect(componentSource).toContain('<div className="fx-topographic">ZURS STORE</div>');
     expect(componentSource).not.toContain("fx-magnetic");
-    expect(styleSource).toContain('font: 600 28px/1.15 "JetBrains Mono", monospace;');
+    expect(styleSource).toContain('font: 600 16px/1.15 "JetBrains Mono", monospace;');
     expect(styleSource).toContain("repeating-radial-gradient(ellipse at 30% 55%");
     expect(styleSource).toContain("--ink: oklch(0.29 0.06 260);");
     expect(styleSource).toContain("--ink-3: oklch(0.62 0.17 220);");

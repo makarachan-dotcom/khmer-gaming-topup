@@ -98,7 +98,7 @@ button, input, textarea, select { font: inherit; }
 .fx-topographic {
   --ink: oklch(0.29 0.06 260);
   --ink-3: oklch(0.62 0.17 220);
-  font: 600 28px/1.15 "JetBrains Mono", monospace;
+  font: 600 16px/1.15 "JetBrains Mono", monospace;
   letter-spacing: .1em;
   color: transparent;
   background:

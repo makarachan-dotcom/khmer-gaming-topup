@@ -269,3 +269,4 @@
 - [x] Audit all provider and fallback package artwork for broken, repeated, incorrect, or visually inconsistent package-card images across desktop and mobile.
 - [x] Fix the generated-art fallback renderer so it uses its category-specific asset instead of repeating a game-cover logo behind package cards.
 - [x] Remove the GAMING & DIGITAL top gap and center it exactly beneath ZURS STORE on desktop and mobile.
+- [x] Reduce the ZURS STORE Topographic brand text to the previous compact size while retaining subtitle centering.
