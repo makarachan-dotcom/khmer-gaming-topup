@@ -266,9 +266,15 @@ export const initialApprovedPublicGameIds = [
 
 export const mobileLegendsFamilyGameId = "mobile_legends";
 const mobileLegendsFamilyVariantIds = ["mobile_legends_global", "mobile_legends_promo", "mobile_legends_special"] as const;
+export const pubgMobileFamilyGameId = "pubg_mobile";
+const pubgMobileFamilyVariantIds = ["pubg_mobile_auto", "pubg_mobile_fast"] as const;
 
 function isMobileLegendsFamilyGame(gameId: string) {
   return gameId.trim().toLowerCase() === mobileLegendsFamilyGameId;
+}
+
+function isPubgMobileFamilyGame(gameId: string) {
+  return gameId.trim().toLowerCase() === pubgMobileFamilyGameId;
 }
 
 function publicProviderGameIds(availability: Awaited<ReturnType<typeof providerAvailability>>) {
@@ -329,6 +335,19 @@ export async function fetchProviderGameDetails(gameId: string, options: { includ
       return {
         status: "ready",
         game: { ...primary.game, id: mobileLegendsFamilyGameId, name: "Mobile Legends" },
+        packages: readyVariants.flatMap((details) => details.packages),
+      };
+    }
+    if (isPubgMobileFamilyGame(gameId)) {
+      const activeVariants = pubgMobileFamilyVariantIds.filter((variantId) => availableGames.games.some((game) => game.id === variantId));
+      if (!activeVariants.length) return { status: "unavailable", game: null, packages: [] };
+      const variantDetails = await Promise.all(activeVariants.map((variantId) => fetchProviderGameDetails(variantId, options)));
+      const readyVariants = variantDetails.filter((details): details is Extract<ProviderGameDetailsResponse, { status: "ready" }> => details.status === "ready");
+      if (!readyVariants.length) return { status: variantDetails.some((details) => details.status === "error") ? "error" : "unavailable", game: null, packages: [] };
+      const primary = readyVariants.find((details) => details.game.id === "pubg_mobile_auto") ?? readyVariants[0]!;
+      return {
+        status: "ready",
+        game: { ...primary.game, id: pubgMobileFamilyGameId, name: "PUBG Mobile" },
         packages: readyVariants.flatMap((details) => details.packages),
       };
     }

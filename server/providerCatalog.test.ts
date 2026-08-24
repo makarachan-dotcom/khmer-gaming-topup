@@ -120,6 +120,20 @@ describe("provider catalog", () => {
     if (result.status === "ready") expect(result.packages.map((item) => item.id)).toEqual(["mobile_legends_global:global", "mobile_legends_promo:promo", "mobile_legends_special:special"]);
   });
 
+  it("merges active PUBG Mobile Auto and Fast variants into one family page", async () => {
+    process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
+    process.env.FZR_CARDS_API_KEY = "server-only-key";
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (url.includes("/offers?category_id=pubg_mobile_auto")) return { ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "pubg_mobile_auto", name: "PUBG Mobile (Auto)", fields: [{ key: "player_id", label: "Player ID", type: "text" }], offers: [{ offer_id: "auto", name: "60 UC", price_usd: "1.00" }] }) };
+      if (url.includes("/offers?category_id=pubg_mobile_fast")) return { ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "pubg_mobile_fast", name: "PUBG Mobile (Fast)", fields: [{ key: "player_id", label: "Player ID", type: "text" }], offers: [{ offer_id: "fast", name: "120 UC", price_usd: "2.00" }] }) };
+      return { ok: true, json: async () => ({ ok: true, kind: "topup", items: [{ category_id: "pubg_mobile_auto", name: "PUBG Mobile (Auto)" }, { category_id: "pubg_mobile_fast", name: "PUBG Mobile (Fast)" }], meta: { next_cursor: null, has_more: false } }) };
+    }));
+
+    const result = await fetchProviderGameDetails("pubg_mobile");
+    expect(result).toMatchObject({ status: "ready", game: { id: "pubg_mobile", name: "PUBG Mobile" } });
+    if (result.status === "ready") expect(result.packages.map((item) => item.id)).toEqual(["pubg_mobile_auto:auto", "pubg_mobile_fast:fast"]);
+  });
+
   it("returns authorized package UI for an admin preview without submitting a player identity", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "server-only-key";

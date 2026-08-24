@@ -76,18 +76,23 @@ describe("provider game catalog grouping", () => {
       { id: "mobile_legends_special", name: "Mobile Legends (Special)", region: "Special" },
       { id: "free_fire_sg", name: "Free Fire (SG)", region: "Singapore" },
       { id: "free_fire_kh", name: "Free Fire (KH)", region: "Cambodia" },
+      { id: "pubg_mobile_auto", name: "PUBG Mobile (Auto)", region: "Global" },
+      { id: "pubg_mobile_fast", name: "PUBG Mobile (Fast)", region: "Global" },
       { id: "honor_of_kings", name: "Honor of Kings", region: "Global" },
     ];
 
     const grouped = groupProviderGamesByBaseName(games);
     const mobileLegends = grouped.find(group => group.baseName === "Mobile Legends");
     const freeFire = grouped.find(group => group.baseName === "Free Fire");
+    const pubgMobile = grouped.find(group => group.baseName === "PUBG Mobile");
     const honorOfKings = grouped.find(group => group.baseName === "Honor of Kings");
 
     expect(mobileLegends?.games.map(game => game.id)).toEqual(["mobile_legends_global", "mobile_legends_promo", "mobile_legends_special"]);
     expect(mobileLegends?.games.map(providerGameVariantLabel)).toEqual(["Global", "Promo", "Special"]);
     expect(freeFire?.games.map(game => game.id)).toEqual(["free_fire_kh", "free_fire_sg"]);
     expect(freeFire?.games.map(providerGameVariantLabel)).toEqual(["KH", "SG"]);
+    expect(pubgMobile?.games.map(game => game.id)).toEqual(["pubg_mobile_auto", "pubg_mobile_fast"]);
+    expect(pubgMobile?.games.map(providerGameVariantLabel)).toEqual(["Auto", "Fast"]);
     expect(honorOfKings?.games.map(game => game.id)).toEqual(["honor_of_kings"]);
   });
 
