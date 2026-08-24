@@ -255,3 +255,7 @@
 - [x] Replace repeated game-cover preview backgrounds with varied artwork driven by each provider package title/type, including Deal, BC, Lucky Bag, Pre-order, Pass, and special packages.
 - [x] Replace generic package symbols with original game-themed package artwork for Season Pass, Level Up, Elite Pass, Premium Pass, Deals, BC, Lucky Bag, Pre-order, and Special packages; retain only provider-approved official game logos/covers and exact provider data.
 - [x] Add the requested pure-CSS `fx-contour` wireframe SVG effect in the ZURS STORE top area with exact tokens, dash motion, and reduced-motion fallback.
+- [x] Correct React SVG attribute names in the `fx-contour` header markup and verify no console property warnings remain.
+- [ ] Prioritize first-visible package artwork loading while lazy-loading artwork outside the initial top-up viewport.
+- [x] Preserve all existing provider package content, package-card layout, and established artwork; apply additions only where a package has no usable artwork.
+- [x] Restore the prior Mobile Legends package-art presentation exactly and prohibit new generated-art substitution for MLBB packages.

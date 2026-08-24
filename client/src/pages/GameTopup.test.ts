@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canBrowseTopupPackages, canBrowseVerifiedPackages, gameIdFromTopupPath, gameThemedArtworkForPackage, gameTopupPath, groupProviderPackagesByMeaning, initialDiamondPackageLimit, partitionProviderPackagesForFullTicketEvent, readVerifiedPlayerEntries, requiresPlayerIdentityCheck, saveVerifiedPlayerEntry, sortProviderPackagesByPrice, visibleDiamondPackageItems } from "./GameTopup";
+import { canBrowseTopupPackages, canBrowseVerifiedPackages, gameIdFromTopupPath, gameThemedArtworkForPackage, gameTopupPath, groupProviderPackagesByMeaning, initialDiamondPackageLimit, partitionProviderPackagesForFullTicketEvent, readVerifiedPlayerEntries, requiresPlayerIdentityCheck, saveVerifiedPlayerEntry, sortProviderPackagesByPrice, usesLegacyMobileLegendsArtwork, visibleDiamondPackageItems } from "./GameTopup";
 
 describe("dedicated game top-up routes", () => {
   it("creates and reads an encoded provider game route", () => {
@@ -50,6 +50,12 @@ describe("dedicated game top-up routes", () => {
     expect(gameThemedArtworkForPackage("blood_strike", "Lucky Bag Week", "Lucky Bag Week")).toContain("bloodstrike-elite-pass-art");
     expect(gameThemedArtworkForPackage("blood_strike", "Bloodstrike Pre-order Item", "Bloodstrike Pre-order Item")).toContain("bloodstrike-premium-pass-art");
     expect(gameThemedArtworkForPackage("mobile_legends", "Weekly Pass", "Weekly Pass")).toBeNull();
+  });
+
+  it("restores the previous generated artwork renderer for MLBB only when no provider package image exists", () => {
+    expect(usesLegacyMobileLegendsArtwork("mobile_legends_global", false)).toBe(true);
+    expect(usesLegacyMobileLegendsArtwork("mobile_legends_global", true)).toBe(false);
+    expect(usesLegacyMobileLegendsArtwork("blood_strike", false)).toBe(false);
   });
 
   it("shows ten diamond packages first and reveals the provider-authorized remainder only after expansion", () => {

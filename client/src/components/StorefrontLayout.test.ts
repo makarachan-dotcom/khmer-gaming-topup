@@ -21,7 +21,9 @@ describe("storefront media protection", () => {
   it("keeps the requested pure-CSS wireframe SVG markup, tokens, motion, and reduced-motion fallback", () => {
     const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
     const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
-    expect(componentSource).toContain('<svg className="fx-contour" viewBox="0 0 260 56" role="img" aria-label="OUTLINE"><text x="50%" y="50%" dominant-baseline="central" text-anchor="middle">OUTLINE</text></svg>');
+    expect(componentSource).toContain('<svg className="fx-contour" viewBox="0 0 260 56" role="img" aria-label="OUTLINE"><text x="50%" y="50%" dominantBaseline="central" textAnchor="middle">OUTLINE</text></svg>');
+    expect(componentSource).not.toContain("dominant-baseline");
+    expect(componentSource).not.toContain("text-anchor");
     expect(styleSource).toContain("--ink: currentColor;");
     expect(styleSource).toContain("--ink-2: #FF4FD8;");
     expect(styleSource).toContain("--ink-3: #4FF8FF;");
