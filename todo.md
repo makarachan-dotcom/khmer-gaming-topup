@@ -259,3 +259,4 @@
 - [x] Prioritize first-visible package artwork loading while lazy-loading artwork outside the initial top-up viewport.
 - [x] Preserve all existing provider package content, package-card layout, and established artwork; apply additions only where a package has no usable artwork.
 - [x] Restore the prior Mobile Legends package-art presentation exactly and prohibit new generated-art substitution for MLBB packages.
+- [x] Restore the exact prior artwork asset used for Mobile Legends diamond package cards, without changing any other package visual or data.

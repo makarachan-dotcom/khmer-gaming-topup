@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canBrowseTopupPackages, canBrowseVerifiedPackages, gameIdFromTopupPath, gameThemedArtworkForPackage, gameTopupPath, groupProviderPackagesByMeaning, initialDiamondPackageLimit, partitionProviderPackagesForFullTicketEvent, readVerifiedPlayerEntries, requiresPlayerIdentityCheck, saveVerifiedPlayerEntry, sortProviderPackagesByPrice, usesLegacyMobileLegendsArtwork, visibleDiamondPackageItems } from "./GameTopup";
+import { canBrowseTopupPackages, canBrowseVerifiedPackages, gameIdFromTopupPath, gameThemedArtworkForPackage, gameTopupPath, groupProviderPackagesByMeaning, initialDiamondPackageLimit, partitionProviderPackagesForFullTicketEvent, readVerifiedPlayerEntries, requiresPlayerIdentityCheck, saveVerifiedPlayerEntry, sortProviderPackagesByPrice, usesLegacyMobileLegendsArtwork, usesMobileLegendsDiamondChestArtwork, visibleDiamondPackageItems } from "./GameTopup";
 
 describe("dedicated game top-up routes", () => {
   it("creates and reads an encoded provider game route", () => {
@@ -56,6 +56,12 @@ describe("dedicated game top-up routes", () => {
     expect(usesLegacyMobileLegendsArtwork("mobile_legends_global", false)).toBe(true);
     expect(usesLegacyMobileLegendsArtwork("mobile_legends_global", true)).toBe(false);
     expect(usesLegacyMobileLegendsArtwork("blood_strike", false)).toBe(false);
+  });
+
+  it("restores the exact old diamond chest artwork only for MLBB currency packages", () => {
+    expect(usesMobileLegendsDiamondChestArtwork("mobile_legends_global", "86 Diamonds", "86 Diamonds")).toBe(true);
+    expect(usesMobileLegendsDiamondChestArtwork("mobile_legends_global", "Weekly Pass", "Weekly Pass")).toBe(false);
+    expect(usesMobileLegendsDiamondChestArtwork("blood_strike", "86 Diamonds", "86 Diamonds")).toBe(false);
   });
 
   it("shows ten diamond packages first and reveals the provider-authorized remainder only after expansion", () => {
