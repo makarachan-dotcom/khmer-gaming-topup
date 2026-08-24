@@ -89,10 +89,9 @@ function StorefrontShell({ children }: { children: ReactNode }) {
           <Link href="/" className="flex min-w-0 shrink items-center gap-2.5" aria-label="ZURS STORE home">
             <img src={logoUrl} alt="ZURS STORE logo" className="h-9 w-9 shrink-0 rounded-xl object-cover ring-1 ring-white/90 shadow-sm" />
             <div className="min-w-0 leading-none">
-              <p className="truncate font-display text-sm font-extrabold tracking-tight text-slate-950">ZURS STORE</p>
+              <div className="fx-magnetic fx-magnetic--brand" role="img" aria-label="ZURS STORE"><b aria-hidden="true" style={{ "--i": 0 } as CSSProperties}>Z</b><b aria-hidden="true" style={{ "--i": 1 } as CSSProperties}>U</b><b aria-hidden="true" style={{ "--i": 2 } as CSSProperties}>R</b><b aria-hidden="true" style={{ "--i": 3 } as CSSProperties}>S</b><span aria-hidden="true">&nbsp;</span><b aria-hidden="true" style={{ "--i": 4 } as CSSProperties}>S</b><b aria-hidden="true" style={{ "--i": 5 } as CSSProperties}>T</b><b aria-hidden="true" style={{ "--i": 6 } as CSSProperties}>O</b><b aria-hidden="true" style={{ "--i": 7 } as CSSProperties}>R</b><b aria-hidden="true" style={{ "--i": 8 } as CSSProperties}>E</b></div>
               <p className="mt-1 text-[8px] font-bold tracking-[0.16em] text-indigo-600">GAMING &amp; DIGITAL</p>
             </div>
-            <div className="hidden text-slate-950 xl:block"><div className="fx-magnetic" role="img" aria-label="MAGNET"><b aria-hidden="true" style={{ "--i": 0 } as CSSProperties}>M</b><b aria-hidden="true" style={{ "--i": 1 } as CSSProperties}>A</b><b aria-hidden="true" style={{ "--i": 2 } as CSSProperties}>G</b><b aria-hidden="true" style={{ "--i": 3 } as CSSProperties}>N</b><b aria-hidden="true" style={{ "--i": 4 } as CSSProperties}>E</b><b aria-hidden="true" style={{ "--i": 5 } as CSSProperties}>T</b></div></div>
           </Link>
 
           <div className="hidden text-slate-950 2xl:block"><svg className="fx-contour" viewBox="0 0 260 56" role="img" aria-label="OUTLINE"><text x="50%" y="50%" dominantBaseline="central" textAnchor="middle">OUTLINE</text></svg></div>

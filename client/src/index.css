@@ -120,6 +120,11 @@ button, input, textarea, select { font: inherit; }
   color: var(--ink);
   display: inline-flex;
 }
+.fx-magnetic--brand {
+  font: 800 0.875rem/1.1 "JetBrains Mono", monospace;
+  letter-spacing: .025em;
+  white-space: nowrap;
+}
 .fx-magnetic b {
   font-weight: inherit;
   display: inline-block;
