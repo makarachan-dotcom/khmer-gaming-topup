@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { canBrowseTopupPackages, canBrowseVerifiedPackages, gameIdFromTopupPath, gameThemedArtworkForPackage, gameTopupPath, groupProviderPackagesByMeaning, initialDiamondPackageLimit, partitionProviderPackagesForFullTicketEvent, readVerifiedPlayerEntries, requiresPlayerIdentityCheck, saveVerifiedPlayerEntry, sortProviderPackagesByPrice, usesLegacyMobileLegendsArtwork, usesMobileLegendsDiamondChestArtwork, visibleDiamondPackageItems } from "./GameTopup";
 
 describe("dedicated game top-up routes", () => {
@@ -50,6 +52,13 @@ describe("dedicated game top-up routes", () => {
     expect(gameThemedArtworkForPackage("blood_strike", "Lucky Bag Week", "Lucky Bag Week")).toContain("bloodstrike-elite-pass-art");
     expect(gameThemedArtworkForPackage("blood_strike", "Bloodstrike Pre-order Item", "Bloodstrike Pre-order Item")).toContain("bloodstrike-premium-pass-art");
     expect(gameThemedArtworkForPackage("mobile_legends", "Weekly Pass", "Weekly Pass")).toBeNull();
+  });
+
+  it("renders category-specific fallback artwork rather than a repeated game cover", () => {
+    const source = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
+    expect(source).toContain("<img src={themedArtwork ?? artworkUrl}");
+    expect(source).toContain("artworkUrl={generatedArtwork.url}");
+    expect(source).not.toContain('className="generated-package-art__game-cover"');
   });
 
   it("restores the previous generated artwork renderer for MLBB only when no provider package image exists", () => {

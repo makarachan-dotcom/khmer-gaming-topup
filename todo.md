@@ -265,3 +265,6 @@
 - [x] Replace the Magnetic brand-name effect with the requested pure-CSS `fx-topographic` contour-map animation on ZURS STORE.
 - [x] Remove the unwanted desktop OUTLINE decoration and refine the Topographic ZURS STORE brand treatment for clearer desktop header hierarchy.
 - [x] Fix the /account tRPC mutation path that returns HTML instead of valid JSON to the client.
+- [x] Align the GAMING & DIGITAL subtitle directly beneath the ZURS STORE brand treatment on desktop and mobile.
+- [x] Audit all provider and fallback package artwork for broken, repeated, incorrect, or visually inconsistent package-card images across desktop and mobile.
+- [x] Fix the generated-art fallback renderer so it uses its category-specific asset instead of repeating a game-cover logo behind package cards.

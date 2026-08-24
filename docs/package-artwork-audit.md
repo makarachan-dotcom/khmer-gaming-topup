@@ -1,0 +1,7 @@
+# Package Artwork Audit
+
+Initial static-asset availability audit covered 87 package-art URLs referenced by Mobile Legends, PUBG, provider-supplied, generated, and Blood Strike artwork mappings. All 87 resolved successfully with HTTP 200 after retrying two transient CDN timeouts; no persistent missing-image response was found.
+
+The local Blood Strike route did not reach its package grid during the visual check because the provider catalog remained in its loading state. This is recorded as a catalog-loading limitation for that local review, not as an artwork failure. The audit therefore continued through source precedence, static URL availability, and regression coverage.
+
+The audit found one renderer defect: generated fallback cards had a category-specific artwork URL available but rendered the game-cover logo as the full background instead. The renderer now displays its generated category-specific scene as the full card artwork, while preserving the game logo as a small overlay. Existing precedence is unchanged: Mobile Legends diamond cards retain the restored gold chest image; owner/provider-supplied images continue to win; PUBG UC images continue to win; Blood Strike themed package art continues to win over generic category art. The category-art assets, Blood Strike scenes, MLBB chest asset, PUBG images, provider-supplied image inventory, and Mobile Legends provider-artwork endpoint were verified available during the audit.
