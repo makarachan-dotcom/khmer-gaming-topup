@@ -249,3 +249,4 @@
 - [x] Align Check-ID to the owner's final matrix: server-only free validation for Free Fire, Mobile Legends, Magic Chess, 8 Ball Pool, Call of Duty Mobile, and Arena of Valor only; explicit customer ID confirmation for unsupported games with no false username or rotating fallback attempts.
 - [x] Audit the deployed diamond-package logo/artwork and the final six-game Check-ID flow; correct any missing artwork, failed image handling, or validation mismatch without exposing player data or enabling purchases.
 - [x] Replace question-mark and repeated placeholder package previews with provider-supplied images where available and generated category-specific artwork for Diamonds, Weekly Pass, Membership, Level Up, and other authorized package types without inventing package details.
+- [x] Verify the latest package-artwork release is live on the official zurs.me custom domain and record the outcome.
