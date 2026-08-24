@@ -5,7 +5,7 @@ import { nanoid } from "nanoid";
 import {
   adminRoleAudits, customerWallets, gamePackages, gameProducts, gmailSenderConnections, InsertUser, marketplaceContacts, marketplaceDisclosureRequests, marketplaceEvidenceAccessLogs, marketplaceFavorites, marketplaceFraudReports, marketplaceListings, marketplaceVerificationEvidence, marketplaceVerifications, orders, orderStatusEvents, orderSupportTickets, paymentTransactions, savedPlayerIds, siteContent, smmServices, smmTiers, User, users, walletTopups, welcomeEmailDeliveries,
 } from "../drizzle/schema";
-import { createAppwriteMarketplaceListing, createAppwriteWalletTopup, deleteAppwriteMarketplaceListing, getAppwriteCustomerOrders, getAppwriteCustomerPaymentHistory, getAppwriteProviderCatalog, getAppwriteUserByEmail, getAppwriteUserByOpenId, getAppwriteWalletSummary, getAppwriteWalletTopup, isAppwriteStoreConfigured, listAppwriteMarketplaceListings, syncAppwriteFzrCatalog, syncAppwriteSmmCatalog, updateAppwriteMarketplaceListing, updateAppwriteProviderOffer, updateAppwriteUserDisplayName, updateAppwriteWalletTopup, upsertAppwriteUser } from "./appwriteStore";
+import { createAppwriteMarketplaceListing, createAppwriteWalletTopup, deleteAppwriteMarketplaceListing, getAppwriteAdminRoleAudits, getAppwriteCustomerOrders, getAppwriteCustomerPaymentHistory, getAppwriteProviderCatalog, getAppwriteUserByEmail, getAppwriteUserByOpenId, getAppwriteWalletSummary, getAppwriteWalletTopup, isAppwriteStoreConfigured, listAppwriteMarketplaceListings, listAppwriteUsers, setAppwriteUserRole, syncAppwriteFzrCatalog, syncAppwriteSmmCatalog, updateAppwriteMarketplaceListing, updateAppwriteProviderOffer, updateAppwriteUserDisplayName, updateAppwriteWalletTopup, upsertAppwriteUser } from "./appwriteStore";
 import { buildOrderNumber, isSingleAdminEmail } from "./storefrontDomain";
 import { validateAdminRoleChange } from "./adminRoles";
 import { buildEvidenceRetentionAuditReason, canApproveMarketplaceVerification, hasOnlyOwnedMarketplaceScreenshotKeys, type DisclosureRequestStatus, type FraudReportStatus } from "./marketplaceSafety";
@@ -863,13 +863,16 @@ export async function getPaymentTransactions() {
 
 export async function getAdminUsers() {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) return isAppwriteStoreConfigured() ? listAppwriteUsers() : [];
   return db.select({ id: users.id, name: users.name, displayName: users.displayName, email: users.email, role: users.role, createdAt: users.createdAt, lastSignedIn: users.lastSignedIn }).from(users).orderBy(desc(users.createdAt)).limit(100);
 }
 
 export async function setAdminUserRole(input: { actorUserId: number; targetUserId: number; nextRole: "user" | "admin"; confirmationEmail: string; reason: string }) {
   const db = await getDb();
-  if (!db) throw new Error("Role management is unavailable until the primary administrator database is connected.");
+  if (!db) {
+    if (!isAppwriteStoreConfigured()) throw new Error("Role management is unavailable until the administrator storage is connected.");
+    return setAppwriteUserRole(input);
+  }
   const target = await db.select().from(users).where(eq(users.id, input.targetUserId)).limit(1);
   if (!target[0]) throw new Error("The target account was not found.");
   validateAdminRoleChange({ targetEmail: target[0].email, previousRole: target[0].role, nextRole: input.nextRole, confirmationEmail: input.confirmationEmail, reason: input.reason });
@@ -880,7 +883,7 @@ export async function setAdminUserRole(input: { actorUserId: number; targetUserI
 
 export async function getAdminRoleAudits() {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) return isAppwriteStoreConfigured() ? getAppwriteAdminRoleAudits() : [];
   const rows = await db.select({ audit: adminRoleAudits, actor: users }).from(adminRoleAudits).leftJoin(users, eq(adminRoleAudits.actorUserId, users.id)).orderBy(desc(adminRoleAudits.createdAt)).limit(100);
   return rows;
 }

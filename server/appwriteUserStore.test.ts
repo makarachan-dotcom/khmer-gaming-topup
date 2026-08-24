@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getAppwriteCustomerOrders, getAppwriteCustomerPaymentHistory, getAppwriteUserByOpenId, isAppwriteStoreConfigured, shouldRetryAppwriteCreateAsUpdate, updateAppwriteUserDisplayName } from "./appwriteStore";
+import { getAppwriteCustomerOrders, getAppwriteCustomerPaymentHistory, getAppwriteUserByOpenId, isAppwriteStoreConfigured, setAppwriteUserRole, shouldRetryAppwriteCreateAsUpdate, updateAppwriteUserDisplayName, upsertAppwriteUser } from "./appwriteStore";
 import { isSingleAdminEmail } from "./storefrontDomain";
 
 const savedEnvironment = {
@@ -87,6 +87,34 @@ describe("Appwrite user store", () => {
 
     await expect(updateAppwriteUserDisplayName({ user: currentUser, displayName: "Makara ZURS Member" })).resolves.toEqual({ displayName: "Makara ZURS Member" });
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("preserves an owner-granted Appwrite admin role on a later sign-in", async () => {
+    process.env.APPWRITE_ENDPOINT = "https://appwrite.example/v1";
+    process.env.APPWRITE_PROJECT_ID = "zurs-project";
+    process.env.APPWRITE_API_KEY = "server-only-test-key";
+    const openId = "google:trusted-admin";
+    const existing = { id: 1_000_000_234, openId, name: "Trusted Admin", displayName: null, email: "trusted@example.com", loginMethod: "google", role: "admin", createdAt: new Date("2026-08-21T00:00:00.000Z").toISOString(), updatedAt: new Date("2026-08-21T00:00:00.000Z").toISOString(), lastSignedIn: new Date("2026-08-21T00:00:00.000Z").toISOString() };
+    const fetchMock = vi.fn(async (_input: string | URL | Request, init?: RequestInit) => init?.method === "GET" ? new Response(JSON.stringify({ $id: "user-document", sourceTable: "users", sourceId: openId, payload: JSON.stringify(existing) }), { status: 200 }) : new Response(JSON.stringify({}), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(upsertAppwriteUser({ openId, email: "trusted@example.com", name: "Trusted Admin", loginMethod: "google" })).resolves.toMatchObject({ role: "admin" });
+  });
+
+  it("updates only an existing Appwrite account after exact email confirmation and writes an audit record", async () => {
+    process.env.APPWRITE_ENDPOINT = "https://appwrite.example/v1";
+    process.env.APPWRITE_PROJECT_ID = "zurs-project";
+    process.env.APPWRITE_API_KEY = "server-only-test-key";
+    const member = { id: 1_000_000_345, openId: "google:member", name: "Member", displayName: null, email: "member@example.com", loginMethod: "google", role: "user", createdAt: new Date("2026-08-21T00:00:00.000Z").toISOString(), updatedAt: new Date("2026-08-21T00:00:00.000Z").toISOString(), lastSignedIn: new Date("2026-08-21T00:00:00.000Z").toISOString() };
+    const fetchMock = vi.fn(async (_input: string | URL | Request, init?: RequestInit) => {
+      if (init?.method === "GET") return new Response(JSON.stringify({ documents: [{ $id: "member-document", sourceTable: "users", sourceId: member.openId, payload: JSON.stringify(member) }], total: 1 }), { status: 200 });
+      return new Response(JSON.stringify({}), { status: init?.method === "POST" ? 201 : 200 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(setAppwriteUserRole({ actorUserId: 1_000_000_001, targetUserId: member.id, nextRole: "admin", confirmationEmail: "member@example.com", reason: "Grant verified operations access" })).resolves.toEqual({ success: true });
+    expect(fetchMock.mock.calls.filter(([, init]) => (init as RequestInit | undefined)?.method === "PUT")).toHaveLength(1);
+    expect(fetchMock.mock.calls.filter(([, init]) => (init as RequestInit | undefined)?.method === "POST")).toHaveLength(1);
   });
 
   it("recognizes the owner email as the single ZURS STORE administrator", () => {

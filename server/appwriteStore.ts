@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { nanoid } from "nanoid";
 import type { InsertUser, User } from "../drizzle/schema";
+import { validateAdminRoleChange } from "./adminRoles";
 import { isSingleAdminEmail } from "./storefrontDomain";
 import type { FzrProviderSyncSnapshot, SmmProviderCatalogResponse } from "./providerCatalog";
 
@@ -12,6 +13,7 @@ export type AppwriteWalletTopup = { id: string; userId: number; referenceCode: s
 export type AppwriteProviderAvailability = { hiddenGameIds: string[]; hiddenSmmServiceIds: string[]; activeGameIds?: string[]; updatedAt: Date };
 export type AppwriteProviderCatalog = { games: Array<{ id: string; providerSourceId: string; titleKh: string; titleEn: string; packageSourceIds?: string[]; packages: Array<{ id: string; providerOfferSourceId?: string; amountLabel: string; basePriceUsd: string; profitMarginPercent: string; priceUsd: string; isActive: boolean; featured: boolean; providerAuthorized: true; providerSource: string }> }>; smm: Array<{ id: string; providerSourceId: string; platform: string; titleKh: string; titleEn: string; tiers: Array<{ id: string; quantity: number; basePriceUsd: string; profitMarginPercent: string; priceUsd: string; isActive: boolean; providerAuthorized: true; providerSource: string }> }> };
 type AppwriteProviderCatalogIndex = { gameSourceIds: string[]; smmSourceIds: string[]; updatedAt: string };
+export type AppwriteAdminRoleAudit = { id: string; actorUserId: number; targetUserId: number; previousRole: "user" | "admin"; nextRole: "user" | "admin"; reason: string; createdAt: Date };
 
 const databaseId = () => process.env.APPWRITE_DATABASE_ID || "zurs_store";
 const collectionId = "zurs_records";
@@ -289,6 +291,10 @@ function userDocumentPath(openId: string) {
   return `/databases/${databaseId()}/collections/${collectionId}/documents/${documentId(`users:${openId}`)}`;
 }
 
+function adminRoleAuditDocumentPath(auditId: string) {
+  return `/databases/${databaseId()}/collections/${collectionId}/documents/${documentId(`admin_role_audits:${auditId}`)}`;
+}
+
 async function pagedRecords(pageSize: number, buildPath: (offset: number) => string) {
   const records: AppwriteRecord[] = [];
   for (let offset = 0; offset < 10_000; offset += pageSize) {
@@ -343,6 +349,50 @@ export async function getAppwriteUserByEmail(email: string) {
   return users.find((user) => user.email?.trim().toLowerCase() === normalized);
 }
 
+export async function listAppwriteUsers() {
+  if (!config()) return [];
+  return (await allUserRecords()).map(toUser).filter((user): user is User => user !== null).sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime()).slice(0, 100);
+}
+
+function toAdminRoleAudit(record: AppwriteRecord): AppwriteAdminRoleAudit | null {
+  const value = parsePayload<Partial<AppwriteAdminRoleAudit>>(record);
+  if (!value || typeof value.id !== "string" || typeof value.actorUserId !== "number" || typeof value.targetUserId !== "number" || (value.previousRole !== "user" && value.previousRole !== "admin") || (value.nextRole !== "user" && value.nextRole !== "admin") || typeof value.reason !== "string") return null;
+  return { id: value.id, actorUserId: value.actorUserId, targetUserId: value.targetUserId, previousRole: value.previousRole, nextRole: value.nextRole, reason: value.reason, createdAt: asDate(value.createdAt) };
+}
+
+export async function setAppwriteUserRole(input: { actorUserId: number; targetUserId: number; nextRole: "user" | "admin"; confirmationEmail: string; reason: string }) {
+  if (!config()) throw new Error("Role management storage is unavailable.");
+  const target = (await listAppwriteUsers()).find((user) => user.id === input.targetUserId);
+  if (!target) throw new Error("The target account was not found.");
+  validateAdminRoleChange({ targetEmail: target.email, previousRole: target.role, nextRole: input.nextRole, confirmationEmail: input.confirmationEmail, reason: input.reason });
+  const audit: AppwriteAdminRoleAudit = { id: nanoid(), actorUserId: input.actorUserId, targetUserId: target.id, previousRole: target.role, nextRole: input.nextRole, reason: input.reason.trim(), createdAt: new Date() };
+  const auditBody = { data: { sourceTable: "admin_role_audits", sourceId: audit.id, payload: JSON.stringify(audit), sourceUpdatedAt: audit.createdAt.toISOString() } };
+  const auditPath = adminRoleAuditDocumentPath(audit.id);
+  try {
+    await request("POST", `/databases/${databaseId()}/collections/${collectionId}/documents`, { documentId: documentId(`admin_role_audits:${audit.id}`), ...auditBody });
+  } catch (error) {
+    if (!shouldRetryAppwriteCreateAsUpdate(error)) throw error;
+    await request("PUT", auditPath, auditBody);
+  }
+
+  const updated: User = { ...target, role: input.nextRole, updatedAt: new Date() };
+  const userBody = { data: { sourceTable: "users", sourceId: updated.openId, payload: JSON.stringify(updated), sourceUpdatedAt: updated.updatedAt.toISOString() } };
+  try {
+    await request("PUT", userDocumentPath(updated.openId), userBody);
+  } catch (error) {
+    await request("DELETE", auditPath).catch(() => undefined);
+    throw error;
+  }
+  return { success: true };
+}
+
+export async function getAppwriteAdminRoleAudits() {
+  if (!config()) return [];
+  const [audits, members] = await Promise.all([recordsFor("admin_role_audits"), listAppwriteUsers()]);
+  const usersById = new Map(members.map((member) => [member.id, member]));
+  return audits.map(toAdminRoleAudit).filter((audit): audit is AppwriteAdminRoleAudit => audit !== null).sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime()).slice(0, 100).map((audit) => ({ audit, actor: usersById.get(audit.actorUserId) ?? null }));
+}
+
 export async function upsertAppwriteUser(input: InsertUser) {
   if (!input.openId) throw new Error("User openId is required for Appwrite upsert");
   const existing = await getAppwriteUserByOpenId(input.openId);
@@ -355,7 +405,7 @@ export async function upsertAppwriteUser(input: InsertUser) {
     displayName: existing?.displayName ?? null,
     email,
     loginMethod: input.loginMethod === undefined ? existing?.loginMethod ?? null : input.loginMethod,
-    role: isSingleAdminEmail(email) ? "admin" : "user",
+    role: isSingleAdminEmail(email) || existing?.role === "admin" ? "admin" : "user",
     createdAt: existing?.createdAt ?? now,
     updatedAt: now,
     lastSignedIn: input.lastSignedIn ?? now,

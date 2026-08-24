@@ -270,7 +270,11 @@
 - [x] Fix the generated-art fallback renderer so it uses its category-specific asset instead of repeating a game-cover logo behind package cards.
 - [x] Remove the GAMING & DIGITAL top gap and center it exactly beneath ZURS STORE on desktop and mobile.
 - [x] Reduce the ZURS STORE Topographic brand text to the previous compact size while retaining subtitle centering.
-- [ ] Verify the existing account for zaz998016@gmail.com and promote only that account to admin.
+- [x] Defer verification and promotion for zaz998016@gmail.com at the owner’s “not now” instruction; promote only after that exact account signs in.
 - [x] Inspect uploaded MLBB package data and image assets without executing the uploaded widget script.
 - [x] Map only verified uploaded MLBB artwork to matching provider package names/amounts and apply package-type color treatments without changing package data.
-- [ ] Await the requested email account's first sign-in before a secure audited admin promotion can be completed.
+- [x] Record that the requested email must sign in once before a secure audited admin promotion can be completed; the owner-controlled Admin Management option is available for that step.
+- [x] Confirm chanmakara672@gmail.com resolves to the protected owner-admin role in the active user store.
+- [x] Add an owner-only Admin Management interface for selecting an existing account, confirming its email, providing an audit reason, and granting or revoking admin access without self-lockout.
+- [x] Add and run regression coverage for owner-only access, confirmation, audit reason, and protected owner-account behavior in the Admin Management interface.
+- [ ] Synchronize the validated administrator-management update to GitHub main and cache-fresh verify the latest official zurs.me release.
