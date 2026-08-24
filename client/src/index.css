@@ -113,6 +113,35 @@ button, input, textarea, select { font: inherit; }
   to { stroke-dashoffset: -100; }
 }
 
+/* 39 Magnetic — letters attract into a tight field, then repel outward */
+.fx-magnetic {
+  font: 600 30px/1.1 "JetBrains Mono", monospace;
+  letter-spacing: .06em;
+  color: var(--ink);
+  display: inline-flex;
+}
+.fx-magnetic b {
+  font-weight: inherit;
+  display: inline-block;
+  text-shadow: 0 0 0 var(--ink-2);
+  animation: fx-magnetic 2.7s ease-in-out infinite;
+  animation-delay: calc(var(--i) * .07s);
+}
+.fx-magnetic b:nth-child(odd) { color: var(--ink-3); }
+@keyframes fx-magnetic {
+  0%, 100% {
+    transform: translateX(0) scale(1);
+    text-shadow: 0 0 0 transparent;
+  }
+  42% {
+    transform: translateX(calc((3 - var(--i)) * 2px)) scale(1.12);
+    text-shadow: 0 0 16px color-mix(in srgb, var(--ink-2) 70%, transparent);
+  }
+  62% {
+    transform: translateX(calc((var(--i) - 3) * 3px)) scale(.96);
+  }
+}
+
 @keyframes premium-shine { 0%, 55% { transform: translateX(-110%); } 72%, 100% { transform: translateX(110%); } }
 
 .game-visual { position: relative; display: grid; height: 100%; width: 100%; overflow: hidden; place-items: center; border-radius: inherit; background: linear-gradient(140deg, oklch(0.50 0.18 266), oklch(0.35 0.12 280)); }
@@ -287,6 +316,7 @@ button, input, textarea, select { font: inherit; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
   .fx-contour text { animation: none; }
+  .fx-magnetic b { animation: none; }
   .emoji-asset { display: none; }
   .game-title-marquee-track { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .game-title-marquee-track > span + span { display: none; }

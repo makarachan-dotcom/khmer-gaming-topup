@@ -260,3 +260,4 @@
 - [x] Preserve all existing provider package content, package-card layout, and established artwork; apply additions only where a package has no usable artwork.
 - [x] Restore the prior Mobile Legends package-art presentation exactly and prohibit new generated-art substitution for MLBB packages.
 - [x] Restore the exact prior artwork asset used for Mobile Legends diamond package cards, without changing any other package visual or data.
+- [x] Add the requested pure-CSS `fx-magnetic` Magnetic text effect beside the ZURS STORE logo with exact tokens, staggered motion, and reduced-motion fallback.

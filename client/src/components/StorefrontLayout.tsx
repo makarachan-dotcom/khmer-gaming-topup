@@ -8,7 +8,7 @@ import { useSelectedProduct } from "@/contexts/SelectedProductContext";
 import { trpc } from "@/lib/trpc";
 import { animate } from "animejs";
 import { ArrowUp, BarChart3, BadgeCheck, ChevronDown, CircleDollarSign, Crown, Eye, EyeOff, House, LogIn, ShieldCheck, Sparkles, Store, UserRound, WalletCards } from "lucide-react";
-import { ReactNode, useEffect, useRef, useState } from "react";
+import { type CSSProperties, ReactNode, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 
 const logoUrl = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/kBXeVXEnNVEuNZKS.jpg";
@@ -92,9 +92,10 @@ function StorefrontShell({ children }: { children: ReactNode }) {
               <p className="truncate font-display text-sm font-extrabold tracking-tight text-slate-950">ZURS STORE</p>
               <p className="mt-1 text-[8px] font-bold tracking-[0.16em] text-indigo-600">GAMING &amp; DIGITAL</p>
             </div>
+            <div className="hidden text-slate-950 xl:block"><div className="fx-magnetic" role="img" aria-label="MAGNET"><b aria-hidden="true" style={{ "--i": 0 } as CSSProperties}>M</b><b aria-hidden="true" style={{ "--i": 1 } as CSSProperties}>A</b><b aria-hidden="true" style={{ "--i": 2 } as CSSProperties}>G</b><b aria-hidden="true" style={{ "--i": 3 } as CSSProperties}>N</b><b aria-hidden="true" style={{ "--i": 4 } as CSSProperties}>E</b><b aria-hidden="true" style={{ "--i": 5 } as CSSProperties}>T</b></div></div>
           </Link>
 
-          <div className="hidden text-slate-950 xl:block"><svg className="fx-contour" viewBox="0 0 260 56" role="img" aria-label="OUTLINE"><text x="50%" y="50%" dominantBaseline="central" textAnchor="middle">OUTLINE</text></svg></div>
+          <div className="hidden text-slate-950 2xl:block"><svg className="fx-contour" viewBox="0 0 260 56" role="img" aria-label="OUTLINE"><text x="50%" y="50%" dominantBaseline="central" textAnchor="middle">OUTLINE</text></svg></div>
 
           <nav className="hidden items-center gap-1 lg:flex" aria-label="Main navigation">
             {navigation.map((item) => { const Icon = item.href === "/smm" ? BarChart3 : Store; return <Link key={item.href} href={item.href} className={cn("inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition-all hover:-translate-y-0.5", location === item.href ? "bg-indigo-50 text-indigo-700 shadow-sm" : "text-slate-600 hover:bg-white/80 hover:text-slate-950")}><Icon className="h-3.5 w-3.5" />{item.label}</Link>; })}
