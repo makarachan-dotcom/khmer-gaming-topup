@@ -7,6 +7,7 @@ const zursLogoUrl = "https://files.manuscdn.com/user_upload_by_module/session_fi
 
 type Currency = "USD" | "KHR";
 type BakongConfig = { token: string; accountId: string; merchantName: string; merchantCity: string; merchantPhone: string; storeLabel: string };
+type BakongResponse = { responseCode?: number; errorCode?: number; data?: { shortLink?: string; hash?: string; amount?: string | number; currency?: string; toAccountId?: string } };
 
 function getConfig(): BakongConfig | null {
   const token = process.env.BAKONG_API_TOKEN?.trim();
@@ -26,6 +27,12 @@ export function getBakongPaymentReadiness() {
 function currencyCode(currency: Currency) { return currency === "KHR" ? khqrData.currency.khr : khqrData.currency.usd; }
 function validAmount(amount: string) { const value = Number(amount); if (!Number.isFinite(value) || value <= 0) throw new Error("Invalid payment amount"); return value; }
 
+async function readBakongJson(response: Response): Promise<BakongResponse | null> {
+  const body = await response.text().catch(() => "");
+  if (!body.trim() || /^\s*</.test(body)) return null;
+  try { return JSON.parse(body) as BakongResponse; } catch { return null; }
+}
+
 export async function createBakongKhqrPayment(input: { trackingCode: string; amount: string; currency: Currency }) {
   const config = getConfig();
   if (!config) throw new Error("Bakong KHQR is not configured");
@@ -42,8 +49,8 @@ export async function createBakongKhqrPayment(input: { trackingCode: string; amo
   let deeplink: string | null = null;
   try {
     const response = await fetch(`${apiBaseUrl}/v1/generate_deeplink_by_qr`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ qr, sourceInfo: { appIconUrl: zursLogoUrl, appName: "ZURS STORE", appDeepLinkCallback: "https://khmergame-girzfgts.manus.space/order-status" } }) });
-    const payload = await response.json() as { responseCode?: number; data?: { shortLink?: string } };
-    if (response.ok && payload.responseCode === 0 && payload.data?.shortLink) deeplink = payload.data.shortLink;
+    const payload = await readBakongJson(response);
+    if (response.ok && payload?.responseCode === 0 && payload.data?.shortLink) deeplink = payload.data.shortLink;
   } catch { /* A scannable KHQR remains available if the optional deeplink service is unavailable. */ }
   return { md5, qrImageDataUrl, deeplink, expiresAt: expiry };
 }
@@ -52,7 +59,8 @@ export async function checkBakongKhqrPayment(input: { md5: string; expectedAmoun
   const config = getConfig();
   if (!config) throw new Error("Bakong KHQR is not configured");
   const response = await fetch(`${apiBaseUrl}/v1/check_transaction_by_md5`, { method: "POST", headers: { Authorization: `Bearer ${config.token}`, "Content-Type": "application/json" }, body: JSON.stringify({ md5: input.md5 }) });
-  const payload = await response.json() as { responseCode?: number; errorCode?: number; data?: { hash?: string; amount?: string | number; currency?: string; toAccountId?: string } };
+  const payload = await readBakongJson(response);
+  if (!payload) return { status: "unavailable" as const };
   if (!response.ok || payload.responseCode !== 0 || !payload.data) return { status: payload.errorCode === 1 ? "unpaid" as const : "unavailable" as const };
   const matchesAmount = Math.abs(Number(payload.data.amount) - Number(input.expectedAmount)) < 0.00001;
   const matchesCurrency = payload.data.currency === input.expectedCurrency;

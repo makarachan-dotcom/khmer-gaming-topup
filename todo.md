@@ -264,3 +264,4 @@
 - [x] Move the Magnetic animation onto the ZURS STORE brand name itself and remove the separate MAGNET label.
 - [x] Replace the Magnetic brand-name effect with the requested pure-CSS `fx-topographic` contour-map animation on ZURS STORE.
 - [x] Remove the unwanted desktop OUTLINE decoration and refine the Topographic ZURS STORE brand treatment for clearer desktop header hierarchy.
+- [x] Fix the /account tRPC mutation path that returns HTML instead of valid JSON to the client.
