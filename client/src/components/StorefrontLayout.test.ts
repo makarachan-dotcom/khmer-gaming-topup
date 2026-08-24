@@ -42,6 +42,6 @@ describe("storefront media protection", () => {
 
   it("centers the Gaming & Digital subtitle beneath the animated brand name", () => {
     const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
-    expect(componentSource).toContain('className="mt-1 whitespace-nowrap text-center text-[8px] font-bold tracking-[0.16em] text-indigo-600">GAMING &amp; DIGITAL');
+    expect(componentSource).toContain('className="mt-0 w-full whitespace-nowrap text-center text-[8px] font-bold tracking-[0.16em] text-indigo-600">GAMING &amp; DIGITAL');
   });
 });

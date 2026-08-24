@@ -90,7 +90,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
             <img src={logoUrl} alt="ZURS STORE logo" className="h-9 w-9 shrink-0 rounded-xl object-cover ring-1 ring-white/90 shadow-sm" />
             <div className="min-w-0 leading-none">
               <div className="fx-topographic">ZURS STORE</div>
-              <p className="mt-1 whitespace-nowrap text-center text-[8px] font-bold tracking-[0.16em] text-indigo-600">GAMING &amp; DIGITAL</p>
+              <p className="mt-0 w-full whitespace-nowrap text-center text-[8px] font-bold tracking-[0.16em] text-indigo-600">GAMING &amp; DIGITAL</p>
             </div>
           </Link>
 
