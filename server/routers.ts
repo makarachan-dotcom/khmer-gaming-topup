@@ -12,7 +12,6 @@ import { createDiditHostedSession } from "./didit";
 import { disclosureRequestStatuses, fraudReportStatuses } from "./marketplaceSafety";
 import { deriveLocationRisk, resolveLocationCountry } from "./marketplaceLocation";
 import { createZursSession, getZursSessionCookieOptions, ZURS_SESSION_COOKIE } from "./zursSession";
-import { getProductPurchaseReadiness } from "./paymentReadiness";
 
 const marketplaceType = z.enum(["sale", "swap", "wanted"]);
 
@@ -48,7 +47,7 @@ export const appRouter = router({
     smm: publicProcedure.query(() => db.getSmmCatalog()),
   }),
   payments: router({
-    readiness: publicProcedure.query(() => getProductPurchaseReadiness()),
+    readiness: publicProcedure.query(() => db.getPublicPaymentAvailability()),
   }),
   wallet: router({
     summary: protectedProcedure.query(({ ctx }) => db.getCustomerWalletSummary(ctx.user.id)),
@@ -140,6 +139,8 @@ export const appRouter = router({
     updateSmmTier: adminProcedure.input(z.object({ tierId: z.string().min(4).max(64), priceUsd: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(), basePriceUsd: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(), profitMarginPercent: z.string().regex(/^\d+(\.\d{1,2})?$/).refine((value) => Number(value) <= 1000).optional(), isActive: z.boolean() }).refine((input) => Boolean(input.priceUsd ?? input.basePriceUsd), "A base price is required")).mutation(({ input }) => db.updateSmmTier({ ...input, basePriceUsd: input.basePriceUsd ?? input.priceUsd!, profitMarginPercent: input.profitMarginPercent ?? "0.00" })),
     deleteSmmTier: adminProcedure.input(z.object({ tierId: z.string().min(4).max(64) })).mutation(({ input }) => db.deleteSmmTier(input.tierId)),
     payments: adminProcedure.query(() => db.getPaymentTransactions()),
+    paymentControl: ownerProcedure.query(() => db.getPaymentControl()),
+    setPaymentControl: ownerProcedure.input(z.object({ enabled: z.boolean() })).mutation(({ ctx, input }) => db.setPaymentControl({ ...input, updatedByUserId: ctx.user.id })),
     users: adminProcedure.query(() => db.getAdminUsers()),
     roleAudits: ownerProcedure.query(() => db.getAdminRoleAudits()),
     setUserRole: ownerProcedure.input(z.object({ targetUserId: z.number().int().positive(), nextRole: z.enum(["user", "admin"]), confirmationEmail: z.string().trim().email().max(320), reason: z.string().trim().min(10).max(500) })).mutation(({ ctx, input }) => db.setAdminUserRole({ actorUserId: ctx.user.id, ...input })),

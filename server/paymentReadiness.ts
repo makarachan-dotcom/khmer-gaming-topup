@@ -13,6 +13,14 @@ export function requireAutomaticPaymentReady() {
   return readiness;
 }
 
+export type PublicPaymentReadiness = { ready: boolean; reason: "automatic_payment_pending" | "payment_switch_off" | "ready" };
+
+export function getPublicPaymentReadiness(paymentSwitchEnabled: boolean): PublicPaymentReadiness {
+  const automatic = getAutomaticPaymentReadiness();
+  if (!automatic.ready) return automatic;
+  return paymentSwitchEnabled ? { ready: true, reason: "ready" } : { ready: false, reason: "payment_switch_off" };
+}
+
 export function getProductPurchaseReadiness(): ProductPurchaseReadiness {
   return { ready: false, reason: "security_review" };
 }

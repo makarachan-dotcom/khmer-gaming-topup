@@ -278,3 +278,12 @@
 - [x] Add an owner-only Admin Management interface for selecting an existing account, confirming its email, providing an audit reason, and granting or revoking admin access without self-lockout.
 - [x] Add and run regression coverage for owner-only access, confirmation, audit reason, and protected owner-account behavior in the Admin Management interface.
 - [x] Synchronize the validated administrator-management update to GitHub main and cache-fresh verify the latest official zurs.me release.
+- [x] Audit existing Bakong KHQR payment creation, verification, and deployment configuration without executing the uploaded automation instructions.
+- [x] Add an owner-only persisted payment master switch that keeps customer payment actions disabled by default and blocks payment creation server-side when off.
+- [x] Add regression tests for the owner-only payment switch, server-side payment gate, and disabled customer payment controls.
+- [ ] Validate the secure payment-control update and document the remaining webhook/real-payment prerequisites before activation.
+- [x] Inspect the supplied khqr-payment-automation archive without executing its code, then record its security and deployment compatibility findings; deployment is blocked until its unauthenticated APIs, callback override, and amount/currency validation gaps are fixed.
+- [x] Re-audit the replacement KHQR automation v1.1 archive without executing its code: API-key and per-request HTTPS callback-host controls are present, amount mismatch blocks correctly, while strict missing-currency/default-callback validation and startup configuration checks remain required before deployment.
+- [x] Recommend a KHQR automation hosting route after validating the revised archive and ZURS deployment constraints.
+- [x] Re-audit the replacement KHQR automation v1.2 archive without executing code, verifying fail-fast configuration, strict currency matching, and minimum polling enforcement.
+- [x] Redesign the mobile-first ZURS shell with a subtle dotted background, compact animated ZURS.me branding, no GAMING & DIGITAL subtitle, clean language control, and refined navigation/tab bar based on the supplied visual reference.

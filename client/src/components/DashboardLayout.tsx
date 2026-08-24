@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/sidebar";
 import { startLogin } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { Boxes, CircleDollarSign, ImagePlus, LayoutDashboard, LogOut, PanelLeft, ReceiptText, ShieldCheck, Users } from "lucide-react";
+import { Boxes, CircleDollarSign, CreditCard, ImagePlus, LayoutDashboard, LogOut, PanelLeft, ReceiptText, ShieldCheck, Users } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -28,6 +28,7 @@ const menuItems = [
   { icon: ImagePlus, label: "Banner & Promo", path: "/admin/media" },
   { icon: Users, label: "ប្រតិបត្តិការ", path: "/admin?tab=operations" },
   { icon: ShieldCheck, label: "សិទ្ធិ Admin", path: "/admin/access" },
+  { icon: CreditCard, label: "Payment Control", path: "/admin/payment" },
   { icon: CircleDollarSign, label: "តម្លៃ និង Margin", path: "/admin/pricing" },
 ];
 

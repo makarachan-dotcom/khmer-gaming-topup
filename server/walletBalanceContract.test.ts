@@ -23,7 +23,7 @@ describe("customer wallet balance contract", () => {
     expect(header).toContain('balance-control--visible');
   });
 
-  it("adds wallet funds only through a verified Bakong top-up while product purchases remain locked", () => {
+  it("adds wallet funds only through a verified Bakong top-up while the owner-controlled payment gate defaults to off", () => {
     const schema = readFileSync(resolve(process.cwd(), "drizzle/schema.ts"), "utf8");
     const db = readFileSync(resolve(process.cwd(), "server/db.ts"), "utf8");
     const appwrite = readFileSync(resolve(process.cwd(), "server/appwriteStore.ts"), "utf8");
@@ -40,8 +40,10 @@ describe("customer wallet balance contract", () => {
     expect(router).toContain('beginTopup: protectedProcedure');
     expect(router).toContain('refreshTopup: protectedProcedure');
     expect(walletPage).toContain('បញ្ចូលប្រាក់');
-    expect(readiness).toContain('reason: "security_review"');
-    expect(readiness).toContain('requireProductPurchaseEnabled');
-    expect(db).toContain('requireProductPurchaseEnabled();');
+    expect(readiness).toContain('reason: "payment_switch_off"');
+    expect(readiness).toContain('getPublicPaymentReadiness');
+    expect(db).toContain('requirePublicPaymentEnabled();');
+    expect(db).toContain('getPaymentControl');
+    expect(appwrite).toContain('getAppwritePaymentControl');
   });
 });

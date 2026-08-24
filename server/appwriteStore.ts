@@ -14,6 +14,7 @@ export type AppwriteProviderAvailability = { hiddenGameIds: string[]; hiddenSmmS
 export type AppwriteProviderCatalog = { games: Array<{ id: string; providerSourceId: string; titleKh: string; titleEn: string; packageSourceIds?: string[]; packages: Array<{ id: string; providerOfferSourceId?: string; amountLabel: string; basePriceUsd: string; profitMarginPercent: string; priceUsd: string; isActive: boolean; featured: boolean; providerAuthorized: true; providerSource: string }> }>; smm: Array<{ id: string; providerSourceId: string; platform: string; titleKh: string; titleEn: string; tiers: Array<{ id: string; quantity: number; basePriceUsd: string; profitMarginPercent: string; priceUsd: string; isActive: boolean; providerAuthorized: true; providerSource: string }> }> };
 type AppwriteProviderCatalogIndex = { gameSourceIds: string[]; smmSourceIds: string[]; updatedAt: string };
 export type AppwriteAdminRoleAudit = { id: string; actorUserId: number; targetUserId: number; previousRole: "user" | "admin"; nextRole: "user" | "admin"; reason: string; createdAt: Date };
+export type AppwritePaymentControl = { enabled: boolean; updatedByUserId: number | null; updatedAt: Date };
 
 const databaseId = () => process.env.APPWRITE_DATABASE_ID || "zurs_store";
 const collectionId = "zurs_records";
@@ -33,6 +34,32 @@ export function isAppwriteStoreConfigured() { return Boolean(config()); }
 
 const providerAvailabilitySourceId = "global";
 const providerCatalogIndexSourceId = "global";
+const paymentControlSourceId = "global";
+
+function paymentControlDocumentPath() {
+  return `/databases/${databaseId()}/collections/${collectionId}/documents/${documentId(`payment_control:${paymentControlSourceId}`)}`;
+}
+
+export async function getAppwritePaymentControl(): Promise<AppwritePaymentControl> {
+  if (!config()) return { enabled: false, updatedByUserId: null, updatedAt: new Date(0) };
+  const record = await request("GET", paymentControlDocumentPath()) as AppwriteRecord | null;
+  const value = record?.sourceTable === "payment_control" ? parsePayload<Partial<AppwritePaymentControl>>(record) : null;
+  return { enabled: value?.enabled === true, updatedByUserId: typeof value?.updatedByUserId === "number" ? value.updatedByUserId : null, updatedAt: value?.updatedAt ? asDate(value.updatedAt) : new Date(0) };
+}
+
+export async function setAppwritePaymentControl(input: { enabled: boolean; updatedByUserId: number }) {
+  if (!config()) throw new Error("Payment-control storage is unavailable.");
+  const next: AppwritePaymentControl = { enabled: input.enabled, updatedByUserId: input.updatedByUserId, updatedAt: new Date() };
+  const body = { data: { sourceTable: "payment_control", sourceId: paymentControlSourceId, payload: JSON.stringify(next), sourceUpdatedAt: next.updatedAt.toISOString() } };
+  const path = paymentControlDocumentPath();
+  const existing = await request("GET", path) as AppwriteRecord | null;
+  if (existing) await request("PUT", path, body);
+  else {
+    try { await request("POST", `/databases/${databaseId()}/collections/${collectionId}/documents`, { documentId: documentId(`payment_control:${paymentControlSourceId}`), ...body }); }
+    catch (error) { if (!shouldRetryAppwriteCreateAsUpdate(error)) throw error; await request("PUT", path, body); }
+  }
+  return next;
+}
 
 function providerAvailabilityDocumentPath() {
   return `/databases/${databaseId()}/collections/${collectionId}/documents/${documentId(`provider_availability:${providerAvailabilitySourceId}`)}`;

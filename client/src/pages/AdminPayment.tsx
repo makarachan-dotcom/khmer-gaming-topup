@@ -1,0 +1,25 @@
+import { useAuth } from "@/_core/hooks/useAuth";
+import DashboardLayout from "@/components/DashboardLayout";
+import { LoadingV2 } from "@/components/OutlineLoader";
+import { trpc } from "@/lib/trpc";
+import { AlertTriangle, CreditCard, LockKeyhole, Power, ShieldCheck } from "lucide-react";
+
+const ownerEmail = "chanmakara672@gmail.com";
+
+export default function AdminPayment() {
+  const { user, loading } = useAuth();
+  if (loading) return <div className="min-h-screen bg-slate-50" />;
+  if (user?.email?.toLowerCase() !== ownerEmail) return <div className="grid min-h-screen place-items-center bg-slate-50 p-5"><div className="max-w-md rounded-2xl border border-rose-100 bg-white p-6 text-center"><AlertTriangle className="mx-auto h-8 w-8 text-rose-600" /><h1 className="mt-3 text-lg font-bold text-slate-950">Owner access only</h1><p className="mt-2 text-sm leading-6 text-slate-600">មានតែម្ចាស់ ZURS STORE ប៉ុណ្ណោះដែលអាចបើក ឬបិទការទូទាត់សាធារណៈបាន។</p></div></div>;
+  return <DashboardLayout><PaymentWorkspace /></DashboardLayout>;
+}
+
+function PaymentWorkspace() {
+  const control = trpc.admin.paymentControl.useQuery();
+  const readiness = trpc.payments.readiness.useQuery();
+  const utils = trpc.useUtils();
+  const update = trpc.admin.setPaymentControl.useMutation({ onSuccess: () => { utils.admin.paymentControl.invalidate(); utils.payments.readiness.invalidate(); utils.wallet.topupAvailability.invalidate(); } });
+  const enabled = control.data?.enabled === true;
+  const ready = readiness.data?.ready === true;
+  return <main className="mx-auto max-w-3xl pb-10"><header><p className="text-xs font-bold tracking-[0.14em] text-indigo-700">OWNER SECURITY</p><h1 className="mt-1 font-display text-3xl font-bold tracking-tight text-slate-950">Payment Control</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">ប៊ូតុងនេះគ្រប់គ្រងការបង្កើត KHQR សាធារណៈសម្រាប់ Wallet និង checkout។ វាមិនរំខានការផ្ទៀងផ្ទាត់ payment session ដែលមានរួចទេ។</p></header>
+    <section className="mt-6 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm"><div className={enabled ? "bg-emerald-50 p-6" : "bg-amber-50 p-6"}><div className="flex items-start gap-3"><span className={enabled ? "grid h-11 w-11 place-items-center rounded-2xl bg-emerald-600 text-white" : "grid h-11 w-11 place-items-center rounded-2xl bg-amber-500 text-white"}>{enabled ? <Power className="h-5 w-5" /> : <LockKeyhole className="h-5 w-5" />}</span><div><p className="text-sm font-extrabold text-slate-950">{enabled ? "ការទូទាត់សាធារណៈកំពុងបើក" : "ការទូទាត់សាធារណៈកំពុងបិទ"}</p><p className="mt-1 text-xs leading-5 text-slate-600">{enabled ? "អតិថិជនអាចបង្កើត KHQR បាន លុះត្រាតែ Bakong configuration មានស្ថានភាព ready។" : "អតិថិជនមិនអាចបង្កើត KHQR ឬចាប់ផ្ដើម payment session ថ្មីបានទេ។"}</p></div></div></div><div className="space-y-4 p-6"><div className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 p-4"><div className="flex items-center gap-3"><CreditCard className="h-5 w-5 text-indigo-600" /><div><p className="text-xs font-bold text-slate-900">Bakong readiness</p><p className="mt-0.5 text-[11px] text-slate-500">{readiness.isLoading ? "កំពុងពិនិត្យ…" : ready ? "Ready for an owner-approved activation test" : readiness.data?.reason === "payment_switch_off" ? "Credentials are ready; owner switch remains OFF" : "Merchant configuration is not ready"}</p></div></div><span className={ready ? "rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-bold text-emerald-800" : "rounded-full bg-slate-200 px-2.5 py-1 text-[10px] font-bold text-slate-700"}>{ready ? "READY" : "BLOCKED"}</span></div>{update.error ? <p className="text-xs text-rose-600">{update.error.message}</p> : null}<button type="button" onClick={() => update.mutate({ enabled: !enabled })} disabled={control.isLoading || update.isPending || (!enabled && readiness.data?.reason === "automatic_payment_pending")} className={enabled ? "flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-slate-950 text-xs font-bold text-white disabled:opacity-40" : "flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 text-xs font-bold text-white disabled:opacity-40"}>{update.isPending ? <LoadingV2 size={16} color="#ffffff" className="h-4 w-4" /> : enabled ? <LockKeyhole className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}{enabled ? "បិទការទូទាត់សាធារណៈ" : "បើកការទូទាត់សាធារណៈ"}</button><p className="text-center text-[10px] leading-4 text-slate-500">បើកតែបន្ទាប់ពី webhook signature, VPS worker និង 100 KHR end-to-end test បានជោគជ័យ។</p></div></section></main>;
+}

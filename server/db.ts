@@ -5,11 +5,11 @@ import { nanoid } from "nanoid";
 import {
   adminRoleAudits, customerWallets, gamePackages, gameProducts, gmailSenderConnections, InsertUser, marketplaceContacts, marketplaceDisclosureRequests, marketplaceEvidenceAccessLogs, marketplaceFavorites, marketplaceFraudReports, marketplaceListings, marketplaceVerificationEvidence, marketplaceVerifications, orders, orderStatusEvents, orderSupportTickets, paymentTransactions, savedPlayerIds, siteContent, smmServices, smmTiers, User, users, walletTopups, welcomeEmailDeliveries,
 } from "../drizzle/schema";
-import { createAppwriteMarketplaceListing, createAppwriteWalletTopup, deleteAppwriteMarketplaceListing, getAppwriteAdminRoleAudits, getAppwriteCustomerOrders, getAppwriteCustomerPaymentHistory, getAppwriteProviderCatalog, getAppwriteUserByEmail, getAppwriteUserByOpenId, getAppwriteWalletSummary, getAppwriteWalletTopup, isAppwriteStoreConfigured, listAppwriteMarketplaceListings, listAppwriteUsers, setAppwriteUserRole, syncAppwriteFzrCatalog, syncAppwriteSmmCatalog, updateAppwriteMarketplaceListing, updateAppwriteProviderOffer, updateAppwriteUserDisplayName, updateAppwriteWalletTopup, upsertAppwriteUser } from "./appwriteStore";
+import { createAppwriteMarketplaceListing, createAppwriteWalletTopup, deleteAppwriteMarketplaceListing, getAppwriteAdminRoleAudits, getAppwriteCustomerOrders, getAppwriteCustomerPaymentHistory, getAppwritePaymentControl, getAppwriteProviderCatalog, getAppwriteUserByEmail, getAppwriteUserByOpenId, getAppwriteWalletSummary, getAppwriteWalletTopup, isAppwriteStoreConfigured, listAppwriteMarketplaceListings, listAppwriteUsers, setAppwritePaymentControl, setAppwriteUserRole, syncAppwriteFzrCatalog, syncAppwriteSmmCatalog, updateAppwriteMarketplaceListing, updateAppwriteProviderOffer, updateAppwriteUserDisplayName, updateAppwriteWalletTopup, upsertAppwriteUser } from "./appwriteStore";
 import { buildOrderNumber, isSingleAdminEmail } from "./storefrontDomain";
 import { validateAdminRoleChange } from "./adminRoles";
 import { buildEvidenceRetentionAuditReason, canApproveMarketplaceVerification, hasOnlyOwnedMarketplaceScreenshotKeys, type DisclosureRequestStatus, type FraudReportStatus } from "./marketplaceSafety";
-import { requireAutomaticPaymentReady, requireProductPurchaseEnabled } from "./paymentReadiness";
+import { getPublicPaymentReadiness } from "./paymentReadiness";
 import { checkBakongKhqrPayment, createBakongKhqrPayment } from "./bakongKhqr";
 import type { FzrProviderSyncSnapshot, SmmProviderCatalogResponse } from "./providerCatalog";
 import { submitSmmProviderOrder } from "./providerCatalog";
@@ -139,16 +139,12 @@ function walletTopupPayload(row: typeof walletTopups.$inferSelect) {
 export async function getWalletTopupAvailability() {
   const db = await getDb();
   if (!db && !isAppwriteStoreConfigured()) return { available: false, reason: "verified_ledger_unavailable" as const };
-  try {
-    requireAutomaticPaymentReady();
-    return { available: true, reason: null } as const;
-  } catch {
-    return { available: false, reason: "automatic_payment_pending" as const };
-  }
+  const readiness = await getPublicPaymentAvailability();
+  return readiness.ready ? { available: true, reason: null } as const : { available: false, reason: readiness.reason } as const;
 }
 
 export async function beginWalletTopup(input: { userId: number; amountKhr: string }) {
-  requireAutomaticPaymentReady();
+  await requirePublicPaymentEnabled();
   const db = await getDb();
   if (!db && !isAppwriteStoreConfigured()) throw new Error("Wallet top-up requires the verified transaction ledger. Please try again later.");
   const amount = Number(input.amountKhr);
@@ -345,7 +341,7 @@ export async function syncSmmCatalog(snapshot: Extract<SmmProviderCatalogRespons
 }
 
 export async function createTopupOrder(input: { userId: number; packageId: string; playerId: string; zoneId?: string | null; quantity: number }) {
-  requireProductPurchaseEnabled();
+  await requirePublicPaymentEnabled();
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
   const result = await db.select({ game: gameProducts, package: gamePackages }).from(gamePackages).innerJoin(gameProducts, eq(gamePackages.productId, gameProducts.id)).where(and(eq(gamePackages.id, input.packageId), eq(gamePackages.isActive, true), eq(gameProducts.isActive, true))).limit(1);
@@ -360,7 +356,7 @@ export async function createTopupOrder(input: { userId: number; packageId: strin
 }
 
 export async function createSmmOrder(input: { userId: number; tierId: string; target: string }) {
-  requireProductPurchaseEnabled();
+  await requirePublicPaymentEnabled();
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
   const result = await db.select({ service: smmServices, tier: smmTiers }).from(smmTiers).innerJoin(smmServices, eq(smmTiers.serviceId, smmServices.id)).where(and(eq(smmTiers.id, input.tierId), eq(smmTiers.isActive, true), eq(smmServices.isActive, true))).limit(1);
@@ -388,7 +384,7 @@ export async function getCustomerPaymentHistory(userId: number) {
 }
 
 export async function beginStagedPayment(input: { orderId: string; userId: number }) {
-  requireProductPurchaseEnabled();
+  await requirePublicPaymentEnabled();
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
   const order = await db.select().from(orders).where(and(eq(orders.id, input.orderId), eq(orders.userId, input.userId))).limit(1);
@@ -651,7 +647,7 @@ export async function createMarketplaceFraudReport(input: { listingId: string; r
 export async function getPublicSiteContent() {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(siteContent).where(eq(siteContent.isActive, true)).orderBy(desc(siteContent.updatedAt));
+  return (await db.select().from(siteContent).where(eq(siteContent.isActive, true)).orderBy(desc(siteContent.updatedAt))).filter((content) => content.contentKey !== paymentControlContentKey);
 }
 
 export async function getAdminOverview() {
@@ -892,6 +888,39 @@ export async function getSiteContent() {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(siteContent).orderBy(asc(siteContent.contentKey));
+}
+
+const paymentControlContentKey = "system-payment-control";
+
+export async function getPaymentControl() {
+  const db = await getDb();
+  if (!db) return isAppwriteStoreConfigured() ? getAppwritePaymentControl() : { enabled: false, updatedByUserId: null, updatedAt: new Date(0) };
+  const record = await db.select().from(siteContent).where(eq(siteContent.contentKey, paymentControlContentKey)).limit(1);
+  return { enabled: record[0]?.isActive === true, updatedByUserId: record[0]?.updatedByUserId ?? null, updatedAt: record[0]?.updatedAt ?? new Date(0) };
+}
+
+export async function setPaymentControl(input: { enabled: boolean; updatedByUserId: number }) {
+  const db = await getDb();
+  if (!db) {
+    if (!isAppwriteStoreConfigured()) throw new Error("Payment-control storage is unavailable.");
+    return setAppwritePaymentControl(input);
+  }
+  const existing = await db.select({ id: siteContent.id }).from(siteContent).where(eq(siteContent.contentKey, paymentControlContentKey)).limit(1);
+  const values = { titleKh: "Payment Control", bodyKh: "System-only payment master switch", mediaUrl: null, isActive: input.enabled, updatedByUserId: input.updatedByUserId };
+  if (existing[0]) await db.update(siteContent).set(values).where(eq(siteContent.id, existing[0].id));
+  else await db.insert(siteContent).values({ id: nanoid(), contentKey: paymentControlContentKey, ...values });
+  return getPaymentControl();
+}
+
+export async function getPublicPaymentAvailability() {
+  const control = await getPaymentControl();
+  return getPublicPaymentReadiness(control.enabled);
+}
+
+async function requirePublicPaymentEnabled() {
+  const readiness = await getPublicPaymentAvailability();
+  if (!readiness.ready) throw new Error(readiness.reason === "payment_switch_off" ? "Payments are temporarily turned off by the store administrator." : "Automatic Cambodian payment is not available yet. Purchases are temporarily disabled.");
+  return readiness;
 }
 
 export async function saveSiteContent(input: { contentKey: string; titleKh?: string | null; bodyKh?: string | null; mediaUrl?: string | null; isActive: boolean; updatedByUserId: number }) {

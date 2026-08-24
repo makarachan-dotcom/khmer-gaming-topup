@@ -20,6 +20,7 @@ import Admin from "./pages/Admin";
 import AdminTickets from "./pages/AdminTickets";
 import AdminAccess from "./pages/AdminAccess";
 import AdminPricing from "./pages/AdminPricing";
+import AdminPayment from "./pages/AdminPayment";
 import Checkout from "./pages/Checkout";
 import AdminMedia from "./pages/AdminMedia";
 import Legal from "./pages/Legal";
@@ -45,6 +46,7 @@ function Router() {
       <Route path="/admin/tickets" component={AdminTickets} />
       <Route path="/admin/access" component={AdminAccess} />
       <Route path="/admin/pricing" component={AdminPricing} />
+      <Route path="/admin/payment" component={AdminPayment} />
       <Route path="/admin/marketplace-safety" component={AdminMarketplaceSafety} />
       <Route path={"/checkout/:orderId"} component={Checkout} />
       <Route path={"/admin/media"} component={AdminMedia} />
