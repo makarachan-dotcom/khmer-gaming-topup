@@ -8,7 +8,7 @@ import { useSelectedProduct } from "@/contexts/SelectedProductContext";
 import { trpc } from "@/lib/trpc";
 import { animate } from "animejs";
 import { ArrowUp, BarChart3, BadgeCheck, ChevronDown, CircleDollarSign, Crown, Eye, EyeOff, House, LogIn, ShieldCheck, Sparkles, Store, UserRound, WalletCards } from "lucide-react";
-import { type CSSProperties, ReactNode, useEffect, useRef, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 
 const logoUrl = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/kBXeVXEnNVEuNZKS.jpg";
@@ -89,7 +89,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
           <Link href="/" className="flex min-w-0 shrink items-center gap-2.5" aria-label="ZURS STORE home">
             <img src={logoUrl} alt="ZURS STORE logo" className="h-9 w-9 shrink-0 rounded-xl object-cover ring-1 ring-white/90 shadow-sm" />
             <div className="min-w-0 leading-none">
-              <div className="fx-magnetic fx-magnetic--brand" role="img" aria-label="ZURS STORE"><b aria-hidden="true" style={{ "--i": 0 } as CSSProperties}>Z</b><b aria-hidden="true" style={{ "--i": 1 } as CSSProperties}>U</b><b aria-hidden="true" style={{ "--i": 2 } as CSSProperties}>R</b><b aria-hidden="true" style={{ "--i": 3 } as CSSProperties}>S</b><span aria-hidden="true">&nbsp;</span><b aria-hidden="true" style={{ "--i": 4 } as CSSProperties}>S</b><b aria-hidden="true" style={{ "--i": 5 } as CSSProperties}>T</b><b aria-hidden="true" style={{ "--i": 6 } as CSSProperties}>O</b><b aria-hidden="true" style={{ "--i": 7 } as CSSProperties}>R</b><b aria-hidden="true" style={{ "--i": 8 } as CSSProperties}>E</b></div>
+              <div className="fx-topographic">ZURS STORE</div>
               <p className="mt-1 text-[8px] font-bold tracking-[0.16em] text-indigo-600">GAMING &amp; DIGITAL</p>
             </div>
           </Link>

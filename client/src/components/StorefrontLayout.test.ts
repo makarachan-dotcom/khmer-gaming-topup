@@ -33,18 +33,15 @@ describe("storefront media protection", () => {
     expect(styleSource).toContain(".fx-contour text { animation: none; }");
   });
 
-  it("applies the requested pure-CSS Magnetic effect to the ZURS STORE brand name, not a separate label", () => {
+  it("applies the requested pure-CSS Topographic effect to the ZURS STORE brand name", () => {
     const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
     const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
-    expect(componentSource).toContain('className="fx-magnetic fx-magnetic--brand" role="img" aria-label="ZURS STORE"');
-    expect(componentSource).toContain('>Z</b><b aria-hidden="true"');
-    expect(componentSource).toContain('>E</b></div>');
-    expect(componentSource).not.toContain('aria-label="MAGNET"');
-    expect(styleSource).toContain('font: 600 30px/1.1 "JetBrains Mono", monospace;');
-    expect(styleSource).toContain(".fx-magnetic--brand {");
-    expect(styleSource).toContain("animation: fx-magnetic 2.7s ease-in-out infinite;");
-    expect(styleSource).toContain("animation-delay: calc(var(--i) * .07s);");
-    expect(styleSource).toContain(".fx-magnetic b:nth-child(odd) { color: var(--ink-3); }");
-    expect(styleSource).toContain(".fx-magnetic b { animation: none; }");
+    expect(componentSource).toContain('<div className="fx-topographic">ZURS STORE</div>');
+    expect(componentSource).not.toContain("fx-magnetic");
+    expect(styleSource).toContain('font: 600 28px/1.15 "JetBrains Mono", monospace;');
+    expect(styleSource).toContain("repeating-radial-gradient(ellipse at 30% 55%");
+    expect(styleSource).toContain("animation: fx-topographic 5s linear infinite;");
+    expect(styleSource).toContain("to { background-position: 130px 0, -170px 0; }");
+    expect(styleSource).toContain(".fx-topographic { animation: none; }");
   });
 });
