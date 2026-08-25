@@ -11,6 +11,7 @@ import { validateAdminRoleChange } from "./adminRoles";
 import { buildEvidenceRetentionAuditReason, canApproveMarketplaceVerification, hasOnlyOwnedMarketplaceScreenshotKeys, type DisclosureRequestStatus, type FraudReportStatus } from "./marketplaceSafety";
 import { getPublicPaymentReadiness } from "./paymentReadiness";
 import { checkBakongKhqrPayment, createBakongKhqrPayment, registerBakongKhqrWorkerWatch } from "./bakongKhqr";
+import { getKhqrReconciliationDisposition } from "./khqrReconciliation";
 import type { FzrProviderSyncSnapshot, SmmProviderCatalogResponse } from "./providerCatalog";
 import { submitSmmProviderOrder } from "./providerCatalog";
 
@@ -441,9 +442,17 @@ export async function reconcileKhqrWorkerPayment(input: { md5: string; orderId: 
   if (!db) throw new Error("Payment reconciliation requires the primary ledger database.");
   const match = await db.select({ payment: paymentTransactions, order: orders }).from(paymentTransactions).innerJoin(orders, eq(paymentTransactions.orderId, orders.id)).where(and(eq(paymentTransactions.provider, "bakong_khqr"), eq(paymentTransactions.providerRequestId, input.md5), eq(paymentTransactions.orderId, input.orderId))).limit(1);
   const record = match[0];
-  if (!record || record.payment.currency !== input.currency || Number(record.payment.amount) !== Number(input.amount)) throw new Error("Payment callback did not match the stored payment session.");
-  if (record.payment.status === "paid" && record.order.status === "paid") return { idempotent: true };
-  if (record.payment.status !== "pending" || record.order.status !== "awaiting_payment") throw new Error("Payment session is not eligible for reconciliation.");
+  const disposition = getKhqrReconciliationDisposition(record ? {
+    provider: record.payment.provider,
+    md5: record.payment.providerRequestId ?? "",
+    orderId: record.payment.orderId,
+    amount: record.payment.amount,
+    currency: record.payment.currency as "KHR" | "USD",
+    paymentStatus: record.payment.status,
+    orderStatus: record.order.status,
+  } : undefined, input);
+  if (disposition === "reject") throw new Error("Payment callback did not match an eligible stored payment session.");
+  if (disposition === "idempotent") return { idempotent: true };
   const existingPayload = record.payment.callbackPayload && typeof record.payment.callbackPayload === "object" ? record.payment.callbackPayload as Record<string, unknown> : {};
   await db.update(paymentTransactions).set({ status: "paid", paidAt: new Date(), callbackPayload: { ...existingPayload, workerVerifiedAt: new Date().toISOString(), workerMd5: input.md5 } }).where(eq(paymentTransactions.id, record.payment.id));
   await db.update(orders).set({ status: "paid" }).where(eq(orders.id, record.order.id));

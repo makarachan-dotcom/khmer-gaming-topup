@@ -281,11 +281,11 @@
 - [x] Audit existing Bakong KHQR payment creation, verification, and deployment configuration without executing the uploaded automation instructions.
 - [x] Add an owner-only persisted payment master switch that keeps customer payment actions disabled by default and blocks payment creation server-side when off.
 - [x] Add regression tests for the owner-only payment switch, server-side payment gate, and disabled customer payment controls.
-- [ ] Validate the secure payment-control update and document the remaining webhook/real-payment prerequisites before activation.
+- [x] Validate the secure payment-control update and document the remaining webhook/real-payment prerequisites before activation.
 - [x] Obtain a worker domain with DNS pointed to the VPS and secure SSH credentials before VPS deployment; HTTPS cannot be issued for a bare IP address.
 - [x] Add a signed worker-to-website KHQR webhook that validates callback authenticity, idempotency, order ownership, exact amount, and currency before crediting or fulfilling an order.
 - [x] Deploy the reviewed v1.2 worker to the VPS with PM2, Nginx, HTTPS, least-privilege environment files, and a 5-second polling floor; corrected Linux firewall rule order, issued the certificate, and confirmed worker health after PM2 restart.
-- [ ] Validate the deployed worker with authentication, signature, idempotency, amount/currency mismatch, and a small live-payment test before enabling the public payment switch; authentication and restart-recovery have passed, while the exact reconciliation callback requires the next deployed website configuration.
+- [ ] Validate the deployed worker with authentication, signature, idempotency, amount/currency mismatch, and a small live-payment test before enabling the public payment switch; worker auth and restart recovery passed, signed non-financial callbacks reach reconciliation as 409, and automated exact-match/idempotency guards pass. A user-approved genuine 100 KHR payment remains required before public activation.
 - [x] Verify that pay-worker.zurs.me resolves to the supplied VPS and that the uploaded SSH key authenticates without exposing key material.
 - [x] Add a privacy-preserving sticky verified-account bar that appears only after successful ID verification when the form scrolls out of view, masks IDs, and provides an immediate edit-ID action.
 - [x] Validate the sticky verified-account bar on mobile and desktop without exposing raw player IDs in the compact bar.
@@ -297,6 +297,7 @@
 - [x] Cache-fresh verify the latest checkpoint on the official zurs.me domain after the user’s recheck request.
 - [x] Retry HTTPS issuance and public reachability after the user’s Oracle Cloud ingress remediation.
 - [x] Investigate the user-reported stale zurs.me view using cache-bypass official-domain checks.
-- [ ] Rotate and apply one matching high-entropy KHQR worker callback secret to both the deployed website and VPS worker, then verify a correctly signed non-financial probe reaches reconciliation checks.
+- [x] Rotate and apply one matching high-entropy KHQR worker callback secret to both the deployed website and VPS worker, then verify a correctly signed non-financial probe reaches reconciliation checks.
+- [x] Set the provisioned KHQR worker URL, callback URL, API key, and callback secret in Vercel Production (now added as Production secrets), then redeploy before the signed reconciliation retest; production redeploy has been triggered.
 - [x] Fix the verified-account sticky bar trigger so it appears while package cards are in view and returns directly to the editable Player/Server ID inputs.
 - [x] Add reduced-motion-safe animated active-state transitions when users switch mobile tab-bar destinations.
