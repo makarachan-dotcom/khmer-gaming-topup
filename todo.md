@@ -1,10 +1,11 @@
 # Project TODO
 
-- [ ] Preserve the failed 100 KHR test as uncredited and document the provider response as unpaid without exposing payment identifiers.
-- [ ] Diagnose Bakong merchant configuration and transaction-recognition compatibility for newly generated KHQR sessions.
+- [x] Preserve the failed 100 KHR test as uncredited and document the provider response as unpaid without exposing payment identifiers.
+- [ ] Re-run one authoritative merchant-account verification from the same production environment as live payments and resolve the VPS-versus-production preflight mismatch.
+- [ ] Record only safe provider-response fields for the failed 100 KHR test together with the authoritative merchant verification outcome before closing transaction-recognition diagnosis.
 - [ ] Repair verified automatic reconciliation only after the provider can recognize the new dynamic KHQR transaction.
 - [ ] Repeat an owner-approved small live test and confirm automatic paid/credit behavior before opening public payments.
-- [ ] Audit live worker polling, provider reachability, and signed callback delivery for automatic KHQR confirmation before shop opening.
+- [x] Audit live worker polling, provider reachability, and signed callback delivery for automatic KHQR confirmation before shop opening.
 - [ ] Run an owner-approved small live payment and confirm website auto-check changes it to paid/credited without manual refresh.
 - [ ] Confirm shop-opening payment readiness, then keep public payment creation disabled unless the owner explicitly enables it.
 - [x] Publish the completed automatic-payment safeguards to GitHub and official production while leaving the previous expired QR unchanged.
@@ -14,6 +15,9 @@
 - [x] Deferred at the owner's request: do not alter the previous expired QR.
 - [ ] Complete a new owner-controlled KHQR payment test and verify automatic confirmation succeeds through the real worker/provider path.
 - [ ] Verify only safe fields for the new test (status, amount, currency, paidAt, creditedAt) and confirm Public Payment Control remains OFF afterward.
+- [ ] Publish the new merchant-preflight and expired-session safeguards to GitHub/Vercel, then verify official www.zurs.me reflects the updated readiness behavior while public payment remains disabled.
+- [x] Add a short-lived cached Bakong merchant preflight gate that blocks new customer payment sessions when merchant verification fails, without affecting existing reconciliation or callbacks.
+- [x] Remove owner-only expired-QR recovery and requeue routes so an expired session cannot be reopened or credited outside the verified live reconciliation path.
 - [x] Diagnose and repair the Wallet KHQR automatic status refresh when a user-paid QR remains pending.
 - [x] Deferred at the owner's request: leave the previous expired QR unchanged and do not retry its recovery or reconciliation.
 - [x] Add a privacy-safe paid-success modal with restrained confirmation motion and receipt view/download actions.

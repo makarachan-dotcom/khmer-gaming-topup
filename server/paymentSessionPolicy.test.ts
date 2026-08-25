@@ -24,12 +24,10 @@ describe("five-minute KHQR payment-session policy", () => {
     expect(database).toContain("lt(paymentTransactions.manualCheckCount, 2)");
     expect(database).toContain("activeSessionKey: db ? `wallet:${input.userId}` : null");
     expect(database).toContain("requireNoOtherOpenPayment");
-    expect(database).toContain("recoverExpiredWalletTopupAfterVerifiedPayment");
-    expect(database).toContain("Bakong did not confirm an exact payment for this expired Wallet session.");
-    expect(database).toContain("Only a recent expired Wallet session is eligible for owner recovery.");
-    expect(routers).toContain("recoverExpiredTopup: ownerProcedure");
-    expect(database).toContain("prepareExpiredWalletTopupForWorkerRecovery");
-    expect(routers).toContain("prepareWorkerRecovery: ownerProcedure");
+    expect(database).not.toContain("recoverExpiredWalletTopupAfterVerifiedPayment");
+    expect(database).not.toContain("prepareExpiredWalletTopupForWorkerRecovery");
+    expect(routers).not.toContain("recoverExpiredTopup: ownerProcedure");
+    expect(routers).not.toContain("prepareWorkerRecovery: ownerProcedure");
   });
 
   it("renders bounded automatic checking and the two-check allowance in both payment screens", () => {

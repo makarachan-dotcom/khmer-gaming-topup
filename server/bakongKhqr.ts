@@ -10,6 +10,9 @@ type Currency = "USD" | "KHR";
 export const khqrPaymentWindowMs = 5 * 60 * 1000;
 type BakongConfig = { token: string; accountId: string; merchantName: string; merchantCity: string; merchantPhone: string; storeLabel: string };
 type BakongResponse = { responseCode?: number; errorCode?: number; data?: { shortLink?: string; hash?: string; amount?: string | number; currency?: string; toAccountId?: string } };
+export type BakongMerchantPreflightStatus = "verified" | "account_not_found" | "configuration_missing" | "unavailable";
+const merchantPreflightCacheTtlMs = 60_000;
+let merchantPreflightCache: { status: BakongMerchantPreflightStatus; checkedAt: number } | null = null;
 
 function getConfig(): BakongConfig | null {
   const token = process.env.BAKONG_API_TOKEN?.trim();
@@ -22,13 +25,32 @@ function getConfig(): BakongConfig | null {
   return { token, accountId, merchantName, merchantCity, merchantPhone, storeLabel };
 }
 
-export function getBakongPaymentReadiness() {
-  return getConfig() ? { ready: true, reason: "ready" as const } : { ready: false, reason: "automatic_payment_pending" as const };
+export function resetBakongMerchantPreflightCache() {
+  merchantPreflightCache = null;
+}
+
+function getCachedMerchantPreflight() {
+  if (!merchantPreflightCache || Date.now() - merchantPreflightCache.checkedAt >= merchantPreflightCacheTtlMs) return null;
+  return merchantPreflightCache.status;
+}
+
+function rememberMerchantPreflight(status: BakongMerchantPreflightStatus) {
+  // Keep a short, process-local cache to avoid calling Bakong for every availability render.
+  if (status !== "unavailable") merchantPreflightCache = { status, checkedAt: Date.now() };
+  return status;
+}
+
+export async function getBakongPaymentReadiness() {
+  if (!getConfig()) return { ready: false, reason: "automatic_payment_pending" as const };
+  const status = getCachedMerchantPreflight() ?? await verifyBakongMerchantAccount();
+  return status === "verified"
+    ? { ready: true, reason: "ready" as const }
+    : { ready: false, reason: "merchant_unverified" as const };
 }
 
 export async function verifyBakongMerchantAccount() {
   const config = getConfig();
-  if (!config) return { status: "configuration_missing" as const };
+  if (!config) return rememberMerchantPreflight("configuration_missing");
   try {
     const response = await fetch(`${apiBaseUrl}/v1/check_bakong_account`, {
       method: "POST",
@@ -37,11 +59,11 @@ export async function verifyBakongMerchantAccount() {
       signal: AbortSignal.timeout(10_000),
     });
     const payload = await readBakongJson(response);
-    if (response.ok && payload?.responseCode === 0) return { status: "verified" as const };
-    if (response.ok && payload?.responseCode === 1) return { status: "account_not_found" as const };
-    return { status: "unavailable" as const };
+    if (response.ok && payload?.responseCode === 0) return rememberMerchantPreflight("verified");
+    if (response.ok && payload?.responseCode === 1) return rememberMerchantPreflight("account_not_found");
+    return rememberMerchantPreflight("unavailable");
   } catch {
-    return { status: "unavailable" as const };
+    return rememberMerchantPreflight("unavailable");
   }
 }
 

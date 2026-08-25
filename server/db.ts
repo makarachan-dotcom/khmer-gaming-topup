@@ -259,40 +259,6 @@ export async function refreshWalletTopup(input: { userId: number; topupId: strin
   return { topup: await getWalletTopupSession(input), wallet: await getCustomerWalletSummary(input.userId) };
 }
 
-export async function recoverExpiredWalletTopupAfterVerifiedPayment(input: { topupId: string }) {
-  const db = await getDb();
-  if (!db) throw new Error("Expired wallet recovery requires the primary ledger database.");
-  const current = (await db.select().from(walletTopups).where(and(eq(walletTopups.id, input.topupId), eq(walletTopups.status, "expired"))).limit(1))[0];
-  if (!current) throw new Error("No eligible expired Wallet session was found for recovery.");
-  if (Date.now() - current.createdAt.getTime() > 24 * 60 * 60 * 1000) throw new Error("Only a recent expired Wallet session is eligible for owner recovery.");
-  const payload = current.paymentPayload && typeof current.paymentPayload === "object" ? current.paymentPayload as Record<string, unknown> : {};
-  const md5 = typeof payload.bakongMd5 === "string" ? payload.bakongMd5 : null;
-  if (!md5) throw new Error("Wallet recovery cannot verify the payment reference.");
-  const verification = await checkBakongKhqrPayment({ md5, expectedAmount: String(current.amountKhr), expectedCurrency: current.currency === "USD" ? "USD" : "KHR" });
-  if (verification.status !== "paid") throw new Error("Bakong did not confirm an exact payment for this expired Wallet session.");
-  await db.transaction(async (tx) => {
-    const transition = await tx.update(walletTopups).set({ status: "paid", activeSessionKey: null, providerTransactionId: verification.transactionHash, paidAt: new Date(), creditedAt: new Date() }).where(and(eq(walletTopups.id, current.id), eq(walletTopups.status, "expired")));
-    const affectedRows = Array.isArray(transition) ? Number((transition[0] as { affectedRows?: number } | undefined)?.affectedRows ?? 0) : 0;
-    if (affectedRows > 0) {
-      const field = current.currency === "USD" ? "balanceUsd" : "balanceKhr";
-      await tx.insert(customerWallets).values({ userId: current.userId, balanceKhr: current.currency === "USD" ? "0" : String(current.amountKhr), balanceUsd: current.currency === "USD" ? String(current.amountKhr) : "0" }).onDuplicateKeyUpdate({ set: { [field]: sql`${customerWallets[field]} + ${current.amountKhr}` } });
-    }
-  });
-  return { recovered: true };
-}
-
-export async function prepareExpiredWalletTopupForWorkerRecovery(input: { topupId: string }) {
-  const db = await getDb();
-  if (!db) throw new Error("Worker recovery preparation requires the primary ledger database.");
-  const current = (await db.select().from(walletTopups).where(and(eq(walletTopups.id, input.topupId), eq(walletTopups.status, "expired"))).limit(1))[0];
-  if (!current) throw new Error("No eligible expired Wallet session was found for worker recovery.");
-  if (Date.now() - current.createdAt.getTime() > 24 * 60 * 60 * 1000) throw new Error("Only a recent expired Wallet session is eligible for worker recovery.");
-  const result = await db.update(walletTopups).set({ status: "pending", expiresAt: new Date(Date.now() + 2 * 60 * 1000), activeSessionKey: null }).where(and(eq(walletTopups.id, current.id), eq(walletTopups.status, "expired")));
-  const affectedRows = Array.isArray(result) ? Number((result[0] as { affectedRows?: number } | undefined)?.affectedRows ?? 0) : 0;
-  if (affectedRows !== 1) throw new Error("Wallet session recovery preparation did not complete.");
-  return { prepared: true };
-}
-
 async function refreshAppwriteWalletTopup(input: { userId: number; topupId: string; source?: "manual" | "automatic" }) {
   if (!isAppwriteStoreConfigured()) throw new Error("Wallet top-up ledger is unavailable");
   const current = await getAppwriteWalletTopup(input);

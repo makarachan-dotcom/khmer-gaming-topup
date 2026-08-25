@@ -35,6 +35,8 @@ describe("Bakong KHQR payment contract", () => {
     const router = readFileSync(resolve(process.cwd(), "server/routers.ts"), "utf8");
     expect(adapter).toContain('verifyBakongMerchantAccount');
     expect(adapter).toContain('check_bakong_account');
+    expect(adapter).toContain('merchantPreflightCacheTtlMs');
+    expect(adapter).toContain('merchant_unverified');
     expect(router).toContain('paymentMerchantPreflight: ownerProcedure');
   });
 });

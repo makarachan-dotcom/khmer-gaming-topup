@@ -57,8 +57,6 @@ export const appRouter = router({
     topupSession: protectedProcedure.input(z.object({ topupId: z.string().min(4).max(64) })).query(({ ctx, input }) => db.getWalletTopupSession({ userId: ctx.user.id, ...input })),
     receipt: protectedProcedure.input(z.object({ topupId: z.string().min(4).max(64) })).query(({ ctx, input }) => db.getWalletTopupReceipt({ userId: ctx.user.id, ...input })),
     refreshTopup: protectedProcedure.input(z.object({ topupId: z.string().min(4).max(64), source: z.enum(["manual", "automatic"]).optional() })).mutation(({ ctx, input }) => db.refreshWalletTopup({ userId: ctx.user.id, ...input })),
-    recoverExpiredTopup: ownerProcedure.input(z.object({ topupId: z.string().min(4).max(64) })).mutation(({ input }) => db.recoverExpiredWalletTopupAfterVerifiedPayment(input)),
-    prepareWorkerRecovery: ownerProcedure.input(z.object({ topupId: z.string().min(4).max(64) })).mutation(({ input }) => db.prepareExpiredWalletTopupForWorkerRecovery(input)),
   }),
   provider: router({
     games: publicProcedure.query(() => fetchProviderGames()),
@@ -145,7 +143,7 @@ export const appRouter = router({
     deleteSmmTier: adminProcedure.input(z.object({ tierId: z.string().min(4).max(64) })).mutation(({ input }) => db.deleteSmmTier(input.tierId)),
     payments: adminProcedure.query(() => db.getPaymentTransactions()),
     paymentControl: ownerProcedure.query(() => db.getPaymentControl()),
-    paymentMerchantPreflight: ownerProcedure.query(() => verifyBakongMerchantAccount()),
+    paymentMerchantPreflight: ownerProcedure.query(async () => ({ status: await verifyBakongMerchantAccount() })),
     setPaymentControl: ownerProcedure.input(z.object({ enabled: z.boolean() })).mutation(({ ctx, input }) => db.setPaymentControl({ ...input, updatedByUserId: ctx.user.id })),
     users: adminProcedure.query(() => db.getAdminUsers()),
     roleAudits: ownerProcedure.query(() => db.getAdminRoleAudits()),
