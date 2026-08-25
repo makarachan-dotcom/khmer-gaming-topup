@@ -97,9 +97,12 @@ export function registerGoogleAuthRoutes(app: Express) {
       // Appwrite email scan on every sign-in, which can exhaust the read quota.
       const openId = fallbackOpenId;
       const persistedUser = await db.upsertUser({ openId, name: profile.name ?? null, email, loginMethod: "google", lastSignedIn: new Date() });
-      const user = persistedUser ?? await db.getUserByOpenId(openId);
+      // Legacy user records can retain an earlier OAuth identifier while their
+      // verified Google email remains authoritative. Reuse that existing user
+      // session rather than rejecting a successful OAuth callback.
+      const user = persistedUser ?? await db.getUserByOpenId(openId) ?? await db.getUserByEmail(email);
       if (!user) throw new Error("Unable to create Google user session");
-      const session = await createZursSession(openId, { email, name: profile.name ?? null, loginMethod: "google" });
+      const session = await createZursSession(user.openId, { email, name: profile.name ?? null, loginMethod: "google" });
       res.cookie(ZURS_SESSION_COOKIE, session, getZursSessionCookieOptions(req));
       await sendWelcomeIfEligible(user);
       return res.redirect(saved.returnPath);
