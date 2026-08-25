@@ -291,7 +291,7 @@
 - [x] Repair the owner Payment Control read/write flow so Appwrite 402 quota exhaustion does not block readiness or expose a raw provider error; production now uses the primary ledger when available and the owner page no longer surfaces the raw Appwrite quota error.
 - [x] Owner-requested testing release: publish the latest validated update while retaining Payment Control OFF; await owner testing feedback before resuming live KHQR validation.
 - [x] Compare the current preview with cache-fresh zurs.me and www.zurs.me, then synchronize GitHub main, Vercel production alias, and official-domain release if drift is found; the official domain serves the synchronized shell and the same nine game cards after initial loading.
-- [x] Enable owner Payment Control quick-toggle even when Bakong readiness is BLOCKED, while retaining the independent server-side readiness gate for all customer payment creation.
+- [x] Enable owner Payment Control quick-toggle even when Bakong readiness is BLOCKED, while retaining the independent server-side readiness gate for all customer payment creation; official production button verified enabled after the latest deployment alias became READY.
 - [x] Verify that pay-worker.zurs.me resolves to the supplied VPS and that the uploaded SSH key authenticates without exposing key material.
 - [x] Add a privacy-preserving sticky verified-account bar that appears only after successful ID verification when the form scrolls out of view, masks IDs, and provides an immediate edit-ID action.
 - [x] Validate the sticky verified-account bar on mobile and desktop without exposing raw player IDs in the compact bar.
