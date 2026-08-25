@@ -298,3 +298,5 @@
 - [x] Retry HTTPS issuance and public reachability after the user’s Oracle Cloud ingress remediation.
 - [x] Investigate the user-reported stale zurs.me view using cache-bypass official-domain checks.
 - [ ] Rotate and apply one matching high-entropy KHQR worker callback secret to both the deployed website and VPS worker, then verify a correctly signed non-financial probe reaches reconciliation checks.
+- [x] Fix the verified-account sticky bar trigger so it appears while package cards are in view and returns directly to the editable Player/Server ID inputs.
+- [x] Add reduced-motion-safe animated active-state transitions when users switch mobile tab-bar destinations.

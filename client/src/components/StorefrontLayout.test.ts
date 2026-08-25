@@ -45,4 +45,14 @@ describe("storefront media protection", () => {
     expect(componentSource).toContain("zurs-mobile-tab--active");
     expect(styleSource).toContain("radial-gradient(circle, oklch(0.49 0.05 267 / 0.18)");
   });
+
+  it("moves a dedicated indicator when the active mobile tab changes", () => {
+    const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
+    const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
+    expect(componentSource).toContain("zurs-mobile-tab-indicator");
+    expect(componentSource).toContain('"--mobile-tab-index": activeMobileTabIndex');
+    expect(styleSource).toContain("--mobile-tab-index");
+    expect(styleSource).toContain("zurs-mobile-tab-indicator-enter");
+    expect(styleSource).toContain("tab-icon-active");
+  });
 });

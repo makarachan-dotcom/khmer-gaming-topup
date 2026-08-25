@@ -178,21 +178,24 @@ function VerifiedIdentityStatus({ playerName, country, fields }: { playerName: s
   useEffect(() => {
     const anchor = anchorRef.current;
     if (!anchor) return;
-    const observer = new IntersectionObserver(([entry]) => {
-      const shouldCompact = !entry.isIntersecting && window.scrollY > 96;
-      if (shouldCompact) {
+    const updateCompactState = () => {
+      const shouldCompact = anchor.getBoundingClientRect().bottom <= 76;
+      if (shouldCompact && !compact) {
         const values = Array.from(anchor.closest("form")?.querySelectorAll<HTMLInputElement>("input") ?? []).map((input) => input.value.trim()).filter(Boolean);
         setCompactFields(values.length ? Object.fromEntries(values.map((value, index) => [`id-${index}`, value])) : fields);
       }
       setCompact(shouldCompact);
-    }, { threshold: 0.2, rootMargin: "-70px 0px 0px 0px" });
-    observer.observe(anchor);
-    return () => observer.disconnect();
-  }, []);
+    };
+    updateCompactState();
+    window.addEventListener("scroll", updateCompactState, { passive: true });
+    window.addEventListener("resize", updateCompactState);
+    return () => { window.removeEventListener("scroll", updateCompactState); window.removeEventListener("resize", updateCompactState); };
+  }, [compact, fields]);
   const editIdentity = () => {
     const form = anchorRef.current?.closest("form");
-    form?.scrollIntoView({ behavior: "smooth", block: "center" });
-    window.setTimeout(() => form?.querySelector<HTMLInputElement>("input")?.focus(), 300);
+    const firstInput = form?.querySelector<HTMLInputElement>("input[required], input");
+    firstInput?.scrollIntoView({ behavior: "smooth", block: "center" });
+    window.setTimeout(() => firstInput?.focus(), 300);
   };
   return <div ref={anchorRef}>{compact ? <VerifiedAccountBar playerName={playerName} fields={compactFields} onEdit={editIdentity} /> : null}<div className="identity-verified identity-verified--gold mt-4 flex items-center gap-3 rounded-xl p-3"><span className="identity-verified-mark"><AnimatedGlyph name="success" size={18} color="#fff7db" /></span><div className="min-w-0"><p className="text-[10px] font-extrabold tracking-[0.12em] text-amber-900">គណនីបានបញ្ជាក់</p><p className="identity-verified-name mt-0.5 text-sm font-extrabold">{country ? <span className="country-flag" role="img" aria-label={`${country.label} flag`}>{country.flag}</span> : null}{playerName}</p><p className="mt-0.5 text-[11px] text-amber-900/75">គណនីនេះបានបញ្ជាក់រួចរាល់។</p></div><CheckCircle2 className="ml-auto h-5 w-5 shrink-0 text-amber-700" /></div></div>;
 }

@@ -46,6 +46,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
   const wallet = trpc.wallet.summary.useQuery(undefined, { enabled: Boolean(user) });
   const displayedBalance = Number(wallet.data?.balanceKhr ?? 0).toLocaleString("km-KH", { maximumFractionDigits: 2 });
   const balanceCurrency = wallet.data?.currency ?? "KHR";
+  const activeMobileTabIndex = Math.max(0, mobileNavigation.findIndex((item) => item.href === location));
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -115,8 +116,9 @@ function StorefrontShell({ children }: { children: ReactNode }) {
         </div>
       </footer>
 
-	      {selectedProduct ? <SelectedProductActionBar product={selectedProduct} isAuthenticated={Boolean(user)} isAuthenticationLoading={loading} signInHref={googleSignInHref} /> : <nav className="liquid-tabbar zurs-mobile-tabbar fixed inset-x-3 bottom-3 z-40 grid grid-cols-4 gap-1 rounded-[1.35rem] p-1.5 sm:hidden" aria-label="Mobile primary navigation">
-	        {mobileNavigation.map(({ href, label, icon: Icon, animation }) => { const active = location === href; return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={cn("zurs-mobile-tab flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-bold transition-all", active ? "zurs-mobile-tab--active text-slate-950" : "text-slate-500 hover:bg-white/75 hover:text-indigo-700")}>{active && animation ? <AnimatedGlyph name={animation} size={21} color="#312e81" /> : <Icon className={cn("h-4 w-4", active && "tab-icon-active")} strokeWidth={active ? 2.35 : 1.9} />}<span className="truncate">{label}</span></Link>; })}
+      {selectedProduct ? <SelectedProductActionBar product={selectedProduct} isAuthenticated={Boolean(user)} isAuthenticationLoading={loading} signInHref={googleSignInHref} /> : <nav className="liquid-tabbar zurs-mobile-tabbar fixed inset-x-3 bottom-3 z-40 grid grid-cols-4 gap-1 rounded-[1.35rem] p-1.5 sm:hidden" style={{ "--mobile-tab-index": activeMobileTabIndex } as React.CSSProperties} aria-label="Mobile primary navigation">
+        <span className="zurs-mobile-tab-indicator" aria-hidden="true" />
+        {mobileNavigation.map(({ href, label, icon: Icon, animation }) => { const active = location === href; return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={cn("zurs-mobile-tab relative z-10 flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-bold transition-all", active ? "zurs-mobile-tab--active text-slate-950" : "text-slate-500 hover:bg-white/75 hover:text-indigo-700")}>{active && animation ? <AnimatedGlyph name={animation} size={21} color="#312e81" /> : <Icon className={cn("h-4 w-4", active && "tab-icon-active")} strokeWidth={active ? 2.35 : 1.9} />}<span className="truncate">{label}</span></Link>; })}
       </nav>}
       <button type="button" onClick={navigateToTop} aria-label="ត្រឡប់ទៅខាងលើ" className={cn("fixed right-4 z-[45] grid h-11 w-11 place-items-center rounded-2xl border border-white/80 bg-slate-950 text-white shadow-lg shadow-slate-950/20 transition-[opacity,transform,background-color] duration-200 hover:-translate-y-1 hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 sm:bottom-6", showScrollTop ? "bottom-[5.5rem] opacity-100" : "pointer-events-none bottom-[4.5rem] translate-y-3 opacity-0")}><ArrowUp className="h-5 w-5" strokeWidth={2.25} /></button>
     </div>
