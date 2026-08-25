@@ -428,6 +428,28 @@ export async function refreshBakongPayment(input: { orderId: string; userId: num
   return getCustomerPaymentSession(input);
 }
 
+export async function recordKhqrWorkerVerificationDeferred(input: { md5: string; orderId: string; amount: string | number; currency: "KHR" | "USD"; reason: "bakong_daily_request_limit" }) {
+  const db = await getDb();
+  if (!db) throw new Error("Payment verification status requires the primary ledger database.");
+  const recordedAt = new Date().toISOString();
+  if (input.orderId.startsWith("wallet:")) {
+    const walletId = input.orderId.slice("wallet:".length);
+    const rows = await db.select().from(walletTopups).where(eq(walletTopups.id, walletId)).limit(1);
+    const wallet = rows[0];
+    const payload = wallet?.paymentPayload && typeof wallet.paymentPayload === "object" ? wallet.paymentPayload as Record<string, unknown> : {};
+    const storedMd5 = typeof payload.bakongMd5 === "string" ? payload.bakongMd5 : "";
+    if (!wallet || wallet.provider !== "bakong_khqr" || wallet.status !== "pending" || storedMd5 !== input.md5 || String(wallet.amountKhr) !== String(input.amount) || input.currency !== "KHR") throw new Error("Deferred verification did not match an eligible wallet session.");
+    await db.update(walletTopups).set({ paymentPayload: { ...payload, lastWorkerVerificationAt: recordedAt, lastWorkerVerificationMd5: input.md5, lastWorkerVerificationStatus: "verification_deferred", lastWorkerVerificationError: input.reason } }).where(and(eq(walletTopups.id, wallet.id), eq(walletTopups.status, "pending")));
+    return { recorded: true };
+  }
+  const match = await db.select().from(paymentTransactions).where(and(eq(paymentTransactions.provider, "bakong_khqr"), eq(paymentTransactions.providerRequestId, input.md5), eq(paymentTransactions.orderId, input.orderId))).limit(1);
+  const payment = match[0];
+  const payload = payment?.callbackPayload && typeof payment.callbackPayload === "object" ? payment.callbackPayload as Record<string, unknown> : {};
+  if (!payment || payment.status !== "pending" || String(payment.amount) !== String(input.amount) || payment.currency !== input.currency) throw new Error("Deferred verification did not match an eligible checkout payment session.");
+  await db.update(paymentTransactions).set({ callbackPayload: { ...payload, lastWorkerVerificationAt: recordedAt, lastWorkerVerificationMd5: input.md5, lastWorkerVerificationStatus: "verification_deferred", lastWorkerVerificationError: input.reason } }).where(and(eq(paymentTransactions.id, payment.id), eq(paymentTransactions.status, "pending")));
+  return { recorded: true };
+}
+
 export async function reconcileKhqrWorkerPayment(input: { md5: string; orderId: string; amount: string | number; currency: "KHR" | "USD" }) {
   const db = await getDb();
   if (!db) throw new Error("Payment reconciliation requires the primary ledger database.");
