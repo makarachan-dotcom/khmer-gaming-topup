@@ -286,7 +286,17 @@
 - [x] Add a signed worker-to-website KHQR webhook that validates callback authenticity, idempotency, order ownership, exact amount, and currency before crediting or fulfilling an order.
 - [x] Deploy the reviewed v1.2 worker to the VPS with PM2, Nginx, HTTPS, least-privilege environment files, and a 5-second polling floor; corrected Linux firewall rule order, issued the certificate, and confirmed worker health after PM2 restart.
 - [ ] Validate the deployed worker with authentication, signature, idempotency, amount/currency mismatch, and a small live-payment test before enabling the public payment switch; worker auth and restart recovery passed, signed non-financial callbacks reach reconciliation as 409, and automated exact-match/idempotency guards pass. A user-approved genuine 100 KHR payment remains required before public activation.
-- [ ] Run the owner-approved genuine 100 KHR KHQR test with a temporary master-switch enablement, observe end-to-end reconciliation, and return public payments to OFF immediately afterward.
+- [ ] Run the owner-approved genuine 100 KHR KHQR test with a temporary master-switch enablement, observe end-to-end reconciliation, and return public payments to OFF immediately afterward; one pending 100 KHR owner Wallet session and worker watch were created successfully, and the temporary public switch is verified OFF.
+- [x] Create one fresh replacement 100 KHR owner KHQR validation session after confirming the prior session is not reused, then return the public switch to OFF before sharing the new QR.
+- [x] Complete the temporary enablement and create one fresh replacement 100 KHR QR, then return the public switch to OFF before sharing the new QR.
+- [x] Select 100 KHR in the fresh replacement Wallet flow, create exactly one QR, and return the public switch to OFF before sharing it.
+- [x] Verify the single 100 KHR replacement creation response, then turn the public switch OFF before sharing the new QR.
+- [ ] Confirm the replacement QR has an active worker watch; the owner switch is verified OFF.
+- [ ] Verify the replacement QR's active watch and confirm the owner switch persisted OFF after the return-to-OFF mutation; switch state is verified and worker watch remains pending requeue.
+- [ ] Verify the owner-reported 100 KHR payment through worker callback, exact reconciliation, and wallet credit while retaining Payment Control OFF.
+- [x] Add worker-watch registration for Wallet KHQR sessions and exact wallet callback reconciliation, covered by exact-match/idempotency regression tests.
+- [x] Confirm the prior 100 KHR QR is not reused; the replacement flow starts from a fresh Wallet form and the owner switch is OFF.
+- [x] Restore the owner production sign-in session in the current browser before creating the replacement 100 KHR validation QR; fresh QR creation succeeded after sign-in.
 - [x] Align wallet top-up validation to allow the approved 100 KHR genuine test amount consistently in both client and server rules.
 - [x] Add the existing primary ledger DATABASE_URL as a Vercel Production secret and redeploy before creating the genuine 100 KHR validation session.
 - [x] Repair the owner Payment Control read/write flow so Appwrite 402 quota exhaustion does not block readiness or expose a raw provider error; production now uses the primary ledger when available and the owner page no longer surfaces the raw Appwrite quota error.

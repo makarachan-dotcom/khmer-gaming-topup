@@ -11,7 +11,7 @@ import { validateAdminRoleChange } from "./adminRoles";
 import { buildEvidenceRetentionAuditReason, canApproveMarketplaceVerification, hasOnlyOwnedMarketplaceScreenshotKeys, type DisclosureRequestStatus, type FraudReportStatus } from "./marketplaceSafety";
 import { getPublicPaymentReadiness } from "./paymentReadiness";
 import { checkBakongKhqrPayment, createBakongKhqrPayment, registerBakongKhqrWorkerWatch } from "./bakongKhqr";
-import { getKhqrReconciliationDisposition } from "./khqrReconciliation";
+import { getKhqrReconciliationDisposition, getKhqrWalletReconciliationDisposition } from "./khqrReconciliation";
 import type { FzrProviderSyncSnapshot, SmmProviderCatalogResponse } from "./providerCatalog";
 import { submitSmmProviderOrder } from "./providerCatalog";
 
@@ -156,6 +156,12 @@ export async function beginWalletTopup(input: { userId: number; amountKhr: strin
   const record = { id: nanoid(), userId: input.userId, referenceCode, provider: "bakong_khqr", providerRequestId: generated.md5, status: "pending" as const, amountKhr: String(amount), paymentPayload: { bakongMd5: generated.md5, qrImageDataUrl: generated.qrImageDataUrl, deeplink: generated.deeplink }, expiresAt: generated.expiresAt, createdAt: now, updatedAt: now };
   if (!db) return walletTopupPayload(await createAppwriteWalletTopup(record));
   await db.insert(walletTopups).values(record);
+  try {
+    await registerBakongKhqrWorkerWatch({ md5: generated.md5, orderId: `wallet:${record.id}`, amount: String(amount), currency: "KHR" });
+  } catch (error) {
+    await db.update(walletTopups).set({ status: "failed" }).where(and(eq(walletTopups.id, record.id), eq(walletTopups.status, "pending")));
+    throw error;
+  }
   return walletTopupPayload({ ...record, providerTransactionId: null, paidAt: null, creditedAt: null });
 }
 
@@ -440,6 +446,29 @@ export async function refreshBakongPayment(input: { orderId: string; userId: num
 export async function reconcileKhqrWorkerPayment(input: { md5: string; orderId: string; amount: string | number; currency: "KHR" | "USD" }) {
   const db = await getDb();
   if (!db) throw new Error("Payment reconciliation requires the primary ledger database.");
+  if (input.orderId.startsWith("wallet:")) {
+    const walletId = input.orderId.slice("wallet:".length);
+    if (!walletId) throw new Error("Wallet callback did not identify a stored session.");
+    const rows = await db.select().from(walletTopups).where(eq(walletTopups.id, walletId)).limit(1);
+    const wallet = rows[0];
+    const payload = wallet?.paymentPayload && typeof wallet.paymentPayload === "object" ? wallet.paymentPayload as Record<string, unknown> : {};
+    const storedMd5 = typeof payload.bakongMd5 === "string" ? payload.bakongMd5 : "";
+    const walletDisposition = getKhqrWalletReconciliationDisposition(wallet ? {
+      provider: wallet.provider,
+      md5: storedMd5,
+      walletId: wallet.id,
+      amount: wallet.amountKhr,
+      status: wallet.status,
+    } : undefined, input);
+    if (walletDisposition === "reject") throw new Error("Payment callback did not match an eligible wallet session.");
+    if (walletDisposition === "idempotent") return { idempotent: true };
+    await db.transaction(async (tx) => {
+      const transition = await tx.update(walletTopups).set({ status: "paid", providerTransactionId: input.md5, paidAt: new Date(), creditedAt: new Date() }).where(and(eq(walletTopups.id, wallet.id), eq(walletTopups.status, "pending")));
+      const affectedRows = Array.isArray(transition) ? Number((transition[0] as { affectedRows?: number } | undefined)?.affectedRows ?? 0) : 0;
+      if (affectedRows > 0) await tx.insert(customerWallets).values({ userId: wallet.userId, balanceKhr: String(wallet.amountKhr) }).onDuplicateKeyUpdate({ set: { balanceKhr: sql`${customerWallets.balanceKhr} + ${wallet.amountKhr}` } });
+    });
+    return { idempotent: false };
+  }
   const match = await db.select({ payment: paymentTransactions, order: orders }).from(paymentTransactions).innerJoin(orders, eq(paymentTransactions.orderId, orders.id)).where(and(eq(paymentTransactions.provider, "bakong_khqr"), eq(paymentTransactions.providerRequestId, input.md5), eq(paymentTransactions.orderId, input.orderId))).limit(1);
   const record = match[0];
   const disposition = getKhqrReconciliationDisposition(record ? {
