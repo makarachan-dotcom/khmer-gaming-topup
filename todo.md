@@ -27,6 +27,13 @@
 - [x] Verify the owner-reported post-sync payment through provider outcome plus Wallet status, paidAt, and creditedAt before reporting auto-confirmation success; the session expired with provider unavailable and paidAt/creditedAt absent.
 - [x] Remove temporary worker probe scripts and the uploaded SSH key from the sandbox after diagnosis.
 - [ ] Obtain Bakong-side confirmation that the active merchant/token is entitled to locate dynamic KHQR transactions, then re-run preflight before any further paid test.
+- [x] Reconcile the historical verified 100 KHR Wallet credit against subsequent uncredited test sessions using only safe status, amount, currency, and timestamp fields; earlier paid/credited sessions exist, while later tests expired uncredited.
+- [ ] Apply the owner-supplied active Bakong merchant account and API token through secure project secrets, then validate only secret presence and safe merchant preflight.
+- [ ] Obtain Bakong developer support confirmation for the current dynamic-transaction lookup failure (non-success responseCode 1/errorCode 17 with no data), then rerun preflight before any additional paid test.
+- [x] Re-upload Oracle SSH key before mirroring the newly supplied API token to the private worker environment; never paste the key or token in chat.
+- [x] Use the renewed SSH key to mirror the newly supplied Bakong token to the worker, reload PM2, and record only safe status codes; PM2 reloaded, public worker health returned ok, and project/worker token fingerprint comparison returned MATCH.
+- [x] Re-run a worker-side privacy-safe provider probe after the renewed-key token sync and record only HTTP, responseCode, and errorCode outcomes; latest-job lookup returned HTTP 200, responseCode 1, errorCode 17, with no data.
+- [ ] Validate the active project/runtime Bakong credentials return VERIFIED in the lightweight credential test before considering another paid test.
 - [x] Add an owner-safe verification surface that exposes only latest Wallet status, amount, currency, paidAt, creditedAt, and expiry—never QR payloads, references, hashes, or account details.
 - [x] Make the fresh controlled-test QR available only in the owner-authenticated Wallet session; do not send its QR image, payload, or deeplink through chat.
 - [x] Publish the new merchant-preflight and expired-session safeguards to GitHub/Vercel, then verify official www.zurs.me reflects the updated readiness behavior while public payment remains disabled.
