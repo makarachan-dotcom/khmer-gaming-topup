@@ -10,7 +10,7 @@ import { buildOrderNumber, isSingleAdminEmail } from "./storefrontDomain";
 import { validateAdminRoleChange } from "./adminRoles";
 import { buildEvidenceRetentionAuditReason, canApproveMarketplaceVerification, hasOnlyOwnedMarketplaceScreenshotKeys, type DisclosureRequestStatus, type FraudReportStatus } from "./marketplaceSafety";
 import { getPublicPaymentReadiness } from "./paymentReadiness";
-import { checkBakongKhqrPayment, createBakongKhqrPayment } from "./bakongKhqr";
+import { checkBakongKhqrPayment, createBakongKhqrPayment, registerBakongKhqrWorkerWatch } from "./bakongKhqr";
 import type { FzrProviderSyncSnapshot, SmmProviderCatalogResponse } from "./providerCatalog";
 import { submitSmmProviderOrder } from "./providerCatalog";
 
@@ -396,7 +396,10 @@ export async function beginStagedPayment(input: { orderId: string; userId: numbe
   const currency = order[0].currency === "KHR" ? "KHR" : "USD" as const;
   const generated = canReuse ? null : await createBakongKhqrPayment({ trackingCode: order[0].trackingCode, amount: String(order[0].subtotal), currency });
   const transaction = existing[0] && canReuse ? existing[0] : { id: nanoid(), orderId: input.orderId, provider: "bakong_khqr", providerRequestId: generated!.md5, status: "pending" as const, amount: order[0].subtotal, currency, checkoutUrl: generated!.deeplink ?? `/checkout/${input.orderId}`, callbackPayload: { bakongMd5: generated!.md5, qrImageDataUrl: generated!.qrImageDataUrl, deeplink: generated!.deeplink }, expiresAt: generated!.expiresAt };
-  if (!canReuse) await db.insert(paymentTransactions).values(transaction);
+  if (!canReuse) {
+    await db.insert(paymentTransactions).values(transaction);
+    await registerBakongKhqrWorkerWatch({ md5: generated!.md5, orderId: input.orderId, amount: String(order[0].subtotal), currency });
+  }
   if (order[0].status !== "awaiting_payment") await appendOrderStatusEvent({ orderId: input.orderId, eventType: "payment_session_created", status: "awaiting_payment", actorType: "system", messageKh: statusMessageKh("awaiting_payment") });
   await db.update(orders).set({ status: "awaiting_payment" }).where(eq(orders.id, input.orderId));
   const payload = transaction.callbackPayload && typeof transaction.callbackPayload === "object" ? transaction.callbackPayload as Record<string, unknown> : {};
@@ -431,6 +434,21 @@ export async function refreshBakongPayment(input: { orderId: string; userId: num
   const result = await checkBakongKhqrPayment({ md5, expectedAmount: String(current.amount), expectedCurrency: currency });
   if (result.status === "paid") { await db.update(paymentTransactions).set({ status: "paid", providerTransactionId: result.transactionHash, paidAt: new Date(), callbackPayload: { ...payload, verifiedAt: new Date().toISOString(), transactionHash: result.transactionHash } }).where(eq(paymentTransactions.id, current.id)); await updateOrderStatus({ orderId: input.orderId, status: "paid" }); }
   return getCustomerPaymentSession(input);
+}
+
+export async function reconcileKhqrWorkerPayment(input: { md5: string; orderId: string; amount: string | number; currency: "KHR" | "USD" }) {
+  const db = await getDb();
+  if (!db) throw new Error("Payment reconciliation requires the primary ledger database.");
+  const match = await db.select({ payment: paymentTransactions, order: orders }).from(paymentTransactions).innerJoin(orders, eq(paymentTransactions.orderId, orders.id)).where(and(eq(paymentTransactions.provider, "bakong_khqr"), eq(paymentTransactions.providerRequestId, input.md5), eq(paymentTransactions.orderId, input.orderId))).limit(1);
+  const record = match[0];
+  if (!record || record.payment.currency !== input.currency || Number(record.payment.amount) !== Number(input.amount)) throw new Error("Payment callback did not match the stored payment session.");
+  if (record.payment.status === "paid" && record.order.status === "paid") return { idempotent: true };
+  if (record.payment.status !== "pending" || record.order.status !== "awaiting_payment") throw new Error("Payment session is not eligible for reconciliation.");
+  const existingPayload = record.payment.callbackPayload && typeof record.payment.callbackPayload === "object" ? record.payment.callbackPayload as Record<string, unknown> : {};
+  await db.update(paymentTransactions).set({ status: "paid", paidAt: new Date(), callbackPayload: { ...existingPayload, workerVerifiedAt: new Date().toISOString(), workerMd5: input.md5 } }).where(eq(paymentTransactions.id, record.payment.id));
+  await db.update(orders).set({ status: "paid" }).where(eq(orders.id, record.order.id));
+  await appendOrderStatusEvent({ orderId: record.order.id, eventType: "payment_confirmed", status: "paid", actorType: "system", messageKh: statusMessageKh("paid"), providerReference: input.md5 });
+  return { idempotent: false };
 }
 
 export async function getCustomerOrderTracking(input: { userId: number; trackingCode: string }) {

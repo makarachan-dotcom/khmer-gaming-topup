@@ -1,5 +1,6 @@
 import bakongKhqr from "bakong-khqr";
 import QRCode from "qrcode";
+import { getKhqrWorkerCredentials } from "./khqrWorkerSecrets";
 
 const { BakongKHQR, IndividualInfo, khqrData } = bakongKhqr as any;
 const apiBaseUrl = "https://api-bakong.nbc.gov.kh";
@@ -67,4 +68,15 @@ export async function checkBakongKhqrPayment(input: { md5: string; expectedAmoun
   const matchesReceiver = payload.data.toAccountId?.trim().toLowerCase() === config.accountId.toLowerCase();
   if (!matchesAmount || !matchesCurrency || !matchesReceiver || !payload.data.hash) return { status: "unavailable" as const };
   return { status: "paid" as const, transactionHash: payload.data.hash };
+}
+
+export async function registerBakongKhqrWorkerWatch(input: { md5: string; orderId: string; amount: string; currency: Currency }) {
+  const baseUrl = process.env.KHQR_WORKER_URL?.replace(/\/$/, "");
+  const { apiKey } = getKhqrWorkerCredentials();
+  const callbackUrl = process.env.KHQR_WORKER_CALLBACK_URL || "https://www.zurs.me/api/webhooks/khqr-worker";
+  if (!baseUrl?.startsWith("https://") || !apiKey || !callbackUrl.startsWith("https://")) throw new Error("KHQR automation worker is not configured.");
+  const response = await fetch(`${baseUrl}/api/payments/watch`, { method: "POST", headers: { "Content-Type": "application/json", "X-API-Key": apiKey }, body: JSON.stringify({ ...input, callbackUrl }), signal: AbortSignal.timeout(10_000) });
+  if (!response.ok) throw new Error("KHQR automation worker rejected the payment watch request.");
+  const result = await response.json() as { ok?: boolean };
+  if (!result.ok) throw new Error("KHQR automation worker did not accept the payment watch request.");
 }

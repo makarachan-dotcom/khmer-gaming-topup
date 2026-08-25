@@ -11,6 +11,8 @@ import { fetchProviderGames, fetchSmmProviderServices } from "./providerCatalog"
 import { deriveProviderNetworkRisk } from "./providerNetworkRisk";
 import { registerProviderArtworkRoutes } from "./providerArtwork";
 import crypto from "node:crypto";
+import { parseKhqrWorkerCallback, verifyKhqrWorkerSignature } from "./khqrWorkerWebhook";
+import { getKhqrWorkerCredentials } from "./khqrWorkerSecrets";
 
 /**
  * Builds the shared Express application for the local long-running server and
@@ -19,6 +21,15 @@ import crypto from "node:crypto";
  */
 export function createApp() {
   const app = express();
+  app.post("/api/webhooks/khqr-worker", express.raw({ type: "application/json", limit: "32kb" }), async (req, res) => {
+    try {
+      if (!verifyKhqrWorkerSignature(req.body, req.header("x-khqr-signature") ?? undefined, getKhqrWorkerCredentials().callbackSecret ?? undefined)) return res.status(401).json({ success: false, error: "invalid signature" });
+      const callback = parseKhqrWorkerCallback(req.body);
+      if (!callback) return res.status(400).json({ success: false, error: "invalid callback" });
+      const result = await import("./db").then(({ reconcileKhqrWorkerPayment }) => reconcileKhqrWorkerPayment(callback));
+      return res.json({ success: true, idempotent: result.idempotent });
+    } catch { return res.status(409).json({ success: false, error: "payment reconciliation rejected" }); }
+  });
   app.post("/api/webhooks/didit", express.raw({ type: "application/json" }), async (req, res) => {
     try {
       const secret = process.env.DIDIT_WEBHOOK_SECRET; const signature = req.header("x-signature"); const timestamp = req.header("x-timestamp");

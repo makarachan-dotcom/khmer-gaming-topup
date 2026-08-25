@@ -1,10 +1,14 @@
 import { getBakongPaymentReadiness } from "./bakongKhqr";
+import { getKhqrWorkerCredentials } from "./khqrWorkerSecrets";
 
 export type PaymentReadiness = { ready: boolean; reason: "automatic_payment_pending" | "ready" };
 export type ProductPurchaseReadiness = { ready: false; reason: "security_review" };
 
 export function getAutomaticPaymentReadiness(): PaymentReadiness {
-  return getBakongPaymentReadiness();
+  const bakong = getBakongPaymentReadiness();
+  const credentials = getKhqrWorkerCredentials();
+  const workerReady = Boolean(process.env.KHQR_WORKER_URL?.startsWith("https://") && credentials.apiKey && credentials.callbackSecret && credentials.callbackSecret.length >= 32);
+  return bakong.ready && workerReady ? { ready: true, reason: "ready" } : { ready: false, reason: "automatic_payment_pending" };
 }
 
 export function requireAutomaticPaymentReady() {

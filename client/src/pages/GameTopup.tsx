@@ -3,6 +3,7 @@ import { AnimatedGlyph } from "@/components/AnimatedGlyph";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { OutlineLoader } from "@/components/OutlineLoader";
 import { ProviderGameArtwork } from "@/components/ProviderGameIdentity";
+import { VerifiedAccountBar } from "@/components/VerifiedAccountBar";
 import { OverflowMarquee } from "@/components/OverflowMarquee";
 import { useSelectedProduct } from "@/contexts/SelectedProductContext";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -14,7 +15,7 @@ import { suppliedProductArtworkForPackage } from "@/lib/suppliedProductArtwork";
 import { generatedPackageArtworkForPackage, type GeneratedPackageArtworkKind } from "@/lib/generatedPackageArtwork";
 import { trpc } from "@/lib/trpc";
 import { ArrowLeft, BadgePercent, Box, CalendarClock, CheckCircle2, ChevronDown, ChevronRight, CircleAlert, Crown, Eye, Gem, Gift, History, ShieldAlert, Sparkles, TrendingUp, UserRound, WalletCards } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 
 type SavedPlayerEntry = { id: string; fields: Record<string, string>; savedAt: number };
@@ -161,13 +162,39 @@ export function canBrowseTopupPackages(fieldsReady: boolean, status: string | un
   return adminPreviewActive || (identityRequired ? (canBrowseVerifiedPackages(fieldsReady, status) || (status === "not_supported" && idAccuracyConfirmed)) : fieldsReady);
 }
 
-function IdentityStatus({ identity, pending, country, idAccuracyConfirmed, onIdAccuracyConfirmedChange }: { identity: ReturnType<typeof trpc.provider.validatePlayerId.useMutation>["data"]; pending: boolean; country: ReturnType<typeof countryFlagForRegion>; idAccuracyConfirmed: boolean; onIdAccuracyConfirmedChange: (confirmed: boolean) => void }) {
+function IdentityStatus({ identity, pending, country, idAccuracyConfirmed, onIdAccuracyConfirmedChange, fields = {} }: { identity: ReturnType<typeof trpc.provider.validatePlayerId.useMutation>["data"]; pending: boolean; country: ReturnType<typeof countryFlagForRegion>; idAccuracyConfirmed: boolean; onIdAccuracyConfirmedChange: (confirmed: boolean) => void; fields?: Record<string, string> }) {
   if (pending) return <div className="mt-4 flex items-center gap-2 rounded-xl border border-indigo-100 bg-indigo-50/75 p-3 text-xs font-semibold text-indigo-800"><OutlineLoader size={18} color="#4f46e5" />កំពុងពិនិត្យឈ្មោះគណនី…</div>;
-  if (identity?.status === "verified") return <div className="identity-verified identity-verified--gold mt-4 flex items-center gap-3 rounded-xl p-3"><span className="identity-verified-mark"><AnimatedGlyph name="success" size={18} color="#fff7db" /></span><div className="min-w-0"><p className="text-[10px] font-extrabold tracking-[0.12em] text-amber-900">គណនីបានបញ្ជាក់</p><p className="identity-verified-name mt-0.5 text-sm font-extrabold">{country ? <span className="country-flag" role="img" aria-label={`${country.label} flag`}>{country.flag}</span> : null}{identity.playerName}</p><p className="mt-0.5 text-[11px] text-amber-900/75">គណនីនេះបានបញ្ជាក់រួចរាល់។</p></div><CheckCircle2 className="ml-auto h-5 w-5 shrink-0 text-amber-700" /></div>;
+  if (identity?.status === "verified") return <VerifiedIdentityStatus playerName={identity.playerName} country={country} fields={fields} />;
   if (identity?.status === "invalid") return <div className="mt-4 flex items-center gap-3 rounded-xl border border-rose-100 bg-rose-50 p-3"><CircleAlert className="h-5 w-5 shrink-0 text-rose-600" /><p className="text-xs leading-5 text-rose-900">មិនអាចបញ្ជាក់គណនីនេះបានទេ។ សូមពិនិត្យ Player ID និង Server ID ម្តងទៀត។</p></div>;
   if (identity?.status === "not_supported") return <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3"><div className="flex items-start gap-3"><ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" /><p className="text-xs leading-5 text-amber-950">ហ្គេមនេះមិនទាន់មានសេវាពិនិត្យឈ្មោះគណនីទេ។ សូមពិនិត្យ Player ID និង Server ID ឲ្យត្រឹមត្រូវ ព្រោះការបញ្ចូលព័ត៌មានខុសអាចមិនអាចកែប្រែបាន។</p></div><label className="mt-3 flex cursor-pointer items-start gap-2 rounded-lg bg-white/75 p-2.5 text-xs font-semibold leading-5 text-amber-950"><input type="checkbox" checked={idAccuracyConfirmed} onChange={(event) => onIdAccuracyConfirmedChange(event.target.checked)} className="mt-1 h-4 w-4 rounded border-amber-400 text-amber-700 focus:ring-amber-500" /><span>ខ្ញុំបានពិនិត្យព័ត៌មានគណនីរួចរាល់ ហើយយល់ព្រមបន្តមើលកញ្ចប់សម្រាប់ហ្គេមនេះ។</span></label></div>;
   if (identity?.status === "unavailable" || identity?.status === "error") return <div className="mt-4 flex items-center gap-3 rounded-xl border border-amber-100 bg-amber-50 p-3"><ShieldAlert className="h-5 w-5 shrink-0 text-amber-600" /><p className="text-xs leading-5 text-amber-900">មិនអាចពិនិត្យ Username ពី provider ពេលនេះទេ។ កញ្ចប់ និងប៊ូតុងបន្តត្រូវបានចាក់សោរ—សូមព្យាយាមម្ដងទៀតបន្តិចក្រោយ។</p></div>;
   return <div className="mt-4 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600"><OutlineLoader size={18} color="#64748b" />កំពុងរៀបចំការពិនិត្យគណនី…</div>;
+}
+
+function VerifiedIdentityStatus({ playerName, country, fields }: { playerName: string; country: ReturnType<typeof countryFlagForRegion>; fields: Record<string, string> }) {
+  const anchorRef = useRef<HTMLDivElement>(null);
+  const [compact, setCompact] = useState(false);
+  const [compactFields, setCompactFields] = useState<Record<string, string>>(fields);
+  useEffect(() => {
+    const anchor = anchorRef.current;
+    if (!anchor) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      const shouldCompact = !entry.isIntersecting && window.scrollY > 96;
+      if (shouldCompact) {
+        const values = Array.from(anchor.closest("form")?.querySelectorAll<HTMLInputElement>("input") ?? []).map((input) => input.value.trim()).filter(Boolean);
+        setCompactFields(values.length ? Object.fromEntries(values.map((value, index) => [`id-${index}`, value])) : fields);
+      }
+      setCompact(shouldCompact);
+    }, { threshold: 0.2, rootMargin: "-70px 0px 0px 0px" });
+    observer.observe(anchor);
+    return () => observer.disconnect();
+  }, []);
+  const editIdentity = () => {
+    const form = anchorRef.current?.closest("form");
+    form?.scrollIntoView({ behavior: "smooth", block: "center" });
+    window.setTimeout(() => form?.querySelector<HTMLInputElement>("input")?.focus(), 300);
+  };
+  return <div ref={anchorRef}>{compact ? <VerifiedAccountBar playerName={playerName} fields={compactFields} onEdit={editIdentity} /> : null}<div className="identity-verified identity-verified--gold mt-4 flex items-center gap-3 rounded-xl p-3"><span className="identity-verified-mark"><AnimatedGlyph name="success" size={18} color="#fff7db" /></span><div className="min-w-0"><p className="text-[10px] font-extrabold tracking-[0.12em] text-amber-900">គណនីបានបញ្ជាក់</p><p className="identity-verified-name mt-0.5 text-sm font-extrabold">{country ? <span className="country-flag" role="img" aria-label={`${country.label} flag`}>{country.flag}</span> : null}{playerName}</p><p className="mt-0.5 text-[11px] text-amber-900/75">គណនីនេះបានបញ្ជាក់រួចរាល់។</p></div><CheckCircle2 className="ml-auto h-5 w-5 shrink-0 text-amber-700" /></div></div>;
 }
 
 export type ProviderPackage = { id: string; label: string; amountLabel: string; priceLabel: string };

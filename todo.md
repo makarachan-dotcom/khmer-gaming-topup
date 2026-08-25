@@ -282,6 +282,13 @@
 - [x] Add an owner-only persisted payment master switch that keeps customer payment actions disabled by default and blocks payment creation server-side when off.
 - [x] Add regression tests for the owner-only payment switch, server-side payment gate, and disabled customer payment controls.
 - [ ] Validate the secure payment-control update and document the remaining webhook/real-payment prerequisites before activation.
+- [x] Obtain a worker domain with DNS pointed to the VPS and secure SSH credentials before VPS deployment; HTTPS cannot be issued for a bare IP address.
+- [x] Add a signed worker-to-website KHQR webhook that validates callback authenticity, idempotency, order ownership, exact amount, and currency before crediting or fulfilling an order.
+- [ ] Deploy the reviewed v1.2 worker to the VPS with PM2, Nginx, HTTPS, least-privilege environment files, and a 5-second polling floor; installation succeeded but Oracle public HTTP reachability blocked the ACME certificate challenge, so the worker has been safely stopped pending firewall correction.
+- [ ] Validate the deployed worker with authentication, signature, idempotency, restart-recovery, amount/currency mismatch, and small live-payment tests before enabling the public payment switch.
+- [x] Verify that pay-worker.zurs.me resolves to the supplied VPS and that the uploaded SSH key authenticates without exposing key material.
+- [x] Add a privacy-preserving sticky verified-account bar that appears only after successful ID verification when the form scrolls out of view, masks IDs, and provides an immediate edit-ID action.
+- [x] Validate the sticky verified-account bar on mobile and desktop without exposing raw player IDs in the compact bar.
 - [x] Inspect the supplied khqr-payment-automation archive without executing its code, then record its security and deployment compatibility findings; deployment is blocked until its unauthenticated APIs, callback override, and amount/currency validation gaps are fixed.
 - [x] Re-audit the replacement KHQR automation v1.1 archive without executing its code: API-key and per-request HTTPS callback-host controls are present, amount mismatch blocks correctly, while strict missing-currency/default-callback validation and startup configuration checks remain required before deployment.
 - [x] Recommend a KHQR automation hosting route after validating the revised archive and ZURS deployment constraints.
