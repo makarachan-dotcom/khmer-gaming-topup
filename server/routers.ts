@@ -56,6 +56,7 @@ export const appRouter = router({
     topupSession: protectedProcedure.input(z.object({ topupId: z.string().min(4).max(64) })).query(({ ctx, input }) => db.getWalletTopupSession({ userId: ctx.user.id, ...input })),
     receipt: protectedProcedure.input(z.object({ topupId: z.string().min(4).max(64) })).query(({ ctx, input }) => db.getWalletTopupReceipt({ userId: ctx.user.id, ...input })),
     refreshTopup: protectedProcedure.input(z.object({ topupId: z.string().min(4).max(64), source: z.enum(["manual", "automatic"]).optional() })).mutation(({ ctx, input }) => db.refreshWalletTopup({ userId: ctx.user.id, ...input })),
+    recoverExpiredTopup: ownerProcedure.input(z.object({ topupId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => db.recoverExpiredWalletTopupAfterVerifiedPayment({ userId: ctx.user.id, ...input })),
   }),
   provider: router({
     games: publicProcedure.query(() => fetchProviderGames()),

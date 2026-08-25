@@ -16,6 +16,7 @@ describe("five-minute KHQR payment-session policy", () => {
   it("limits direct manual checks to two and retains a single active Wallet session", () => {
     const schema = projectFile("drizzle/schema.ts");
     const database = projectFile("server/db.ts");
+    const routers = projectFile("server/routers.ts");
     expect(schema).toContain("manualCheckCount: int(\"manualCheckCount\").default(0).notNull()");
     expect(schema).toContain("activeSessionKey: varchar(\"activeSessionKey\", { length: 64 })");
     expect(database).toContain("lt(walletTopups.manualCheckCount, 2)");
@@ -23,6 +24,9 @@ describe("five-minute KHQR payment-session policy", () => {
     expect(database).toContain("lt(paymentTransactions.manualCheckCount, 2)");
     expect(database).toContain("activeSessionKey: db ? `wallet:${input.userId}` : null");
     expect(database).toContain("requireNoOtherOpenPayment");
+    expect(database).toContain("recoverExpiredWalletTopupAfterVerifiedPayment");
+    expect(database).toContain("Bakong did not confirm an exact payment for this expired Wallet session.");
+    expect(routers).toContain("recoverExpiredTopup: ownerProcedure");
   });
 
   it("renders bounded automatic checking and the two-check allowance in both payment screens", () => {
