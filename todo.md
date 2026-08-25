@@ -1,9 +1,14 @@
 # Project TODO
 
+- [x] Publish the completed automatic-payment safeguards to GitHub and official production while leaving the previous expired QR unchanged.
+- [ ] Confirm the published production release is READY for the owner to test a newly created payment session.
+- [x] Audit Bakong provider reachability, worker polling health, and website callback outcomes for automatic confirmation failures.
+- [x] Implement automatic-check source separation and worker/server safeguards without weakening exact session, amount, currency, signature, or idempotency checks.
+- [x] Deferred at the owner's request: do not alter the previous expired QR.
+- [ ] Complete a new owner-controlled KHQR payment test and verify automatic confirmation succeeds through the real worker/provider path.
+- [ ] Verify only safe fields for the new test (status, amount, currency, paidAt, creditedAt) and confirm Public Payment Control remains OFF afterward.
 - [x] Diagnose and repair the Wallet KHQR automatic status refresh when a user-paid QR remains pending.
-- [ ] Reconcile the affected expired Wallet session through a successful production provider/worker verification path; do not use direct SQL to mark it paid.
-- [ ] Diagnose and correct the production provider response mismatch without weakening exact session, amount, currency, and merchant validation.
-- [ ] Confirm verified reconciliation outcome with a privacy-safe status check while Public Payment Control remains off.
+- [x] Deferred at the owner's request: leave the previous expired QR unchanged and do not retry its recovery or reconciliation.
 - [x] Add a privacy-safe paid-success modal with restrained confirmation motion and receipt view/download actions.
 - [x] Add protected receipt data and a customer-only receipt view/download flow without exposing QR payloads, hashes, or provider references.
 - [x] Extend paid-success popup and receipt actions to verified Wallet top-ups.
