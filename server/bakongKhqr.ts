@@ -10,7 +10,7 @@ type Currency = "USD" | "KHR";
 export const khqrPaymentWindowMs = 5 * 60 * 1000;
 type BakongConfig = { token: string; accountId: string; merchantName: string; merchantCity: string; merchantPhone: string; storeLabel: string };
 type BakongResponse = { responseCode?: number; errorCode?: number; data?: { shortLink?: string; hash?: string; amount?: string | number; currency?: string; toAccountId?: string } };
-export type BakongMerchantPreflightStatus = "verified" | "account_not_found" | "configuration_missing" | "unavailable";
+export type BakongMerchantPreflightStatus = "verified" | "account_not_found" | "rejected" | "configuration_missing" | "unavailable";
 const merchantPreflightCacheTtlMs = 60_000;
 let merchantPreflightCache: { status: BakongMerchantPreflightStatus; checkedAt: number } | null = null;
 
@@ -60,7 +60,8 @@ export async function verifyBakongMerchantAccount() {
     });
     const payload = await readBakongJson(response);
     if (response.ok && payload?.responseCode === 0) return rememberMerchantPreflight("verified");
-    if (response.ok && payload?.responseCode === 1) return rememberMerchantPreflight("account_not_found");
+    if (response.ok && payload?.responseCode === 1 && payload.errorCode === 11) return rememberMerchantPreflight("account_not_found");
+    if (response.ok && payload?.responseCode === 1) return rememberMerchantPreflight("rejected");
     return rememberMerchantPreflight("unavailable");
   } catch {
     return rememberMerchantPreflight("unavailable");

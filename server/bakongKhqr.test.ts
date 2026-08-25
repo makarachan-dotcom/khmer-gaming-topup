@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { checkBakongKhqrPayment } from "./bakongKhqr";
+import { checkBakongKhqrPayment, resetBakongMerchantPreflightCache, verifyBakongMerchantAccount } from "./bakongKhqr";
 
 const bakongEnv = {
   BAKONG_API_TOKEN: "test-token",
@@ -13,6 +13,7 @@ const bakongEnv = {
 describe("Bakong KHQR response handling", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    resetBakongMerchantPreflightCache();
     for (const [key, value] of Object.entries(bakongEnv)) process.env[key] = value;
   });
 
@@ -21,5 +22,15 @@ describe("Bakong KHQR response handling", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("<!DOCTYPE html><html><body>Temporary error</body></html>", { status: 502, headers: { "Content-Type": "text/html" } })));
 
     await expect(checkBakongKhqrPayment({ md5: "safe-md5", expectedAmount: "500", expectedCurrency: "KHR" })).resolves.toEqual({ status: "unavailable" });
+  });
+
+  it("distinguishes the documented missing-account code from an undocumented rejected preflight outcome", async () => {
+    Object.assign(process.env, bakongEnv);
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ responseCode: 1, errorCode: 11 }), { status: 200 })));
+    await expect(verifyBakongMerchantAccount()).resolves.toBe("account_not_found");
+
+    resetBakongMerchantPreflightCache();
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ responseCode: 1, errorCode: 14 }), { status: 200 })));
+    await expect(verifyBakongMerchantAccount()).resolves.toBe("rejected");
   });
 });
