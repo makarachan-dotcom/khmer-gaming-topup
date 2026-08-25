@@ -53,21 +53,20 @@ export async function createBakongKhqrPayment(input: { trackingCode: string; amo
     const payload = await readBakongJson(response);
     if (response.ok && payload?.responseCode === 0 && payload.data?.shortLink) deeplink = payload.data.shortLink;
   } catch { /* A scannable KHQR remains available if the optional deeplink service is unavailable. */ }
-  return { md5, qrImageDataUrl, deeplink, expiresAt: expiry, merchantAccountId: config.accountId };
+  return { md5, qrImageDataUrl, deeplink, expiresAt: expiry };
 }
 
-export async function checkBakongKhqrPayment(input: { md5: string; expectedAmount: string; expectedCurrency: Currency; expectedMerchantAccountId?: string }) {
+export async function checkBakongKhqrPayment(input: { md5: string; expectedAmount: string; expectedCurrency: Currency }) {
   const config = getConfig();
   if (!config) throw new Error("Bakong KHQR is not configured");
   const response = await fetch(`${apiBaseUrl}/v1/check_transaction_by_md5`, { method: "POST", headers: { Authorization: `Bearer ${config.token}`, "Content-Type": "application/json" }, body: JSON.stringify({ md5: input.md5 }) });
   const payload = await readBakongJson(response);
-  if (!payload) return { status: "unavailable" as const, reason: "empty_or_malformed_bakong_response" };
-  if (!response.ok || payload.responseCode !== 0 || !payload.data) return { status: payload.responseCode === 1 || payload.errorCode === 17 ? "unpaid" as const : "unavailable" as const, reason: `bakong_response_${payload.responseCode ?? "unknown"}_${payload.errorCode ?? "unknown"}` };
+  if (!payload) return { status: "unavailable" as const };
+  if (!response.ok || payload.responseCode !== 0 || !payload.data) return { status: payload.errorCode === 1 ? "unpaid" as const : "unavailable" as const };
   const matchesAmount = Math.abs(Number(payload.data.amount) - Number(input.expectedAmount)) < 0.00001;
   const matchesCurrency = payload.data.currency === input.expectedCurrency;
-  const expectedMerchantAccountId = (input.expectedMerchantAccountId ?? config.accountId).trim().toLowerCase();
-  const matchesReceiver = payload.data.toAccountId?.trim().toLowerCase() === expectedMerchantAccountId;
-  if (!matchesAmount || !matchesCurrency || !matchesReceiver || !payload.data.hash) return { status: "unavailable" as const, reason: "bakong_transaction_did_not_match_stored_session" };
+  const matchesReceiver = payload.data.toAccountId?.trim().toLowerCase() === config.accountId.toLowerCase();
+  if (!matchesAmount || !matchesCurrency || !matchesReceiver || !payload.data.hash) return { status: "unavailable" as const };
   return { status: "paid" as const, transactionHash: payload.data.hash };
 }
 

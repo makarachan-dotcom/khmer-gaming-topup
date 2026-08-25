@@ -153,7 +153,7 @@ export async function beginWalletTopup(input: { userId: number; amountKhr: strin
   const referenceCode = buildWalletTopupReference();
   const generated = await createBakongKhqrPayment({ trackingCode: referenceCode, amount: String(amount), currency: "KHR" });
   const now = new Date();
-  const record = { id: nanoid(), userId: input.userId, referenceCode, provider: "bakong_khqr", providerRequestId: generated.md5, status: "pending" as const, amountKhr: String(amount), paymentPayload: { bakongMd5: generated.md5, merchantAccountId: generated.merchantAccountId, qrImageDataUrl: generated.qrImageDataUrl, deeplink: generated.deeplink }, expiresAt: generated.expiresAt, createdAt: now, updatedAt: now };
+  const record = { id: nanoid(), userId: input.userId, referenceCode, provider: "bakong_khqr", providerRequestId: generated.md5, status: "pending" as const, amountKhr: String(amount), paymentPayload: { bakongMd5: generated.md5, qrImageDataUrl: generated.qrImageDataUrl, deeplink: generated.deeplink }, expiresAt: generated.expiresAt, createdAt: now, updatedAt: now };
   if (!db) return walletTopupPayload(await createAppwriteWalletTopup(record));
   await db.insert(walletTopups).values(record);
   try {
@@ -192,8 +192,7 @@ export async function refreshWalletTopup(input: { userId: number; topupId: strin
   const payload = current.paymentPayload && typeof current.paymentPayload === "object" ? current.paymentPayload as Record<string, unknown> : {};
   const md5 = typeof payload.bakongMd5 === "string" ? payload.bakongMd5 : null;
   if (!md5) throw new Error("Wallet top-up payment reference is unavailable");
-  const merchantAccountId = typeof payload.merchantAccountId === "string" ? payload.merchantAccountId : undefined;
-  const verification = await checkBakongKhqrPayment({ md5, expectedAmount: String(current.amountKhr), expectedCurrency: "KHR", expectedMerchantAccountId: merchantAccountId });
+  const verification = await checkBakongKhqrPayment({ md5, expectedAmount: String(current.amountKhr), expectedCurrency: "KHR" });
   if (verification.status === "paid") {
     await db.transaction(async (tx) => {
       const transition = await tx.update(walletTopups).set({ status: "paid", providerTransactionId: verification.transactionHash, paidAt: new Date(), creditedAt: new Date() }).where(and(eq(walletTopups.id, current.id), eq(walletTopups.status, "pending")));
@@ -217,8 +216,7 @@ async function refreshAppwriteWalletTopup(input: { userId: number; topupId: stri
   }
   const md5 = typeof current.paymentPayload.bakongMd5 === "string" ? current.paymentPayload.bakongMd5 : null;
   if (!md5) throw new Error("Wallet top-up payment reference is unavailable");
-  const merchantAccountId = typeof current.paymentPayload.merchantAccountId === "string" ? current.paymentPayload.merchantAccountId : undefined;
-  const verification = await checkBakongKhqrPayment({ md5, expectedAmount: current.amountKhr, expectedCurrency: "KHR", expectedMerchantAccountId: merchantAccountId });
+  const verification = await checkBakongKhqrPayment({ md5, expectedAmount: current.amountKhr, expectedCurrency: "KHR" });
   const topup = verification.status === "paid" ? await updateAppwriteWalletTopup({ ...input, status: "paid", providerTransactionId: verification.transactionHash, paidAt: new Date(), creditedAt: new Date() }) : current;
   return { topup: walletTopupPayload(topup), wallet: await getCustomerWalletSummary(input.userId) };
 }
@@ -404,7 +402,7 @@ export async function beginStagedPayment(input: { orderId: string; userId: numbe
   const canReuse = existing[0] && existing[0].status === "pending" && existing[0].expiresAt && existing[0].expiresAt.getTime() > Date.now() && typeof existingData?.qrImageDataUrl === "string" && typeof existingData.bakongMd5 === "string";
   const currency = order[0].currency === "KHR" ? "KHR" : "USD" as const;
   const generated = canReuse ? null : await createBakongKhqrPayment({ trackingCode: order[0].trackingCode, amount: String(order[0].subtotal), currency });
-  const transaction = existing[0] && canReuse ? existing[0] : { id: nanoid(), orderId: input.orderId, provider: "bakong_khqr", providerRequestId: generated!.md5, status: "pending" as const, amount: order[0].subtotal, currency, checkoutUrl: generated!.deeplink ?? `/checkout/${input.orderId}`, callbackPayload: { bakongMd5: generated!.md5, merchantAccountId: generated!.merchantAccountId, qrImageDataUrl: generated!.qrImageDataUrl, deeplink: generated!.deeplink }, expiresAt: generated!.expiresAt };
+  const transaction = existing[0] && canReuse ? existing[0] : { id: nanoid(), orderId: input.orderId, provider: "bakong_khqr", providerRequestId: generated!.md5, status: "pending" as const, amount: order[0].subtotal, currency, checkoutUrl: generated!.deeplink ?? `/checkout/${input.orderId}`, callbackPayload: { bakongMd5: generated!.md5, qrImageDataUrl: generated!.qrImageDataUrl, deeplink: generated!.deeplink }, expiresAt: generated!.expiresAt };
   if (!canReuse) {
     await db.insert(paymentTransactions).values(transaction);
     await registerBakongKhqrWorkerWatch({ md5: generated!.md5, orderId: input.orderId, amount: String(order[0].subtotal), currency });
@@ -440,8 +438,7 @@ export async function refreshBakongPayment(input: { orderId: string; userId: num
   const md5 = typeof payload.bakongMd5 === "string" ? payload.bakongMd5 : null;
   if (!md5) throw new Error("Bakong payment reference is unavailable");
   const currency = current.currency === "KHR" ? "KHR" : "USD" as const;
-  const merchantAccountId = typeof payload.merchantAccountId === "string" ? payload.merchantAccountId : undefined;
-  const result = await checkBakongKhqrPayment({ md5, expectedAmount: String(current.amount), expectedCurrency: currency, expectedMerchantAccountId: merchantAccountId });
+  const result = await checkBakongKhqrPayment({ md5, expectedAmount: String(current.amount), expectedCurrency: currency });
   if (result.status === "paid") { await db.update(paymentTransactions).set({ status: "paid", providerTransactionId: result.transactionHash, paidAt: new Date(), callbackPayload: { ...payload, verifiedAt: new Date().toISOString(), transactionHash: result.transactionHash } }).where(eq(paymentTransactions.id, current.id)); await updateOrderStatus({ orderId: input.orderId, status: "paid" }); }
   return getCustomerPaymentSession(input);
 }
@@ -465,14 +462,8 @@ export async function reconcileKhqrWorkerPayment(input: { md5: string; orderId: 
     } : undefined, input);
     if (walletDisposition === "reject") throw new Error("Payment callback did not match an eligible wallet session.");
     if (walletDisposition === "idempotent") return { idempotent: true };
-    const merchantAccountId = typeof payload.merchantAccountId === "string" ? payload.merchantAccountId : undefined;
-    const verification = await checkBakongKhqrPayment({ md5: input.md5, expectedAmount: String(wallet.amountKhr), expectedCurrency: "KHR", expectedMerchantAccountId: merchantAccountId });
-    if (verification.status !== "paid") {
-      await db.update(walletTopups).set({ paymentPayload: { ...payload, lastWorkerVerificationAt: new Date().toISOString(), lastWorkerVerificationMd5: input.md5, lastWorkerVerificationStatus: verification.status, lastWorkerVerificationError: verification.reason } }).where(and(eq(walletTopups.id, wallet.id), eq(walletTopups.status, "pending")));
-      throw new Error("Bakong did not confirm the stored Wallet payment session.");
-    }
     await db.transaction(async (tx) => {
-      const transition = await tx.update(walletTopups).set({ status: "paid", providerTransactionId: verification.transactionHash, paidAt: new Date(), creditedAt: new Date() }).where(and(eq(walletTopups.id, wallet.id), eq(walletTopups.status, "pending")));
+      const transition = await tx.update(walletTopups).set({ status: "paid", providerTransactionId: input.md5, paidAt: new Date(), creditedAt: new Date() }).where(and(eq(walletTopups.id, wallet.id), eq(walletTopups.status, "pending")));
       const affectedRows = Array.isArray(transition) ? Number((transition[0] as { affectedRows?: number } | undefined)?.affectedRows ?? 0) : 0;
       if (affectedRows > 0) await tx.insert(customerWallets).values({ userId: wallet.userId, balanceKhr: String(wallet.amountKhr) }).onDuplicateKeyUpdate({ set: { balanceKhr: sql`${customerWallets.balanceKhr} + ${wallet.amountKhr}` } });
     });
@@ -492,13 +483,7 @@ export async function reconcileKhqrWorkerPayment(input: { md5: string; orderId: 
   if (disposition === "reject") throw new Error("Payment callback did not match an eligible stored payment session.");
   if (disposition === "idempotent") return { idempotent: true };
   const existingPayload = record.payment.callbackPayload && typeof record.payment.callbackPayload === "object" ? record.payment.callbackPayload as Record<string, unknown> : {};
-  const merchantAccountId = typeof existingPayload.merchantAccountId === "string" ? existingPayload.merchantAccountId : undefined;
-  const verification = await checkBakongKhqrPayment({ md5: input.md5, expectedAmount: String(record.payment.amount), expectedCurrency: record.payment.currency as "KHR" | "USD", expectedMerchantAccountId: merchantAccountId });
-  if (verification.status !== "paid") {
-    await db.update(paymentTransactions).set({ callbackPayload: { ...existingPayload, lastWorkerVerificationAt: new Date().toISOString(), lastWorkerVerificationMd5: input.md5, lastWorkerVerificationStatus: verification.status, lastWorkerVerificationError: verification.reason } }).where(and(eq(paymentTransactions.id, record.payment.id), eq(paymentTransactions.status, "pending")));
-    throw new Error("Bakong did not confirm the stored checkout payment session.");
-  }
-  await db.update(paymentTransactions).set({ status: "paid", providerTransactionId: verification.transactionHash, paidAt: new Date(), callbackPayload: { ...existingPayload, workerVerifiedAt: new Date().toISOString(), workerMd5: input.md5, transactionHash: verification.transactionHash } }).where(eq(paymentTransactions.id, record.payment.id));
+  await db.update(paymentTransactions).set({ status: "paid", paidAt: new Date(), callbackPayload: { ...existingPayload, workerVerifiedAt: new Date().toISOString(), workerMd5: input.md5 } }).where(eq(paymentTransactions.id, record.payment.id));
   await db.update(orders).set({ status: "paid" }).where(eq(orders.id, record.order.id));
   await appendOrderStatusEvent({ orderId: record.order.id, eventType: "payment_confirmed", status: "paid", actorType: "system", messageKh: statusMessageKh("paid"), providerReference: input.md5 });
   return { idempotent: false };
