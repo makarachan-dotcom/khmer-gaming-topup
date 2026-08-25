@@ -297,3 +297,4 @@
 - [x] Cache-fresh verify the latest checkpoint on the official zurs.me domain after the user’s recheck request.
 - [x] Retry HTTPS issuance and public reachability after the user’s Oracle Cloud ingress remediation.
 - [x] Investigate the user-reported stale zurs.me view using cache-bypass official-domain checks.
+- [ ] Rotate and apply one matching high-entropy KHQR worker callback secret to both the deployed website and VPS worker, then verify a correctly signed non-financial probe reaches reconciliation checks.
