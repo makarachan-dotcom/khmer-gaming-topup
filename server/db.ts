@@ -219,6 +219,31 @@ export async function getActiveWalletTopup(input: { userId: number }) {
   return current ? walletTopupPayload(current) : null;
 }
 
+export async function getLatestWalletVerification(input: { userId: number }) {
+  const db = await getDb();
+  if (!db) return null;
+  const current = (await db.select().from(walletTopups).where(eq(walletTopups.userId, input.userId)).orderBy(desc(walletTopups.createdAt)).limit(1))[0];
+  if (!current) return null;
+  const payload = current.paymentPayload && typeof current.paymentPayload === "object" ? current.paymentPayload as Record<string, unknown> : {};
+  const md5 = typeof payload.bakongMd5 === "string" ? payload.bakongMd5 : null;
+  let providerStatus: "paid" | "unpaid" | "unavailable" = "unavailable";
+  if (md5) {
+    try {
+      const verification = await checkBakongKhqrPayment({ md5, expectedAmount: String(current.amountKhr), expectedCurrency: current.currency === "USD" ? "USD" : "KHR" });
+      providerStatus = verification.status;
+    } catch { /* The owner surface reports only a safe unavailable outcome. */ }
+  }
+  return {
+    status: current.status,
+    amount: String(current.amountKhr),
+    currency: current.currency === "USD" ? "USD" as const : "KHR" as const,
+    providerStatus,
+    paidAt: current.paidAt,
+    creditedAt: current.creditedAt,
+    expiresAt: current.expiresAt,
+  };
+}
+
 export async function getWalletTopupReceipt(input: { userId: number; topupId: string }) {
   const db = await getDb();
   const current = db ? (await db.select().from(walletTopups).where(and(eq(walletTopups.id, input.topupId), eq(walletTopups.userId, input.userId), eq(walletTopups.status, "paid"))).limit(1))[0] : isAppwriteStoreConfigured() ? await getAppwriteWalletTopup(input) : undefined;
