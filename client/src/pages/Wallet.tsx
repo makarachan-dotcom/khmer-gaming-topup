@@ -51,9 +51,11 @@ export default function Wallet() {
 
   useEffect(() => {
     if (!topupId || !waiting || countdown.remaining <= 0) return;
-    const timer = window.setInterval(() => session.refetch(), 10_000);
+    const timer = window.setInterval(() => {
+      if (!refresh.isPending) refresh.mutate({ topupId, source: "automatic" });
+    }, 10_000);
     return () => window.clearInterval(timer);
-  }, [topupId, waiting, countdown.remaining, session]);
+  }, [topupId, waiting, countdown.remaining, refresh]);
 
   useEffect(() => { if (paid) setSuccessOpen(true); }, [paid]);
 

@@ -224,7 +224,7 @@ export async function getWalletTopupReceipt(input: { userId: number; topupId: st
   };
 }
 
-export async function refreshWalletTopup(input: { userId: number; topupId: string }) {
+export async function refreshWalletTopup(input: { userId: number; topupId: string; source?: "manual" | "automatic" }) {
   const db = await getDb();
   if (!db) return refreshAppwriteWalletTopup(input);
   const rows = await db.select().from(walletTopups).where(and(eq(walletTopups.id, input.topupId), eq(walletTopups.userId, input.userId))).limit(1);
@@ -236,9 +236,11 @@ export async function refreshWalletTopup(input: { userId: number; topupId: strin
     await db.update(walletTopups).set({ status: "expired", activeSessionKey: null }).where(and(eq(walletTopups.id, current.id), eq(walletTopups.status, "pending")));
     return { topup: await getWalletTopupSession(input), wallet: await getCustomerWalletSummary(input.userId) };
   }
-  const increment = await db.update(walletTopups).set({ manualCheckCount: sql`${walletTopups.manualCheckCount} + 1` }).where(and(eq(walletTopups.id, current.id), eq(walletTopups.status, "pending"), lt(walletTopups.manualCheckCount, 2)));
-  const incremented = Array.isArray(increment) ? Number((increment[0] as { affectedRows?: number } | undefined)?.affectedRows ?? 0) : 0;
-  if (incremented !== 1) throw new Error("Manual payment status checks are limited to two per payment session.");
+  if ((input.source ?? "manual") === "manual") {
+    const increment = await db.update(walletTopups).set({ manualCheckCount: sql`${walletTopups.manualCheckCount} + 1` }).where(and(eq(walletTopups.id, current.id), eq(walletTopups.status, "pending"), lt(walletTopups.manualCheckCount, 2)));
+    const incremented = Array.isArray(increment) ? Number((increment[0] as { affectedRows?: number } | undefined)?.affectedRows ?? 0) : 0;
+    if (incremented !== 1) throw new Error("Manual payment status checks are limited to two per payment session.");
+  }
   const payload = current.paymentPayload && typeof current.paymentPayload === "object" ? current.paymentPayload as Record<string, unknown> : {};
   const md5 = typeof payload.bakongMd5 === "string" ? payload.bakongMd5 : null;
   if (!md5) throw new Error("Wallet top-up payment reference is unavailable");
@@ -257,7 +259,7 @@ export async function refreshWalletTopup(input: { userId: number; topupId: strin
   return { topup: await getWalletTopupSession(input), wallet: await getCustomerWalletSummary(input.userId) };
 }
 
-async function refreshAppwriteWalletTopup(input: { userId: number; topupId: string }) {
+async function refreshAppwriteWalletTopup(input: { userId: number; topupId: string; source?: "manual" | "automatic" }) {
   if (!isAppwriteStoreConfigured()) throw new Error("Wallet top-up ledger is unavailable");
   const current = await getAppwriteWalletTopup(input);
   if (!current) throw new Error("Wallet top-up session was not found");
@@ -266,7 +268,7 @@ async function refreshAppwriteWalletTopup(input: { userId: number; topupId: stri
     const topup = await updateAppwriteWalletTopup({ ...input, status: "expired" });
     return { topup: walletTopupPayload(topup), wallet: await getCustomerWalletSummary(input.userId) };
   }
-  await recordAppwriteWalletManualCheck(input);
+  if ((input.source ?? "manual") === "manual") await recordAppwriteWalletManualCheck(input);
   const md5 = typeof current.paymentPayload.bakongMd5 === "string" ? current.paymentPayload.bakongMd5 : null;
   if (!md5) throw new Error("Wallet top-up payment reference is unavailable");
   const verification = await checkBakongKhqrPayment({ md5, expectedAmount: current.amountKhr, expectedCurrency: current.currency });

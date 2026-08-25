@@ -1,5 +1,7 @@
 # Project TODO
 
+- [x] Diagnose and repair the Wallet KHQR automatic status refresh when a user-paid QR remains pending.
+- [ ] Verify the affected Wallet session is reconciled only after exact worker/provider amount and currency validation, with public Payment Control remaining off.
 - [x] Add a privacy-safe paid-success modal with restrained confirmation motion and receipt view/download actions.
 - [x] Add protected receipt data and a customer-only receipt view/download flow without exposing QR payloads, hashes, or provider references.
 - [x] Extend paid-success popup and receipt actions to verified Wallet top-ups.
