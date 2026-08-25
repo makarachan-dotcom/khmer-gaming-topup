@@ -10,6 +10,8 @@ const bakongEnv = {
   BAKONG_STORE_LABEL: "ZURS",
 };
 
+const paymentInput = { md5: "safe-md5", expectedAmount: "500", expectedCurrency: "KHR" as const };
+
 describe("Bakong KHQR response handling", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -20,6 +22,26 @@ describe("Bakong KHQR response handling", () => {
     Object.assign(process.env, bakongEnv);
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("<!DOCTYPE html><html><body>Temporary error</body></html>", { status: 502, headers: { "Content-Type": "text/html" } })));
 
-    await expect(checkBakongKhqrPayment({ md5: "safe-md5", expectedAmount: "500", expectedCurrency: "KHR" })).resolves.toMatchObject({ status: "unavailable", reason: "empty_or_malformed_bakong_response" });
+    await expect(checkBakongKhqrPayment(paymentInput)).resolves.toMatchObject({ status: "unavailable", reason: "empty_or_malformed_bakong_response" });
+  });
+
+  it("accepts a successful exact-MD5 response when Bakong omits the optional receiver field", async () => {
+    Object.assign(process.env, bakongEnv);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      responseCode: 0,
+      data: { hash: "h".repeat(64), amount: 500, currency: "KHR" },
+    }), { status: 200, headers: { "Content-Type": "application/json" } })));
+
+    await expect(checkBakongKhqrPayment(paymentInput)).resolves.toMatchObject({ status: "paid", transactionHash: "h".repeat(64) });
+  });
+
+  it("rejects a successful response whose supplied recipient does not match the stored merchant account", async () => {
+    Object.assign(process.env, bakongEnv);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      responseCode: 0,
+      data: { hash: "h".repeat(64), amount: 500, currency: "KHR", toAccountId: "other@bank" },
+    }), { status: 200, headers: { "Content-Type": "application/json" } })));
+
+    await expect(checkBakongKhqrPayment(paymentInput)).resolves.toMatchObject({ status: "unavailable", reason: "bakong_transaction_did_not_match_stored_session" });
   });
 });
