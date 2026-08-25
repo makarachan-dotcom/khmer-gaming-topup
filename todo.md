@@ -4,6 +4,14 @@
 - [ ] Re-run one authoritative merchant-account verification from the same production environment as live payments and resolve the VPS-versus-production preflight mismatch.
 - [ ] Record only safe provider-response fields for the failed 100 KHR test together with the authoritative merchant verification outcome before closing transaction-recognition diagnosis.
 - [ ] Repair verified automatic reconciliation only after the provider can recognize the new dynamic KHQR transaction.
+- [x] Identify an official Bakong technical-support or registered-account channel for resolving the undocumented dynamic transaction lookup outcome; the official Bakong site lists a contact form and the Bakong support email.
+- [x] Prepare a redacted Bakong support request containing only safe response outcomes and implementation facts, with no token, account, QR payload, MD5, hash, or personal data.
+- [x] Obtain owner confirmation immediately before submitting any external Bakong support request.
+- [ ] Submit the approved redacted request through the official Bakong contact form and record only the confirmation outcome.
+- [ ] Diagnose the official contact form’s non-submitting Send action and use an official alternative channel only if submission can be verified safely.
+- [x] Obtain confirmation to send the existing redacted request through the official Bakong support email after the contact form produced no confirmed submission.
+- [x] Send the approved redacted request to the official Bakong support email and record only the send outcome; Gmail displayed Message sent.
+- [x] Populate the official Bakong contact form with the owner-provided registered email and the redacted dynamic-KHQR request, then stop before submission.
 - [ ] Repeat an owner-approved small live test and confirm automatic paid/credit behavior before opening public payments.
 - [x] Audit live worker polling, provider reachability, and signed callback delivery for automatic KHQR confirmation before shop opening.
 - [ ] Run an owner-approved small live payment and confirm website auto-check changes it to paid/credited without manual refresh.
