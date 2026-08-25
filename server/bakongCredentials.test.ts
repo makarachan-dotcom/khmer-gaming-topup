@@ -43,6 +43,8 @@ describe("Bakong KHQR payment payload", () => {
     expect(session.md5).toMatch(/^[a-f0-9]{32}$/i);
     expect(session.qrImageDataUrl).toMatch(/^data:image\/png;base64,/);
     expect(session.deeplink).toBeNull();
-    expect(session.expiresAt.getTime()).toBeGreaterThan(Date.now());
+    const remainingMs = session.expiresAt.getTime() - Date.now();
+    expect(remainingMs).toBeGreaterThan(4 * 60 * 1000);
+    expect(remainingMs).toBeLessThanOrEqual(5 * 60 * 1000);
   });
 });

@@ -38,7 +38,8 @@ export async function createBakongKhqrPayment(input: { trackingCode: string; amo
   const config = getConfig();
   if (!config) throw new Error("Bakong KHQR is not configured");
   const amount = validAmount(input.amount);
-  const expiry = new Date(Date.now() + 15 * 60 * 1000);
+  // Keep QR validity aligned with the worker's five-minute automatic-check window.
+  const expiry = new Date(Date.now() + 5 * 60 * 1000);
   const info = new IndividualInfo(config.accountId, config.merchantName, config.merchantCity, {
     currency: currencyCode(input.currency), amount, mobileNumber: config.merchantPhone, billNumber: input.trackingCode.slice(0, 35), storeLabel: config.storeLabel, terminalLabel: "ZURS", expirationTimestamp: expiry.getTime(),
   });
