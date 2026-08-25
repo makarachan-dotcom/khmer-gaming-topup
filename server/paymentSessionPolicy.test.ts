@@ -24,16 +24,20 @@ describe("five-minute KHQR payment-session policy", () => {
     expect(database).toContain("lt(paymentTransactions.manualCheckCount, 2)");
     expect(database).toContain("activeSessionKey: db ? `wallet:${input.userId}` : null");
     expect(database).toContain("requireNoOtherOpenPayment");
+    expect(database).toContain("export async function getActiveWalletTopup");
     expect(database).not.toContain("recoverExpiredWalletTopupAfterVerifiedPayment");
     expect(database).not.toContain("prepareExpiredWalletTopupForWorkerRecovery");
     expect(routers).not.toContain("recoverExpiredTopup: ownerProcedure");
     expect(routers).not.toContain("prepareWorkerRecovery: ownerProcedure");
+    expect(routers).toContain("activeTopup: protectedProcedure");
   });
 
   it("renders bounded automatic checking and the two-check allowance in both payment screens", () => {
     const wallet = projectFile("client/src/pages/Wallet.tsx");
     const checkout = projectFile("client/src/pages/Checkout.tsx");
     expect(wallet).toContain('refresh.mutate({ topupId, source: "automatic" })');
+    expect(wallet).toContain("trpc.wallet.activeTopup.useQuery");
+    expect(wallet).toContain("setTopupId(restored.data.id)");
     expect(wallet).toContain("active.manualChecksRemaining}/2");
     expect(wallet).toContain("USD · ដុល្លារ");
     expect(checkout).toContain("session.refetch(), 10_000");

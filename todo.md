@@ -15,6 +15,7 @@
 - [x] Deferred at the owner's request: do not alter the previous expired QR.
 - [ ] Complete a new owner-controlled KHQR payment test and verify automatic confirmation succeeds through the real worker/provider path.
 - [ ] Verify only safe fields for the new test (status, amount, currency, paidAt, creditedAt) and confirm Public Payment Control remains OFF afterward.
+- [ ] Make the fresh controlled-test QR available only in the owner-authenticated Wallet session; do not send its QR image, payload, or deeplink through chat.
 - [x] Publish the new merchant-preflight and expired-session safeguards to GitHub/Vercel, then verify official www.zurs.me reflects the updated readiness behavior while public payment remains disabled.
 - [x] Add a short-lived cached Bakong merchant preflight gate that blocks new customer payment sessions when merchant verification fails, without affecting existing reconciliation or callbacks.
 - [x] Distinguish Bakong’s documented account-not-found response from an undocumented rejected preflight outcome without assigning an unsupported cause or exposing merchant details.

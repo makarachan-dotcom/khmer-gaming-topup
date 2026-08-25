@@ -53,6 +53,7 @@ export const appRouter = router({
   wallet: router({
     summary: protectedProcedure.query(({ ctx }) => db.getCustomerWalletSummary(ctx.user.id)),
     topupAvailability: protectedProcedure.query(() => db.getWalletTopupAvailability()),
+    activeTopup: protectedProcedure.query(({ ctx }) => db.getActiveWalletTopup({ userId: ctx.user.id })),
     beginTopup: protectedProcedure.input(z.object({ amount: z.string().regex(/^\d+(?:\.\d{1,2})?$/), currency: z.enum(["KHR", "USD"]) })).mutation(({ ctx, input }) => db.beginWalletTopup({ userId: ctx.user.id, ...input })),
     topupSession: protectedProcedure.input(z.object({ topupId: z.string().min(4).max(64) })).query(({ ctx, input }) => db.getWalletTopupSession({ userId: ctx.user.id, ...input })),
     receipt: protectedProcedure.input(z.object({ topupId: z.string().min(4).max(64) })).query(({ ctx, input }) => db.getWalletTopupReceipt({ userId: ctx.user.id, ...input })),

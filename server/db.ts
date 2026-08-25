@@ -207,6 +207,18 @@ export async function getWalletTopupSession(input: { userId: number; topupId: st
   return walletTopupPayload(current);
 }
 
+export async function getActiveWalletTopup(input: { userId: number }) {
+  const db = await getDb();
+  if (!db) {
+    const current = isAppwriteStoreConfigured() ? await getAppwriteActiveWalletTopup(input.userId) : undefined;
+    return current ? walletTopupPayload(current as never) : null;
+  }
+  const now = new Date();
+  await db.update(walletTopups).set({ status: "expired", activeSessionKey: null }).where(and(eq(walletTopups.userId, input.userId), eq(walletTopups.status, "pending"), lt(walletTopups.expiresAt, now)));
+  const current = (await db.select().from(walletTopups).where(and(eq(walletTopups.userId, input.userId), eq(walletTopups.status, "pending"), gt(walletTopups.expiresAt, now))).limit(1))[0];
+  return current ? walletTopupPayload(current) : null;
+}
+
 export async function getWalletTopupReceipt(input: { userId: number; topupId: string }) {
   const db = await getDb();
   const current = db ? (await db.select().from(walletTopups).where(and(eq(walletTopups.id, input.topupId), eq(walletTopups.userId, input.userId), eq(walletTopups.status, "paid"))).limit(1))[0] : isAppwriteStoreConfigured() ? await getAppwriteWalletTopup(input) : undefined;
