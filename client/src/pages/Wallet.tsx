@@ -39,6 +39,8 @@ export default function Wallet() {
   const begin = trpc.wallet.beginTopup.useMutation({ onSuccess: (topup) => setTopupId(topup.id) });
   const utils = trpc.useUtils();
   const refresh = trpc.wallet.refreshTopup.useMutation({ onSuccess: async () => { await utils.wallet.summary.invalidate(); await utils.wallet.activeTopup.invalidate(); if (topupId) await session.refetch(); } });
+  const refetchSession = session.refetch;
+  const sessionIsFetching = session.isFetching;
   const active = session.data ?? begin.data ?? restored.data ?? null;
   const status = active?.status;
   const waiting = status === "pending";
@@ -55,12 +57,16 @@ export default function Wallet() {
   }, [topupId, restored.data?.id]);
 
   useEffect(() => {
-    if (!topupId || !waiting || countdown.remaining <= 0) return;
+    if (!topupId || !waiting) return;
     const timer = window.setInterval(() => {
-      if (!refresh.isPending) refresh.mutate({ topupId, source: "automatic" });
+      if (!sessionIsFetching) {
+        void refetchSession().then((result) => {
+          if (result.data?.status === "paid") void utils.wallet.summary.invalidate();
+        });
+      }
     }, 10_000);
     return () => window.clearInterval(timer);
-  }, [topupId, waiting, countdown.remaining, refresh]);
+  }, [topupId, waiting, sessionIsFetching, refetchSession, utils]);
 
   useEffect(() => { if (paid) setSuccessOpen(true); }, [paid]);
 

@@ -20,7 +20,7 @@ describe("five-minute KHQR payment-session policy", () => {
     expect(schema).toContain("manualCheckCount: int(\"manualCheckCount\").default(0).notNull()");
     expect(schema).toContain("activeSessionKey: varchar(\"activeSessionKey\", { length: 64 })");
     expect(database).toContain("lt(walletTopups.manualCheckCount, 2)");
-    expect(database).toContain('if ((input.source ?? "manual") === "manual")');
+    expect(database).toContain("const increment = await db.update(walletTopups)");
     expect(database).toContain("lt(paymentTransactions.manualCheckCount, 2)");
     expect(database).toContain("activeSessionKey: db ? `wallet:${input.userId}` : null");
     expect(database).toContain("requireNoOtherOpenPayment");
@@ -35,12 +35,13 @@ describe("five-minute KHQR payment-session policy", () => {
   it("renders bounded automatic checking and the two-check allowance in both payment screens", () => {
     const wallet = projectFile("client/src/pages/Wallet.tsx");
     const checkout = projectFile("client/src/pages/Checkout.tsx");
-    expect(wallet).toContain('refresh.mutate({ topupId, source: "automatic" })');
+    expect(wallet).toContain("refetchSession()");
+    expect(wallet).not.toContain('source: "automatic"');
     expect(wallet).toContain("trpc.wallet.activeTopup.useQuery");
     expect(wallet).toContain("setTopupId(restored.data.id)");
     expect(wallet).toContain("active.manualChecksRemaining}/2");
     expect(wallet).toContain("USD · ដុល្លារ");
-    expect(checkout).toContain("session.refetch(), 10_000");
+    expect(checkout).toContain("refetchPaymentSession()");
     expect(checkout).toContain("payment.manualChecksRemaining}/2");
     expect(checkout).toContain("រយៈពេល 5 នាទី");
   });

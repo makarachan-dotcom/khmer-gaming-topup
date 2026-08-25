@@ -23,6 +23,7 @@ export default function Checkout() {
   const orderId = location.split("/").pop() ?? "";
   const session = trpc.orders.paymentSession.useQuery({ orderId }, { enabled: orderId.length >= 4 });
   const refresh = trpc.orders.refreshPayment.useMutation({ onSuccess: () => session.refetch() });
+  const refetchPaymentSession = session.refetch;
   const payment = session.data?.payment;
   const receipt = trpc.orders.receipt.useQuery({ orderId }, { enabled: payment?.status === "paid" });
   const [successOpen, setSuccessOpen] = useState(false);
@@ -30,7 +31,7 @@ export default function Checkout() {
   const countdown = useCountdown(payment?.expiresAt, waitingForBakong);
 
   useEffect(() => { if (payment?.status === "paid") setSuccessOpen(true); }, [payment?.status]);
-  useEffect(() => { if (!waitingForBakong || refresh.isPending || countdown.seconds <= 0) return; const timer = window.setInterval(() => session.refetch(), 10_000); return () => window.clearInterval(timer); }, [waitingForBakong, refresh.isPending, countdown.seconds, session]);
+  useEffect(() => { if (!waitingForBakong || refresh.isPending) return; const timer = window.setInterval(() => { void refetchPaymentSession(); }, 10_000); return () => window.clearInterval(timer); }, [waitingForBakong, refresh.isPending, refetchPaymentSession]);
 
   const amount = session.data ? `${session.data.order.currency === "USD" ? "$" : "៛ "}${Number(session.data.order.subtotal).toFixed(session.data.order.currency === "USD" ? 2 : 0)}` : "";
   const openReceipt = () => { setSuccessOpen(false); setLocation(`/receipt/${encodeURIComponent(orderId)}`); };
