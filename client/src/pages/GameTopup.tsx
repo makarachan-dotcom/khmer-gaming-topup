@@ -179,8 +179,9 @@ function VerifiedIdentityStatus({ playerName, country, fields }: { playerName: s
     const anchor = anchorRef.current;
     if (!anchor) return;
     const updateCompactState = () => {
-      const shouldCompact = anchor.getBoundingClientRect().bottom <= 76;
-      if (shouldCompact && !compact) {
+      const isMobile = window.matchMedia("(max-width: 767px)").matches;
+      const shouldCompact = isMobile && anchor.getBoundingClientRect().bottom <= 76;
+      if (shouldCompact) {
         const values = Array.from(anchor.closest("form")?.querySelectorAll<HTMLInputElement>("input") ?? []).map((input) => input.value.trim()).filter(Boolean);
         setCompactFields(values.length ? Object.fromEntries(values.map((value, index) => [`id-${index}`, value])) : fields);
       }
@@ -190,7 +191,7 @@ function VerifiedIdentityStatus({ playerName, country, fields }: { playerName: s
     window.addEventListener("scroll", updateCompactState, { passive: true });
     window.addEventListener("resize", updateCompactState);
     return () => { window.removeEventListener("scroll", updateCompactState); window.removeEventListener("resize", updateCompactState); };
-  }, [compact, fields]);
+  }, [fields]);
   const editIdentity = () => {
     const form = anchorRef.current?.closest("form");
     const firstInput = form?.querySelector<HTMLInputElement>("input[required], input");
