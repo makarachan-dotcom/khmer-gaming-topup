@@ -7,12 +7,8 @@ const apiBaseUrl = "https://api-bakong.nbc.gov.kh";
 const zursLogoUrl = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/kBXeVXEnNVEuNZKS.jpg";
 
 type Currency = "USD" | "KHR";
-export const khqrPaymentWindowMs = 5 * 60 * 1000;
 type BakongConfig = { token: string; accountId: string; merchantName: string; merchantCity: string; merchantPhone: string; storeLabel: string };
 type BakongResponse = { responseCode?: number; errorCode?: number; data?: { shortLink?: string; hash?: string; amount?: string | number; currency?: string; toAccountId?: string } };
-export type BakongMerchantPreflightStatus = "verified" | "account_not_found" | "rejected" | "configuration_missing" | "unavailable";
-const merchantPreflightCacheTtlMs = 60_000;
-let merchantPreflightCache: { status: BakongMerchantPreflightStatus; checkedAt: number } | null = null;
 
 function getConfig(): BakongConfig | null {
   const token = process.env.BAKONG_API_TOKEN?.trim();
@@ -25,47 +21,8 @@ function getConfig(): BakongConfig | null {
   return { token, accountId, merchantName, merchantCity, merchantPhone, storeLabel };
 }
 
-export function resetBakongMerchantPreflightCache() {
-  merchantPreflightCache = null;
-}
-
-function getCachedMerchantPreflight() {
-  if (!merchantPreflightCache || Date.now() - merchantPreflightCache.checkedAt >= merchantPreflightCacheTtlMs) return null;
-  return merchantPreflightCache.status;
-}
-
-function rememberMerchantPreflight(status: BakongMerchantPreflightStatus) {
-  // Keep a short, process-local cache to avoid calling Bakong for every availability render.
-  if (status !== "unavailable") merchantPreflightCache = { status, checkedAt: Date.now() };
-  return status;
-}
-
-export async function getBakongPaymentReadiness() {
-  if (!getConfig()) return { ready: false, reason: "automatic_payment_pending" as const };
-  const status = getCachedMerchantPreflight() ?? await verifyBakongMerchantAccount();
-  return status === "verified"
-    ? { ready: true, reason: "ready" as const }
-    : { ready: false, reason: "merchant_unverified" as const };
-}
-
-export async function verifyBakongMerchantAccount() {
-  const config = getConfig();
-  if (!config) return rememberMerchantPreflight("configuration_missing");
-  try {
-    const response = await fetch(`${apiBaseUrl}/v1/check_bakong_account`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${config.token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ accountId: config.accountId }),
-      signal: AbortSignal.timeout(10_000),
-    });
-    const payload = await readBakongJson(response);
-    if (response.ok && payload?.responseCode === 0) return rememberMerchantPreflight("verified");
-    if (response.ok && payload?.responseCode === 1 && payload.errorCode === 11) return rememberMerchantPreflight("account_not_found");
-    if (response.ok && payload?.responseCode === 1) return rememberMerchantPreflight("rejected");
-    return rememberMerchantPreflight("unavailable");
-  } catch {
-    return rememberMerchantPreflight("unavailable");
-  }
+export function getBakongPaymentReadiness() {
+  return getConfig() ? { ready: true, reason: "ready" as const } : { ready: false, reason: "automatic_payment_pending" as const };
 }
 
 function currencyCode(currency: Currency) { return currency === "KHR" ? khqrData.currency.khr : khqrData.currency.usd; }
@@ -81,7 +38,7 @@ export async function createBakongKhqrPayment(input: { trackingCode: string; amo
   const config = getConfig();
   if (!config) throw new Error("Bakong KHQR is not configured");
   const amount = validAmount(input.amount);
-  const expiry = new Date(Date.now() + khqrPaymentWindowMs);
+  const expiry = new Date(Date.now() + 15 * 60 * 1000);
   const info = new IndividualInfo(config.accountId, config.merchantName, config.merchantCity, {
     currency: currencyCode(input.currency), amount, mobileNumber: config.merchantPhone, billNumber: input.trackingCode.slice(0, 35), storeLabel: config.storeLabel, terminalLabel: "ZURS", expirationTimestamp: expiry.getTime(),
   });
@@ -108,8 +65,7 @@ export async function checkBakongKhqrPayment(input: { md5: string; expectedAmoun
   if (!response.ok || payload.responseCode !== 0 || !payload.data) return { status: payload.errorCode === 1 ? "unpaid" as const : "unavailable" as const };
   const matchesAmount = Math.abs(Number(payload.data.amount) - Number(input.expectedAmount)) < 0.00001;
   const matchesCurrency = payload.data.currency === input.expectedCurrency;
-  const returnedReceiver = payload.data.toAccountId?.trim().toLowerCase();
-  const matchesReceiver = !returnedReceiver || returnedReceiver === config.accountId.toLowerCase();
+  const matchesReceiver = payload.data.toAccountId?.trim().toLowerCase() === config.accountId.toLowerCase();
   if (!matchesAmount || !matchesCurrency || !matchesReceiver || !payload.data.hash) return { status: "unavailable" as const };
   return { status: "paid" as const, transactionHash: payload.data.hash };
 }

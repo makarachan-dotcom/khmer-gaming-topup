@@ -15,7 +15,6 @@ describe("wallet KHQR worker integration", () => {
   it("routes wallet-prefixed worker callbacks through exact wallet reconciliation", () => {
     expect(dbSource).toContain('if (input.orderId.startsWith("wallet:"))');
     expect(dbSource).toContain("getKhqrWalletReconciliationDisposition");
-    expect(dbSource).toContain('const field = wallet.currency === "USD" ? "balanceUsd" : "balanceKhr"');
-    expect(dbSource).toContain("activeSessionKey: null");
+    expect(dbSource).toContain("onDuplicateKeyUpdate({ set: { balanceKhr:");
   });
 });

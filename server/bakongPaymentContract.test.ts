@@ -13,7 +13,6 @@ describe("Bakong KHQR payment contract", () => {
     expect(adapter).toContain('matchesAmount');
     expect(adapter).toContain('matchesCurrency');
     expect(adapter).toContain('matchesReceiver');
-    expect(adapter).toContain('!returnedReceiver || returnedReceiver === config.accountId.toLowerCase()');
     expect(db).toContain('provider: "bakong_khqr"');
     expect(db).toContain('createBakongKhqrPayment');
     expect(db).toContain('checkBakongKhqrPayment');
@@ -28,15 +27,5 @@ describe("Bakong KHQR payment contract", () => {
     expect(checkout).toContain('refresh.mutate({ orderId })');
     expect(checkout).toContain('setInterval');
     expect(checkout).toContain('OutlineLoader');
-  });
-
-  it("provides an owner-only merchant preflight without exposing merchant configuration", () => {
-    const adapter = readFileSync(resolve(process.cwd(), "server/bakongKhqr.ts"), "utf8");
-    const router = readFileSync(resolve(process.cwd(), "server/routers.ts"), "utf8");
-    expect(adapter).toContain('verifyBakongMerchantAccount');
-    expect(adapter).toContain('check_bakong_account');
-    expect(adapter).toContain('merchantPreflightCacheTtlMs');
-    expect(adapter).toContain('merchant_unverified');
-    expect(router).toContain('paymentMerchantPreflight: ownerProcedure');
   });
 });

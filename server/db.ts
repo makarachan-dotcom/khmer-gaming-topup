@@ -1,11 +1,11 @@
-import { and, asc, desc, eq, gt, inArray, lt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, lt, sql } from "drizzle-orm";
 import { createHash, randomBytes } from "node:crypto";
 import { drizzle } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
 import {
   adminRoleAudits, customerWallets, gamePackages, gameProducts, gmailSenderConnections, InsertUser, marketplaceContacts, marketplaceDisclosureRequests, marketplaceEvidenceAccessLogs, marketplaceFavorites, marketplaceFraudReports, marketplaceListings, marketplaceVerificationEvidence, marketplaceVerifications, orders, orderStatusEvents, orderSupportTickets, paymentTransactions, savedPlayerIds, siteContent, smmServices, smmTiers, User, users, walletTopups, welcomeEmailDeliveries,
 } from "../drizzle/schema";
-import { createAppwriteMarketplaceListing, createAppwriteWalletTopup, deleteAppwriteMarketplaceListing, getAppwriteActiveWalletTopup, getAppwriteAdminRoleAudits, getAppwriteCustomerOrders, getAppwriteCustomerPaymentHistory, getAppwritePaymentControl, getAppwriteProviderCatalog, getAppwriteUserByEmail, getAppwriteUserByOpenId, getAppwriteWalletSummary, getAppwriteWalletTopup, isAppwriteStoreConfigured, listAppwriteMarketplaceListings, listAppwriteUsers, recordAppwriteWalletManualCheck, setAppwritePaymentControl, setAppwriteUserRole, syncAppwriteFzrCatalog, syncAppwriteSmmCatalog, updateAppwriteMarketplaceListing, updateAppwriteProviderOffer, updateAppwriteUserDisplayName, updateAppwriteWalletTopup, upsertAppwriteUser } from "./appwriteStore";
+import { createAppwriteMarketplaceListing, createAppwriteWalletTopup, deleteAppwriteMarketplaceListing, getAppwriteAdminRoleAudits, getAppwriteCustomerOrders, getAppwriteCustomerPaymentHistory, getAppwritePaymentControl, getAppwriteProviderCatalog, getAppwriteUserByEmail, getAppwriteUserByOpenId, getAppwriteWalletSummary, getAppwriteWalletTopup, isAppwriteStoreConfigured, listAppwriteMarketplaceListings, listAppwriteUsers, setAppwritePaymentControl, setAppwriteUserRole, syncAppwriteFzrCatalog, syncAppwriteSmmCatalog, updateAppwriteMarketplaceListing, updateAppwriteProviderOffer, updateAppwriteUserDisplayName, updateAppwriteWalletTopup, upsertAppwriteUser } from "./appwriteStore";
 import { buildOrderNumber, isSingleAdminEmail } from "./storefrontDomain";
 import { validateAdminRoleChange } from "./adminRoles";
 import { buildEvidenceRetentionAuditReason, canApproveMarketplaceVerification, hasOnlyOwnedMarketplaceScreenshotKeys, type DisclosureRequestStatus, type FraudReportStatus } from "./marketplaceSafety";
@@ -110,11 +110,11 @@ export async function updateUserDisplayName(input: { user: User; displayName: st
 
 export async function getCustomerWalletSummary(userId: number) {
   const db = await getDb();
-  if (!db) return isAppwriteStoreConfigured() ? getAppwriteWalletSummary(userId) : { balanceKhr: "0.00", balanceUsd: "0.00", currency: "KHR" as const, available: false };
+  if (!db) return isAppwriteStoreConfigured() ? getAppwriteWalletSummary(userId) : { balanceKhr: "0.00", currency: "KHR" as const, available: false };
   const existing = await db.select().from(customerWallets).where(eq(customerWallets.userId, userId)).limit(1);
-  if (existing[0]) return { balanceKhr: String(existing[0].balanceKhr), balanceUsd: String(existing[0].balanceUsd), currency: "KHR" as const, available: true };
-  await db.insert(customerWallets).values({ userId, balanceKhr: "0.00", balanceUsd: "0.00" }).onDuplicateKeyUpdate({ set: { userId } });
-  return { balanceKhr: "0.00", balanceUsd: "0.00", currency: "KHR" as const, available: true };
+  if (existing[0]) return { balanceKhr: String(existing[0].balanceKhr), currency: "KHR" as const, available: true };
+  await db.insert(customerWallets).values({ userId, balanceKhr: "0.00" }).onDuplicateKeyUpdate({ set: { userId } });
+  return { balanceKhr: "0.00", currency: "KHR" as const, available: true };
 }
 
 function buildWalletTopupReference() {
@@ -127,25 +127,14 @@ function walletTopupPayload(row: typeof walletTopups.$inferSelect) {
     id: row.id,
     referenceCode: row.referenceCode,
     status: row.status,
-    amount: String(row.amountKhr),
     amountKhr: String(row.amountKhr),
-    currency: row.currency === "USD" ? "USD" as const : "KHR" as const,
-    manualChecksRemaining: Math.max(0, 2 - row.manualCheckCount),
+    currency: "KHR" as const,
     expiresAt: row.expiresAt,
     paidAt: row.paidAt,
     creditedAt: row.creditedAt,
     qrImageDataUrl: typeof payload.qrImageDataUrl === "string" ? payload.qrImageDataUrl : null,
     deeplink: typeof payload.deeplink === "string" ? payload.deeplink : null,
   };
-}
-
-async function requireNoOtherOpenPayment(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, userId: number, orderId?: string) {
-  const now = new Date();
-  await db.update(walletTopups).set({ status: "expired", activeSessionKey: null }).where(and(eq(walletTopups.userId, userId), eq(walletTopups.status, "pending"), lt(walletTopups.expiresAt, now)));
-  const activeWallet = await db.select({ id: walletTopups.id }).from(walletTopups).where(and(eq(walletTopups.userId, userId), eq(walletTopups.status, "pending"), gt(walletTopups.expiresAt, now))).limit(1);
-  if (activeWallet[0]) throw new Error("Please complete or wait for your current payment session to expire before creating a new payment.");
-  const activeCheckout = await db.select({ id: paymentTransactions.id, orderId: paymentTransactions.orderId }).from(paymentTransactions).innerJoin(orders, eq(paymentTransactions.orderId, orders.id)).where(and(eq(orders.userId, userId), eq(paymentTransactions.status, "pending"), gt(paymentTransactions.expiresAt, now))).limit(1);
-  if (activeCheckout[0] && activeCheckout[0].orderId !== orderId) throw new Error("Please complete or wait for your current payment session to expire before creating a new payment.");
 }
 
 export async function getWalletTopupAvailability() {
@@ -155,36 +144,22 @@ export async function getWalletTopupAvailability() {
   return readiness.ready ? { available: true, reason: null } as const : { available: false, reason: readiness.reason } as const;
 }
 
-export async function beginWalletTopup(input: { userId: number; amount: string; currency: "KHR" | "USD" }) {
+export async function beginWalletTopup(input: { userId: number; amountKhr: string }) {
   await requirePublicPaymentEnabled();
   const db = await getDb();
   if (!db && !isAppwriteStoreConfigured()) throw new Error("Wallet top-up requires the verified transaction ledger. Please try again later.");
-  const amount = Number(input.amount);
-  const validKhr = input.currency === "KHR" && Number.isInteger(amount) && amount >= 100 && amount <= 10_000_000;
-  const validUsd = input.currency === "USD" && Number.isFinite(amount) && amount >= 0.01 && amount <= 10_000;
-  if (!validKhr && !validUsd) throw new Error(input.currency === "USD" ? "Wallet top-up amount must be between 0.01 and 10,000 USD." : "Wallet top-up amount must be between 100 and 10,000,000 KHR.");
-  if (!db) {
-    const existing = await getAppwriteActiveWalletTopup(input.userId);
-    if (existing) return walletTopupPayload(existing as never);
-  } else {
-    const existing = await db.select().from(walletTopups).where(eq(walletTopups.activeSessionKey, `wallet:${input.userId}`)).limit(1);
-    if (existing[0]) return walletTopupPayload(existing[0]);
-    await requireNoOtherOpenPayment(db, input.userId);
-  }
+  const amount = Number(input.amountKhr);
+  if (!Number.isInteger(amount) || amount < 100 || amount > 10_000_000) throw new Error("Wallet top-up amount must be between 100 and 10,000,000 KHR.");
   const referenceCode = buildWalletTopupReference();
-  const generated = await createBakongKhqrPayment({ trackingCode: referenceCode, amount: String(amount), currency: input.currency });
+  const generated = await createBakongKhqrPayment({ trackingCode: referenceCode, amount: String(amount), currency: "KHR" });
   const now = new Date();
-  const record = { id: nanoid(), userId: input.userId, referenceCode, provider: "bakong_khqr", providerRequestId: generated.md5, status: "pending" as const, amountKhr: String(amount), currency: input.currency, manualCheckCount: 0, activeSessionKey: db ? `wallet:${input.userId}` : null, paymentPayload: { bakongMd5: generated.md5, qrImageDataUrl: generated.qrImageDataUrl, deeplink: generated.deeplink }, expiresAt: generated.expiresAt, createdAt: now, updatedAt: now };
+  const record = { id: nanoid(), userId: input.userId, referenceCode, provider: "bakong_khqr", providerRequestId: generated.md5, status: "pending" as const, amountKhr: String(amount), paymentPayload: { bakongMd5: generated.md5, qrImageDataUrl: generated.qrImageDataUrl, deeplink: generated.deeplink }, expiresAt: generated.expiresAt, createdAt: now, updatedAt: now };
   if (!db) return walletTopupPayload(await createAppwriteWalletTopup(record));
-  try { await db.insert(walletTopups).values(record); } catch {
-    const existing = await db.select().from(walletTopups).where(eq(walletTopups.activeSessionKey, `wallet:${input.userId}`)).limit(1);
-    if (existing[0]) return walletTopupPayload(existing[0]);
-    throw new Error("Unable to create a payment session. Please try again.");
-  }
+  await db.insert(walletTopups).values(record);
   try {
-    await registerBakongKhqrWorkerWatch({ md5: generated.md5, orderId: `wallet:${record.id}`, amount: String(amount), currency: input.currency });
+    await registerBakongKhqrWorkerWatch({ md5: generated.md5, orderId: `wallet:${record.id}`, amount: String(amount), currency: "KHR" });
   } catch (error) {
-    await db.update(walletTopups).set({ status: "failed", activeSessionKey: null }).where(and(eq(walletTopups.id, record.id), eq(walletTopups.status, "pending")));
+    await db.update(walletTopups).set({ status: "failed" }).where(and(eq(walletTopups.id, record.id), eq(walletTopups.status, "pending")));
     throw error;
   }
   return walletTopupPayload({ ...record, providerTransactionId: null, paidAt: null, creditedAt: null });
@@ -198,63 +173,8 @@ export async function getWalletTopupSession(input: { userId: number; topupId: st
     return walletTopupPayload(current);
   }
   const rows = await db.select().from(walletTopups).where(and(eq(walletTopups.id, input.topupId), eq(walletTopups.userId, input.userId))).limit(1);
-  const current = rows[0];
-  if (!current) throw new Error("Wallet top-up session was not found");
-  if (current.status === "pending" && current.expiresAt.getTime() <= Date.now()) {
-    await db.update(walletTopups).set({ status: "expired", activeSessionKey: null }).where(and(eq(walletTopups.id, current.id), eq(walletTopups.status, "pending")));
-    return getWalletTopupSession(input);
-  }
-  return walletTopupPayload(current);
-}
-
-export async function getActiveWalletTopup(input: { userId: number }) {
-  const db = await getDb();
-  if (!db) {
-    const current = isAppwriteStoreConfigured() ? await getAppwriteActiveWalletTopup(input.userId) : undefined;
-    return current ? walletTopupPayload(current as never) : null;
-  }
-  const now = new Date();
-  await db.update(walletTopups).set({ status: "expired", activeSessionKey: null }).where(and(eq(walletTopups.userId, input.userId), eq(walletTopups.status, "pending"), lt(walletTopups.expiresAt, now)));
-  const current = (await db.select().from(walletTopups).where(and(eq(walletTopups.userId, input.userId), eq(walletTopups.status, "pending"), gt(walletTopups.expiresAt, now))).limit(1))[0];
-  return current ? walletTopupPayload(current) : null;
-}
-
-export async function getLatestWalletVerification(input: { userId: number }) {
-  const db = await getDb();
-  if (!db) return null;
-  const current = (await db.select().from(walletTopups).where(eq(walletTopups.userId, input.userId)).orderBy(desc(walletTopups.createdAt)).limit(1))[0];
-  if (!current) return null;
-  const providerStatus: "paid" | "unpaid" | "unavailable" = current.status === "paid"
-    ? "paid"
-    : current.status === "pending"
-      ? "unpaid"
-      : "unavailable";
-  return {
-    status: current.status,
-    amount: String(current.amountKhr),
-    currency: current.currency === "USD" ? "USD" as const : "KHR" as const,
-    providerStatus,
-    paidAt: current.paidAt,
-    creditedAt: current.creditedAt,
-    expiresAt: current.expiresAt,
-  };
-}
-
-export async function getWalletTopupReceipt(input: { userId: number; topupId: string }) {
-  const db = await getDb();
-  const current = db ? (await db.select().from(walletTopups).where(and(eq(walletTopups.id, input.topupId), eq(walletTopups.userId, input.userId), eq(walletTopups.status, "paid"))).limit(1))[0] : isAppwriteStoreConfigured() ? await getAppwriteWalletTopup(input) : undefined;
-  if (!current || current.status !== "paid") throw new Error("A wallet receipt is available only after a verified payment.");
-  return {
-    receiptNumber: `ZURS-${current.referenceCode}`,
-    orderNumber: current.referenceCode,
-    trackingCode: current.referenceCode,
-    productName: "ZURS Wallet top-up",
-    amount: String(current.amountKhr),
-    currency: current.currency === "USD" ? "USD" as const : "KHR" as const,
-    orderType: "wallet" as const,
-    paidAt: current.paidAt ?? current.creditedAt ?? current.updatedAt,
-    issuedAt: current.creditedAt ?? current.paidAt ?? current.updatedAt,
-  };
+  if (!rows[0]) throw new Error("Wallet top-up session was not found");
+  return walletTopupPayload(rows[0]);
 }
 
 export async function refreshWalletTopup(input: { userId: number; topupId: string }) {
@@ -266,24 +186,19 @@ export async function refreshWalletTopup(input: { userId: number; topupId: strin
   if (current.status === "paid") return { topup: walletTopupPayload(current), wallet: await getCustomerWalletSummary(input.userId) };
   if (current.status !== "pending") return { topup: walletTopupPayload(current), wallet: await getCustomerWalletSummary(input.userId) };
   if (current.expiresAt.getTime() <= Date.now()) {
-    await db.update(walletTopups).set({ status: "expired", activeSessionKey: null }).where(and(eq(walletTopups.id, current.id), eq(walletTopups.status, "pending")));
+    await db.update(walletTopups).set({ status: "expired" }).where(and(eq(walletTopups.id, current.id), eq(walletTopups.status, "pending")));
     return { topup: await getWalletTopupSession(input), wallet: await getCustomerWalletSummary(input.userId) };
   }
-  const increment = await db.update(walletTopups).set({ manualCheckCount: sql`${walletTopups.manualCheckCount} + 1` }).where(and(eq(walletTopups.id, current.id), eq(walletTopups.status, "pending"), lt(walletTopups.manualCheckCount, 2)));
-  const incremented = Array.isArray(increment) ? Number((increment[0] as { affectedRows?: number } | undefined)?.affectedRows ?? 0) : 0;
-  if (incremented !== 1) throw new Error("Manual payment status checks are limited to two per payment session.");
   const payload = current.paymentPayload && typeof current.paymentPayload === "object" ? current.paymentPayload as Record<string, unknown> : {};
   const md5 = typeof payload.bakongMd5 === "string" ? payload.bakongMd5 : null;
   if (!md5) throw new Error("Wallet top-up payment reference is unavailable");
-  const currency = current.currency === "USD" ? "USD" : "KHR" as const;
-  const verification = await checkBakongKhqrPayment({ md5, expectedAmount: String(current.amountKhr), expectedCurrency: currency });
+  const verification = await checkBakongKhqrPayment({ md5, expectedAmount: String(current.amountKhr), expectedCurrency: "KHR" });
   if (verification.status === "paid") {
     await db.transaction(async (tx) => {
-      const transition = await tx.update(walletTopups).set({ status: "paid", activeSessionKey: null, providerTransactionId: verification.transactionHash, paidAt: new Date(), creditedAt: new Date() }).where(and(eq(walletTopups.id, current.id), eq(walletTopups.status, "pending")));
+      const transition = await tx.update(walletTopups).set({ status: "paid", providerTransactionId: verification.transactionHash, paidAt: new Date(), creditedAt: new Date() }).where(and(eq(walletTopups.id, current.id), eq(walletTopups.status, "pending")));
       const affectedRows = Array.isArray(transition) ? Number((transition[0] as { affectedRows?: number } | undefined)?.affectedRows ?? 0) : 0;
       if (affectedRows > 0) {
-        const field = current.currency === "USD" ? "balanceUsd" : "balanceKhr";
-        await tx.insert(customerWallets).values({ userId: input.userId, balanceKhr: current.currency === "USD" ? "0" : String(current.amountKhr), balanceUsd: current.currency === "USD" ? String(current.amountKhr) : "0" }).onDuplicateKeyUpdate({ set: { [field]: sql`${customerWallets[field]} + ${current.amountKhr}` } });
+        await tx.insert(customerWallets).values({ userId: input.userId, balanceKhr: String(current.amountKhr) }).onDuplicateKeyUpdate({ set: { balanceKhr: sql`${customerWallets.balanceKhr} + ${current.amountKhr}` } });
       }
     });
   }
@@ -299,10 +214,9 @@ async function refreshAppwriteWalletTopup(input: { userId: number; topupId: stri
     const topup = await updateAppwriteWalletTopup({ ...input, status: "expired" });
     return { topup: walletTopupPayload(topup), wallet: await getCustomerWalletSummary(input.userId) };
   }
-  await recordAppwriteWalletManualCheck(input);
   const md5 = typeof current.paymentPayload.bakongMd5 === "string" ? current.paymentPayload.bakongMd5 : null;
   if (!md5) throw new Error("Wallet top-up payment reference is unavailable");
-  const verification = await checkBakongKhqrPayment({ md5, expectedAmount: current.amountKhr, expectedCurrency: current.currency });
+  const verification = await checkBakongKhqrPayment({ md5, expectedAmount: current.amountKhr, expectedCurrency: "KHR" });
   const topup = verification.status === "paid" ? await updateAppwriteWalletTopup({ ...input, status: "paid", providerTransactionId: verification.transactionHash, paidAt: new Date(), creditedAt: new Date() }) : current;
   return { topup: walletTopupPayload(topup), wallet: await getCustomerWalletSummary(input.userId) };
 }
@@ -486,7 +400,6 @@ export async function beginStagedPayment(input: { orderId: string; userId: numbe
   const existing = await db.select().from(paymentTransactions).where(and(eq(paymentTransactions.orderId, input.orderId), eq(paymentTransactions.provider, "bakong_khqr"))).orderBy(desc(paymentTransactions.createdAt)).limit(1);
   const existingData = existing[0]?.callbackPayload && typeof existing[0].callbackPayload === "object" ? existing[0].callbackPayload as Record<string, unknown> : null;
   const canReuse = existing[0] && existing[0].status === "pending" && existing[0].expiresAt && existing[0].expiresAt.getTime() > Date.now() && typeof existingData?.qrImageDataUrl === "string" && typeof existingData.bakongMd5 === "string";
-  if (!canReuse) await requireNoOtherOpenPayment(db, input.userId, input.orderId);
   const currency = order[0].currency === "KHR" ? "KHR" : "USD" as const;
   const generated = canReuse ? null : await createBakongKhqrPayment({ trackingCode: order[0].trackingCode, amount: String(order[0].subtotal), currency });
   const transaction = existing[0] && canReuse ? existing[0] : { id: nanoid(), orderId: input.orderId, provider: "bakong_khqr", providerRequestId: generated!.md5, status: "pending" as const, amount: order[0].subtotal, currency, checkoutUrl: generated!.deeplink ?? `/checkout/${input.orderId}`, callbackPayload: { bakongMd5: generated!.md5, qrImageDataUrl: generated!.qrImageDataUrl, deeplink: generated!.deeplink }, expiresAt: generated!.expiresAt };
@@ -507,32 +420,8 @@ export async function getCustomerPaymentSession(input: { orderId: string; userId
   if (!order[0]) throw new Error("Order not found");
   const payment = await db.select().from(paymentTransactions).where(eq(paymentTransactions.orderId, input.orderId)).orderBy(desc(paymentTransactions.createdAt)).limit(1);
   const current = payment[0];
-  if (current?.status === "pending" && current.expiresAt && current.expiresAt.getTime() <= Date.now()) {
-    await db.update(paymentTransactions).set({ status: "expired" }).where(and(eq(paymentTransactions.id, current.id), eq(paymentTransactions.status, "pending")));
-    await updateOrderStatus({ orderId: input.orderId, status: "expired" });
-    return getCustomerPaymentSession(input);
-  }
   const payload = current?.callbackPayload && typeof current.callbackPayload === "object" ? current.callbackPayload as Record<string, unknown> : {};
-  return { order: order[0], payment: current ? { id: current.id, provider: current.provider, status: current.status, amount: current.amount, currency: current.currency, manualChecksRemaining: Math.max(0, 2 - current.manualCheckCount), checkoutUrl: current.checkoutUrl, expiresAt: current.expiresAt, paidAt: current.paidAt, qrImageDataUrl: typeof payload.qrImageDataUrl === "string" ? payload.qrImageDataUrl : null, deeplink: typeof payload.deeplink === "string" ? payload.deeplink : null } : null };
-}
-
-export async function getCustomerPaymentReceipt(input: { orderId: string; userId: number }) {
-  const db = await getDb();
-  if (!db) throw new Error("Receipt service is unavailable");
-  const rows = await db.select({ order: orders, payment: paymentTransactions }).from(orders).innerJoin(paymentTransactions, eq(paymentTransactions.orderId, orders.id)).where(and(eq(orders.id, input.orderId), eq(orders.userId, input.userId), eq(paymentTransactions.status, "paid"))).orderBy(desc(paymentTransactions.paidAt)).limit(1);
-  const row = rows[0];
-  if (!row || !["paid", "delivered"].includes(row.order.status)) throw new Error("A receipt is available only after a verified payment.");
-  return {
-    receiptNumber: `ZURS-${row.order.orderNumber}`,
-    orderNumber: row.order.orderNumber,
-    trackingCode: row.order.trackingCode,
-    productName: row.order.productName,
-    amount: String(row.payment.amount),
-    currency: row.payment.currency === "KHR" ? "KHR" as const : "USD" as const,
-    orderType: row.order.orderType,
-    paidAt: row.payment.paidAt ?? row.order.updatedAt,
-    issuedAt: row.payment.paidAt ?? row.order.updatedAt,
-  };
+  return { order: order[0], payment: current ? { id: current.id, provider: current.provider, status: current.status, amount: current.amount, currency: current.currency, checkoutUrl: current.checkoutUrl, expiresAt: current.expiresAt, paidAt: current.paidAt, qrImageDataUrl: typeof payload.qrImageDataUrl === "string" ? payload.qrImageDataUrl : null, deeplink: typeof payload.deeplink === "string" ? payload.deeplink : null } : null };
 }
 
 export async function refreshBakongPayment(input: { orderId: string; userId: number }) {
@@ -545,9 +434,6 @@ export async function refreshBakongPayment(input: { orderId: string; userId: num
   if (!current) throw new Error("Bakong payment session not found");
   if (current.status === "paid") return getCustomerPaymentSession(input);
   if (current.expiresAt && current.expiresAt.getTime() <= Date.now()) { await db.update(paymentTransactions).set({ status: "expired" }).where(eq(paymentTransactions.id, current.id)); await updateOrderStatus({ orderId: input.orderId, status: "expired" }); return getCustomerPaymentSession(input); }
-  const increment = await db.update(paymentTransactions).set({ manualCheckCount: sql`${paymentTransactions.manualCheckCount} + 1` }).where(and(eq(paymentTransactions.id, current.id), eq(paymentTransactions.status, "pending"), lt(paymentTransactions.manualCheckCount, 2)));
-  const incremented = Array.isArray(increment) ? Number((increment[0] as { affectedRows?: number } | undefined)?.affectedRows ?? 0) : 0;
-  if (incremented !== 1) throw new Error("Manual payment status checks are limited to two per payment session.");
   const payload = current.callbackPayload && typeof current.callbackPayload === "object" ? current.callbackPayload as Record<string, unknown> : {};
   const md5 = typeof payload.bakongMd5 === "string" ? payload.bakongMd5 : null;
   if (!md5) throw new Error("Bakong payment reference is unavailable");
@@ -572,22 +458,14 @@ export async function reconcileKhqrWorkerPayment(input: { md5: string; orderId: 
       md5: storedMd5,
       walletId: wallet.id,
       amount: wallet.amountKhr,
-      currency: wallet.currency === "USD" ? "USD" as const : "KHR" as const,
       status: wallet.status,
     } : undefined, input);
-    if (wallet?.status === "pending" && wallet.expiresAt.getTime() <= Date.now()) {
-      await db.update(walletTopups).set({ status: "expired", activeSessionKey: null }).where(and(eq(walletTopups.id, wallet.id), eq(walletTopups.status, "pending")));
-      throw new Error("Wallet payment callback arrived after the QR session expired.");
-    }
     if (walletDisposition === "reject") throw new Error("Payment callback did not match an eligible wallet session.");
     if (walletDisposition === "idempotent") return { idempotent: true };
     await db.transaction(async (tx) => {
-      const transition = await tx.update(walletTopups).set({ status: "paid", activeSessionKey: null, providerTransactionId: input.md5, paidAt: new Date(), creditedAt: new Date() }).where(and(eq(walletTopups.id, wallet.id), eq(walletTopups.status, "pending")));
+      const transition = await tx.update(walletTopups).set({ status: "paid", providerTransactionId: input.md5, paidAt: new Date(), creditedAt: new Date() }).where(and(eq(walletTopups.id, wallet.id), eq(walletTopups.status, "pending")));
       const affectedRows = Array.isArray(transition) ? Number((transition[0] as { affectedRows?: number } | undefined)?.affectedRows ?? 0) : 0;
-      if (affectedRows > 0) {
-        const field = wallet.currency === "USD" ? "balanceUsd" : "balanceKhr";
-        await tx.insert(customerWallets).values({ userId: wallet.userId, balanceKhr: wallet.currency === "USD" ? "0" : String(wallet.amountKhr), balanceUsd: wallet.currency === "USD" ? String(wallet.amountKhr) : "0" }).onDuplicateKeyUpdate({ set: { [field]: sql`${customerWallets[field]} + ${wallet.amountKhr}` } });
-      }
+      if (affectedRows > 0) await tx.insert(customerWallets).values({ userId: wallet.userId, balanceKhr: String(wallet.amountKhr) }).onDuplicateKeyUpdate({ set: { balanceKhr: sql`${customerWallets.balanceKhr} + ${wallet.amountKhr}` } });
     });
     return { idempotent: false };
   }
