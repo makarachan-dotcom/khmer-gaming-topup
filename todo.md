@@ -286,6 +286,10 @@
 - [x] Add a signed worker-to-website KHQR webhook that validates callback authenticity, idempotency, order ownership, exact amount, and currency before crediting or fulfilling an order.
 - [x] Deploy the reviewed v1.2 worker to the VPS with PM2, Nginx, HTTPS, least-privilege environment files, and a 5-second polling floor; corrected Linux firewall rule order, issued the certificate, and confirmed worker health after PM2 restart.
 - [ ] Validate the deployed worker with authentication, signature, idempotency, amount/currency mismatch, and a small live-payment test before enabling the public payment switch; worker auth and restart recovery passed, signed non-financial callbacks reach reconciliation as 409, and automated exact-match/idempotency guards pass. A user-approved genuine 100 KHR payment remains required before public activation.
+- [ ] Run the owner-approved genuine 100 KHR KHQR test with a temporary master-switch enablement, observe end-to-end reconciliation, and return public payments to OFF immediately afterward.
+- [ ] Add the existing primary ledger DATABASE_URL as a Vercel Production secret and redeploy before creating the genuine 100 KHR validation session; saved as a Production Secret and redeploy has started.
+- [ ] Repair the owner Payment Control read/write flow so Appwrite 402 quota exhaustion does not block readiness or expose a raw provider error; keep the master switch OFF during the repair.
+- [ ] Owner-requested testing release: publish the latest validated update while retaining Payment Control OFF; await owner testing feedback before resuming live KHQR validation.
 - [x] Verify that pay-worker.zurs.me resolves to the supplied VPS and that the uploaded SSH key authenticates without exposing key material.
 - [x] Add a privacy-preserving sticky verified-account bar that appears only after successful ID verification when the form scrolls out of view, masks IDs, and provides an immediate edit-ID action.
 - [x] Validate the sticky verified-account bar on mobile and desktop without exposing raw player IDs in the compact bar.
