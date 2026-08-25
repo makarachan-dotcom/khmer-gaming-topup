@@ -66,7 +66,8 @@ export async function checkBakongKhqrPayment(input: { md5: string; expectedAmoun
   if (!response.ok || payload.responseCode !== 0 || !payload.data) return { status: payload.errorCode === 1 ? "unpaid" as const : "unavailable" as const };
   const matchesAmount = Math.abs(Number(payload.data.amount) - Number(input.expectedAmount)) < 0.00001;
   const matchesCurrency = payload.data.currency === input.expectedCurrency;
-  const matchesReceiver = payload.data.toAccountId?.trim().toLowerCase() === config.accountId.toLowerCase();
+  const returnedReceiver = payload.data.toAccountId?.trim().toLowerCase();
+  const matchesReceiver = !returnedReceiver || returnedReceiver === config.accountId.toLowerCase();
   if (!matchesAmount || !matchesCurrency || !matchesReceiver || !payload.data.hash) return { status: "unavailable" as const };
   return { status: "paid" as const, transactionHash: payload.data.hash };
 }
