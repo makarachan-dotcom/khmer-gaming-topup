@@ -180,7 +180,7 @@ function VerifiedIdentityStatus({ playerName, country, fields }: { playerName: s
     if (!anchor) return;
     const updateCompactState = () => {
       const isMobile = window.matchMedia("(max-width: 767px)").matches;
-      const shouldCompact = isMobile && anchor.getBoundingClientRect().bottom <= 112;
+      const shouldCompact = isMobile && anchor.getBoundingClientRect().bottom <= 76;
       if (shouldCompact) {
         const values = Array.from(anchor.closest("form")?.querySelectorAll<HTMLInputElement>("input") ?? []).map((input) => input.value.trim()).filter(Boolean);
         setCompactFields(values.length ? Object.fromEntries(values.map((value, index) => [`id-${index}`, value])) : fields);
