@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, lt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, lt, sql } from "drizzle-orm";
 import { createHash, randomBytes } from "node:crypto";
 import { drizzle } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
@@ -150,9 +150,13 @@ export async function beginWalletTopup(input: { userId: number; amountKhr: strin
   if (!db && !isAppwriteStoreConfigured()) throw new Error("Wallet top-up requires the verified transaction ledger. Please try again later.");
   const amount = Number(input.amountKhr);
   if (!Number.isInteger(amount) || amount < 100 || amount > 10_000_000) throw new Error("Wallet top-up amount must be between 100 and 10,000,000 KHR.");
+  const now = new Date();
+  if (db) {
+    const active = await db.select().from(walletTopups).where(and(eq(walletTopups.userId, input.userId), eq(walletTopups.provider, "bakong_khqr"), eq(walletTopups.status, "pending"), gt(walletTopups.expiresAt, now))).orderBy(desc(walletTopups.createdAt)).limit(1);
+    if (active[0]) return walletTopupPayload(active[0]);
+  }
   const referenceCode = buildWalletTopupReference();
   const generated = await createBakongKhqrPayment({ trackingCode: referenceCode, amount: String(amount), currency: "KHR" });
-  const now = new Date();
   const record = { id: nanoid(), userId: input.userId, referenceCode, provider: "bakong_khqr", providerRequestId: generated.md5, status: "pending" as const, amountKhr: String(amount), paymentPayload: { bakongMd5: generated.md5, merchantAccountId: generated.merchantAccountId, qrImageDataUrl: generated.qrImageDataUrl, deeplink: generated.deeplink }, expiresAt: generated.expiresAt, createdAt: now, updatedAt: now };
   if (!db) return walletTopupPayload(await createAppwriteWalletTopup(record));
   await db.insert(walletTopups).values(record);

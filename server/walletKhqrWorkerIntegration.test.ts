@@ -12,6 +12,15 @@ describe("wallet KHQR worker integration", () => {
     expect(watchIndex).toBeGreaterThan(insertIndex);
   });
 
+  it("reuses an unexpired pending Wallet session before generating another QR or worker watch", () => {
+    const activeLookupIndex = dbSource.indexOf('const active = await db.select().from(walletTopups)');
+    const existingReturnIndex = dbSource.indexOf('if (active[0]) return walletTopupPayload(active[0]);');
+    const generateIndex = dbSource.indexOf('const generated = await createBakongKhqrPayment');
+    expect(activeLookupIndex).toBeGreaterThan(-1);
+    expect(existingReturnIndex).toBeGreaterThan(activeLookupIndex);
+    expect(generateIndex).toBeGreaterThan(existingReturnIndex);
+  });
+
   it("routes wallet-prefixed worker callbacks through exact wallet reconciliation", () => {
     expect(dbSource).toContain('if (input.orderId.startsWith("wallet:"))');
     expect(dbSource).toContain("getKhqrWalletReconciliationDisposition");
