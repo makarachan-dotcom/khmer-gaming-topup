@@ -189,20 +189,9 @@ export async function refreshWalletTopup(input: { userId: number; topupId: strin
     await db.update(walletTopups).set({ status: "expired" }).where(and(eq(walletTopups.id, current.id), eq(walletTopups.status, "pending")));
     return { topup: await getWalletTopupSession(input), wallet: await getCustomerWalletSummary(input.userId) };
   }
-  const payload = current.paymentPayload && typeof current.paymentPayload === "object" ? current.paymentPayload as Record<string, unknown> : {};
-  const md5 = typeof payload.bakongMd5 === "string" ? payload.bakongMd5 : null;
-  if (!md5) throw new Error("Wallet top-up payment reference is unavailable");
-  const merchantAccountId = typeof payload.merchantAccountId === "string" ? payload.merchantAccountId : undefined;
-  const verification = await checkBakongKhqrPayment({ md5, expectedAmount: String(current.amountKhr), expectedCurrency: "KHR", expectedMerchantAccountId: merchantAccountId });
-  if (verification.status === "paid") {
-    await db.transaction(async (tx) => {
-      const transition = await tx.update(walletTopups).set({ status: "paid", providerTransactionId: verification.transactionHash, paidAt: new Date(), creditedAt: new Date() }).where(and(eq(walletTopups.id, current.id), eq(walletTopups.status, "pending")));
-      const affectedRows = Array.isArray(transition) ? Number((transition[0] as { affectedRows?: number } | undefined)?.affectedRows ?? 0) : 0;
-      if (affectedRows > 0) {
-        await tx.insert(customerWallets).values({ userId: input.userId, balanceKhr: String(current.amountKhr) }).onDuplicateKeyUpdate({ set: { balanceKhr: sql`${customerWallets.balanceKhr} + ${current.amountKhr}` } });
-      }
-    });
-  }
+  // The worker is the sole automatic Bakong checker. This customer refresh only
+  // reads the primary ledger, so browser polling cannot consume provider quota
+  // or create a second path that credits a Wallet.
   return { topup: await getWalletTopupSession(input), wallet: await getCustomerWalletSummary(input.userId) };
 }
 
@@ -215,12 +204,9 @@ async function refreshAppwriteWalletTopup(input: { userId: number; topupId: stri
     const topup = await updateAppwriteWalletTopup({ ...input, status: "expired" });
     return { topup: walletTopupPayload(topup), wallet: await getCustomerWalletSummary(input.userId) };
   }
-  const md5 = typeof current.paymentPayload.bakongMd5 === "string" ? current.paymentPayload.bakongMd5 : null;
-  if (!md5) throw new Error("Wallet top-up payment reference is unavailable");
-  const merchantAccountId = typeof current.paymentPayload.merchantAccountId === "string" ? current.paymentPayload.merchantAccountId : undefined;
-  const verification = await checkBakongKhqrPayment({ md5, expectedAmount: current.amountKhr, expectedCurrency: "KHR", expectedMerchantAccountId: merchantAccountId });
-  const topup = verification.status === "paid" ? await updateAppwriteWalletTopup({ ...input, status: "paid", providerTransactionId: verification.transactionHash, paidAt: new Date(), creditedAt: new Date() }) : current;
-  return { topup: walletTopupPayload(topup), wallet: await getCustomerWalletSummary(input.userId) };
+  // Keep browser-driven refresh ledger-only; worker callbacks perform exact
+  // Bakong verification and the idempotent credit transition.
+  return { topup: walletTopupPayload(current), wallet: await getCustomerWalletSummary(input.userId) };
 }
 
 export async function getGameCatalog() {
@@ -436,13 +422,9 @@ export async function refreshBakongPayment(input: { orderId: string; userId: num
   if (!current) throw new Error("Bakong payment session not found");
   if (current.status === "paid") return getCustomerPaymentSession(input);
   if (current.expiresAt && current.expiresAt.getTime() <= Date.now()) { await db.update(paymentTransactions).set({ status: "expired" }).where(eq(paymentTransactions.id, current.id)); await updateOrderStatus({ orderId: input.orderId, status: "expired" }); return getCustomerPaymentSession(input); }
-  const payload = current.callbackPayload && typeof current.callbackPayload === "object" ? current.callbackPayload as Record<string, unknown> : {};
-  const md5 = typeof payload.bakongMd5 === "string" ? payload.bakongMd5 : null;
-  if (!md5) throw new Error("Bakong payment reference is unavailable");
-  const currency = current.currency === "KHR" ? "KHR" : "USD" as const;
-  const merchantAccountId = typeof payload.merchantAccountId === "string" ? payload.merchantAccountId : undefined;
-  const result = await checkBakongKhqrPayment({ md5, expectedAmount: String(current.amount), expectedCurrency: currency, expectedMerchantAccountId: merchantAccountId });
-  if (result.status === "paid") { await db.update(paymentTransactions).set({ status: "paid", providerTransactionId: result.transactionHash, paidAt: new Date(), callbackPayload: { ...payload, verifiedAt: new Date().toISOString(), transactionHash: result.transactionHash } }).where(eq(paymentTransactions.id, current.id)); await updateOrderStatus({ orderId: input.orderId, status: "paid" }); }
+  // The worker owns provider polling and signed confirmation. This endpoint only
+  // returns the current ledger session (and expires stale rows above), preventing
+  // the browser from issuing duplicate Bakong lookups every ten seconds.
   return getCustomerPaymentSession(input);
 }
 
