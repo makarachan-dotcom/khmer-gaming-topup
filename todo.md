@@ -1,7 +1,7 @@
 # Project TODO
 
 - [x] Publish the completed automatic-payment safeguards to GitHub and official production while leaving the previous expired QR unchanged.
-- [ ] Confirm the published production release is READY for the owner to test a newly created payment session.
+- [x] Confirm the published production release is READY for the owner to test a newly created payment session.
 - [x] Audit Bakong provider reachability, worker polling health, and website callback outcomes for automatic confirmation failures.
 - [x] Implement automatic-check source separation and worker/server safeguards without weakening exact session, amount, currency, signature, or idempotency checks.
 - [x] Deferred at the owner's request: do not alter the previous expired QR.
