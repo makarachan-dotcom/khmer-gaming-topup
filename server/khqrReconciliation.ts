@@ -20,6 +20,7 @@ export type KhqrStoredWalletTopup = {
   md5: string;
   walletId: string;
   amount: string | number;
+  currency: "KHR" | "USD";
   status: string;
 };
 
@@ -49,7 +50,7 @@ export function getKhqrWalletReconciliationDisposition(
     stored.provider !== "bakong_khqr"
     || stored.md5 !== callback.md5
     || callback.orderId !== `wallet:${stored.walletId}`
-    || callback.currency !== "KHR"
+    || callback.currency !== stored.currency
     || Number(stored.amount) !== Number(callback.amount)
   ) return "reject" as const;
   if (stored.status === "paid") return "idempotent" as const;

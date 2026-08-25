@@ -22,6 +22,8 @@ import AdminAccess from "./pages/AdminAccess";
 import AdminPricing from "./pages/AdminPricing";
 import AdminPayment from "./pages/AdminPayment";
 import Checkout from "./pages/Checkout";
+import Receipt from "./pages/Receipt";
+import WalletReceipt from "./pages/WalletReceipt";
 import AdminMedia from "./pages/AdminMedia";
 import Legal from "./pages/Legal";
 import GameTopup from "./pages/GameTopup";
@@ -49,6 +51,8 @@ function Router() {
       <Route path="/admin/payment" component={AdminPayment} />
       <Route path="/admin/marketplace-safety" component={AdminMarketplaceSafety} />
       <Route path={"/checkout/:orderId"} component={Checkout} />
+      <Route path={"/receipt/:orderId"} component={Receipt} />
+      <Route path={"/wallet/receipt/:topupId"} component={WalletReceipt} />
       <Route path={"/admin/media"} component={AdminMedia} />
       <Route path="/privacy" component={() => <Legal kind="privacy" />} />
       <Route path="/terms" component={() => <Legal kind="terms" />} />

@@ -9,7 +9,7 @@ type AppwriteRecord = { $id: string; sourceTable: string; sourceId: string; payl
 type AppwriteList = { documents?: AppwriteRecord[]; total?: number };
 type AppwriteOrder = { id: string; userId: number; orderNumber: string; orderType: "topup" | "smm"; status: string; currency: string; subtotal: string; productName: string; details: unknown; createdAt: Date; updatedAt: Date };
 type AppwritePayment = { id: string; orderId: string; provider: string; status: string; amount: string; currency: string; createdAt: Date; updatedAt: Date; paidAt: Date | null; orderNumber: string; productName: string; orderStatus: string };
-export type AppwriteWalletTopup = { id: string; userId: number; referenceCode: string; provider: string; providerRequestId: string; providerTransactionId: string | null; status: "pending" | "paid" | "expired" | "failed"; amountKhr: string; paymentPayload: Record<string, unknown>; expiresAt: Date; paidAt: Date | null; creditedAt: Date | null; createdAt: Date; updatedAt: Date };
+export type AppwriteWalletTopup = { id: string; userId: number; referenceCode: string; provider: string; providerRequestId: string; providerTransactionId: string | null; status: "pending" | "paid" | "expired" | "failed"; amountKhr: string; currency: "KHR" | "USD"; manualCheckCount: number; activeSessionKey: string | null; paymentPayload: Record<string, unknown>; expiresAt: Date; paidAt: Date | null; creditedAt: Date | null; createdAt: Date; updatedAt: Date };
 export type AppwriteProviderAvailability = { hiddenGameIds: string[]; hiddenSmmServiceIds: string[]; activeGameIds?: string[]; updatedAt: Date };
 export type AppwriteProviderCatalog = { games: Array<{ id: string; providerSourceId: string; titleKh: string; titleEn: string; packageSourceIds?: string[]; packages: Array<{ id: string; providerOfferSourceId?: string; amountLabel: string; basePriceUsd: string; profitMarginPercent: string; priceUsd: string; isActive: boolean; featured: boolean; providerAuthorized: true; providerSource: string }> }>; smm: Array<{ id: string; providerSourceId: string; platform: string; titleKh: string; titleEn: string; tiers: Array<{ id: string; quantity: number; basePriceUsd: string; profitMarginPercent: string; priceUsd: string; isActive: boolean; providerAuthorized: true; providerSource: string }> }> };
 type AppwriteProviderCatalogIndex = { gameSourceIds: string[]; smmSourceIds: string[]; updatedAt: string };
@@ -474,7 +474,9 @@ function toWalletTopup(record: AppwriteRecord): AppwriteWalletTopup | null {
   const status = value.status;
   if (!status || !["pending", "paid", "expired", "failed"].includes(status)) return null;
   const paymentPayload = value.paymentPayload && typeof value.paymentPayload === "object" && !Array.isArray(value.paymentPayload) ? value.paymentPayload as Record<string, unknown> : {};
-  return { id: value.id, userId: value.userId, referenceCode: value.referenceCode, provider: String(value.provider ?? "bakong_khqr"), providerRequestId: value.providerRequestId, providerTransactionId: value.providerTransactionId ?? null, status, amountKhr: String(value.amountKhr ?? "0"), paymentPayload, expiresAt: asDate(value.expiresAt), paidAt: value.paidAt ? asDate(value.paidAt) : null, creditedAt: value.creditedAt ? asDate(value.creditedAt) : null, createdAt: asDate(value.createdAt), updatedAt: asDate(value.updatedAt) };
+  const currency = value.currency === "USD" ? "USD" : "KHR";
+  const manualCheckCount = Number.isInteger(value.manualCheckCount) ? Math.max(0, Number(value.manualCheckCount)) : 0;
+  return { id: value.id, userId: value.userId, referenceCode: value.referenceCode, provider: String(value.provider ?? "bakong_khqr"), providerRequestId: value.providerRequestId, providerTransactionId: value.providerTransactionId ?? null, status, amountKhr: String(value.amountKhr ?? "0"), currency, manualCheckCount, activeSessionKey: typeof value.activeSessionKey === "string" ? value.activeSessionKey : null, paymentPayload, expiresAt: asDate(value.expiresAt), paidAt: value.paidAt ? asDate(value.paidAt) : null, creditedAt: value.creditedAt ? asDate(value.creditedAt) : null, createdAt: asDate(value.createdAt), updatedAt: asDate(value.updatedAt) };
 }
 
 async function allAppwriteWalletTopups() {
@@ -486,8 +488,9 @@ async function allAppwriteWalletTopups() {
 
 export async function getAppwriteWalletSummary(userId: number) {
   const paidTopups = (await allAppwriteWalletTopups()).filter(({ topup }) => topup.userId === userId && topup.status === "paid");
-  const balanceKhr = paidTopups.reduce((total, { topup }) => total + Number(topup.amountKhr), 0);
-  return { balanceKhr: balanceKhr.toFixed(2), currency: "KHR" as const, available: true };
+  const balanceKhr = paidTopups.filter(({ topup }) => topup.currency !== "USD").reduce((total, { topup }) => total + Number(topup.amountKhr), 0);
+  const balanceUsd = paidTopups.filter(({ topup }) => topup.currency === "USD").reduce((total, { topup }) => total + Number(topup.amountKhr), 0);
+  return { balanceKhr: balanceKhr.toFixed(2), balanceUsd: balanceUsd.toFixed(2), currency: "KHR" as const, available: true };
 }
 
 export async function createAppwriteWalletTopup(input: Omit<AppwriteWalletTopup, "providerTransactionId" | "paidAt" | "creditedAt" | "createdAt" | "updatedAt">) {
@@ -500,6 +503,20 @@ export async function createAppwriteWalletTopup(input: Omit<AppwriteWalletTopup,
 export async function getAppwriteWalletTopup(input: { userId: number; topupId: string }) {
   const item = (await allAppwriteWalletTopups()).find(({ topup }) => topup.id === input.topupId && topup.userId === input.userId);
   return item?.topup;
+}
+
+export async function getAppwriteActiveWalletTopup(userId: number) {
+  return (await allAppwriteWalletTopups()).map(({ topup }) => topup).find((topup) => topup.userId === userId && topup.status === "pending" && topup.expiresAt.getTime() > Date.now());
+}
+
+export async function recordAppwriteWalletManualCheck(input: { userId: number; topupId: string }) {
+  const item = (await allAppwriteWalletTopups()).find(({ topup }) => topup.id === input.topupId && topup.userId === input.userId);
+  if (!item) throw new Error("Wallet top-up session was not found");
+  if (item.topup.manualCheckCount >= 2) throw new Error("Manual payment status checks are limited to two per payment session.");
+  const now = new Date();
+  const topup = { ...item.topup, manualCheckCount: item.topup.manualCheckCount + 1, updatedAt: now };
+  await request("PUT", `/databases/${databaseId()}/collections/${collectionId}/documents/${item.record.$id}`, { data: { sourceTable: "wallet_topups", sourceId: topup.id, payload: JSON.stringify(topup), sourceUpdatedAt: now.toISOString() } });
+  return topup;
 }
 
 export async function updateAppwriteWalletTopup(input: { userId: number; topupId: string; status: AppwriteWalletTopup["status"]; providerTransactionId?: string | null; paidAt?: Date | null; creditedAt?: Date | null }) {

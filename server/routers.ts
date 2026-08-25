@@ -52,8 +52,9 @@ export const appRouter = router({
   wallet: router({
     summary: protectedProcedure.query(({ ctx }) => db.getCustomerWalletSummary(ctx.user.id)),
     topupAvailability: protectedProcedure.query(() => db.getWalletTopupAvailability()),
-    beginTopup: protectedProcedure.input(z.object({ amountKhr: z.string().regex(/^\d+$/) })).mutation(({ ctx, input }) => db.beginWalletTopup({ userId: ctx.user.id, ...input })),
+    beginTopup: protectedProcedure.input(z.object({ amount: z.string().regex(/^\d+(?:\.\d{1,2})?$/), currency: z.enum(["KHR", "USD"]) })).mutation(({ ctx, input }) => db.beginWalletTopup({ userId: ctx.user.id, ...input })),
     topupSession: protectedProcedure.input(z.object({ topupId: z.string().min(4).max(64) })).query(({ ctx, input }) => db.getWalletTopupSession({ userId: ctx.user.id, ...input })),
+    receipt: protectedProcedure.input(z.object({ topupId: z.string().min(4).max(64) })).query(({ ctx, input }) => db.getWalletTopupReceipt({ userId: ctx.user.id, ...input })),
     refreshTopup: protectedProcedure.input(z.object({ topupId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => db.refreshWalletTopup({ userId: ctx.user.id, ...input })),
   }),
   provider: router({
@@ -95,6 +96,7 @@ export const appRouter = router({
     createSmm: protectedProcedure.input(z.object({ tierId: z.string().min(4).max(64), target: z.string().trim().min(3).max(500) })).mutation(({ ctx, input }) => db.createSmmOrder({ userId: ctx.user.id, ...input })),
     beginPayment: protectedProcedure.input(z.object({ orderId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => db.beginStagedPayment({ userId: ctx.user.id, ...input })),
     paymentSession: protectedProcedure.input(z.object({ orderId: z.string().min(4).max(64) })).query(({ ctx, input }) => db.getCustomerPaymentSession({ userId: ctx.user.id, ...input })),
+    receipt: protectedProcedure.input(z.object({ orderId: z.string().min(4).max(64) })).query(({ ctx, input }) => db.getCustomerPaymentReceipt({ userId: ctx.user.id, ...input })),
     refreshPayment: protectedProcedure.input(z.object({ orderId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => db.refreshBakongPayment({ userId: ctx.user.id, ...input })),
     tracking: protectedProcedure.input(z.object({ trackingCode: z.string().trim().min(12).max(48) })).query(({ ctx, input }) => db.getCustomerOrderTracking({ userId: ctx.user.id, ...input })),
     createTicket: protectedProcedure.input(z.object({ trackingCode: z.string().trim().min(12).max(48), subject: z.string().trim().min(4).max(180), message: z.string().trim().min(10).max(5000) })).mutation(({ ctx, input }) => db.createOrderSupportTicket({ userId: ctx.user.id, ...input })),

@@ -1,5 +1,17 @@
 # Project TODO
 
+- [x] Add a privacy-safe paid-success modal with restrained confirmation motion and receipt view/download actions.
+- [x] Add protected receipt data and a customer-only receipt view/download flow without exposing QR payloads, hashes, or provider references.
+- [x] Extend paid-success popup and receipt actions to verified Wallet top-ups.
+- [x] Add a protected Wallet top-up receipt view/download flow that omits QR payloads, hashes, worker IDs, and provider references.
+- [x] Add regression coverage for both checkout and Wallet paid receipt actions and privacy-safe receipt payloads.
+- [x] Deferred at the owner's request: referral attribution, qualified conversion rewards, and all referral discounts remain unavailable to avoid unintended financial loss.
+- [x] Add payment-session auto-checking every 10 seconds for at most 5 minutes, with exactly two manual status checks per session.
+- [x] Support explicitly selected KHR or USD payment sessions while preserving exact amount/currency reconciliation.
+- [x] Block creation of any new payment session while an eligible session for the same order or wallet top-up is still pending.
+- [x] Redesign the QR payment screen with clear countdown, automatic-check state, manual-check allowance, and payment-completion feedback.
+- [x] Correct the verified-account sticky header so it reliably appears after the verified form leaves the viewport and returns/focuses the editable ID field on demand.
+
 - [x] Define the production data model for game packages, SMM services, marketplace listings, orders, payment transactions, saved player IDs, and content.
 - [x] Deliver a Khmer-first responsive interface with a Khmer-compatible font and reliable direct navigation; the optional English toggle is intentionally deferred until a complete reviewed translation set is available.
 - [x] Replace temporary catalog displays with database-backed game, SMM, and marketplace queries.

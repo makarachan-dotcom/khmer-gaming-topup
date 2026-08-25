@@ -7,6 +7,7 @@ const apiBaseUrl = "https://api-bakong.nbc.gov.kh";
 const zursLogoUrl = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/kBXeVXEnNVEuNZKS.jpg";
 
 type Currency = "USD" | "KHR";
+export const khqrPaymentWindowMs = 5 * 60 * 1000;
 type BakongConfig = { token: string; accountId: string; merchantName: string; merchantCity: string; merchantPhone: string; storeLabel: string };
 type BakongResponse = { responseCode?: number; errorCode?: number; data?: { shortLink?: string; hash?: string; amount?: string | number; currency?: string; toAccountId?: string } };
 
@@ -38,7 +39,7 @@ export async function createBakongKhqrPayment(input: { trackingCode: string; amo
   const config = getConfig();
   if (!config) throw new Error("Bakong KHQR is not configured");
   const amount = validAmount(input.amount);
-  const expiry = new Date(Date.now() + 15 * 60 * 1000);
+  const expiry = new Date(Date.now() + khqrPaymentWindowMs);
   const info = new IndividualInfo(config.accountId, config.merchantName, config.merchantCity, {
     currency: currencyCode(input.currency), amount, mobileNumber: config.merchantPhone, billNumber: input.trackingCode.slice(0, 35), storeLabel: config.storeLabel, terminalLabel: "ZURS", expirationTimestamp: expiry.getTime(),
   });

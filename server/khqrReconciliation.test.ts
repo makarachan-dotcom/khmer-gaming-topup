@@ -21,11 +21,18 @@ describe("KHQR reconciliation guard", () => {
   });
 
   it("permits only the exact pending wallet session and is idempotent after credit", () => {
-    const wallet = { provider: "bakong_khqr", md5: callback.md5, walletId: "wallet-topup-123", amount: "100", status: "pending" };
+    const wallet = { provider: "bakong_khqr", md5: callback.md5, walletId: "wallet-topup-123", amount: "100", currency: "KHR" as const, status: "pending" };
     const walletCallback = { ...callback, orderId: "wallet:wallet-topup-123" };
     expect(getKhqrWalletReconciliationDisposition(wallet, walletCallback)).toBe("reconcile");
     expect(getKhqrWalletReconciliationDisposition(wallet, { ...walletCallback, amount: "101" })).toBe("reject");
     expect(getKhqrWalletReconciliationDisposition(wallet, { ...walletCallback, currency: "USD" })).toBe("reject");
     expect(getKhqrWalletReconciliationDisposition({ ...wallet, status: "paid" }, walletCallback)).toBe("idempotent");
+  });
+
+  it("permits USD wallet callbacks only when the stored currency is exactly USD", () => {
+    const usdWallet = { provider: "bakong_khqr", md5: callback.md5, walletId: "wallet-usd-123", amount: "2.50", currency: "USD" as const, status: "pending" };
+    const usdCallback = { md5: callback.md5, orderId: "wallet:wallet-usd-123", amount: "2.50", currency: "USD" as const };
+    expect(getKhqrWalletReconciliationDisposition(usdWallet, usdCallback)).toBe("reconcile");
+    expect(getKhqrWalletReconciliationDisposition(usdWallet, { ...usdCallback, currency: "KHR" })).toBe("reject");
   });
 });
