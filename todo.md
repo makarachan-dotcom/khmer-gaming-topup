@@ -284,8 +284,8 @@
 - [ ] Validate the secure payment-control update and document the remaining webhook/real-payment prerequisites before activation.
 - [x] Obtain a worker domain with DNS pointed to the VPS and secure SSH credentials before VPS deployment; HTTPS cannot be issued for a bare IP address.
 - [x] Add a signed worker-to-website KHQR webhook that validates callback authenticity, idempotency, order ownership, exact amount, and currency before crediting or fulfilling an order.
-- [ ] Deploy the reviewed v1.2 worker to the VPS with PM2, Nginx, HTTPS, least-privilege environment files, and a 5-second polling floor; installation succeeded but Oracle public HTTP reachability blocked the ACME certificate challenge, so the worker has been safely stopped pending firewall correction.
-- [ ] Validate the deployed worker with authentication, signature, idempotency, restart-recovery, amount/currency mismatch, and small live-payment tests before enabling the public payment switch.
+- [x] Deploy the reviewed v1.2 worker to the VPS with PM2, Nginx, HTTPS, least-privilege environment files, and a 5-second polling floor; corrected Linux firewall rule order, issued the certificate, and confirmed worker health after PM2 restart.
+- [ ] Validate the deployed worker with authentication, signature, idempotency, amount/currency mismatch, and a small live-payment test before enabling the public payment switch; authentication and restart-recovery have passed, while the exact reconciliation callback requires the next deployed website configuration.
 - [x] Verify that pay-worker.zurs.me resolves to the supplied VPS and that the uploaded SSH key authenticates without exposing key material.
 - [x] Add a privacy-preserving sticky verified-account bar that appears only after successful ID verification when the form scrolls out of view, masks IDs, and provides an immediate edit-ID action.
 - [x] Validate the sticky verified-account bar on mobile and desktop without exposing raw player IDs in the compact bar.
@@ -294,3 +294,6 @@
 - [x] Recommend a KHQR automation hosting route after validating the revised archive and ZURS deployment constraints.
 - [x] Re-audit the replacement KHQR automation v1.2 archive without executing code, verifying fail-fast configuration, strict currency matching, and minimum polling enforcement.
 - [x] Redesign the mobile-first ZURS shell with a subtle dotted background, compact animated ZURS.me branding, no GAMING & DIGITAL subtitle, clean language control, and refined navigation/tab bar based on the supplied visual reference.
+- [x] Cache-fresh verify the latest checkpoint on the official zurs.me domain after the user’s recheck request.
+- [x] Retry HTTPS issuance and public reachability after the user’s Oracle Cloud ingress remediation.
+- [x] Investigate the user-reported stale zurs.me view using cache-bypass official-domain checks.
