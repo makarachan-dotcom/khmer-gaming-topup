@@ -290,6 +290,7 @@
 - [ ] Add the existing primary ledger DATABASE_URL as a Vercel Production secret and redeploy before creating the genuine 100 KHR validation session; saved as a Production Secret and redeploy has started.
 - [ ] Repair the owner Payment Control read/write flow so Appwrite 402 quota exhaustion does not block readiness or expose a raw provider error; keep the master switch OFF during the repair.
 - [ ] Owner-requested testing release: publish the latest validated update while retaining Payment Control OFF; await owner testing feedback before resuming live KHQR validation.
+- [ ] Compare the current preview with cache-fresh zurs.me and www.zurs.me, then synchronize GitHub main, Vercel production alias, and official-domain release if drift is found.
 - [x] Verify that pay-worker.zurs.me resolves to the supplied VPS and that the uploaded SSH key authenticates without exposing key material.
 - [x] Add a privacy-preserving sticky verified-account bar that appears only after successful ID verification when the form scrolls out of view, masks IDs, and provides an immediate edit-ID action.
 - [x] Validate the sticky verified-account bar on mobile and desktop without exposing raw player IDs in the compact bar.
