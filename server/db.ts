@@ -149,7 +149,7 @@ export async function beginWalletTopup(input: { userId: number; amountKhr: strin
   const db = await getDb();
   if (!db && !isAppwriteStoreConfigured()) throw new Error("Wallet top-up requires the verified transaction ledger. Please try again later.");
   const amount = Number(input.amountKhr);
-  if (!Number.isInteger(amount) || amount < 500 || amount > 10_000_000) throw new Error("Wallet top-up amount must be between 500 and 10,000,000 KHR.");
+  if (!Number.isInteger(amount) || amount < 100 || amount > 10_000_000) throw new Error("Wallet top-up amount must be between 100 and 10,000,000 KHR.");
   const referenceCode = buildWalletTopupReference();
   const generated = await createBakongKhqrPayment({ trackingCode: referenceCode, amount: String(amount), currency: "KHR" });
   const now = new Date();
