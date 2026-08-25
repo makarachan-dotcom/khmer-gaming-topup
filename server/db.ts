@@ -259,11 +259,12 @@ export async function refreshWalletTopup(input: { userId: number; topupId: strin
   return { topup: await getWalletTopupSession(input), wallet: await getCustomerWalletSummary(input.userId) };
 }
 
-export async function recoverExpiredWalletTopupAfterVerifiedPayment(input: { userId: number; topupId: string }) {
+export async function recoverExpiredWalletTopupAfterVerifiedPayment(input: { topupId: string }) {
   const db = await getDb();
   if (!db) throw new Error("Expired wallet recovery requires the primary ledger database.");
-  const current = (await db.select().from(walletTopups).where(and(eq(walletTopups.id, input.topupId), eq(walletTopups.userId, input.userId), eq(walletTopups.status, "expired"))).limit(1))[0];
+  const current = (await db.select().from(walletTopups).where(and(eq(walletTopups.id, input.topupId), eq(walletTopups.status, "expired"))).limit(1))[0];
   if (!current) throw new Error("No eligible expired Wallet session was found for recovery.");
+  if (Date.now() - current.createdAt.getTime() > 24 * 60 * 60 * 1000) throw new Error("Only a recent expired Wallet session is eligible for owner recovery.");
   const payload = current.paymentPayload && typeof current.paymentPayload === "object" ? current.paymentPayload as Record<string, unknown> : {};
   const md5 = typeof payload.bakongMd5 === "string" ? payload.bakongMd5 : null;
   if (!md5) throw new Error("Wallet recovery cannot verify the payment reference.");

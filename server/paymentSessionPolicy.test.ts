@@ -26,6 +26,7 @@ describe("five-minute KHQR payment-session policy", () => {
     expect(database).toContain("requireNoOtherOpenPayment");
     expect(database).toContain("recoverExpiredWalletTopupAfterVerifiedPayment");
     expect(database).toContain("Bakong did not confirm an exact payment for this expired Wallet session.");
+    expect(database).toContain("Only a recent expired Wallet session is eligible for owner recovery.");
     expect(routers).toContain("recoverExpiredTopup: ownerProcedure");
   });
 
