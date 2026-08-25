@@ -29,4 +29,12 @@ describe("Bakong KHQR payment contract", () => {
     expect(checkout).toContain('setInterval');
     expect(checkout).toContain('OutlineLoader');
   });
+
+  it("provides an owner-only merchant preflight without exposing merchant configuration", () => {
+    const adapter = readFileSync(resolve(process.cwd(), "server/bakongKhqr.ts"), "utf8");
+    const router = readFileSync(resolve(process.cwd(), "server/routers.ts"), "utf8");
+    expect(adapter).toContain('verifyBakongMerchantAccount');
+    expect(adapter).toContain('check_bakong_account');
+    expect(router).toContain('paymentMerchantPreflight: ownerProcedure');
+  });
 });

@@ -12,6 +12,7 @@ import { createDiditHostedSession } from "./didit";
 import { disclosureRequestStatuses, fraudReportStatuses } from "./marketplaceSafety";
 import { deriveLocationRisk, resolveLocationCountry } from "./marketplaceLocation";
 import { createZursSession, getZursSessionCookieOptions, ZURS_SESSION_COOKIE } from "./zursSession";
+import { verifyBakongMerchantAccount } from "./bakongKhqr";
 
 const marketplaceType = z.enum(["sale", "swap", "wanted"]);
 
@@ -144,6 +145,7 @@ export const appRouter = router({
     deleteSmmTier: adminProcedure.input(z.object({ tierId: z.string().min(4).max(64) })).mutation(({ input }) => db.deleteSmmTier(input.tierId)),
     payments: adminProcedure.query(() => db.getPaymentTransactions()),
     paymentControl: ownerProcedure.query(() => db.getPaymentControl()),
+    paymentMerchantPreflight: ownerProcedure.query(() => verifyBakongMerchantAccount()),
     setPaymentControl: ownerProcedure.input(z.object({ enabled: z.boolean() })).mutation(({ ctx, input }) => db.setPaymentControl({ ...input, updatedByUserId: ctx.user.id })),
     users: adminProcedure.query(() => db.getAdminUsers()),
     roleAudits: ownerProcedure.query(() => db.getAdminRoleAudits()),

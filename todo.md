@@ -1,5 +1,12 @@
 # Project TODO
 
+- [ ] Preserve the failed 100 KHR test as uncredited and document the provider response as unpaid without exposing payment identifiers.
+- [ ] Diagnose Bakong merchant configuration and transaction-recognition compatibility for newly generated KHQR sessions.
+- [ ] Repair verified automatic reconciliation only after the provider can recognize the new dynamic KHQR transaction.
+- [ ] Repeat an owner-approved small live test and confirm automatic paid/credit behavior before opening public payments.
+- [ ] Audit live worker polling, provider reachability, and signed callback delivery for automatic KHQR confirmation before shop opening.
+- [ ] Run an owner-approved small live payment and confirm website auto-check changes it to paid/credited without manual refresh.
+- [ ] Confirm shop-opening payment readiness, then keep public payment creation disabled unless the owner explicitly enables it.
 - [x] Publish the completed automatic-payment safeguards to GitHub and official production while leaving the previous expired QR unchanged.
 - [x] Confirm the published production release is READY for the owner to test a newly created payment session.
 - [x] Audit Bakong provider reachability, worker polling health, and website callback outcomes for automatic confirmation failures.

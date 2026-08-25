@@ -26,6 +26,25 @@ export function getBakongPaymentReadiness() {
   return getConfig() ? { ready: true, reason: "ready" as const } : { ready: false, reason: "automatic_payment_pending" as const };
 }
 
+export async function verifyBakongMerchantAccount() {
+  const config = getConfig();
+  if (!config) return { status: "configuration_missing" as const };
+  try {
+    const response = await fetch(`${apiBaseUrl}/v1/check_bakong_account`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${config.token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ accountId: config.accountId }),
+      signal: AbortSignal.timeout(10_000),
+    });
+    const payload = await readBakongJson(response);
+    if (response.ok && payload?.responseCode === 0) return { status: "verified" as const };
+    if (response.ok && payload?.responseCode === 1) return { status: "account_not_found" as const };
+    return { status: "unavailable" as const };
+  } catch {
+    return { status: "unavailable" as const };
+  }
+}
+
 function currencyCode(currency: Currency) { return currency === "KHR" ? khqrData.currency.khr : khqrData.currency.usd; }
 function validAmount(amount: string) { const value = Number(amount); if (!Number.isFinite(value) || value <= 0) throw new Error("Invalid payment amount"); return value; }
 
