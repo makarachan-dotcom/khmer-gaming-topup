@@ -14,8 +14,19 @@
 - [x] Implement automatic-check source separation and worker/server safeguards without weakening exact session, amount, currency, signature, or idempotency checks.
 - [x] Deferred at the owner's request: do not alter the previous expired QR.
 - [ ] Complete a new owner-controlled KHQR payment test and verify automatic confirmation succeeds through the real worker/provider path.
-- [ ] Verify only safe fields for the new test (status, amount, currency, paidAt, creditedAt) and confirm Public Payment Control remains OFF afterward.
-- [ ] Capture inspectable safe provider and primary-ledger evidence for the owner-reported replacement 100 KHR payment before reporting automatic confirmation success.
+- [x] Verify only safe fields for the new test (status, amount, currency, paidAt, creditedAt) and confirm Public Payment Control remains OFF afterward.
+- [x] Capture inspectable safe provider and primary-ledger evidence for the owner-reported replacement 100 KHR payment before reporting automatic confirmation success; the session expired with provider unavailable and no paidAt/creditedAt values.
+- [x] Create one final 100 KHR Wallet QR while the owner is ready, return Payment Control to OFF immediately, and capture provider/ledger evidence within the valid session window; the session expired without verified payment or credit.
+- [x] Verify the owner-reported final payment through the safe provider outcome plus Wallet status, paidAt, and creditedAt before deciding shop-opening readiness; provider was unavailable and paidAt/creditedAt were absent after expiry.
+- [x] Sync the worker’s BAKONG_API_TOKEN from the current secure WebDev runtime and reload PM2 successfully without exposing secrets.
+- [x] Confirm Vercel Production is the operating Bakong merchant credential source through safe production preflight/readiness evidence; direct Vercel environment write access remains unavailable, but official merchant preflight is VERIFIED.
+- [x] Verify whether the worker requires a merchant account identifier in addition to BAKONG_API_TOKEN before claiming cross-environment merchant alignment; worker source uses only BAKONG_API_TOKEN for the provider call.
+- [x] Validate the newly supplied Oracle SSH access and identify the worker’s managed environment entry points without printing private configuration or credential values.
+- [x] Verify merchant preflight and worker provider reachability after secure credential alignment; official preflight is VERIFIED, worker HTTPS health is OK, and an invalid-MD5 probe returned HTTP 200 with non-success provider codes. This does not prove transaction recognition or auto-credit readiness.
+- [x] Run one post-sync 100 KHR controlled Wallet payment and capture safe provider/ledger evidence before determining shop-opening readiness; the worker received a non-success provider response and no payment/credit was verified.
+- [x] Verify the owner-reported post-sync payment through provider outcome plus Wallet status, paidAt, and creditedAt before reporting auto-confirmation success; the session expired with provider unavailable and paidAt/creditedAt absent.
+- [x] Remove temporary worker probe scripts and the uploaded SSH key from the sandbox after diagnosis.
+- [ ] Obtain Bakong-side confirmation that the active merchant/token is entitled to locate dynamic KHQR transactions, then re-run preflight before any further paid test.
 - [x] Add an owner-safe verification surface that exposes only latest Wallet status, amount, currency, paidAt, creditedAt, and expiry—never QR payloads, references, hashes, or account details.
 - [x] Make the fresh controlled-test QR available only in the owner-authenticated Wallet session; do not send its QR image, payload, or deeplink through chat.
 - [x] Publish the new merchant-preflight and expired-session safeguards to GitHub/Vercel, then verify official www.zurs.me reflects the updated readiness behavior while public payment remains disabled.
