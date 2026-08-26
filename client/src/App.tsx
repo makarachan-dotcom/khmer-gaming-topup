@@ -21,7 +21,9 @@ import AdminPayment from "./pages/AdminPayment";
 import Checkout from "./pages/Checkout";
 import AdminMedia from "./pages/AdminMedia";
 import AdminPackageArtwork from "./pages/AdminPackageArtwork";
-import AdminProviderSecurity from "./pages/AdminProviderSecurity";
+import AdminProviderSecurity from "@/pages/AdminProviderSecurity";
+import AdminContactAdmins from "@/pages/AdminContactAdmins";
+import AdminGameImages from "@/pages/AdminGameImages";
 import Legal from "./pages/Legal";
 import GameTopup from "./pages/GameTopup";
 
@@ -51,6 +53,8 @@ function Router() {
       <Route path={"/checkout/:orderId"} component={Checkout} />
       <Route path={"/admin/media"} component={AdminMedia} />
       <Route path={"/admin/package-artwork"} component={AdminPackageArtwork} />
+      <Route path={"/admin/contact-admins"} component={AdminContactAdmins} />
+      <Route path={"/admin/game-images"} component={AdminGameImages} />
       <Route path={"/admin/provider-security"} component={AdminProviderSecurity} />
       <Route path="/privacy" component={() => <Legal kind="privacy" />} />
       <Route path="/terms" component={() => <Legal kind="terms" />} />

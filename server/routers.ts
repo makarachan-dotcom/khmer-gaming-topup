@@ -66,6 +66,7 @@ export const appRouter = router({
     games: publicProcedure.query(() => fetchProviderGames()),
     gameDetails: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120) })).query(({ input }) => fetchProviderGameDetails(input.gameId)),
     packageArtwork: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120) })).query(({ input }) => db.getProviderPackageArtworkOverrides(input.gameId)),
+    gameImages: publicProcedure.query(() => db.getProviderGameImageOverrides()),
     packagePreview: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120) })).query(({ input }) => fetchPublicProviderPackagePreview(input.gameId)),
     packages: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120), fields: z.record(z.string().trim().max(64), z.string().trim().min(1).max(256)).refine((fields) => Object.keys(fields).length <= 12, "Too many provider fields"), idAccuracyConfirmed: z.boolean().optional().default(false) })).mutation(({ input }) => fetchProviderPackages(input)),
     validatePlayerId: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120), fields: z.record(z.string().trim().max(64), z.string().trim().min(1).max(256)).refine((fields) => Object.keys(fields).length <= 12, "Too many provider fields") })).mutation(async ({ input }) => toPublicPlayerIdentityResponse(await validateProviderPlayerIdentity(input))),
@@ -97,6 +98,9 @@ export const appRouter = router({
   }),
   content: router({
     active: publicProcedure.query(() => db.getPublicSiteContent()),
+  }),
+  support: router({
+    contactAdmins: publicProcedure.query(() => db.getContactAdmins()),
   }),
   orders: router({
     createTopup: protectedProcedure.input(z.object({ packageId: z.string().min(4).max(64), playerId: z.string().trim().min(2).max(128), zoneId: z.string().trim().min(1).max(128).optional(), quantity: z.number().int().min(1).max(9) })).mutation(({ ctx, input }) => db.createTopupOrder({ userId: ctx.user.id, ...input })),
@@ -175,6 +179,11 @@ export const appRouter = router({
     setUserRole: ownerProcedure.input(z.object({ targetUserId: z.number().int().positive(), nextRole: z.enum(["user", "admin"]), confirmationEmail: z.string().trim().email().max(320), reason: z.string().trim().min(10).max(500) })).mutation(({ ctx, input }) => db.setAdminUserRole({ actorUserId: ctx.user.id, ...input })),
     content: adminProcedure.query(() => db.getSiteContent()),
     saveContent: adminProcedure.input(z.object({ contentKey: z.string().trim().min(2).max(100), titleKh: z.string().trim().max(240).optional(), bodyKh: z.string().trim().max(5000).optional(), mediaUrl: z.string().trim().max(2048).refine((value) => value.startsWith("/manus-storage/") || /^https?:\/\//i.test(value), "Use a secure media URL").optional(), isActive: z.boolean() })).mutation(({ ctx, input }) => db.saveSiteContent({ updatedByUserId: ctx.user.id, ...input })),
+    contactAdmins: adminProcedure.query(() => db.getContactAdmins(true)),
+    saveContactAdmin: adminProcedure.input(z.object({ id: z.string().trim().min(4).max(64), displayName: z.string().trim().min(2).max(120), telegramUsername: z.string().trim().regex(/^@?[a-zA-Z0-9_]{5,32}$/, "Telegram username must use letters, numbers, or underscores"), workingHoursStart: z.string().regex(/^(?:[01]\\d|2[0-3]):[0-5]\\d$/), workingHoursEnd: z.string().regex(/^(?:[01]\\d|2[0-3]):[0-5]\\d$/), replyTimeText: z.string().trim().min(2).max(160), photoUrl: z.string().trim().max(2048).refine((value) => value.startsWith("/manus-storage/") || /^https:\/\//i.test(value), "Use managed storage or an HTTPS photo URL").nullable().optional(), isVisible: z.boolean(), sortOrder: z.number().int().min(0).max(10_000) })).mutation(({ ctx, input }) => db.saveContactAdmin({ ...input, updatedByUserId: ctx.user.id })),
+    gameImages: adminProcedure.query(() => db.getProviderGameImageOverrides()),
+    saveGameImages: adminProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120), logoUrl: z.string().trim().max(2048).refine((value) => value.startsWith("/manus-storage/") || /^https:\/\//i.test(value), "Use managed storage or an HTTPS logo URL").nullable().optional(), cardArtworkUrl: z.string().trim().max(2048).refine((value) => value.startsWith("/manus-storage/") || /^https:\/\//i.test(value), "Use managed storage or an HTTPS artwork URL").nullable().optional() })).mutation(({ ctx, input }) => db.saveProviderGameImageOverride({ ...input, updatedByUserId: ctx.user.id })),
+    resetGameImage: adminProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120), slot: z.enum(["logo", "cardArtwork"]) })).mutation(({ input }) => db.resetProviderGameImageSlot(input)),
     packageArtwork: adminProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120).optional() }).optional()).query(({ input }) => db.getProviderPackageArtworkOverrides(input?.gameId)),
     savePackageArtwork: adminProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120), offerId: z.string().trim().min(1).max(180), mediaUrl: z.string().trim().min(1).max(2048).refine((value) => value.startsWith("/manus-storage/") || /^https:\/\//i.test(value), "Use managed storage or an HTTPS artwork URL") })).mutation(({ ctx, input }) => db.saveProviderPackageArtworkOverride({ ...input, updatedByUserId: ctx.user.id })),
     resetPackageArtwork: adminProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120), offerId: z.string().trim().min(1).max(180) })).mutation(({ ctx, input }) => db.resetProviderPackageArtworkOverride({ ...input, updatedByUserId: ctx.user.id })),

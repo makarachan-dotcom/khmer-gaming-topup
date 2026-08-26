@@ -3,6 +3,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { AnimatedGlyph } from "@/components/AnimatedGlyph";
 import { OutlineLoader } from "@/components/OutlineLoader";
 import { ProviderGameArtwork } from "@/components/ProviderGameIdentity";
+import { ContactAdminControl } from "@/components/ContactAdminControl";
 import { OverflowMarquee } from "@/components/OverflowMarquee";
 import { useSelectedProduct } from "@/contexts/SelectedProductContext";
 import { useStorefrontHeader } from "@/contexts/StorefrontHeaderContext";
@@ -135,6 +136,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
         </div>
       </footer>
 
+      <ContactAdminControl paymentBarVisible={isTopupRoute} />
       {isTopupRoute ? <SelectedProductActionBar product={selectedProduct} isAuthenticated={Boolean(user)} isAuthenticationLoading={loading} signInHref={googleSignInHref} /> : <nav className="liquid-tabbar zurs-mobile-tabbar fixed bottom-2 left-1/2 z-40 grid h-[3.25rem] w-[min(calc(100vw-1.5rem),15rem)] -translate-x-1/2 grid-cols-2 gap-0.5 rounded-full p-1 shadow-[0_10px_24px_rgba(15,23,42,0.11)] sm:hidden" style={{ "--mobile-tab-index": activeMobileTabIndex } as React.CSSProperties} aria-label="Mobile primary navigation">
         <span className="zurs-mobile-tab-indicator" aria-hidden="true" />
         {mobileNavigation.map(({ href, label, icon: Icon, animation }) => { const active = location === href; const classes = cn("zurs-mobile-tab relative z-10 flex min-w-0 flex-row items-center justify-center gap-1 rounded-full px-2 py-1 text-[9px] font-bold transition-colors", active ? "zurs-mobile-tab--active text-slate-950" : "text-slate-500 hover:bg-white/75 hover:text-slate-800"); return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={classes}>{active && animation ? <AnimatedGlyph name={animation} size={16} color="#312e81" /> : <Icon className={cn("h-3.5 w-3.5", active && "tab-icon-active")} strokeWidth={active ? 2.25 : 1.9} />}<span className="truncate">{label}</span></Link>; })}

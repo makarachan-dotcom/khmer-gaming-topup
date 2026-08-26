@@ -98,4 +98,20 @@ describe("storefront media protection", () => {
     expect(styleSource).toContain('font-family: "Hanuman", "Kantumruy Pro"');
     expect(styleSource).toContain("prefers-reduced-motion: no-preference");
   });
+
+  it("docks the Contact Admin control above storefront actions and locks the mobile viewport scale", () => {
+    const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
+    const contactSource = readFileSync(join(process.cwd(), "client/src/components/ContactAdminControl.tsx"), "utf8");
+    const documentSource = readFileSync(join(process.cwd(), "client/index.html"), "utf8");
+    const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
+    expect(componentSource).toContain("<ContactAdminControl paymentBarVisible={isTopupRoute} />");
+    expect(contactSource).toContain("ទំនាក់ទំនង Admin");
+    expect(contactSource).toContain("Asia/Phnom_Penh");
+    expect(contactSource).toContain("https://t.me/");
+    expect(documentSource).toContain("user-scalable=no");
+    expect(documentSource).toContain("maximum-scale=1.0");
+    expect(styleSource).toContain(".contact-admin-layer");
+    expect(styleSource).toContain(".contact-admin-fab--payment");
+    expect(styleSource).toContain("touch-action: pan-x pan-y");
+  });
 });

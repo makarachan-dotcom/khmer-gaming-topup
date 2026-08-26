@@ -26,7 +26,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
 import { gameTopupPath } from "./GameTopup";
-import { isPopularStorefrontGame, originalGameArtworkFor } from "@/lib/originalGameArtwork";
+import { isPopularStorefrontGame, providerGameImageKey, resolvedGameArtworkFor, type ProviderGameImageOverride } from "@/lib/originalGameArtwork";
 
 const bannerSlides = [
   { src: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/xftKPqLVBztUvpUZ.png", alt: "ZURS.me game top-up banner" },
@@ -177,9 +177,11 @@ function HomepageMedia() {
 function HomeGameCard({
   game,
   displayName,
+  imageOverrides,
 }: {
   game: { id: string; name: string; region?: string; logoUrl?: string };
   displayName?: string;
+  imageOverrides?: Map<string, ProviderGameImageOverride>;
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
@@ -206,10 +208,10 @@ function HomeGameCard({
     { gameId: game.id },
     { enabled: visible, staleTime: 10 * 60 * 1000 }
   );
-  const logoUrl =
-    details.data?.status === "ready" ? details.data.game.logoUrl : game.logoUrl;
+  const imageOverride = imageOverrides?.get(providerGameImageKey(game.id, game.name));
+  const logoUrl = imageOverride?.logoUrl ?? (details.data?.status === "ready" ? details.data.game.logoUrl : game.logoUrl);
   const gameLabel = displayName ?? providerGameBaseName(game);
-  const originalArtwork = originalGameArtworkFor(game.id, game.name);
+  const originalArtwork = resolvedGameArtworkFor(game.id, game.name, imageOverride);
   const popular = isPopularStorefrontGame(game.id, gameLabel);
   return (
     <div ref={cardRef}>
@@ -239,17 +241,18 @@ function HomeGameCard({
 
 type CatalogGame = { id: string; name: string; region?: string; logoUrl?: string };
 
-function ProviderGameCatalogGroup({ baseName, games }: { baseName: string; games: CatalogGame[] }) {
+function ProviderGameCatalogGroup({ baseName, games, imageOverrides }: { baseName: string; games: CatalogGame[]; imageOverrides: Map<string, ProviderGameImageOverride> }) {
   const primary = games[0];
   if (!primary) return null;
   const normalizedBaseName = baseName.trim().toLowerCase();
   if (normalizedBaseName === "mobile legends") {
-    return <HomeGameCard game={{ ...primary, id: "mobile_legends", name: "Mobile Legends" }} displayName="Mobile Legends" />;
+    return <HomeGameCard game={{ ...primary, id: "mobile_legends", name: "Mobile Legends" }} displayName="Mobile Legends" imageOverrides={imageOverrides} />;
   }
   if (normalizedBaseName === "pubg mobile" || games.some(game => game.id === "pubg_mobile_auto" || game.id === "pubg_mobile_fast")) {
-    return <HomeGameCard game={{ ...primary, id: "pubg_mobile", name: "PUBG Mobile" }} displayName="PUBG Mobile" />;
+    return <HomeGameCard game={{ ...primary, id: "pubg_mobile", name: "PUBG Mobile" }} displayName="PUBG Mobile" imageOverrides={imageOverrides} />;
   }
-  return <section className="zurs-game-group col-span-full rounded-[1.15rem] border p-3 sm:p-4"><div className="flex items-center gap-2.5"><ProviderGameArtwork name={primary.name} region={primary.region} logoUrl={primary.logoUrl} className="h-10 w-10 rounded-xl" showCountryFlag={false} /><div className="min-w-0"><OverflowMarquee text={baseName} className="block text-sm font-extrabold text-slate-950" /><p className="mt-0.5 text-[10px] font-semibold text-cyan-800">គាំទ្រសម្រាប់កម្ពុជា · ជ្រើសរើសប្រភេទ top-up</p></div></div><div className={games.length === 1 ? "mx-auto mt-3 grid w-full max-w-[12rem] grid-cols-1 gap-3" : "mt-3 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4"}>{games.map(game => <HomeGameCard key={game.id} game={game} displayName={providerGameVariantLabel(game)} />)}</div></section>;
+  const primaryOverride = imageOverrides.get(providerGameImageKey(primary.id, primary.name));
+  return <section className="zurs-game-group col-span-full rounded-[1.15rem] border p-3 sm:p-4"><div className="flex items-center gap-2.5"><ProviderGameArtwork name={primary.name} region={primary.region} logoUrl={primaryOverride?.logoUrl ?? primary.logoUrl} className="h-10 w-10 rounded-xl" showCountryFlag={false} /><div className="min-w-0"><OverflowMarquee text={baseName} className="block text-sm font-extrabold text-slate-950" /><p className="mt-0.5 text-[10px] font-semibold text-cyan-800">គាំទ្រសម្រាប់កម្ពុជា · ជ្រើសរើសប្រភេទ top-up</p></div></div><div className={games.length === 1 ? "mx-auto mt-3 grid w-full max-w-[12rem] grid-cols-1 gap-3" : "mt-3 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4"}>{games.map(game => <HomeGameCard key={game.id} game={game} displayName={providerGameVariantLabel(game)} imageOverrides={imageOverrides} />)}</div></section>;
 }
 
 const catalogFilters: Array<{ value: ProviderGameFilter; label: string }> = [
@@ -260,6 +263,7 @@ const catalogFilters: Array<{ value: ProviderGameFilter; label: string }> = [
 
 function HomeTopupExperience() {
   const gamesQuery = trpc.provider.games.useQuery();
+  const gameImages = trpc.provider.gameImages.useQuery(undefined, { staleTime: 30_000, refetchInterval: 15_000 });
   const paymentReadiness = trpc.payments.readiness.useQuery();
   const [query, setQuery] = useState("");
   const [regionFilter, setRegionFilter] = useState<ProviderGameFilter>("all");
@@ -269,6 +273,7 @@ function HomeTopupExperience() {
     [games, query, regionFilter]
   );
   const hasFilters = Boolean(query.trim()) || regionFilter !== "all";
+  const imageOverrides = useMemo(() => new Map((gameImages.data ?? []).map((item) => [item.gameId, item])), [gameImages.data]);
   const catalogGroups = useMemo(() => groupProviderGamesByBaseName(visibleGames), [visibleGames]);
 
   return (
@@ -361,7 +366,7 @@ function HomeTopupExperience() {
             </div>
             {visibleGames.length ? (
               <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
-                {catalogGroups.map(group => group.games.length > 1 ? <ProviderGameCatalogGroup key={group.baseName} baseName={group.baseName} games={group.games} /> : <HomeGameCard key={group.games[0]!.id} game={group.games[0]!} />)}
+                {catalogGroups.map(group => group.games.length > 1 ? <ProviderGameCatalogGroup key={group.baseName} baseName={group.baseName} games={group.games} imageOverrides={imageOverrides} /> : <HomeGameCard key={group.games[0]!.id} game={group.games[0]!} imageOverrides={imageOverrides} />)}
               </div>
             ) : (
               <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center">

@@ -71,21 +71,32 @@ function slugFromName(name: string) {
     .replace(/^_+|_+$/g, "");
 }
 
-export function originalGameArtworkFor(gameId: string, gameName = ""): OriginalGameArtwork | null {
+export function providerGameImageKey(gameId: string, gameName = "") {
   const id = gameId.trim().toLocaleLowerCase();
-  if (artwork[id]) return artwork[id];
+  if (artwork[id]) return id;
   const slug = slugFromName(gameName);
-  if (artwork[slug]) return artwork[slug];
-  if (/mobile[\s_-]*legends/i.test(gameName)) return artwork.mobile_legends;
-  if (/free[\s_-]*fire/i.test(gameName)) return artwork.free_fire_my_sg;
-  if (/pubg/i.test(gameName)) return artwork.pubg_mobile;
-  if (/honor[\s_-]*of[\s_-]*kings/i.test(gameName)) return artwork.honor_of_kings;
-  if (/magic[\s_-]*chess/i.test(gameName)) return artwork.magic_chess_gogo_global;
-  if (/8[\s_-]*ball/i.test(gameName)) return artwork["8_ball_pool"];
-  if (/blood[\s_-]*strike/i.test(gameName)) return artwork.blood_strike;
-  if (/eafc|football/i.test(gameName)) return artwork.eafc_mobile;
-  if (/frag/i.test(gameName)) return artwork.frag_pro_shooter;
-  return null;
+  if (artwork[slug]) return slug;
+  if (/mobile[\s_-]*legends/i.test(gameName)) return "mobile_legends";
+  if (/free[\s_-]*fire/i.test(gameName)) return "free_fire_my_sg";
+  if (/pubg/i.test(gameName)) return "pubg_mobile";
+  if (/honor[\s_-]*of[\s_-]*kings/i.test(gameName)) return "honor_of_kings";
+  if (/magic[\s_-]*chess/i.test(gameName)) return "magic_chess_gogo_global";
+  if (/8[\s_-]*ball/i.test(gameName)) return "8_ball_pool";
+  if (/blood[\s_-]*strike/i.test(gameName)) return "blood_strike";
+  if (/eafc|football/i.test(gameName)) return "eafc_mobile";
+  if (/frag/i.test(gameName)) return "frag_pro_shooter";
+  return id;
+}
+
+export function originalGameArtworkFor(gameId: string, gameName = ""): OriginalGameArtwork | null {
+  return artwork[providerGameImageKey(gameId, gameName)] ?? null;
+}
+
+export type ProviderGameImageOverride = { gameId: string; logoUrl: string | null; cardArtworkUrl: string | null };
+
+export function resolvedGameArtworkFor(gameId: string, gameName = "", override?: ProviderGameImageOverride | null): OriginalGameArtwork | null {
+  const defaultArtwork = originalGameArtworkFor(gameId, gameName);
+  return override?.cardArtworkUrl ? { ...(defaultArtwork ?? { accent: "#46d8ff" }), src: override.cardArtworkUrl } : defaultArtwork;
 }
 
 export function isPopularStorefrontGame(gameId: string, gameName = "") {

@@ -3,7 +3,8 @@ import { createHash, randomBytes } from "node:crypto";
 import { drizzle } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
 import {
-  adminRoleAudits, customerWallets, gamePackages, gameProducts, gmailSenderConnections, InsertUser, marketplaceContacts, marketplaceDisclosureRequests, marketplaceEvidenceAccessLogs, marketplaceFavorites, marketplaceFraudReports, marketplaceListings, marketplaceVerificationEvidence, marketplaceVerifications, orders, orderStatusEvents, orderSupportTickets, paymentTransactions, providerPackageArtworkAudits, providerPackageArtworkOverrides, savedPlayerIds, siteContent, smmServices, smmTiers, User, users, walletTopups, welcomeEmailDeliveries,
+    adminRoleAudits, customerWallets, gamePackages, gameProducts, gmailSenderConnections, InsertUser, marketplaceContacts, marketplaceDisclosureRequests, marketplaceEvidenceAccessLogs, marketplaceFavorites, marketplaceFraudReports, marketplaceListings, marketplaceVerificationEvidence, marketplaceVerifications, orders, orderStatusEvents, orderSupportTickets, paymentTransactions, providerPackageArtworkAudits, providerPackageArtworkOverrides, savedPlayerIds, siteContent, smmServices, smmTiers, User,
+users, walletTopups, welcomeEmailDeliveries,
 } from "../drizzle/schema";
 import { createAppwriteMarketplaceListing, createAppwriteWalletTopup, deleteAppwriteMarketplaceListing, getAppwriteAdminRoleAudits, getAppwriteCustomerOrders, getAppwriteCustomerPaymentHistory, getAppwritePaymentControl, getAppwriteProviderCatalog, getAppwriteUserByEmail, getAppwriteUserByOpenId, getAppwriteWalletSummary, getAppwriteWalletTopup, isAppwriteStoreConfigured, listAppwriteMarketplaceListings, listAppwriteUsers, setAppwritePaymentControl, setAppwriteUserRole, syncAppwriteFzrCatalog, syncAppwriteSmmCatalog, updateAppwriteMarketplaceListing, updateAppwriteProviderOffer, updateAppwriteUserDisplayName, updateAppwriteWalletTopup, upsertAppwriteUser } from "./appwriteStore";
 import { buildOrderNumber, isSingleAdminEmail } from "./storefrontDomain";
@@ -1063,4 +1064,133 @@ export async function getProviderPackageArtworkAudits(gameId?: string) {
   const query = db.select().from(providerPackageArtworkAudits).orderBy(desc(providerPackageArtworkAudits.createdAt)).limit(100);
   const rows = gameId ? await query.where(eq(providerPackageArtworkAudits.gameId, gameId.trim())) : await query;
   return rows.map((row) => ({ gameId: row.gameId, offerId: row.offerId, action: row.action, previousMediaUrl: row.previousMediaUrl, nextMediaUrl: row.nextMediaUrl, actorUserId: row.actorUserId, createdAt: row.createdAt }));
+}
+
+const contactAdminContentPrefix = "support-contact-admin:";
+const providerGameImageContentPrefix = "provider-game-image:";
+
+type ContactAdminProfile = {
+  id: string;
+  displayName: string;
+  telegramUsername: string;
+  workingHoursStart: string;
+  workingHoursEnd: string;
+  replyTimeText: string;
+  photoUrl: string | null;
+  isVisible: boolean;
+  sortOrder: number;
+  updatedAt: Date;
+};
+
+const contactAdminSeeds: Array<Omit<ContactAdminProfile, "updatedAt">> = [
+  { id: "admin-makara", displayName: "Admin Makara", telegramUsername: "zurs_makara", workingHoursStart: "08:00", workingHoursEnd: "22:00", replyTimeText: "~5 នាទី", photoUrl: null, isVisible: true, sortOrder: 10 },
+  { id: "admin-lymeng", displayName: "Admin Lymeng", telegramUsername: "zurs_lymeng", workingHoursStart: "08:00", workingHoursEnd: "22:00", replyTimeText: "~10 នាទី", photoUrl: null, isVisible: true, sortOrder: 20 },
+];
+
+function contactAdminContentKey(id: string) { return `${contactAdminContentPrefix}${id}`; }
+function providerGameImageContentKey(gameId: string) { return `${providerGameImageContentPrefix}${gameId}`; }
+
+function parseJsonRecord(value: string | null) {
+  if (!value) return {} as Record<string, unknown>;
+  try { const parsed = JSON.parse(value); return parsed && typeof parsed === "object" ? parsed as Record<string, unknown> : {}; } catch { return {}; }
+}
+
+function contactAdminFromContent(row: typeof siteContent.$inferSelect): ContactAdminProfile | null {
+  if (!row.contentKey.startsWith(contactAdminContentPrefix)) return null;
+  const id = row.contentKey.slice(contactAdminContentPrefix.length);
+  const seed = contactAdminSeeds.find((admin) => admin.id === id);
+  const data = parseJsonRecord(row.bodyKh);
+  return {
+    id,
+    displayName: typeof data.displayName === "string" ? data.displayName : row.titleKh ?? seed?.displayName ?? "Admin",
+    telegramUsername: typeof data.telegramUsername === "string" ? data.telegramUsername : seed?.telegramUsername ?? "",
+    workingHoursStart: typeof data.workingHoursStart === "string" ? data.workingHoursStart : seed?.workingHoursStart ?? "08:00",
+    workingHoursEnd: typeof data.workingHoursEnd === "string" ? data.workingHoursEnd : seed?.workingHoursEnd ?? "22:00",
+    replyTimeText: typeof data.replyTimeText === "string" ? data.replyTimeText : seed?.replyTimeText ?? "~5 នាទី",
+    photoUrl: row.mediaUrl ?? null,
+    isVisible: row.isActive,
+    sortOrder: typeof data.sortOrder === "number" ? data.sortOrder : seed?.sortOrder ?? 999,
+    updatedAt: row.updatedAt,
+  };
+}
+
+async function ensureContactAdminSeeds() {
+  const db = await getDb();
+  if (!db) return;
+  const rows = await db.select().from(siteContent);
+  const keys = new Set(rows.map((row) => row.contentKey));
+  for (const admin of contactAdminSeeds) {
+    const contentKey = contactAdminContentKey(admin.id);
+    if (keys.has(contentKey)) continue;
+    await db.insert(siteContent).values({ id: nanoid(), contentKey, titleKh: admin.displayName, bodyKh: JSON.stringify({ displayName: admin.displayName, telegramUsername: admin.telegramUsername, workingHoursStart: admin.workingHoursStart, workingHoursEnd: admin.workingHoursEnd, replyTimeText: admin.replyTimeText, sortOrder: admin.sortOrder }), mediaUrl: null, isActive: admin.isVisible, updatedByUserId: null });
+  }
+}
+
+export async function getContactAdmins(includeHidden = false) {
+  const db = await getDb();
+  if (!db) return contactAdminSeeds.map((admin) => ({ ...admin, updatedAt: new Date(0) }));
+  await ensureContactAdminSeeds();
+  const admins = (await db.select().from(siteContent)).map(contactAdminFromContent).filter((admin): admin is ContactAdminProfile => Boolean(admin));
+  return admins.filter((admin) => includeHidden || admin.isVisible).sort((a, b) => a.sortOrder - b.sortOrder || a.displayName.localeCompare(b.displayName));
+}
+
+export async function saveContactAdmin(input: { id: string; displayName: string; telegramUsername: string; workingHoursStart: string; workingHoursEnd: string; replyTimeText: string; photoUrl?: string | null; isVisible: boolean; sortOrder: number; updatedByUserId: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Contact-admin storage is unavailable");
+  await ensureContactAdminSeeds();
+  const id = input.id.trim();
+  if (!contactAdminSeeds.some((admin) => admin.id === id)) throw new Error("Contact admin not found");
+  const photoUrl = input.photoUrl?.trim() || null;
+  if (photoUrl && !isSafeArtworkMediaUrl(photoUrl)) throw new Error("Photo URL must use managed storage or HTTPS");
+  const contentKey = contactAdminContentKey(id);
+  const existing = await db.select({ id: siteContent.id }).from(siteContent).where(eq(siteContent.contentKey, contentKey)).limit(1);
+  const values = { titleKh: input.displayName.trim(), bodyKh: JSON.stringify({ displayName: input.displayName.trim(), telegramUsername: input.telegramUsername.replace(/^@+/, "").trim(), workingHoursStart: input.workingHoursStart.trim(), workingHoursEnd: input.workingHoursEnd.trim(), replyTimeText: input.replyTimeText.trim(), sortOrder: input.sortOrder }), mediaUrl: photoUrl, isActive: input.isVisible, updatedByUserId: input.updatedByUserId };
+  if (existing[0]) await db.update(siteContent).set(values).where(eq(siteContent.id, existing[0].id));
+  else await db.insert(siteContent).values({ id: nanoid(), contentKey, ...values });
+  return { success: true };
+}
+
+type ProviderGameImageOverride = { gameId: string; logoUrl: string | null; cardArtworkUrl: string | null; updatedAt: Date };
+
+function providerGameImageFromContent(row: typeof siteContent.$inferSelect): ProviderGameImageOverride | null {
+  if (!row.contentKey.startsWith(providerGameImageContentPrefix)) return null;
+  const data = parseJsonRecord(row.bodyKh);
+  return { gameId: row.contentKey.slice(providerGameImageContentPrefix.length), logoUrl: typeof data.logoUrl === "string" ? data.logoUrl : null, cardArtworkUrl: typeof data.cardArtworkUrl === "string" ? data.cardArtworkUrl : null, updatedAt: row.updatedAt };
+}
+
+export async function getProviderGameImageOverrides() {
+  const db = await getDb();
+  if (!db) return [];
+  return (await db.select().from(siteContent)).map(providerGameImageFromContent).filter((item): item is ProviderGameImageOverride => Boolean(item)).sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+}
+
+export async function saveProviderGameImageOverride(input: { gameId: string; logoUrl?: string | null; cardArtworkUrl?: string | null; updatedByUserId: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Game-image override storage is unavailable");
+  const gameId = input.gameId.trim();
+  const logoUrl = input.logoUrl?.trim() || null;
+  const cardArtworkUrl = input.cardArtworkUrl?.trim() || null;
+  if (logoUrl && !isSafeArtworkMediaUrl(logoUrl)) throw new Error("Logo URL must use managed storage or HTTPS");
+  if (cardArtworkUrl && !isSafeArtworkMediaUrl(cardArtworkUrl)) throw new Error("Artwork URL must use managed storage or HTTPS");
+  const contentKey = providerGameImageContentKey(gameId);
+  const existing = await db.select({ id: siteContent.id }).from(siteContent).where(eq(siteContent.contentKey, contentKey)).limit(1);
+  const values = { titleKh: `Game image override · ${gameId}`, bodyKh: JSON.stringify({ logoUrl, cardArtworkUrl }), mediaUrl: cardArtworkUrl, isActive: true, updatedByUserId: input.updatedByUserId };
+  if (existing[0]) await db.update(siteContent).set(values).where(eq(siteContent.id, existing[0].id));
+  else await db.insert(siteContent).values({ id: nanoid(), contentKey, ...values });
+  return { success: true };
+}
+
+export async function resetProviderGameImageSlot(input: { gameId: string; slot: "logo" | "cardArtwork" }) {
+  const db = await getDb();
+  if (!db) throw new Error("Game-image override storage is unavailable");
+  const gameId = input.gameId.trim();
+  const contentKey = providerGameImageContentKey(gameId);
+  const current = await db.select().from(siteContent).where(eq(siteContent.contentKey, contentKey)).limit(1);
+  if (!current[0]) return { success: true, reset: false };
+  const data = parseJsonRecord(current[0].bodyKh);
+  const logoUrl = input.slot === "logo" ? null : typeof data.logoUrl === "string" ? data.logoUrl : null;
+  const cardArtworkUrl = input.slot === "cardArtwork" ? null : typeof data.cardArtworkUrl === "string" ? data.cardArtworkUrl : null;
+  if (!logoUrl && !cardArtworkUrl) await db.delete(siteContent).where(eq(siteContent.id, current[0].id));
+  else await db.update(siteContent).set({ bodyKh: JSON.stringify({ logoUrl, cardArtworkUrl }), mediaUrl: cardArtworkUrl }).where(eq(siteContent.id, current[0].id));
+  return { success: true, reset: true };
 }
