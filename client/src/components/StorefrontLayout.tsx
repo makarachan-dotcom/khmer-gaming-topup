@@ -43,7 +43,7 @@ export default function StorefrontLayout({ children }: { children: ReactNode }) 
 function StorefrontShell({ children }: { children: ReactNode }) {
   const [location, setLocation] = useLocation();
   const { user, loading, logout } = useAuth();
-  const { selectedProduct } = useSelectedProduct();
+  const { selectedProduct, selectedPaymentMethodId } = useSelectedProduct();
   const { playerTitle } = useStorefrontHeader();
   const accountLabel = user?.displayName || user?.name || "គណនីខ្ញុំ";
   const isOwnerAdmin = user?.role === "admin" || user?.email?.trim().toLowerCase() === "chanmakara672@gmail.com";
@@ -53,6 +53,8 @@ function StorefrontShell({ children }: { children: ReactNode }) {
   const [balanceVisible, setBalanceVisible] = useState(false);
   const [paymentGateOpen, setPaymentGateOpen] = useState(false);
   const wallet = trpc.wallet.summary.useQuery(undefined, { enabled: Boolean(user) });
+  const paymentMethods = trpc.payments.methods.useQuery(undefined, { staleTime: 30_000, refetchInterval: 15_000 });
+  const selectedPaymentMethod = (paymentMethods.data ?? []).find((method) => method.id === selectedPaymentMethodId) ?? null;
   const displayedBalance = Number(wallet.data?.balanceKhr ?? 0).toLocaleString("km-KH", { maximumFractionDigits: 2 });
   const balanceCurrency = wallet.data?.currency ?? "KHR";
   const activeMobileTabIndex = Math.max(0, mobileNavigation.findIndex((item) => item.href === location));
@@ -140,7 +142,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
 
       <ContactAdminControl paymentBarVisible={isTopupRoute} />
       <PaymentMethodGate product={selectedProduct} open={paymentGateOpen} onOpenChange={setPaymentGateOpen} />
-      {isTopupRoute ? <SelectedProductActionBar product={selectedProduct} isAuthenticated={Boolean(user)} isAuthenticationLoading={loading} signInHref={googleSignInHref} onOpenPaymentGate={() => setPaymentGateOpen(true)} /> : <nav className="liquid-tabbar zurs-mobile-tabbar fixed bottom-2 left-1/2 z-40 grid h-[3.25rem] w-[min(calc(100vw-1.5rem),15rem)] -translate-x-1/2 grid-cols-2 gap-0.5 rounded-full p-1 shadow-[0_10px_24px_rgba(15,23,42,0.11)] sm:hidden" style={{ "--mobile-tab-index": activeMobileTabIndex } as React.CSSProperties} aria-label="Mobile primary navigation">
+      {isTopupRoute ? <SelectedProductActionBar product={selectedProduct} paymentMethodName={selectedPaymentMethod?.name ?? null} isAuthenticated={Boolean(user)} isAuthenticationLoading={loading} signInHref={googleSignInHref} onOpenPaymentGate={() => setPaymentGateOpen(true)} /> : <nav className="liquid-tabbar zurs-mobile-tabbar fixed bottom-2 left-1/2 z-40 grid h-[3.25rem] w-[min(calc(100vw-1.5rem),15rem)] -translate-x-1/2 grid-cols-2 gap-0.5 rounded-full p-1 shadow-[0_10px_24px_rgba(15,23,42,0.11)] sm:hidden" style={{ "--mobile-tab-index": activeMobileTabIndex } as React.CSSProperties} aria-label="Mobile primary navigation">
         <span className="zurs-mobile-tab-indicator" aria-hidden="true" />
         {mobileNavigation.map(({ href, label, icon: Icon, animation }) => { const active = location === href; const classes = cn("zurs-mobile-tab relative z-10 flex min-w-0 flex-row items-center justify-center gap-1 rounded-full px-2 py-1 text-[9px] font-bold transition-colors", active ? "zurs-mobile-tab--active text-slate-950" : "text-slate-500 hover:bg-white/75 hover:text-slate-800"); return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={classes}>{active && animation ? <AnimatedGlyph name={animation} size={16} color="#312e81" /> : <Icon className={cn("h-3.5 w-3.5", active && "tab-icon-active")} strokeWidth={active ? 2.25 : 1.9} />}<span className="truncate">{label}</span></Link>; })}
       </nav>}
@@ -149,12 +151,12 @@ function StorefrontShell({ children }: { children: ReactNode }) {
   );
 }
 
-function SelectedProductActionBar({ product, isAuthenticated, isAuthenticationLoading, signInHref, onOpenPaymentGate }: { product: { label: string; amountLabel: string; priceLabel: string; gameName: string; gameLogoUrl?: string } | null; isAuthenticated: boolean; isAuthenticationLoading: boolean; signInHref: string; onOpenPaymentGate: () => void }) {
+function SelectedProductActionBar({ product, paymentMethodName, isAuthenticated, isAuthenticationLoading, signInHref, onOpenPaymentGate }: { product: { label: string; amountLabel: string; priceLabel: string; gameName: string; gameLogoUrl?: string } | null; paymentMethodName: string | null; isAuthenticated: boolean; isAuthenticationLoading: boolean; signInHref: string; onOpenPaymentGate: () => void }) {
   const expanded = Boolean(product);
   return <aside className={cn("selected-product-action-bar fixed bottom-2 left-1/2 z-40 flex h-[3.75rem] -translate-x-1/2 items-center gap-2 rounded-2xl p-2", expanded ? "selected-product-action-bar--expanded" : "selected-product-action-bar--compact")} aria-label="Selected package action bar" aria-live="polite">
     <span className="selected-product-action-bar__compact-content"><WalletCards className="h-4 w-4" /><span>ជ្រើសកញ្ចប់</span><ChevronRight className="h-4 w-4" /></span>
     <div className="selected-product-action-bar__expanded-content">
-      {product ? <><ProviderGameArtwork name={product.gameName} logoUrl={product.gameLogoUrl} priority className="h-11 w-11 shrink-0 rounded-xl" iconClassName="h-5 w-5" /><div className="min-w-0 flex-1"><OverflowMarquee text={product.label} className="text-xs font-extrabold text-slate-950" /><OverflowMarquee text={`${product.amountLabel} · ${product.priceLabel}`} className="mt-0.5 text-[10px] font-semibold text-slate-600" /></div>{isAuthenticationLoading ? <button type="button" disabled aria-disabled="true" className="inline-flex h-10 shrink-0 items-center gap-1 rounded-xl bg-slate-900/10 px-2.5 text-[10px] font-bold text-slate-500"><OutlineLoader size={14} color="#64748b" />កំពុងពិនិត្យ</button> : isAuthenticated ? <button type="button" onClick={onOpenPaymentGate} className="inline-flex h-10 shrink-0 items-center gap-1 rounded-xl bg-slate-950 px-2.5 text-[10px] font-bold text-white shadow-sm transition hover:bg-cyan-700"><ChevronRight className="h-3.5 w-3.5" />បន្ត</button> : <a href={signInHref} className="inline-flex h-10 shrink-0 items-center gap-1 rounded-xl bg-slate-950 px-2.5 text-[10px] font-bold text-white shadow-sm transition hover:bg-indigo-700"><LogIn className="h-3.5 w-3.5" />ចូលគណនីដើម្បីទិញ</a>}</> : null}
+      {product ? <><ProviderGameArtwork name={product.gameName} logoUrl={product.gameLogoUrl} priority className="h-11 w-11 shrink-0 rounded-xl" iconClassName="h-5 w-5" /><div className="min-w-0 flex-1"><OverflowMarquee text={product.label} className="text-xs font-extrabold text-slate-950" /><OverflowMarquee text={`${product.amountLabel} · ${product.priceLabel} · ${paymentMethodName ? `បង់៖ ${paymentMethodName}` : "សូមជ្រើសវិធីបង់ប្រាក់"}`} className="mt-0.5 text-[10px] font-semibold text-slate-600" /></div>{isAuthenticationLoading ? <button type="button" disabled aria-disabled="true" className="inline-flex h-10 shrink-0 items-center gap-1 rounded-xl bg-slate-900/10 px-2.5 text-[10px] font-bold text-slate-500"><OutlineLoader size={14} color="#64748b" />កំពុងពិនិត្យ</button> : isAuthenticated ? paymentMethodName ? <button type="button" onClick={onOpenPaymentGate} className="inline-flex h-10 shrink-0 items-center gap-1 rounded-xl bg-slate-950 px-2.5 text-[10px] font-bold text-white shadow-sm transition hover:bg-cyan-700"><ChevronRight className="h-3.5 w-3.5" />បន្ត</button> : <button type="button" disabled aria-disabled="true" title="សូមជ្រើសវិធីបង់ប្រាក់នៅខាងលើកញ្ចប់" className="inline-flex h-10 shrink-0 items-center gap-1 rounded-xl bg-slate-900/10 px-2.5 text-[10px] font-bold text-slate-500"><WalletCards className="h-3.5 w-3.5" />ជ្រើសវិធី</button> : <a href={signInHref} className="inline-flex h-10 shrink-0 items-center gap-1 rounded-xl bg-slate-950 px-2.5 text-[10px] font-bold text-white shadow-sm transition hover:bg-indigo-700"><LogIn className="h-3.5 w-3.5" />ចូលគណនីដើម្បីទិញ</a>}</> : null}
     </div>
   </aside>;
 }

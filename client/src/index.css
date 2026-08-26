@@ -1142,3 +1142,31 @@ img.payment-method-option__icon { padding: 0.34rem; }
     min-height: 2.45rem;
   }
 }
+
+/* Payment method preselection: appears after verified identity and before packages. */
+.payment-method-preselect {
+  margin-top: 1.15rem;
+  border: 1px solid oklch(0.79 0.055 226 / 0.64);
+  border-radius: 1.2rem;
+  background: linear-gradient(135deg, oklch(0.975 0.02 236 / 0.92), oklch(0.97 0.025 92 / 0.76));
+  box-shadow: 0 12px 28px oklch(0.3 0.08 230 / 0.08), inset 0 1px 0 oklch(1 0 0 / 0.86);
+  padding: 0.9rem;
+}
+.payment-method-preselect__header { display: flex; align-items: start; justify-content: space-between; gap: 0.8rem; }
+.payment-method-preselect__header h3 { margin-top: 0.12rem; color: oklch(0.23 0.065 250); font-family: var(--font-display); font-size: 1rem; font-weight: 800; line-height: 1.38; }
+.payment-method-preselect__header p:not(.payment-method-gate__eyebrow) { margin-top: 0.28rem; color: oklch(0.43 0.04 255); font-size: 0.7rem; line-height: 1.45; }
+.payment-method-preselect__selected { display: inline-flex; max-width: 46%; align-items: center; gap: 0.32rem; overflow: hidden; border: 1px solid oklch(0.67 0.12 215 / 0.55); border-radius: 999px; background: oklch(1 0 0 / 0.74); color: oklch(0.34 0.12 220); padding: 0.35rem 0.52rem; font-size: 0.64rem; font-weight: 850; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+.payment-method-preselect__methods { display: grid; gap: 0.55rem; margin-top: 0.78rem; }
+.payment-method-preselect__hint { margin-top: 0.7rem; color: oklch(0.4 0.07 230); font-size: 0.68rem; font-weight: 700; line-height: 1.45; }
+.payment-method-gate__summary .payment-method-gate__review { margin-top: 0.9rem; }
+.payment-method-gate__missing { display: flex; align-items: start; gap: 0.55rem; margin-top: 1rem; border: 1px solid oklch(0.8 0.07 85); border-radius: 0.95rem; background: oklch(0.97 0.045 90 / 0.72); color: oklch(0.36 0.08 80); padding: 0.8rem; font-size: 0.72rem; line-height: 1.45; }
+.payment-method-gate__missing strong { display: block; color: oklch(0.29 0.075 75); font-size: 0.76rem; }
+.payment-method-gate__missing p { margin-top: 0.18rem; }
+@media (max-width: 639px) {
+  .payment-method-preselect { border-radius: 1.05rem; padding: 0.78rem; }
+  .payment-method-preselect__header { gap: 0.55rem; }
+  .payment-method-preselect__selected { max-width: 43%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .payment-method-preselect, .payment-method-preselect .payment-method-option { transition: none; }
+}

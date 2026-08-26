@@ -145,4 +145,14 @@ describe("dedicated game top-up routes", () => {
     expect(JSON.stringify(entries)).not.toContain("playerName");
     expect(readVerifiedPlayerEntries("mobile_legends_global")).toHaveLength(1);
   });
+
+  it("places payment-method preselection after an accepted identity and before the package list without blocking public preview", () => {
+    const source = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
+    const preselectPosition = source.indexOf("{canBrowsePackages && !adminPreviewActive ? <PaymentMethodPreselect /> : null}");
+    const packagePosition = source.indexOf("<DiamondPackages packages={packages}");
+    expect(source).toContain('import { PaymentMethodPreselect } from "@/components/PaymentMethodGate"');
+    expect(preselectPosition).toBeGreaterThan(-1);
+    expect(packagePosition).toBeGreaterThan(preselectPosition);
+    expect(source).toContain("setSelectedPaymentMethodId(null)");
+  });
 });

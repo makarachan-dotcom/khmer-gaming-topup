@@ -121,10 +121,15 @@ describe("storefront media protection", () => {
     const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
     expect(layoutSource).toContain("<PaymentMethodGate product={selectedProduct} open={paymentGateOpen}");
     expect(layoutSource).toContain("onOpenPaymentGate={() => setPaymentGateOpen(true)}");
+    expect(layoutSource).toContain("paymentMethodName={selectedPaymentMethod?.name ?? null}");
+    expect(layoutSource).toContain("សូមជ្រើសវិធីបង់ប្រាក់");
+    expect(layoutSource).toContain("title=\"សូមជ្រើសវិធីបង់ប្រាក់នៅខាងលើកញ្ចប់\"");
     expect(gateSource).toContain("ជ្រើសរើសវិធីបង់ប្រាក់");
     expect(gateSource).toContain("ការបង់ប្រាក់កំពុងត្រូវបានរៀបចំ — សូមរង់ចាំបន្តិច");
     expect(gateSource).toContain("aria-disabled={!paymentsEnabled}");
     expect(gateSource).toContain("payment-fast-forward__chevrons");
+    expect(gateSource).toContain("មិនទាន់ជ្រើសវិធីបង់ប្រាក់");
+    expect(styleSource).toContain(".payment-method-preselect");
     expect(styleSource).toContain("payment-fast-forward-wave");
     expect(styleSource).toContain("prefers-reduced-motion: no-preference");
   });
