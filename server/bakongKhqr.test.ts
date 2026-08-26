@@ -22,30 +22,36 @@ describe("Bakong KHQR response handling", () => {
     Object.assign(process.env, bakongEnv);
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("<!DOCTYPE html><html><body>Temporary error</body></html>", { status: 502, headers: { "Content-Type": "text/html" } })));
 
-    await expect(checkBakongKhqrPayment(paymentInput)).resolves.toEqual({ status: "unavailable" });
+    await expect(checkBakongKhqrPayment(paymentInput)).resolves.toMatchObject({ status: "unavailable", reason: "empty_or_malformed_bakong_response" });
   });
 
   it("accepts a successful exact-MD5 response when Bakong omits the optional receiver field", async () => {
     Object.assign(process.env, bakongEnv);
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ responseCode: 0, data: { hash: "h".repeat(64), amount: 500, currency: "KHR" } }), { status: 200, headers: { "Content-Type": "application/json" } })));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      responseCode: 0,
+      data: { hash: "h".repeat(64), amount: 500, currency: "KHR" },
+    }), { status: 200, headers: { "Content-Type": "application/json" } })));
 
     await expect(checkBakongKhqrPayment(paymentInput)).resolves.toMatchObject({ status: "paid", transactionHash: "h".repeat(64) });
   });
 
   it("rejects a successful response whose supplied recipient does not match the stored merchant account", async () => {
     Object.assign(process.env, bakongEnv);
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ responseCode: 0, data: { hash: "h".repeat(64), amount: 500, currency: "KHR", toAccountId: "other@bank" } }), { status: 200, headers: { "Content-Type": "application/json" } })));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      responseCode: 0,
+      data: { hash: "h".repeat(64), amount: 500, currency: "KHR", toAccountId: "other@bank" },
+    }), { status: 200, headers: { "Content-Type": "application/json" } })));
 
     await expect(checkBakongKhqrPayment(paymentInput)).resolves.toMatchObject({ status: "unavailable", reason: "bakong_transaction_did_not_match_stored_session" });
   });
 
-  it("distinguishes the documented missing-account code from an undocumented rejected preflight outcome", async () => {
+  it("distinguishes documented missing-account from undocumented rejected preflight", async () => {
     Object.assign(process.env, bakongEnv);
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ responseCode: 1, errorCode: 11 }), { status: 200 })));
     await expect(verifyBakongMerchantAccount()).resolves.toBe("account_not_found");
 
     resetBakongMerchantPreflightCache();
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ responseCode: 1, errorCode: 14 }), { status: 200 })));
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ responseCode: 1, errorCode: 17 }), { status: 200 })));
     await expect(verifyBakongMerchantAccount()).resolves.toBe("rejected");
   });
 });

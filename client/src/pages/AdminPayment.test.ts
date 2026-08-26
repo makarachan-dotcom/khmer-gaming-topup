@@ -12,13 +12,7 @@ describe("owner payment-control quick-toggle contract", () => {
     expect(page).toContain("disabled={control.isLoading || update.isPending}");
     expect(page).not.toContain("disabled={control.isLoading || update.isPending || (!enabled");
     expect(page).toContain("customer payment នៅតែត្រូវ readiness gate");
-    expect(page).toContain("trpc.wallet.latestVerification.useQuery");
-    expect(page).toContain("Latest Wallet verification");
-    expect(page).not.toContain("referenceCode");
-    expect(page).not.toContain("qrImageDataUrl");
-    expect(page).not.toContain("deeplink");
     expect(readiness).toContain('reason: "payment_switch_off"');
     expect(database).toContain("requirePublicPaymentEnabled();");
-    expect(database).toContain("export async function getLatestWalletVerification");
   });
 });

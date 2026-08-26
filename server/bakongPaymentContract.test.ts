@@ -18,26 +18,17 @@ describe("Bakong KHQR payment contract", () => {
     expect(db).toContain('provider: "bakong_khqr"');
     expect(db).toContain('createBakongKhqrPayment');
     expect(db).toContain('checkBakongKhqrPayment');
-    expect(db).toContain('updateOrderStatus({ orderId: input.orderId, status: "paid" })');
+    expect(db).toContain('reconcileKhqrWorkerPayment');
   });
 
-  it("offers a generated QR and owner-scoped refresh action to checkout without client-provided payment claims", () => {
+  it("offers a generated QR while the browser polls only the owner-scoped ledger session", () => {
     const router = readFileSync(resolve(process.cwd(), "server/routers.ts"), "utf8");
     const checkout = readFileSync(resolve(process.cwd(), "client/src/pages/Checkout.tsx"), "utf8");
     expect(router).toContain('refreshPayment: protectedProcedure');
     expect(checkout).toContain('qrImageDataUrl');
-    expect(checkout).toContain('refresh.mutate({ orderId })');
+    expect(checkout).toContain('session.refetch()');
     expect(checkout).toContain('setInterval');
+    expect(checkout).not.toContain('refresh.mutate({ orderId })');
     expect(checkout).toContain('OutlineLoader');
-  });
-
-  it("provides an owner-only merchant preflight without exposing merchant configuration", () => {
-    const adapter = readFileSync(resolve(process.cwd(), "server/bakongKhqr.ts"), "utf8");
-    const router = readFileSync(resolve(process.cwd(), "server/routers.ts"), "utf8");
-    expect(adapter).toContain('verifyBakongMerchantAccount');
-    expect(adapter).toContain('check_bakong_account');
-    expect(adapter).toContain('merchantPreflightCacheTtlMs');
-    expect(adapter).toContain('merchant_unverified');
-    expect(router).toContain('paymentMerchantPreflight: ownerProcedure');
   });
 });

@@ -26,8 +26,12 @@ export function createApp() {
       if (!verifyKhqrWorkerSignature(req.body, req.header("x-khqr-signature") ?? undefined, getKhqrWorkerCredentials().callbackSecret ?? undefined)) return res.status(401).json({ success: false, error: "invalid signature" });
       const callback = parseKhqrWorkerCallback(req.body);
       if (!callback) return res.status(400).json({ success: false, error: "invalid callback" });
-      const result = await import("./db").then(({ reconcileKhqrWorkerPayment }) => reconcileKhqrWorkerPayment(callback));
-      return res.json({ success: true, idempotent: result.idempotent });
+      if (callback.event === "payment.paid") {
+        const result = await import("./db").then(({ reconcileKhqrWorkerPayment }) => reconcileKhqrWorkerPayment(callback));
+        return res.json({ success: true, idempotent: result.idempotent });
+      }
+      const result = await import("./db").then(({ recordKhqrWorkerVerificationDeferred }) => recordKhqrWorkerVerificationDeferred(callback));
+      return res.json({ success: true, recorded: result.recorded });
     } catch { return res.status(409).json({ success: false, error: "payment reconciliation rejected" }); }
   });
   app.post("/api/webhooks/didit", express.raw({ type: "application/json" }), async (req, res) => {

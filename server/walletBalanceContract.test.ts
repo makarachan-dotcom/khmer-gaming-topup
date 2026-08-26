@@ -40,6 +40,8 @@ describe("customer wallet balance contract", () => {
     expect(router).toContain('beginTopup: protectedProcedure');
     expect(router).toContain('refreshTopup: protectedProcedure');
     expect(walletPage).toContain('បញ្ចូលប្រាក់');
+    expect(walletPage).toContain('session.refetch()');
+    expect(walletPage).not.toContain('refresh.mutate({ topupId: active.id })');
     expect(readiness).toContain('reason: "payment_switch_off"');
     expect(readiness).toContain('getPublicPaymentReadiness');
     expect(db).toContain('requirePublicPaymentEnabled();');

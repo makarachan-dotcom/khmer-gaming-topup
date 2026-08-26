@@ -81,8 +81,8 @@ describe("dedicated game top-up routes", () => {
 
   it("uses a scroll-position threshold and focuses an editable ID field from the compact verified bar", () => {
     const source = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
-    expect(source).toContain("anchor.getBoundingClientRect().bottom <= 84");
-    expect(source).toContain("IntersectionObserver");
+    expect(source).toContain('window.matchMedia("(max-width: 767px)").matches');
+    expect(source).toContain("anchor.getBoundingClientRect().bottom <= 76");
     expect(source).toContain('window.addEventListener("scroll", updateCompactState');
     expect(source).toContain('querySelector<HTMLInputElement>("input[required], input")');
   });

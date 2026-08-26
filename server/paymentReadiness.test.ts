@@ -39,14 +39,14 @@ describe("automatic payment readiness", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("blocks new public sessions when Bakong does not verify the merchant, even with the owner switch enabled", async () => {
+  it("blocks new public sessions when Bakong does not verify the merchant", async () => {
     configureCompletePaymentEnvironment();
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ responseCode: 1 }), { status: 200 })));
     await expect(getAutomaticPaymentReadiness()).resolves.toEqual({ ready: false, reason: "merchant_unverified" });
     await expect(getPublicPaymentReadiness(true)).resolves.toEqual({ ready: false, reason: "merchant_unverified" });
   });
 
-  it("keeps public payment off until the owner master switch is enabled after merchant verification", async () => {
+  it("keeps public payment off until the owner switch is enabled after merchant verification", async () => {
     configureCompletePaymentEnvironment();
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ responseCode: 0 }), { status: 200 })));
     await expect(getPublicPaymentReadiness(false)).resolves.toEqual({ ready: false, reason: "payment_switch_off" });

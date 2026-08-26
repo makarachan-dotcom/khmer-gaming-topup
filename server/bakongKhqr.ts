@@ -35,7 +35,6 @@ function getCachedMerchantPreflight() {
 }
 
 function rememberMerchantPreflight(status: BakongMerchantPreflightStatus) {
-  // Keep a short, process-local cache to avoid calling Bakong for every availability render.
   if (status !== "unavailable") merchantPreflightCache = { status, checkedAt: Date.now() };
   return status;
 }
@@ -81,6 +80,7 @@ export async function createBakongKhqrPayment(input: { trackingCode: string; amo
   const config = getConfig();
   if (!config) throw new Error("Bakong KHQR is not configured");
   const amount = validAmount(input.amount);
+  // Keep QR validity aligned with the worker's five-minute automatic-check window.
   const expiry = new Date(Date.now() + khqrPaymentWindowMs);
   const info = new IndividualInfo(config.accountId, config.merchantName, config.merchantCity, {
     currency: currencyCode(input.currency), amount, mobileNumber: config.merchantPhone, billNumber: input.trackingCode.slice(0, 35), storeLabel: config.storeLabel, terminalLabel: "ZURS", expirationTimestamp: expiry.getTime(),
@@ -96,7 +96,7 @@ export async function createBakongKhqrPayment(input: { trackingCode: string; amo
     const payload = await readBakongJson(response);
     if (response.ok && payload?.responseCode === 0 && payload.data?.shortLink) deeplink = payload.data.shortLink;
   } catch { /* A scannable KHQR remains available if the optional deeplink service is unavailable. */ }
-  return { md5, qrImageDataUrl, deeplink, expiresAt: expiry };
+  return { md5, qrImageDataUrl, deeplink, expiresAt: expiry, merchantAccountId: config.accountId };
 }
 
 export async function checkBakongKhqrPayment(input: { md5: string; expectedAmount: string; expectedCurrency: Currency; expectedMerchantAccountId?: string }) {
@@ -104,13 +104,14 @@ export async function checkBakongKhqrPayment(input: { md5: string; expectedAmoun
   if (!config) throw new Error("Bakong KHQR is not configured");
   const response = await fetch(`${apiBaseUrl}/v1/check_transaction_by_md5`, { method: "POST", headers: { Authorization: `Bearer ${config.token}`, "Content-Type": "application/json" }, body: JSON.stringify({ md5: input.md5 }) });
   const payload = await readBakongJson(response);
-  if (!payload) return { status: "unavailable" as const };
-  if (!response.ok || payload.responseCode !== 0 || !payload.data) return { status: payload.errorCode === 1 ? "unpaid" as const : "unavailable" as const };
+  if (!payload) return { status: "unavailable" as const, reason: "empty_or_malformed_bakong_response" };
+  if (!response.ok || payload.responseCode !== 0 || !payload.data) return { status: payload.responseCode === 1 || payload.errorCode === 17 ? "unpaid" as const : "unavailable" as const, reason: `bakong_response_${payload.responseCode ?? "unknown"}_${payload.errorCode ?? "unknown"}` };
   const matchesAmount = Math.abs(Number(payload.data.amount) - Number(input.expectedAmount)) < 0.00001;
   const matchesCurrency = payload.data.currency === input.expectedCurrency;
   const expectedMerchantAccountId = (input.expectedMerchantAccountId ?? config.accountId).trim().toLowerCase();
-  // The private stored MD5 plus exact amount and currency are mandatory. Bakong
-  // may omit the optional receiver field; when it is supplied, it must match.
+  // Some valid MD5-status responses omit the receiver field. The private MD5,
+  // exact stored amount, and exact currency remain mandatory; when Bakong does
+  // return a receiver, it must match the merchant account stored with the session.
   const returnedReceiver = payload.data.toAccountId?.trim().toLowerCase();
   const matchesReceiver = !returnedReceiver || returnedReceiver === expectedMerchantAccountId;
   if (!matchesAmount || !matchesCurrency || !matchesReceiver || !payload.data.hash) return { status: "unavailable" as const, reason: "bakong_transaction_did_not_match_stored_session" };

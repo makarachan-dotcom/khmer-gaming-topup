@@ -16,7 +16,6 @@ export const users = mysqlTable("users", {
 export const customerWallets = mysqlTable("customer_wallets", {
   userId: int("userId").primaryKey(),
   balanceKhr: decimal("balanceKhr", { precision: 14, scale: 2 }).default("0.00").notNull(),
-  balanceUsd: decimal("balanceUsd", { precision: 14, scale: 2 }).default("0.00").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -30,16 +29,13 @@ export const walletTopups = mysqlTable("wallet_topups", {
   providerTransactionId: varchar("providerTransactionId", { length: 160 }),
   status: mysqlEnum("status", ["pending", "paid", "expired", "failed"]).default("pending").notNull(),
   amountKhr: decimal("amountKhr", { precision: 14, scale: 2 }).notNull(),
-  currency: varchar("currency", { length: 8 }).default("KHR").notNull(),
-  manualCheckCount: int("manualCheckCount").default(0).notNull(),
-  activeSessionKey: varchar("activeSessionKey", { length: 64 }),
   paymentPayload: json("paymentPayload").notNull(),
   expiresAt: timestamp("expiresAt").notNull(),
   paidAt: timestamp("paidAt"),
   creditedAt: timestamp("creditedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-}, (table) => [index("wallet_topups_user_idx").on(table.userId), index("wallet_topups_status_idx").on(table.status), uniqueIndex("wallet_topups_active_session_unique").on(table.activeSessionKey)]);
+}, (table) => [index("wallet_topups_user_idx").on(table.userId), index("wallet_topups_status_idx").on(table.status)]);
 
 export const adminRoleAudits = mysqlTable("admin_role_audits", {
   id: varchar("id", { length: 64 }).primaryKey(),
@@ -294,7 +290,6 @@ export const paymentTransactions = mysqlTable("payment_transactions", {
   currency: varchar("currency", { length: 8 }).default("USD").notNull(),
   checkoutUrl: text("checkoutUrl"),
   callbackPayload: json("callbackPayload"),
-  manualCheckCount: int("manualCheckCount").default(0).notNull(),
   expiresAt: timestamp("expiresAt"),
   paidAt: timestamp("paidAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

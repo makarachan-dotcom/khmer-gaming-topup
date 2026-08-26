@@ -40,6 +40,7 @@
 - [x] Compare the historical paid/credited Wallet callback path with the current implementation and identify a minimal restoration; do not roll back unrelated code, reopen expired QR sessions, or force credit. The exact worker callback/credit path remains present.
 - [x] Restore only the evidence-backed automatic KHQR path if a regression is found, while preserving exact amount/currency, callback signature, idempotency, five-minute expiry, two manual checks, and Payment Control default OFF. No safe payment-code regression was found, so no rollback was applied.
 - [x] Integrate the GitHub KHQR response-compatibility repair: permit an omitted optional receiver only when the private stored MD5, exact amount, exact currency, and transaction hash match; reject any supplied mismatched receiver.
+- [x] Restore the short-lived server-side merchant-preflight readiness gate removed by the remote merge, while retaining the remote dynamic-response compatibility repair and Payment Control default OFF.
 - [ ] Diagnose the reported Connect with Gmail error on the public sign-in route without exposing user email, tokens, or session data; current production redirect/configuration is valid and now returns a safe stage reference if a callback fails, but a fresh user-specific reference is still required to isolate an external Google failure.
 - [x] Restrict public Google OAuth status output so it does not disclose the configured Gmail sender address or other account-specific metadata.
 - [ ] Obtain Bakong developer support confirmation for the current dynamic-transaction lookup failure (non-success responseCode 1/errorCode 17 with no data), then rerun preflight before any additional paid test.
@@ -70,7 +71,6 @@
 - [x] Block creation of any new payment session while an eligible session for the same order or wallet top-up is still pending.
 - [x] Redesign the QR payment screen with clear countdown, automatic-check state, manual-check allowance, and payment-completion feedback.
 - [x] Correct the verified-account sticky header so it reliably appears after the verified form leaves the viewport and returns/focuses the editable ID field on demand.
-
 - [x] Define the production data model for game packages, SMM services, marketplace listings, orders, payment transactions, saved player IDs, and content.
 - [x] Deliver a Khmer-first responsive interface with a Khmer-compatible font and reliable direct navigation; the optional English toggle is intentionally deferred until a complete reviewed translation set is available.
 - [x] Replace temporary catalog displays with database-backed game, SMM, and marketplace queries.
