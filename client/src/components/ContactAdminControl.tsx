@@ -39,7 +39,7 @@ function initials(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(-2).map((part) => part[0]?.toUpperCase()).join("") || "A";
 }
 
-function ContactAdminSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+function ContactAdminSheet({ open, onClose, paymentBarVisible }: { open: boolean; onClose: () => void; paymentBarVisible: boolean }) {
   const [mounted, setMounted] = useState(open);
   const [visible, setVisible] = useState(open);
   const admins = trpc.support.contactAdmins.useQuery(undefined, { enabled: mounted, staleTime: 30_000, refetchInterval: 15_000 });
@@ -68,7 +68,7 @@ function ContactAdminSheet({ open, onClose }: { open: boolean; onClose: () => vo
   if (!mounted) return null;
 
   return (
-    <div className={`contact-admin-layer ${visible ? "contact-admin-layer--open" : ""}`} role="presentation">
+    <div className={`contact-admin-layer ${visible ? "contact-admin-layer--open" : ""} ${paymentBarVisible ? "contact-admin-layer--payment" : ""}`} role="presentation">
       <div className="contact-admin-backdrop" aria-hidden="true" onMouseDown={onClose} />
       <section className="contact-admin-sheet" role="dialog" aria-modal="true" aria-labelledby="contact-admin-heading">
         <div className="contact-admin-sheet__handle" aria-hidden="true" />
@@ -123,7 +123,7 @@ export function ContactAdminControl({ paymentBarVisible }: { paymentBarVisible: 
         <Headset className="h-4.5 w-4.5" strokeWidth={2.15} />
         <span className="contact-admin-fab__label">ជំនួយ</span>
       </button>
-      <ContactAdminSheet open={open} onClose={() => setOpen(false)} />
+      <ContactAdminSheet open={open} onClose={() => setOpen(false)} paymentBarVisible={paymentBarVisible} />
     </>
   );
 }

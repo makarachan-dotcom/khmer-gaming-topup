@@ -1092,3 +1092,53 @@ img.payment-method-option__icon { padding: 0.34rem; }
     top: auto !important;
   }
 }
+
+/* Contact Admin mobile side popup: the panel opens from the right, attached above the support chip. */
+@media (max-width: 639px) {
+  .contact-admin-layer {
+    display: block;
+    padding: 0;
+  }
+  .contact-admin-backdrop {
+    background: oklch(0.05 0.035 260 / 0.38);
+    backdrop-filter: blur(3px);
+  }
+  .contact-admin-sheet {
+    position: fixed;
+    z-index: 261;
+    right: max(0.55rem, env(safe-area-inset-right));
+    bottom: calc(max(0.7rem, env(safe-area-inset-bottom)) + 7.2rem);
+    width: min(calc(100vw - 1.1rem), 21rem);
+    max-height: min(66dvh, 31rem);
+    overflow-y: auto;
+    border-radius: 1.25rem;
+    padding: 0.85rem;
+    transform: translateX(calc(100% + 1.25rem));
+    transform-origin: bottom right;
+    box-shadow: 0 20px 52px oklch(0.03 0.03 260 / 0.42), inset 0 1px 0 oklch(1 0 0 / 0.92);
+  }
+  .contact-admin-layer--open .contact-admin-sheet {
+    transform: translateX(0);
+  }
+  .contact-admin-layer--payment .contact-admin-sheet {
+    bottom: calc(max(0.8rem, env(safe-area-inset-bottom)) + 11.2rem);
+  }
+  .contact-admin-sheet__handle {
+    display: none;
+  }
+  .contact-admin-sheet__close {
+    height: 2.1rem;
+    width: 2.1rem;
+    border-radius: 0.72rem;
+  }
+  .contact-admin-card {
+    padding: 0.72rem;
+  }
+  .contact-admin-avatar {
+    height: 2.85rem;
+    width: 2.85rem;
+  }
+  .contact-admin-telegram {
+    min-height: 2.45rem;
+  }
+}
