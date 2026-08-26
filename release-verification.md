@@ -48,3 +48,9 @@ The official `https://www.zurs.me/?release=8dedb722` homepage visibly rendered 9
 On 2026-08-26, Vercel reported Production deployment `dpl_AFNcejCahv5KcWKvfDSG1s3sHPkS` for GitHub checkpoint `2429c6887175d82d7d22d6e9aa41c3a0a45431ef` as `READY`.
 
 The cache-bypass protected route `https://www.zurs.me/admin/provider-security?release=2429c688` rendered the owner rotation workspace: password-only replacement input, provider selector, required audit reason, explicit confirmation text, rollback controls, and metadata-only audit surface. It rendered opaque configured states only; no token, token prefix, provider URL, envelope field, environment-variable name, merchant detail, QR data, or player data appeared. Payment Control was stated as separate and remained OFF. No credential replacement or rollback was submitted during this verification.
+
+## Package-artwork end-to-end verification
+
+On 2026-08-26, the authenticated owner workspace completed an authorized live artwork-override test using the real `PUBG Mobile (Auto)` package `pubg_mobile_auto:60_uc` (`60 UC · $0.89`). An existing public ZURS Store HTTPS image was saved as the temporary override; the owner-only workspace recorded the active override and an artwork audit event.
+
+A cache-bypass public route, `https://www.zurs.me/topup/pubg_mobile_auto?artwork-e2e=1787763320`, then rendered the temporary artwork on the 60 UC card in protected Admin Preview without entering a Player ID. Purchase and order actions remained disabled. The override was subsequently reset successfully: the active override list returned to empty and the audit recorded both the artwork update and reset-to-default event. This verification did not change package names, prices, offer data, payment configuration, order flows, QR/KHQR behavior, credits, or provider credentials.
