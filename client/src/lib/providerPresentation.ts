@@ -78,10 +78,26 @@ export function cambodiaSupportMarker(name: string, providerRegion?: string | nu
   return { flag: "🇰🇭", label: `Cambodia · ${marker.label}` };
 }
 
+const storefrontGamePriority = [
+  "mobile legends",
+  "free fire",
+  "pubg mobile",
+  "honor of kings",
+  "magic chess go go",
+];
+
+function storefrontPriority(name: string) {
+  const normalized = providerGameNameParts(name).baseName.toLocaleLowerCase();
+  const index = storefrontGamePriority.indexOf(normalized);
+  return index === -1 ? storefrontGamePriority.length : index;
+}
+
 export function orderProviderGames<
   T extends { id: string; name: string; region?: string | null },
 >(games: T[]) {
   return [...games].sort((left, right) => {
+    const featuredDifference = storefrontPriority(left.name) - storefrontPriority(right.name);
+    if (featuredDifference) return featuredDifference;
     const priority = (game: T) => {
       const marker = gameRegionMarker(game.name, game.region);
       if (marker.kind === "country" && marker.label === "Cambodia") return 0;
@@ -239,5 +255,5 @@ export function groupProviderGamesByBaseName<T extends ProviderGameCatalogItem>(
         left.id.localeCompare(right.id)
       ),
     }))
-    .sort((left, right) => left.baseName.localeCompare(right.baseName, undefined, { sensitivity: "base" }));
+    .sort((left, right) => storefrontPriority(left.baseName) - storefrontPriority(right.baseName) || left.baseName.localeCompare(right.baseName, undefined, { sensitivity: "base" }));
 }

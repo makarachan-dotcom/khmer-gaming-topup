@@ -129,8 +129,8 @@ function StorefrontShell({ children }: { children: ReactNode }) {
             </nav>
           </div>
           <div className="zurs-footer-meta flex flex-col gap-1 px-1 pt-4 text-[10px] font-medium sm:flex-row sm:items-center sm:justify-between">
-            <span>© ZURS STORE · by ZURS STORE</span>
-            <span className="khmer-tight">រក្សាសិទ្ធិគ្រប់យ៉ាង · សម្រាប់សហគមន៍អ្នកលេងកម្ពុជា</span>
+            <span className="khmer-tight">រក្សាសិទ្ធិគ្រប់យ៉ាងដោយ zurs.me</span>
+            <span className="khmer-tight">សម្រាប់សហគមន៍អ្នកលេងកម្ពុជា</span>
           </div>
         </div>
       </footer>

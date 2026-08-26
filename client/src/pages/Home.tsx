@@ -17,7 +17,6 @@ import {
 } from "@/lib/providerPresentation";
 import { trpc } from "@/lib/trpc";
 import {
-  ArrowUpRight,
   Image as ImageIcon,
   Info,
   Search,
@@ -27,6 +26,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
 import { gameTopupPath } from "./GameTopup";
+import { isPopularStorefrontGame, originalGameArtworkFor } from "@/lib/originalGameArtwork";
 
 const bannerSlides = [
   { src: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/xftKPqLVBztUvpUZ.png", alt: "ZURS.me game top-up banner" },
@@ -209,21 +209,19 @@ function HomeGameCard({
   const logoUrl =
     details.data?.status === "ready" ? details.data.game.logoUrl : game.logoUrl;
   const gameLabel = displayName ?? providerGameBaseName(game);
+  const originalArtwork = originalGameArtworkFor(game.id, game.name);
+  const popular = isPopularStorefrontGame(game.id, gameLabel);
   return (
     <div ref={cardRef}>
       <Link
         href={gameTopupPath(game.id)}
-        className="zurs-mobile-glass group block rounded-2xl zurs-game-card h-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+        className={`zurs-mobile-glass group block rounded-2xl zurs-game-card h-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${popular ? "zurs-game-card--popular" : ""}`}
       >
-        <div className="zurs-game-card-media relative aspect-[16/10] overflow-hidden rounded-[0.95rem]">
-          <ProviderGameArtwork
-            name={game.name}
-            region={game.region}
-            logoUrl={logoUrl}
-            className="h-11 w-11 rounded-xl"
-            showCountryFlag={false}
-          />
-          <span className="zurs-game-card-arrow" aria-hidden="true"><ArrowUpRight className="h-3.5 w-3.5" /></span>
+        <div className="zurs-game-card-media relative aspect-[16/10] overflow-hidden rounded-[0.95rem]" style={{ "--game-accent": originalArtwork?.accent ?? "#46d8ff" } as React.CSSProperties}>
+          {originalArtwork ? <img src={originalArtwork.src} alt="" className="zurs-game-card-art" style={{ objectPosition: originalArtwork.position ?? "center" }} loading={visible ? "eager" : "lazy"} decoding="async" /> : <ProviderGameArtwork name={game.name} region={game.region} logoUrl={logoUrl} className="h-11 w-11 rounded-xl" showCountryFlag={false} />}
+          <span className="zurs-game-card-overlay" aria-hidden="true" />
+          {popular ? <span className="zurs-game-card-popular">🔥 ពេញនិយម</span> : null}
+          <span className="zurs-game-card-cambodia" aria-hidden="true">🇰🇭</span>
         </div>
         <span className="block min-w-0 px-0.5 pb-0.5 pt-2.5">
           <OverflowMarquee text={gameLabel} className="block text-[0.82rem] font-extrabold leading-5 text-slate-950" />
