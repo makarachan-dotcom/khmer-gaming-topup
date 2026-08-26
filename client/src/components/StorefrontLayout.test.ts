@@ -115,26 +115,21 @@ describe("storefront media protection", () => {
     expect(styleSource).toContain("touch-action: pan-x pan-y");
   });
 
-  it("routes selected packages through the payment-method gate and preserves the master-switch affordance", () => {
+  it("routes selected packages directly to the payment preview page and keeps KHQR creation behind final confirmation", () => {
     const layoutSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
-    const gateSource = readFileSync(join(process.cwd(), "client/src/components/PaymentMethodGate.tsx"), "utf8");
+    const checkoutSource = readFileSync(join(process.cwd(), "client/src/pages/Checkout.tsx"), "utf8");
     const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
-    expect(layoutSource).toContain("<PaymentMethodGate product={selectedProduct} open={paymentGateOpen}");
-    expect(layoutSource).toContain("onOpenPaymentGate={() => setPaymentGateOpen(true)}");
+    expect(layoutSource).toContain('onContinue={() => setLocation("/checkout/preview")}');
     expect(layoutSource).toContain("paymentMethodName={selectedPaymentMethod?.name ?? null}");
     expect(layoutSource).toContain("សូមជ្រើសវិធីបង់ប្រាក់");
     expect(layoutSource).toContain("title=\"សូមជ្រើសវិធីបង់ប្រាក់នៅខាងលើកញ្ចប់\"");
-    expect(gateSource).toContain("ជ្រើសរើសវិធីបង់ប្រាក់");
-    expect(gateSource).toContain("ការបង់ប្រាក់កំពុងត្រូវបានរៀបចំ — សូមរង់ចាំបន្តិច");
-    expect(gateSource).toContain("aria-disabled={!paymentsEnabled}");
-    expect(gateSource).toContain("payment-fast-forward__chevrons");
-    expect(gateSource).toContain("មិនទាន់ជ្រើសវិធីបង់ប្រាក់");
-    expect(gateSource).toContain("trpc.orders.createTopup.useMutation()");
-    expect(gateSource).toContain("trpc.orders.beginPayment.useMutation()");
-    expect(gateSource).toContain("បញ្ជាក់ និងបន្តទៅទំព័រទូទាត់");
-    expect(gateSource).toContain("setLocation(`/checkout/${session.order.id}`)");
-    expect(styleSource).toContain(".payment-method-preselect");
-    expect(styleSource).toContain("payment-fast-forward-wave");
-    expect(styleSource).toContain("prefers-reduced-motion: no-preference");
+    expect(checkoutSource).toContain('const preview = orderId === "preview"');
+    expect(checkoutSource).toContain("<PaymentPreview product={selectedProduct}");
+    expect(checkoutSource).toContain("បញ្ជាក់ និងបង្កើត KHQR");
+    expect(checkoutSource).toContain("trpc.orders.createTopup.useMutation()");
+    expect(checkoutSource).toContain("trpc.orders.beginPayment.useMutation()");
+    expect(checkoutSource).toContain("setLocation(`/checkout/${session.order.id}`)");
+    expect(styleSource).toContain(".checkout-preview-hero");
+    expect(styleSource).toContain(".checkout-preview-confirm");
   });
 });

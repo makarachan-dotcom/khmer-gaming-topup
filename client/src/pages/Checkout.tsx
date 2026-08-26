@@ -1,4 +1,6 @@
 import StorefrontLayout from "@/components/StorefrontLayout";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { SelectedProduct, useSelectedProduct } from "@/contexts/SelectedProductContext";
 import { AnimatedBackButton } from "@/components/AnimatedBackButton";
 import { AnimatedGlyph } from "@/components/AnimatedGlyph";
 import { OutlineLoader } from "@/components/OutlineLoader";
@@ -37,7 +39,9 @@ type PaymentMethod = { id: string; name: string; descriptionKh: string; iconUrl:
 export default function Checkout() {
   const [location] = useLocation();
   const orderId = location.split("/").pop() ?? "";
-  const session = trpc.orders.paymentSession.useQuery({ orderId }, { enabled: orderId.length >= 4 });
+  const preview = orderId === "preview";
+  const { selectedProduct, selectedPaymentMethodId } = useSelectedProduct();
+  const session = trpc.orders.paymentSession.useQuery({ orderId }, { enabled: orderId.length >= 4 && !preview });
   const methods = trpc.payments.methods.useQuery(undefined, { staleTime: 30_000 });
   const [showReceipt, setShowReceipt] = useState(false);
   const payment = session.data?.payment as LedgerPayment | null | undefined;
@@ -50,6 +54,7 @@ export default function Checkout() {
     return () => window.clearInterval(timer);
   }, [waitingForBakong, session]);
 
+  if (preview) return <PaymentPreview product={selectedProduct} selectedPaymentMethodId={selectedPaymentMethodId} methods={methods.data ?? []} methodsLoading={methods.isLoading} />;
   if (session.isLoading) return <StorefrontLayout><main className="container max-w-3xl pt-7 sm:pt-12"><PaymentLoading /></main></StorefrontLayout>;
   if (session.error || !session.data || !order) return <StorefrontLayout><main className="container max-w-xl pt-7 sm:pt-12"><CheckoutUnavailable /></main></StorefrontLayout>;
 
@@ -67,6 +72,31 @@ export default function Checkout() {
     {showReceipt && payment ? <ReceiptDialog order={order} payment={payment} details={details} method={selectedMethod} onClose={() => setShowReceipt(false)} /> : null}
   </main></StorefrontLayout>;
 }
+
+function PaymentPreview({ product, selectedPaymentMethodId, methods, methodsLoading }: { product: SelectedProduct | null; selectedPaymentMethodId: string | null; methods: PaymentMethod[]; methodsLoading: boolean }) {
+  const [, setLocation] = useLocation();
+  const { user, loading } = useAuth();
+  const paymentGate = trpc.payments.gate.useQuery(undefined, { staleTime: 15_000 });
+  const createTopup = trpc.orders.createTopup.useMutation();
+  const beginPayment = trpc.orders.beginPayment.useMutation();
+  const [error, setError] = useState<string | null>(null);
+  const method = methods.find((item) => item.id === selectedPaymentMethodId && item.providerKey === "bakong_khqr") ?? methods.find((item) => item.providerKey === "bakong_khqr") ?? null;
+  const busy = createTopup.isPending || beginPayment.isPending;
+  const ready = paymentGate.data?.enabled === true;
+  const confirm = async () => {
+    if (!product?.playerId || !method) { setError("សូមត្រឡប់ទៅបញ្ជាក់ ID និងជ្រើស KHQR មុនបន្ត។"); return; }
+    if (!ready) { setError("ការទូទាត់ KHQR មិនទាន់ត្រូវបានបើកទេ។ ទំព័រទូទាត់នេះត្រូវបានរៀបចំរួច ហើយ QR នឹងបង្កើតបានបន្ទាប់ពី admin បើកការទូទាត់។"); return; }
+    try {
+      setError(null);
+      const order = await createTopup.mutateAsync({ packageId: product.id, playerId: product.playerId, zoneId: product.zoneId || undefined, quantity: 1 });
+      const session = await beginPayment.mutateAsync({ orderId: order.id });
+      setLocation(`/checkout/${session.order.id}`);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "មិនអាចបង្កើត KHQR payment session បានទេ។ សូមព្យាយាមម្ដងទៀត។"); }
+  };
+  if (!product) return <StorefrontLayout><main className="checkout-page container max-w-xl py-7 sm:py-12"><CheckoutUnavailable /></main></StorefrontLayout>;
+  return <StorefrontLayout><main className="checkout-page container max-w-3xl py-5 pb-28 sm:py-10 sm:pb-16"><CheckoutHeader /><section className="checkout-preview-hero"><p>KHQR PAYMENT</p><h1>ទំព័រទូទាត់សុវត្ថិភាព</h1><span>ជំហានចុងក្រោយមុនបង្កើត QR</span></section><section className="checkout-order-summary"><div className="checkout-order-summary__eyebrow"><PackageCheck className="h-4 w-4" />ORDER SUMMARY</div><div className="checkout-order-summary__main"><ProviderGameArtwork name={product.gameName} logoUrl={product.gameLogoUrl} priority showCountryFlag={false} className="h-14 w-14 shrink-0 rounded-2xl" iconClassName="h-6 w-6" /><div className="min-w-0 flex-1"><h2 className="checkout-order-summary__title">{product.gameName}</h2><p className="checkout-order-summary__order">{product.label}</p></div><strong className="checkout-order-summary__amount">{product.priceLabel}</strong></div><div className="checkout-order-summary__details"><SummaryDetail label="កញ្ចប់" value={product.amountLabel} /><SummaryDetail label="Game ID" value={maskCustomerIdentifier(product.playerId ?? "បានការពារ")} /><SummaryDetail label="Server ID" value={maskCustomerIdentifier(product.zoneId || "មិនទាមទារ")} /><SummaryDetail label="Quantity" value="1" /></div></section><section className="checkout-methods"><div className="checkout-section-heading"><div><p>PAYMENT METHOD</p><h2>KHQR តែប៉ុណ្ណោះ</h2></div><span>បានជ្រើសរើស</span></div>{methodsLoading ? <div className="checkout-methods__loading"><OutlineLoader size={20} color="#4f46e5" />កំពុងរៀបចំ KHQR…</div> : method ? <article className="checkout-method-card checkout-method-card--selected mt-3"><MethodLogo method={method} /><div><strong>{method.name}</strong><span>{method.descriptionKh}</span></div><span className="checkout-method-card__check"><Check className="h-3.5 w-3.5" /></span></article> : <div className="checkout-methods__loading"><CreditCard className="h-5 w-5" />KHQR មិនទាន់ត្រូវបានបើក</div>}</section><section className="checkout-preview-confirm"><div><LockKeyhole className="h-5 w-5" /><p><strong>បញ្ជាក់ការបញ្ជាទិញ</strong><span>ការបង្កើត QR និង order ពិតកើតឡើងតែបន្ទាប់ពីអ្នកចុចបញ្ជាក់។</span></p></div>{error ? <p className="checkout-preview-confirm__error" role="alert">{error}</p> : null}{!loading && !user ? <a href={`/api/auth/google?returnTo=${encodeURIComponent("/checkout/preview")}`} className="checkout-primary-action">ចូលគណនីដើម្បីបន្ត</a> : <button type="button" disabled={busy || !method} className="checkout-primary-action" onClick={() => void confirm()}>{busy ? <><OutlineLoader size={18} color="#ffffff" />កំពុងបង្កើត QR…</> : "បញ្ជាក់ និងបង្កើត KHQR"}</button>}<button type="button" className="checkout-secondary-action" onClick={() => window.history.back()}>ត្រឡប់ទៅកែ package</button></section></main></StorefrontLayout>;
+}
+
 
 function CheckoutHeader() {
   return <header className="checkout-page__header"><AnimatedBackButton href="/account" className="checkout-page__back"><ChevronRight className="h-4 w-4 rotate-180" />ត្រឡប់ក្រោយ</AnimatedBackButton><div className="checkout-page__secure"><span className="checkout-page__logo-mark">Z</span><span className="font-display text-sm font-extrabold text-slate-950">ZURS.me</span><span className="checkout-page__secure-copy"><LockKeyhole className="h-3.5 w-3.5" />ការទូទាត់មានសុវត្ថិភាព</span></div></header>;
