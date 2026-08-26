@@ -30,3 +30,7 @@ The official AI stream endpoint returned HTTP 200 with `text/event-stream`. Usin
 ## Current release-candidate local review
 
 On 2026-08-26, the local desktop and 375px mobile review showed the rounded sticky header, the two-item Home/Account mobile control, deep-blue staggered particle background, and visible public game catalog. The MLBB top-up page loaded the game card and Player ID/Server ID form after catalog data resolved. These observations are local candidate evidence only and do not yet confirm production deployment.
+
+## Checkpoint bf544633 production verification
+
+On 2026-08-26, `https://www.zurs.me/?release=bf544633` completed its initial catalog request and visibly rendered 9 of 9 public games: 8 Ball Pool, Blood Strike, EAFC Mobile (KH), FRAG Pro Shooter, Free Fire (MY/SG), Honor of Kings, Magic Chess Go Go (Global), Mobile Legends, and PUBG Mobile (Auto). The official page rendered the compact banner, showed the payment-disabled customer notice, and did not expose public AI navigation. No credential, player ID, QR, or merchant data was recorded.
