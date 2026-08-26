@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildZursAiSystemPrompt, containsThaiScript, normalizeZursAiMessages, selectZursAiModel, ZursAiInputError } from "./zursAi";
+import { buildSafeEventSearchQuery, buildZursAiSystemPrompt, containsThaiScript, consumeZursAiRateLimit, normalizeZursAiMessages, selectZursAiModel, ZursAiInputError } from "./zursAi";
 
 describe("ZURS AI safety policy", () => {
   it("uses a fast model for ordinary requests and quality model for comparisons", () => {
@@ -32,5 +32,10 @@ describe("ZURS AI safety policy", () => {
     expect(source).not.toContain('from "./db"');
     expect(source).not.toContain("./bakongKhqr");
     expect(source).not.toContain("./khqrWorker");
+  });
+
+  it("uses an allowlisted game keyword rather than forwarding a raw customer event message to search", () => {
+    expect(buildSafeEventSearchQuery("Mobile Legends event for 012345678 and name Sokha")).toBe("mobile legends event update");
+    expect(buildSafeEventSearchQuery("ព្រឹត្តិការណ៍ថ្មី សូមទាក់ទងខ្ញុំ 012345678")).toBe("game event update");
   });
 });

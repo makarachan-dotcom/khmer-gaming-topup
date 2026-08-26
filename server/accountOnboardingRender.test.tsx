@@ -31,7 +31,7 @@ describe("Account onboarding dashboard", () => {
     render(<Account />);
     expect(screen.getByText("ZURS Admin")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Ticket" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "ZURS AI" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "ZURS AI" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "ចាកចេញ" })).toBeInTheDocument();
     expect(screen.queryByText("Settings")).not.toBeInTheDocument();
     expect(screen.getByText("ប្រវត្តិការទិញ")).toBeInTheDocument();

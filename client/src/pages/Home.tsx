@@ -15,6 +15,7 @@ import {
   type ProviderGameFilter,
 } from "@/lib/providerPresentation";
 import { trpc } from "@/lib/trpc";
+import { startLogin } from "@/const";
 import {
   Image as ImageIcon,
   Search,
@@ -25,22 +26,32 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
 import { gameTopupPath } from "./GameTopup";
-import { openZursAiChat } from "@/lib/zursAiEvents";
+
+const bannerSlides = [
+  { src: "/manus-storage/zurs-banner-portrait-hero_1b00fc5c.png", alt: "ZURS.me game top-up banner" },
+  { src: "/manus-storage/zurs-banner-topup-wide_b851022a.png", alt: "ZURS.me top-up diamond banner" },
+];
 
 export default function Home() {
   return (
     <StorefrontLayout>
       <main>
+        <HomeBanner />
         <HomepageMedia />
-        <ZursAiHomeCard />
         <HomeTopupExperience />
       </main>
     </StorefrontLayout>
   );
 }
 
-function ZursAiHomeCard() {
-  return <section className="container mt-5 sm:mt-8"><div className="overflow-hidden rounded-[1.5rem] border border-cyan-200/70 bg-gradient-to-br from-slate-950 via-[#10233e] to-cyan-950 p-5 text-white shadow-xl shadow-cyan-950/15 sm:p-7"><div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-start gap-4"><div className="zurs-ai-orb grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-cyan-200/20 bg-cyan-300/10 motion-reduce:animate-none"><AnimatedGlyph name="activity" size={24} color="#a5f3fc" /></div><div><p className="text-[10px] font-extrabold tracking-[0.16em] text-cyan-200">ZURS AI · 24/7</p><h2 className="mt-1 text-xl font-extrabold sm:text-2xl">សួរអំពីហ្គេម និងកញ្ចប់បានភ្លាមៗ</h2><p className="mt-2 max-w-xl text-sm leading-6 text-slate-300">ឲ្យ ZURS AI ជួយណែនាំកញ្ចប់, ពន្យល់របៀបដាក់លេខ ID និងស្វែងរកព័ត៌មាន event ថ្មីៗ។</p></div></div><button type="button" onClick={openZursAiChat} className="inline-flex h-11 shrink-0 items-center justify-center rounded-xl bg-cyan-300 px-4 text-sm font-extrabold text-slate-950 transition hover:-translate-y-0.5 hover:bg-cyan-200">ចាប់ផ្ដើមឆាត</button></div></div></section>;
+function HomeBanner() {
+  const [activeSlide, setActiveSlide] = useState(0);
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const timer = window.setInterval(() => setActiveSlide((current) => (current + 1) % bannerSlides.length), 6_500);
+    return () => window.clearInterval(timer);
+  }, []);
+  return <section className="container pt-4 sm:pt-6" aria-label="ZURS banner"><div className="zurs-banner-frame relative isolate aspect-[16/6] overflow-hidden rounded-2xl border border-slate-900/60 bg-slate-950 shadow-xl shadow-slate-950/15 sm:rounded-[1.65rem]">{bannerSlides.map((slide, index) => <img key={slide.src} src={slide.src} alt={slide.alt} className="zurs-banner-slide absolute inset-0 h-full w-full object-cover" style={{ opacity: index === activeSlide ? 1 : 0, transform: `translateX(${(activeSlide - index) * 100}%)` }} loading={index === 0 ? "eager" : "lazy"} />)}<div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-3 bg-gradient-to-t from-slate-950/85 via-slate-950/35 to-transparent px-3 pb-3 pt-10 sm:px-5 sm:pb-4"><div className="flex gap-1.5" aria-label="Banner slides">{bannerSlides.map((slide, index) => <button key={slide.src} type="button" onClick={() => setActiveSlide(index)} className={`h-1.5 rounded-full transition-all ${index === activeSlide ? "w-5 bg-cyan-300" : "w-1.5 bg-white/55 hover:bg-white"}`} aria-label={`Banner ${index + 1}`} aria-current={index === activeSlide ? "true" : undefined} />)}</div><div className="flex items-center gap-1.5"><button type="button" onClick={startLogin} className="inline-flex h-8 items-center rounded-lg border border-white/45 bg-white/10 px-2.5 text-[10px] font-extrabold text-white backdrop-blur-sm transition hover:bg-white/20 sm:h-9 sm:px-3 sm:text-xs">Sign in</button><button type="button" onClick={startLogin} className="inline-flex h-8 items-center rounded-lg bg-cyan-300 px-2.5 text-[10px] font-extrabold text-slate-950 transition hover:bg-cyan-200 sm:h-9 sm:px-3 sm:text-xs">Sign up</button></div></div></div></section>;
 }
 
 function HomepageMedia() {

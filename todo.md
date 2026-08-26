@@ -405,4 +405,11 @@
 - [x] Rotate and apply one matching high-entropy KHQR worker callback secret to both the deployed website and VPS worker, then verify a correctly signed non-financial probe reaches reconciliation checks.
 - [x] Set the provisioned KHQR worker URL, callback URL, API key, and callback secret in Vercel Production (now added as Production secrets), then redeploy before the signed reconciliation retest; production redeploy has been triggered.
 - [x] Fix the verified-account sticky bar trigger so it appears while package cards are in view and returns directly to the editable Player/Server ID inputs.
+- [x] Upload the two user-supplied ZURS banner images to deployment-safe static storage and preserve their original pixels without re-reading or editing image contents.
+- [x] Build a responsive homepage banner carousel with restrained left-to-right auto-slide motion, reduced-motion fallback, accessible controls, and no distracting visual effects.
+- [x] Add clear Sign up and Sign in CTAs over the banner using the existing secure Google authentication route, then visually validate desktop and mobile layouts.
+- [x] Remove homepage, desktop-navigation, and floating ZURS AI entry surfaces so customer AI chat is opened only from the dedicated mobile AI tab.
+- [x] Keep the supplied banner carousel compact and visually quiet on mobile, with no oversized hero treatment or excessive motion.
+- [x] Remove all customer-facing AI CTA buttons, AI instructional copy, and floating launcher outside the mobile AI tab; retain the direct `/ai` fullscreen route only as the tab destination.
+- [x] Preserve the existing dark AI Chat background and restrained color palette without adding new colorful surfaces during banner/navigation changes.
 - [x] Add reduced-motion-safe animated active-state transitions when users switch mobile tab-bar destinations.

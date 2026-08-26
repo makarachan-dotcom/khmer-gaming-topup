@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { ArrowLeft, Bot, MessageCircle, Send, Sparkles, UserRound, X } from "lucide-react";
+import { ArrowLeft, Bot, Send, Sparkles, UserRound, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Streamdown } from "streamdown";
 import { useLocation } from "wouter";
@@ -152,8 +152,4 @@ export default function ZursAiChat({ initialOpen = false }: { initialOpen?: bool
       <form onSubmit={(event) => { event.preventDefault(); void send(input); }} className="shrink-0 border-t border-white/10 bg-[#0d1c2e]/95 p-3 backdrop-blur-xl sm:px-6"><div className="mx-auto flex max-w-3xl items-end gap-2"><textarea ref={inputRef} value={input} onChange={(event) => setInput(event.target.value.slice(0, 800))} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void send(input); } }} placeholder="សួរ ZURS AI…" disabled={isThinking} rows={1} className="min-h-11 max-h-32 flex-1 resize-none rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-400/15 disabled:opacity-50" /><button type="submit" disabled={!input.trim() || isThinking} className="grid h-11 w-11 place-items-center rounded-2xl bg-cyan-300 text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-40" aria-label="ផ្ញើសារ"><Send className="h-4 w-4" /></button></div><p className="mx-auto mt-2 max-w-3xl text-center text-[10px] text-slate-500">ZURS AI ណែនាំព័ត៌មាន និងកញ្ចប់ប៉ុណ្ណោះ។ ការទូទាត់នៅមិនទាន់បើកក្នុងឆាតទេ។</p></form>
     </section>
   );
-}
-
-export function ZursAiFloatingButton() {
-  return <button type="button" onClick={openZursAiChat} className="fixed bottom-[5.4rem] left-4 z-[46] inline-flex h-12 items-center gap-2 rounded-2xl border border-cyan-200/30 bg-slate-950 px-3.5 text-xs font-extrabold text-cyan-100 shadow-xl shadow-slate-950/25 transition hover:-translate-y-1 hover:border-cyan-200/60 hover:bg-slate-900 sm:bottom-6 sm:left-auto sm:right-6" aria-label="បើក ZURS AI"><MessageCircle className="h-4 w-4 text-cyan-300" />AI ជំនួយការ</button>;
 }

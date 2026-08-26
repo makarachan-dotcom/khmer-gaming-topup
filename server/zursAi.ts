@@ -9,6 +9,7 @@ const MAX_HISTORY_MESSAGES = 8;
 const THAI_SCRIPT = /[\u0E00-\u0E7F]/;
 const COMPLEX_REQUEST = /ប្រៀបធៀប|ណែនាំ|ល្អបំផុត|which|compare|recommend|best|event|update|starlight|ថ្មីៗ/i;
 const EVENT_REQUEST = /event|update|starlight|season|patch|ព្រឹត្តិការណ៍|ព័ត៌មានថ្មី|ថ្មីៗ/i;
+const EVENT_GAME_KEYWORDS = ["mobile legends", "free fire", "pubg", "honor of kings", "blood strike", "roblox", "genshin", "magic chess", "8 ball pool", "call of duty", "arena of valor", "eafc", "frag"];
 const FAST_MODEL = "DeepSeek-V4-Flash";
 // glm-5.3 is available in the provider catalog but has not yet passed an
 // output-quality smoke test for this store. Keep complex requests on the
@@ -111,13 +112,19 @@ function safeHttpUrl(value: unknown) {
   }
 }
 
+export function buildSafeEventSearchQuery(message: string) {
+  const normalized = message.toLocaleLowerCase();
+  const game = EVENT_GAME_KEYWORDS.find((candidate) => normalized.includes(candidate));
+  return `${game ?? "game"} event update`;
+}
+
 export async function searchZursGameEvents(query: string) {
   if (!EVENT_REQUEST.test(query) || !process.env.YOU_API_KEY?.trim()) return [] as Array<{ title: string; url: string; snippet: string }>;
   try {
     const response = await fetch("https://ydc-index.io/v1/search", {
       method: "POST",
       headers: { "X-API-Key": process.env.YOU_API_KEY.trim(), "Content-Type": "application/json" },
-      body: JSON.stringify({ query: `${query} game event`, count: 3, freshness: "month", safesearch: "strict" }),
+      body: JSON.stringify({ query: buildSafeEventSearchQuery(query), count: 3, freshness: "month", safesearch: "strict" }),
       signal: AbortSignal.timeout(9_000),
     });
     if (!response.ok) return [];
