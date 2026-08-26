@@ -129,7 +129,9 @@ export default function GameTopup() {
     return () => window.clearTimeout(timer);
   }, [validationInput]);
 
-  useEffect(() => () => { clearSelectedProduct(); setPlayerTitle(null); }, [setPlayerTitle]);
+  // Keep the selected package while navigating to /checkout/preview. Clearing it
+  // during this route's unmount made the payment preview lose its order context.
+  useEffect(() => () => { setPlayerTitle(null); }, [setPlayerTitle]);
 
   useEffect(() => {
     if (!identityVerified) {

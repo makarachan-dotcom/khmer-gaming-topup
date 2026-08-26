@@ -146,6 +146,13 @@ describe("dedicated game top-up routes", () => {
     expect(readVerifiedPlayerEntries("mobile_legends_global")).toHaveLength(1);
   });
 
+  it("keeps the selected package during the route handoff to checkout preview", () => {
+    const source = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
+    expect(source).toContain("Keep the selected package while navigating to /checkout/preview");
+    expect(source).toContain("useEffect(() => () => { setPlayerTitle(null); }, [setPlayerTitle]);");
+    expect(source).not.toContain("useEffect(() => () => { clearSelectedProduct(); setPlayerTitle(null); }");
+  });
+
   it("places payment-method preselection after an accepted identity and before the package list without blocking public preview", () => {
     const source = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
     const preselectPosition = source.indexOf("{canBrowsePackages && !adminPreviewActive ? <PaymentMethodPreselect /> : null}");
