@@ -15,7 +15,7 @@ type PaymentMethod = {
 export function PaymentMethodPreselect() {
   const methodsQuery = trpc.payments.methods.useQuery(undefined, { staleTime: 30_000, refetchInterval: 15_000 });
   const { selectedPaymentMethodId, setSelectedPaymentMethodId } = useSelectedProduct();
-  const methods = methodsQuery.data ?? [];
+  const methods = (methodsQuery.data ?? []).filter((method) => method.providerKey === "bakong_khqr");
   const selectedMethod = methods.find((method) => method.id === selectedPaymentMethodId) ?? null;
 
   return <section className="payment-method-preselect" aria-labelledby="payment-method-preselect-title">
@@ -23,7 +23,7 @@ export function PaymentMethodPreselect() {
       <div>
         <p className="payment-method-gate__eyebrow">ជំហានទី 2</p>
         <h3 id="payment-method-preselect-title">ជ្រើសរើសវិធីបង់ប្រាក់</h3>
-        <p>ជ្រើសមុនចូលទៅកញ្ចប់។ តម្លៃ និង package មិនផ្លាស់ប្តូរទេ។</p>
+        <p>ទទួលការទូទាត់តាម KHQR ប៉ុណ្ណោះ។ តម្លៃ និង package មិនផ្លាស់ប្តូរទេ។</p>
       </div>
       {selectedMethod ? <span className="payment-method-preselect__selected"><Check className="h-3.5 w-3.5" />{selectedMethod.name}</span> : null}
     </div>
@@ -34,7 +34,7 @@ export function PaymentMethodPreselect() {
         <span className="payment-method-option__check" aria-hidden="true"><Check className="h-3.5 w-3.5" /></span>
       </button>) : <MethodPlaceholder empty />}
     </div>
-    <p className="payment-method-preselect__hint">{selectedMethod ? "វិធីបង់ប្រាក់នេះនឹងត្រូវប្រើនៅពេលអ្នកជ្រើសកញ្ចប់ និងបន្ត checkout។" : "សូមជ្រើសវិធីបង់ប្រាក់មួយ មុនជ្រើសកញ្ចប់។"}</p>
+    <p className="payment-method-preselect__hint">{selectedMethod ? "KHQR នឹងត្រូវប្រើនៅពេលអ្នកជ្រើសកញ្ចប់ និងបន្ត checkout។" : "សូមជ្រើស KHQR មុនជ្រើសកញ្ចប់។"}</p>
   </section>;
 }
 
@@ -44,7 +44,7 @@ export function PaymentMethodGate({ product, open, onOpenChange }: { product: Se
   const gateQuery = trpc.payments.gate.useQuery(undefined, { staleTime: 15_000, refetchInterval: 15_000 });
   const createTopup = trpc.orders.createTopup.useMutation();
   const beginPayment = trpc.orders.beginPayment.useMutation();
-  const methods = methodsQuery.data ?? [];
+  const methods = (methodsQuery.data ?? []).filter((method) => method.providerKey === "bakong_khqr");
   const { selectedPaymentMethodId, setSelectedPaymentMethodId, clearSelectedProduct } = useSelectedProduct();
   const [showInfo, setShowInfo] = useState(false);
   const [paymentScreen, setPaymentScreen] = useState(false);
@@ -140,5 +140,5 @@ function MethodIcon({ method }: { method: PaymentMethod }) {
 }
 
 function MethodPlaceholder({ empty = false }: { empty?: boolean }) {
-  return <div className="payment-method-option payment-method-option--placeholder" aria-live="polite"><span className="payment-method-option__icon"><CreditCard className="h-5 w-5" /></span><span className="payment-method-option__copy"><strong>{empty ? "មិនទាន់មានវិធីបង់ប្រាក់" : "កំពុងរៀបចំវិធីបង់ប្រាក់…"}</strong><span>{empty ? "Admin អាចបន្ថែម ឬបើកប្រើវិធីបង់ប្រាក់ពី dashboard។" : "សូមរង់ចាំបន្តិច"}</span></span></div>;
+  return <div className="payment-method-option payment-method-option--placeholder" aria-live="polite"><span className="payment-method-option__icon"><CreditCard className="h-5 w-5" /></span><span className="payment-method-option__copy"><strong>{empty ? "KHQR មិនទាន់ត្រូវបានបើក" : "កំពុងរៀបចំ KHQR…"}</strong><span>{empty ? "Admin ត្រូវបើក KHQR ពី payment dashboard មុន។" : "សូមរង់ចាំបន្តិច"}</span></span></div>;
 }

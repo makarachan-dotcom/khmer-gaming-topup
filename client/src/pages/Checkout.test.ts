@@ -24,6 +24,17 @@ describe("secure checkout payment page", () => {
     expect(styleSource).toContain("--ink-2: #16a34a");
   });
 
+  it("limits customer-facing payment methods to KHQR and uses the local KHQR logo asset", () => {
+    const source = readFileSync(join(process.cwd(), "client/src/pages/Checkout.tsx"), "utf8");
+    const paymentGateSource = readFileSync(join(process.cwd(), "client/src/components/PaymentMethodGate.tsx"), "utf8");
+    const assetSource = readFileSync(join(process.cwd(), "client/src/lib/mobileLegendsAssets.ts"), "utf8");
+    expect(source).toContain("KHQR តែប៉ុណ្ណោះ");
+    expect(source).toContain('methods.filter((method) => method.providerKey === "bakong_khqr")');
+    expect(paymentGateSource).toContain('filter((method) => method.providerKey === "bakong_khqr")');
+    expect(paymentGateSource).toContain("ទទួលការទូទាត់តាម KHQR ប៉ុណ្ណោះ");
+    expect(assetSource).toContain('khqrLogoUrl = "/khqr-logo.svg"');
+  });
+
   it("includes a printable receipt, visible success steps, and masks customer identifiers in the payment page", () => {
     const source = readFileSync(join(process.cwd(), "client/src/pages/Checkout.tsx"), "utf8");
     const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
