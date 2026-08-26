@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSafeEventSearchQuery, buildZursAiSystemPrompt, containsThaiScript, consumeZursAiRateLimit, extractProviderText, normalizeZursAiMessages, selectZursAiModel, ZursAiInputError, ZursAiUpstreamError } from "./zursAi";
+import { buildRateLimitedFallbackReply, buildSafeEventSearchQuery, buildZursAiSystemPrompt, containsThaiScript, consumeZursAiRateLimit, extractProviderText, normalizeZursAiMessages, selectZursAiModel, ZursAiInputError, ZursAiUpstreamError } from "./zursAi";
 
 describe("ZURS AI safety policy", () => {
   it("uses a fast model for ordinary requests and quality model for comparisons", () => {
@@ -51,5 +51,10 @@ describe("ZURS AI safety policy", () => {
     expect(extractProviderText({ choices: [{ message: { content: "រួច" } }] })).toBe("រួច");
     expect(extractProviderText({ choices: [{ message: { content: [{ type: "text", text: "សួស្តី" }] } }] })).toBe("សួស្តី");
     expect(extractProviderText({ choices: [{ delta: { reasoning_content: "hidden" } }] })).toBe("");
+  });
+
+  it("returns bounded local guidance when the upstream is rate-limited", () => {
+    expect(buildRateLimitedFallbackReply({ message: "តើត្រូវការ Player ID អ្វី?", recommendations: [] })).toContain("Player ID");
+    expect(buildRateLimitedFallbackReply({ message: "ណែនាំ MLBB", recommendations: [{ gameId: "mlbb", name: "Mobile Legends", href: "/topup/mlbb" }] })).toContain("Mobile Legends");
   });
 });

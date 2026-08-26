@@ -123,6 +123,17 @@ export function extractProviderText(payload: unknown) {
 
 const EMPTY_PROVIDER_REPLY = "ខ្ញុំមិនទាន់អាចបង្កើតចម្លើយបានពេញលេញទេ។ សូមសាកម្ដងទៀតបន្តិចក្រោយ ឬជ្រើសហ្គេមពីទំព័រ Top-up ដើម្បីមើលកញ្ចប់ដែលមាន។";
 
+export function buildRateLimitedFallbackReply(input: { message: string; recommendations: ZursAiRecommendation[] }) {
+  const normalized = input.message.toLocaleLowerCase();
+  if (input.recommendations.length) {
+    return `ខ្ញុំរកឃើញ ${input.recommendations.map((item) => item.name).join(" និង ")} ក្នុងហាង។ សូមចុចកាតហ្គេមខាងក្រោម ដើម្បីបំពេញ Player ID និងមើលកញ្ចប់/តម្លៃដែលមាន។`;
+  }
+  if (/id|player|server|លេខ/i.test(normalized)) {
+    return "សូមជ្រើសហ្គេមនៅទំព័រ Top-up រួចបំពេញ Player ID និង Server ID តាម field ដែលបង្ហាញ។ កុំផ្ញើ password ឬព័ត៌មានទូទាត់ក្នុងឆាត។";
+  }
+  return "អ្នកអាចជ្រើសហ្គេមពីទំព័រ Top-up ដើម្បីមើលកញ្ចប់ និងតម្លៃដែលមាន។ សូមបំពេញលេខ ID ឲ្យត្រឹមត្រូវ មុនបន្ត។";
+}
+
 function safeHttpUrl(value: unknown) {
   const candidate = readText(value);
   try {
@@ -213,6 +224,11 @@ export async function streamZursAiReply(input: {
     }),
     signal: input.signal ?? AbortSignal.timeout(35_000),
   });
+  if (response.status === 429) {
+    input.onRecommendations?.(catalogKnowledge.recommendations);
+    input.onDelta(buildRateLimitedFallbackReply({ message: latest.content, recommendations: catalogKnowledge.recommendations }));
+    return;
+  }
   if (!response.ok || !response.body) throw new ZursAiUpstreamError(response.status);
   input.onRecommendations?.(catalogKnowledge.recommendations);
 
