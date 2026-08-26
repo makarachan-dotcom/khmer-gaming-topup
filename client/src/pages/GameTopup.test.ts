@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 vi.mock("streamdown", () => ({ Streamdown: () => null }));
-import { canBrowseTopupPackages, canBrowseVerifiedPackages, gameIdFromTopupPath, gameThemedArtworkForPackage, gameTopupPath, groupProviderPackagesByMeaning, initialDiamondPackageLimit, partitionProviderPackagesForFullTicketEvent, readVerifiedPlayerEntries, requiresPlayerIdentityCheck, saveVerifiedPlayerEntry, sortProviderPackagesByPrice, usesLegacyMobileLegendsArtwork, usesMobileLegendsDiamondChestArtwork, visibleDiamondPackageItems } from "./GameTopup";
+import { canBrowseTopupPackages, canBrowseVerifiedPackages, gameIdFromTopupPath, gameThemedArtworkForPackage, gameTopupPath, groupProviderPackagesByMeaning, initialDiamondPackageLimit, partitionProviderPackagesForFullTicketEvent, readVerifiedPlayerEntries, requiresPlayerIdentityCheck, requiresVerifiedUsername, saveVerifiedPlayerEntry, sortProviderPackagesByPrice, usesLegacyMobileLegendsArtwork, usesMobileLegendsDiamondChestArtwork, visibleDiamondPackageItems } from "./GameTopup";
 
 describe("dedicated game top-up routes", () => {
   it("creates and reads an encoded provider game route", () => {
@@ -144,6 +144,13 @@ describe("dedicated game top-up routes", () => {
     expect(entries[0]?.fields).toEqual({ player_id: "596323155", server_id: "10085" });
     expect(JSON.stringify(entries)).not.toContain("playerName");
     expect(readVerifiedPlayerEntries("mobile_legends_global")).toHaveLength(1);
+  });
+
+  it("requires a verified username for the supported game families before payment preview", () => {
+    ["mobile_legends", "mobile_legends_global", "free_fire_my_sg", "pubg_mobile", "pubg_mobile_auto", "blood_strike", "honor_of_kings", "magic_chess_gogo_global"].forEach((gameId) => {
+      expect(requiresVerifiedUsername(gameId)).toBe(true);
+    });
+    expect(requiresVerifiedUsername("call_of_duty_mobile")).toBe(false);
   });
 
   it("keeps the selected package during the route handoff to checkout preview", () => {

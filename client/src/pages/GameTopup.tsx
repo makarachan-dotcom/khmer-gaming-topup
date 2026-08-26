@@ -98,6 +98,7 @@ export default function GameTopup() {
     return Object.fromEntries(game.requiredFields.filter((field) => field.required || Boolean(details[field.key]?.trim())).map((field) => [field.key, details[field.key]!.trim()]));
   }, [details, fieldsReady, game]);
   const checkoutAccount = checkoutAccountFields(providerFields);
+  const requiresVerifiedPlayerName = requiresVerifiedUsername(game?.id ?? gameId);
   const identityRequired = requiresPlayerIdentityCheck(game?.requiredFields ?? []);
   const validationInput = useMemo(() => game && providerFields && identityRequired ? { gameId: game.id, fields: providerFields } : null, [game, identityRequired, providerFields]);
   const adminPreviewActive = isOwnerAdmin && adminPreviewEnabled;
@@ -119,7 +120,8 @@ export default function GameTopup() {
     }
     setSelectedPackageIdState(id);
     const selected = packages.find((item) => item.id === id);
-    if (selected && !adminPreviewActive && canBrowsePackages) setSelectedProduct({ ...selected, gameName: game?.name ?? "", gameLogoUrl, playerId: checkoutAccount.playerId ?? undefined, zoneId: checkoutAccount.zoneId });
+    const hasRequiredVerifiedName = !requiresVerifiedPlayerName || Boolean(identityVerified && identity?.playerName);
+    if (selected && !adminPreviewActive && canBrowsePackages && hasRequiredVerifiedName) setSelectedProduct({ ...selected, gameName: game?.name ?? "", gameLogoUrl, playerId: checkoutAccount.playerId ?? undefined, zoneId: checkoutAccount.zoneId, playerName: identity?.playerName ?? undefined, requiresVerifiedPlayerName });
     else clearSelectedProduct();
   };
 
@@ -232,6 +234,10 @@ function checkoutAccountFields(fields: Record<string, string> | null) {
 
 export function canBrowseVerifiedPackages(fieldsReady: boolean, status?: string) {
   return fieldsReady && status === "verified";
+}
+
+export function requiresVerifiedUsername(gameId: string) {
+  return /^(?:mobile_legends|free_fire|pubg_mobile|blood_strike|honor_of_kings|magic_chess)(?:_|$)/i.test(gameId.trim());
 }
 
 export function requiresPlayerIdentityCheck(fields: GameField[]) {

@@ -1174,8 +1174,14 @@ img.payment-method-option__icon { padding: 0.34rem; }
 /* Secure checkout and payment receipt experience. */
 .checkout-page { position: relative; }
 .checkout-page__header { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
-.checkout-page__back { display: inline-flex; height: 2.5rem; align-items: center; gap: 0.25rem; border: 1px solid oklch(0.83 0.03 248); border-radius: 0.85rem; background: oklch(1 0 0 / 0.72); padding: 0 0.7rem; color: oklch(0.31 0.075 250); transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), background-color 160ms ease; }
-.checkout-page__back:hover { transform: translateX(-2px); background: white; }
+.checkout-page__back { position: relative; isolation: isolate; overflow: hidden; display: inline-flex; min-height: 2.65rem; align-items: center; gap: 0.42rem; border: 1px solid oklch(0.8 0.05 245 / 0.9); border-radius: 0.95rem; background: linear-gradient(135deg, oklch(1 0 0 / 0.9), oklch(0.96 0.018 240 / 0.88)); padding: 0 0.82rem 0 0.68rem; box-shadow: 0 8px 18px oklch(0.32 0.07 245 / 0.1); color: oklch(0.29 0.085 250); transition: transform 180ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 180ms ease, border-color 180ms ease, background-color 180ms ease, opacity 180ms ease; animation: checkout-back-enter 380ms cubic-bezier(0.23, 1, 0.32, 1) both; }
+.checkout-page__back::before { position: absolute; z-index: -1; inset: 0; content: ""; background: radial-gradient(circle at 15% 50%, oklch(0.78 0.12 225 / 0.3), transparent 45%); opacity: 0; transition: opacity 180ms ease; }
+.checkout-page__back:hover { transform: translateX(-3px); border-color: oklch(0.68 0.11 230); background: white; box-shadow: 0 11px 22px oklch(0.32 0.07 245 / 0.16); }
+.checkout-page__back:hover::before { opacity: 1; }
+.checkout-page__back:active { transform: translateX(-1px) scale(0.97); }
+.checkout-page__back:focus-visible { outline: 2px solid oklch(0.58 0.15 230); outline-offset: 3px; }
+.checkout-page__back.animated-back-button--leaving { pointer-events: none; transform: translateX(-7px) scale(0.98); opacity: 0.74; }
+@keyframes checkout-back-enter { from { transform: translateX(-10px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 .checkout-page__secure { display: inline-flex; min-width: 0; align-items: center; gap: 0.42rem; color: oklch(0.28 0.06 252); }
 .checkout-page__logo-mark { display: grid; height: 1.9rem; width: 1.9rem; flex: 0 0 auto; place-items: center; border-radius: 0.68rem; background: linear-gradient(135deg, oklch(0.44 0.15 260), oklch(0.61 0.16 212)); box-shadow: 0 7px 16px oklch(0.35 0.1 245 / 0.22); color: white; font-family: var(--font-display); font-weight: 850; }
 .checkout-page__secure-copy { display: inline-flex; align-items: center; gap: 0.22rem; color: oklch(0.39 0.08 160); font-size: 0.62rem; font-weight: 800; }

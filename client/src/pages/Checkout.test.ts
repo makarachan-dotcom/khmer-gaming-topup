@@ -35,6 +35,14 @@ describe("secure checkout payment page", () => {
     expect(assetSource).toContain('khqrLogoUrl = "/khqr-logo.svg"');
   });
 
+  it("shows the verified username instead of Game ID and blocks required games without a verified username", () => {
+    const source = readFileSync(join(process.cwd(), "client/src/pages/Checkout.tsx"), "utf8");
+    expect(source).toContain('product.requiresVerifiedPlayerName && !product.playerName');
+    expect(source).toContain("Check ID រហូតទទួលបាន Username");
+    expect(source).toContain('<SummaryDetail label="Username" value={product.playerName} />');
+    expect(source).toContain('<SummaryDetail label="Server ID" value={maskCustomerIdentifier(product.zoneId || "មិនទាមទារ")} />');
+  });
+
   it("includes a printable receipt, visible success steps, and masks customer identifiers in the payment page", () => {
     const source = readFileSync(join(process.cwd(), "client/src/pages/Checkout.tsx"), "utf8");
     const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
