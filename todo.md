@@ -49,6 +49,7 @@
 - [x] Retire customer-facing SMM and account-marketplace routes, navigation, catalog mentions, and promotional copy without deleting protected historical data or admin audit records.
 - [x] Add a fullscreen Khmer-first ZURS AI Chat overlay with shared floating/home/top-up entry points, header/tab-bar suppression, accessible close controls, and reduced-motion-safe response state.
 - [ ] Integrate the selected AI and search providers only through server-side secrets after verifying provider documentation, supported models, pricing, vision, and streaming capabilities.
+- [ ] Re-run the opt-in IAMHC text-output qualification when provider quota/rate capacity is available; the 2026-08-26 minimal fast-model completion returned HTTP 429 after the model-catalog and You.com credential checks returned 2xx, so quality-model promotion and vision remain disabled.
 - [x] Add server-side chat routing, bounded contextual product knowledge, rate/message limits, Thai-script quiet refusal, privacy guardrails, and payment-bypass prevention.
 - [x] Add safe AI product-recommendation mini-cards that route users to the existing top-up flow; do not generate KHQR, create orders, or process payments from chat while Payment Control is OFF.
 - [x] Replace retired SMM/marketplace placements with AI Chat entry points across the homepage, game top-up pages, and mobile navigation.
