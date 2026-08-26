@@ -57,4 +57,11 @@ describe("storefront media protection", () => {
     expect(styleSource).toContain("zurs-mobile-tab-indicator-enter");
     expect(styleSource).toContain("tab-icon-active");
   });
+
+  it("keeps mobile AI as a route-backed tab and removes the mobile floating scroll control", () => {
+    const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
+    expect(componentSource).toContain('onClick={() => setLocation("/ai")}');
+    expect(componentSource).toContain("hidden h-11 w-11");
+    expect(componentSource).toContain("grid h-[4.6rem] grid-cols-3");
+  });
 });

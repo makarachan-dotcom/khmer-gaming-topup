@@ -412,4 +412,7 @@
 - [x] Keep the supplied banner carousel compact and visually quiet on mobile, with no oversized hero treatment or excessive motion.
 - [x] Remove all customer-facing AI CTA buttons, AI instructional copy, and floating launcher outside the mobile AI tab; retain the direct `/ai` fullscreen route only as the tab destination.
 - [x] Preserve the existing dark AI Chat background and restrained color palette without adding new colorful surfaces during banner/navigation changes.
+- [x] Refine the mobile tab bar into a compact, low-clutter three-item control with consistent label/icon alignment and no overlapping floating controls.
+- [x] Verify the supplied banner image URLs are reachable from the published production deployment and correct any delivery/caching issue without re-reading or editing the uploaded image files.
+- [x] Repair ZURS AI text completion handling so valid non-streaming or alternate OpenAI-compatible response shapes do not appear as an empty customer reply; preserve server-only secrets and payment boundaries.
 - [x] Add reduced-motion-safe animated active-state transitions when users switch mobile tab-bar destinations.

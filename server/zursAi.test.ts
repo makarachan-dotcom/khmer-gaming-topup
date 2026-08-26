@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSafeEventSearchQuery, buildZursAiSystemPrompt, containsThaiScript, consumeZursAiRateLimit, normalizeZursAiMessages, selectZursAiModel, ZursAiInputError, ZursAiUpstreamError } from "./zursAi";
+import { buildSafeEventSearchQuery, buildZursAiSystemPrompt, containsThaiScript, consumeZursAiRateLimit, extractProviderText, normalizeZursAiMessages, selectZursAiModel, ZursAiInputError, ZursAiUpstreamError } from "./zursAi";
 
 describe("ZURS AI safety policy", () => {
   it("uses a fast model for ordinary requests and quality model for comparisons", () => {
@@ -44,5 +44,12 @@ describe("ZURS AI safety policy", () => {
     expect(error.name).toBe("ZursAiUpstreamError");
     expect(error.status).toBe(429);
     expect(error.message).toBe("ai_upstream_unavailable");
+  });
+
+  it("accepts safe text from streamed deltas, full messages, and text-part response shapes", () => {
+    expect(extractProviderText({ choices: [{ delta: { content: "បាន" } }] })).toBe("បាន");
+    expect(extractProviderText({ choices: [{ message: { content: "រួច" } }] })).toBe("រួច");
+    expect(extractProviderText({ choices: [{ message: { content: [{ type: "text", text: "សួស្តី" }] } }] })).toBe("សួស្តី");
+    expect(extractProviderText({ choices: [{ delta: { reasoning_content: "hidden" } }] })).toBe("");
   });
 });

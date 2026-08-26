@@ -109,6 +109,20 @@ function readText(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+export function extractProviderText(payload: unknown) {
+  const candidate = payload as { choices?: Array<{ delta?: { content?: unknown }; message?: { content?: unknown } }> };
+  const content = candidate.choices?.[0]?.delta?.content ?? candidate.choices?.[0]?.message?.content;
+  if (typeof content === "string") return content;
+  if (!Array.isArray(content)) return "";
+  return content.map((part) => {
+    if (!part || typeof part !== "object") return "";
+    const record = part as { text?: unknown; type?: unknown };
+    return record.type === "text" ? readText(record.text) : "";
+  }).join("");
+}
+
+const EMPTY_PROVIDER_REPLY = "ខ្ញុំមិនទាន់អាចបង្កើតចម្លើយបានពេញលេញទេ។ សូមសាកម្ដងទៀតបន្តិចក្រោយ ឬជ្រើសហ្គេមពីទំព័រ Top-up ដើម្បីមើលកញ្ចប់ដែលមាន។";
+
 function safeHttpUrl(value: unknown) {
   const candidate = readText(value);
   try {
@@ -202,9 +216,16 @@ export async function streamZursAiReply(input: {
   if (!response.ok || !response.body) throw new ZursAiUpstreamError(response.status);
   input.onRecommendations?.(catalogKnowledge.recommendations);
 
+  if (response.headers.get("content-type")?.includes("application/json")) {
+    const text = extractProviderText(await response.json());
+    input.onDelta(text || EMPTY_PROVIDER_REPLY);
+    return;
+  }
+
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  let emittedContent = false;
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
@@ -215,14 +236,17 @@ export async function streamZursAiReply(input: {
       const data = line.trim().replace(/^data:\s*/, "");
       if (!data || data === "[DONE]") continue;
       try {
-        const payload = JSON.parse(data) as { choices?: Array<{ delta?: { content?: string } }> };
-        const delta = payload.choices?.[0]?.delta?.content;
-        if (typeof delta === "string" && delta) input.onDelta(delta);
+        const text = extractProviderText(JSON.parse(data));
+        if (text) {
+          emittedContent = true;
+          input.onDelta(text);
+        }
       } catch {
         // Ignore provider keep-alives and malformed non-content SSE frames.
       }
     }
   }
+  if (!emittedContent) input.onDelta(EMPTY_PROVIDER_REPLY);
 }
 
 const rateWindows = new Map<string, { startedAt: number; count: number }>();
