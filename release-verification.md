@@ -18,3 +18,11 @@ The existing secret was subsequently updated successfully and Vercel created a n
 ## AI deployment check
 
 The local AI stream probe completed with a delta, recommendations, and a completion marker. Vercel's Environment Variables view has no `IAMHC_API_KEY` entry, which explains why the official deployment cannot make its server-side AI provider request. No provider credential values are recorded here.
+
+## Latest production rollout
+
+Vercel marked the GitHub main deployment for checkpoint `be1f15e5` as `READY` in Production. The deployment URL is `https://zurs-mxvu63gxa-makarachan-dotcoms-projects.vercel.app`; its Git metadata references the `be1f15e569aae39c1b05e5dcac3b5833158999bd` commit.
+
+The official `https://www.zurs.me/?release=be1f15e` page completed its catalog request and visibly rendered the public catalog. Its extracted content listed 9 of 9 games, including 8 Ball Pool, Blood Strike, EAFC Mobile, FRAG Pro Shooter, Free Fire, Honor of Kings, Magic Chess Go Go, Mobile Legends, and PUBG Mobile.
+
+The official AI stream endpoint returned HTTP 200 with `text/event-stream`. Using the server's actual framing, the privacy-safe probe observed one non-empty delta, one recommendations frame, a `[DONE]` marker, and no error frame. This confirms the no-IAMHC catalog fallback is active in Production without disclosing assistant content or provider credentials.

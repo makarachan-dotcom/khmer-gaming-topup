@@ -1,8 +1,8 @@
 # Project TODO
 
-- [ ] Verify on official zurs.me after deployment that homepage game cards visibly render again with inspectable evidence.
-- [ ] Publish the IAMHC-missing catalog fallback patch, then verify the production AI stream returns a safe non-empty response.
-- [ ] Add IAMHC_API_KEY to Vercel Production/Preview or document the approved blocker, then recheck live AI behavior on zurs.me.
+- [x] Verify on official zurs.me after deployment that homepage game cards visibly render again with inspectable evidence. On the READY be1f15e release, www.zurs.me completed catalog loading and visibly listed 9 of 9 public games.
+- [x] Publish the IAMHC-missing catalog fallback patch, then verify the production AI stream returns a safe non-empty response. Official be1f15e AI stream returned one delta, one recommendations frame, `[DONE]`, and no error frame.
+- [x] Add IAMHC_API_KEY to Vercel Production/Preview or document the approved blocker, then recheck live AI behavior on zurs.me. The Vercel key remains absent; the approved bounded catalog fallback is live and verified instead, without claiming general-provider availability.
 - [x] Apply Kantumruy Pro and Hanuman Khmer typography intentionally across the storefront without breaking Latin/number readability; Kantumruy Pro remains the primary UI face and Hanuman is used for long Khmer body copy.
 - [x] Add restrained reduced-motion-safe micro-animations to appropriate storefront interactions without adding visual clutter; existing interaction motion is reduced-motion gated and the compact tab indicator animation was shortened.
 - [x] Reduce the mobile Tabbar footprint while retaining accessible Home, AI, and Account navigation; mobile visual validation shows the 3-tab bar at a 56px height without content overlap.
