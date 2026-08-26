@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { SelectedProductProvider } from "./contexts/SelectedProductContext";
+import { StorefrontHeaderProvider } from "./contexts/StorefrontHeaderContext";
 import Home from "./pages/Home";
 import AdminMarketplaceSafety from "@/pages/AdminMarketplaceSafety";
 import Account from "./pages/Account";
@@ -74,7 +75,7 @@ function App() {
       >
         <TooltipProvider>
           <Toaster />
-          <SelectedProductProvider><Router /></SelectedProductProvider>
+          <StorefrontHeaderProvider><SelectedProductProvider><Router /></SelectedProductProvider></StorefrontHeaderProvider>
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

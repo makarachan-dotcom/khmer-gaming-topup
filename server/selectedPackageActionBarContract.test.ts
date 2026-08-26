@@ -8,7 +8,9 @@ describe("selected package mobile action bar", () => {
   it("uses the supplied Checkbox 08 Lottie asset, provider game artwork, a liquid-glass shell, and disabled purchasing", () => {
     const layout = fs.readFileSync(path.join(projectRoot, "client/src/components/StorefrontLayout.tsx"), "utf8");
     const check = fs.readFileSync(path.join(projectRoot, "client/src/components/SelectedPackageCheck.tsx"), "utf8");
-    expect(layout).toContain("selectedProduct ? <SelectedProductActionBar");
+    expect(layout).toContain("isTopupRoute ? <SelectedProductActionBar");
+    expect(layout).toContain("selected-product-action-bar--expanded");
+    expect(layout).toContain("selected-product-action-bar--compact");
     expect(layout).toContain("ទិញមិនទាន់បើក");
     expect(layout).toContain("disabled aria-disabled=\"true\"");
     expect(layout).toContain("ProviderGameArtwork");

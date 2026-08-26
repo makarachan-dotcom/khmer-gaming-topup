@@ -54,7 +54,7 @@ describe("storefront media protection", () => {
     expect(componentSource).toContain("zurs-mobile-tab-indicator");
     expect(componentSource).toContain('"--mobile-tab-index": activeMobileTabIndex');
     expect(styleSource).toContain("--mobile-tab-index");
-    expect(styleSource).toContain("width: calc((100% - 0.75rem) / 2)");
+    expect(styleSource).toContain("width: calc((100% - 0.5rem) / 2)");
     expect(styleSource).not.toContain("width: calc((100% - 1.5rem) / 4)");
     expect(styleSource).toContain("zurs-mobile-tab-indicator-enter");
     expect(styleSource).toContain("tab-icon-active");
@@ -64,7 +64,7 @@ describe("storefront media protection", () => {
     const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
     const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
     expect(componentSource).toContain("hidden h-11 w-11");
-    expect(componentSource).toContain("grid h-[3.25rem] grid-cols-2");
+    expect(componentSource).toContain("grid h-[3.25rem] w-[min(calc(100vw-1.5rem),15rem)] -translate-x-1/2 grid-cols-2");
     expect(componentSource).toContain("gap-0.5");
     expect(componentSource).not.toContain('href: "/ai"');
     expect(componentSource).toContain("rounded-full");
@@ -73,8 +73,11 @@ describe("storefront media protection", () => {
 
   it("uses a matching rounded top header without changing desktop controls", () => {
     const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
+    const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
     expect(componentSource).toContain("zurs-compact-header sticky top-2");
     expect(componentSource).toContain("rounded-[1.25rem]");
+    expect(styleSource).toContain("position: sticky !important");
+    expect(styleSource).toContain("z-index: 70 !important");
   });
 
   it("uses a banner-aligned particle field with staggered reduced-motion-safe twinkles", () => {
