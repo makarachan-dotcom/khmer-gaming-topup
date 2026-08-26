@@ -57,4 +57,11 @@ describe("ZURS AI safety policy", () => {
     expect(buildRateLimitedFallbackReply({ message: "តើត្រូវការ Player ID អ្វី?", recommendations: [] })).toContain("Player ID");
     expect(buildRateLimitedFallbackReply({ message: "ណែនាំ MLBB", recommendations: [{ gameId: "mlbb", name: "Mobile Legends", href: "/topup/mlbb" }] })).toContain("Mobile Legends");
   });
+
+  it("uses the bounded catalog fallback when an IAMHC credential is unavailable", () => {
+    const source = require("node:fs").readFileSync(require("node:path").resolve(process.cwd(), "server/zursAi.ts"), "utf8");
+    expect(source).toContain("if (!apiKey) {");
+    expect(source).toContain("input.onRecommendations?.(catalogKnowledge.recommendations)");
+    expect(source).toContain("buildRateLimitedFallbackReply({ message: latest.content, recommendations: catalogKnowledge.recommendations })");
+  });
 });

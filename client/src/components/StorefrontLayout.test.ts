@@ -54,7 +54,7 @@ describe("storefront media protection", () => {
     expect(componentSource).toContain("zurs-mobile-tab-indicator");
     expect(componentSource).toContain('"--mobile-tab-index": activeMobileTabIndex');
     expect(styleSource).toContain("--mobile-tab-index");
-    expect(styleSource).toContain("width: calc((100% - 1.25rem) / 3)");
+    expect(styleSource).toContain("width: calc((100% - 0.875rem) / 3)");
     expect(styleSource).not.toContain("width: calc((100% - 1.5rem) / 4)");
     expect(styleSource).toContain("zurs-mobile-tab-indicator-enter");
     expect(styleSource).toContain("tab-icon-active");
@@ -64,6 +64,16 @@ describe("storefront media protection", () => {
     const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
     expect(componentSource).toContain('onClick={() => setLocation("/ai")}');
     expect(componentSource).toContain("hidden h-11 w-11");
-    expect(componentSource).toContain("grid h-[4.6rem] grid-cols-3");
+    expect(componentSource).toContain("grid h-14 grid-cols-3");
+    expect(componentSource).toContain("gap-0.5");
+  });
+
+  it("uses Kantumruy Pro for the storefront and Hanuman for long Khmer copy", () => {
+    const documentSource = readFileSync(join(process.cwd(), "client/index.html"), "utf8");
+    const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
+    expect(documentSource).toContain("family=Hanuman");
+    expect(documentSource).toContain("family=Kantumruy+Pro");
+    expect(styleSource).toContain('font-family: "Hanuman", "Kantumruy Pro"');
+    expect(styleSource).toContain("prefers-reduced-motion: no-preference");
   });
 });

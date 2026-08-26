@@ -206,8 +206,12 @@ export async function streamZursAiReply(input: {
   const messages = normalizeZursAiMessages(input.messages);
   const latest = messages.at(-1)!;
   const apiKey = process.env.IAMHC_API_KEY?.trim();
-  if (!apiKey) throw new Error("ai_not_configured");
   const [catalogKnowledge, eventSources] = await Promise.all([getZursAiCatalogKnowledge(latest.content), searchZursGameEvents(latest.content)]);
+  if (!apiKey) {
+    input.onRecommendations?.(catalogKnowledge.recommendations);
+    input.onDelta(buildRateLimitedFallbackReply({ message: latest.content, recommendations: catalogKnowledge.recommendations }));
+    return;
+  }
   const selection = selectZursAiModel(latest.content);
   const response = await fetch("https://api.iamhc.cn/v1/chat/completions", {
     method: "POST",
