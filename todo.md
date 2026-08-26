@@ -21,9 +21,9 @@
 - [ ] Align the public storefront background with the banner's deep blue palette and add restrained staggered twinkling particles that respect reduced-motion.
 - [ ] Repair the verified-player sticky header so scrolling past Game ID fields shows the confirmed username/game and provides a safe way to change the ID.
 - [ ] Give the top header a compact rounded treatment that visually matches the redesigned mobile Tabbar without reducing usability.
-- [ ] Remove all public website AI entry points, fullscreen chat UI, and the /ai route while preserving unrelated protected admin/history data.
-- [ ] Replace the three-item mobile Tabbar with a compact two-item Home/Account control with clearly rounded outer ends and accessible active state.
-- [ ] Redirect former public AI-only legacy paths to a non-AI destination without altering protected admin marketplace routes.
+- [x] Remove all public website AI entry points, fullscreen chat UI, and the /ai route while preserving unrelated protected admin/history data. Public routing, navigation, FAQ, and Terms are AI-free; unused future adapter/component modules remain unmounted.
+- [x] Replace the three-item mobile Tabbar with a compact two-item Home/Account control with clearly rounded outer ends and accessible active state.
+- [x] Redirect former public AI-only legacy paths to a non-AI destination without altering protected admin marketplace routes.
 - [x] Verify on official zurs.me after deployment that homepage game cards visibly render again with inspectable evidence. On the READY be1f15e release, www.zurs.me completed catalog loading and visibly listed 9 of 9 public games.
 - [x] Publish the IAMHC-missing catalog fallback patch, then verify the production AI stream returns a safe non-empty response. Official be1f15e AI stream returned one delta, one recommendations frame, `[DONE]`, and no error frame.
 - [x] Add IAMHC_API_KEY to Vercel Production/Preview or document the approved blocker, then recheck live AI behavior on zurs.me. The Vercel key remains absent; the approved bounded catalog fallback is live and verified instead, without claiming general-provider availability.
