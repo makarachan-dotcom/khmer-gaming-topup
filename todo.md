@@ -42,6 +42,10 @@
 - [x] Integrate the GitHub KHQR response-compatibility repair: permit an omitted optional receiver only when the private stored MD5, exact amount, exact currency, and transaction hash match; reject any supplied mismatched receiver.
 - [x] Restore the short-lived server-side merchant-preflight readiness gate removed by the remote merge, while retaining the remote dynamic-response compatibility repair and Payment Control default OFF.
 - [ ] Diagnose the reported Connect with Gmail error on the public sign-in route without exposing user email, tokens, or session data; current production redirect/configuration is valid and now returns a safe stage reference if a callback fails, but a fresh user-specific reference is still required to isolate an external Google failure.
+- [ ] Verify the reproduced mobile Google OAuth state-cookie mismatch repair on the deployed callback flow while retaining signed state validation, callback-host binding, expiry, and CSRF protection.
+- [x] Change the OAuth state cookie from `SameSite=None` to secure top-level-navigation-compatible `SameSite=Lax`, with regression coverage for mobile callback cookie handling.
+- [ ] Verify the deployed Google OAuth start route emits a secure `SameSite=Lax` state cookie after publication.
+- [ ] Complete one owner-approved mobile Google sign-in callback test and confirm the prior state-mismatch error no longer appears, or capture only the new non-sensitive failure reference if it persists.
 - [x] Restrict public Google OAuth status output so it does not disclose the configured Gmail sender address or other account-specific metadata.
 - [ ] Obtain Bakong developer support confirmation for the current dynamic-transaction lookup failure (non-success responseCode 1/errorCode 17 with no data), then rerun preflight before any additional paid test.
 - [x] Re-upload Oracle SSH key before mirroring the newly supplied API token to the private worker environment; never paste the key or token in chat.

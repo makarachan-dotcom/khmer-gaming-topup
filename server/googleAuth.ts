@@ -42,7 +42,10 @@ export function getPublicGoogleOAuthStatus(env = process.env) {
 
 export function getGoogleStateCookieOptions(req: Pick<Request, "protocol" | "headers">) {
   const base = getZursSessionCookieOptions(req);
-  return { ...base, sameSite: base.secure ? "none" as const : "lax" as const };
+  // Google returns with a top-level GET navigation. Lax preserves the signed
+  // state-cookie binding on mobile browsers while avoiding a third-party-style
+  // SameSite=None cookie policy that some embedded/custom-tab flows reject.
+  return { ...base, sameSite: "lax" as const };
 }
 
 export function getGoogleCallbackUrl(req: Pick<Request, "protocol" | "get" | "headers">, env = process.env) {

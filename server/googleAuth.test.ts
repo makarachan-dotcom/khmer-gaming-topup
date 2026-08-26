@@ -24,9 +24,14 @@ describe("Google OAuth staging", () => {
     expect(getGoogleCallbackUrl(request("internal-runtime.a.run.app"), { GOOGLE_OAUTH_REDIRECT_URI: "https://khmergame-girzfgts.manus.space/api/auth/google/callback" })).toBe("https://khmergame-girzfgts.manus.space/api/auth/google/callback");
   });
 
-  it("uses cross-site-safe state cookies only on secure OAuth hosts", () => {
-    expect(getGoogleStateCookieOptions({ protocol: "https", headers: {} }).sameSite).toBe("none");
-    expect(getGoogleStateCookieOptions({ protocol: "http", headers: {} }).sameSite).toBe("lax");
+  it("uses mobile-compatible signed state cookies for OAuth callback navigation", () => {
+    const secure = getGoogleStateCookieOptions({ protocol: "https", headers: {} });
+    const local = getGoogleStateCookieOptions({ protocol: "http", headers: {} });
+    expect(secure.sameSite).toBe("lax");
+    expect(secure.secure).toBe(true);
+    expect(secure.httpOnly).toBe(true);
+    expect(local.sameSite).toBe("lax");
+    expect(local.secure).toBe(false);
   });
 
   it("keeps an existing verified-email account identity when Google is connected", () => {
