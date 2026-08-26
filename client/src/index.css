@@ -1082,3 +1082,13 @@ img.payment-method-option__icon { padding: 0.34rem; }
     animation: none;
   }
 }
+
+/* Some storefront utility styles apply relative positioning to generic buttons; this control must escape the page flow. */
+@media (max-width: 639px) {
+  .contact-admin-fab,
+  .contact-admin-fab--payment {
+    position: fixed !important;
+    z-index: 260 !important;
+    top: auto !important;
+  }
+}
