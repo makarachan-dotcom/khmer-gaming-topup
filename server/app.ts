@@ -13,7 +13,7 @@ import { registerProviderArtworkRoutes } from "./providerArtwork";
 import crypto from "node:crypto";
 import { parseKhqrWorkerCallback, verifyKhqrWorkerSignature } from "./khqrWorkerWebhook";
 import { getKhqrWorkerCredentials } from "./khqrWorkerSecrets";
-import { consumeZursAiRateLimit, streamZursAiReply, ZursAiInputError, type ZursAiMessage } from "./zursAi";
+import { consumeZursAiRateLimit, streamZursAiReply, ZursAiInputError, ZursAiUpstreamError, type ZursAiMessage } from "./zursAi";
 
 /**
  * Builds the shared Express application for the local long-running server and
@@ -78,7 +78,9 @@ export function createApp() {
     } catch (error) {
       const code = error instanceof ZursAiInputError && error.message === "retry_message"
         ? "retry_message"
-        : "assistant_unavailable";
+        : error instanceof ZursAiUpstreamError && error.status === 429
+          ? "assistant_busy"
+          : "assistant_unavailable";
       if (!res.writableEnded && !res.destroyed) res.write(`data: ${JSON.stringify({ error: code })}\n\n`);
     } finally {
       finished = true;

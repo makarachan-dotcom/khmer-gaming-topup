@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSafeEventSearchQuery, buildZursAiSystemPrompt, containsThaiScript, consumeZursAiRateLimit, normalizeZursAiMessages, selectZursAiModel, ZursAiInputError } from "./zursAi";
+import { buildSafeEventSearchQuery, buildZursAiSystemPrompt, containsThaiScript, consumeZursAiRateLimit, normalizeZursAiMessages, selectZursAiModel, ZursAiInputError, ZursAiUpstreamError } from "./zursAi";
 
 describe("ZURS AI safety policy", () => {
   it("uses a fast model for ordinary requests and quality model for comparisons", () => {
@@ -37,5 +37,12 @@ describe("ZURS AI safety policy", () => {
   it("uses an allowlisted game keyword rather than forwarding a raw customer event message to search", () => {
     expect(buildSafeEventSearchQuery("Mobile Legends event for 012345678 and name Sokha")).toBe("mobile legends event update");
     expect(buildSafeEventSearchQuery("ព្រឹត្តិការណ៍ថ្មី សូមទាក់ទងខ្ញុំ 012345678")).toBe("game event update");
+  });
+
+  it("classifies an upstream rate limit without retaining provider response details", () => {
+    const error = new ZursAiUpstreamError(429);
+    expect(error.name).toBe("ZursAiUpstreamError");
+    expect(error.status).toBe(429);
+    expect(error.message).toBe("ai_upstream_unavailable");
   });
 });

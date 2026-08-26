@@ -83,7 +83,7 @@ export default function ZursAiChat({ initialOpen = false }: { initialOpen?: bool
         headers: { "Content-Type": "application/json", "X-ZURS-Chat-Session": chatSessionId() },
         body: JSON.stringify({ messages: nextMessages }),
       });
-      if (!response.ok || !response.body) throw new Error("assistant_unavailable");
+      if (!response.ok || !response.body) throw new Error(response.status === 429 ? "assistant_busy" : "assistant_unavailable");
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
@@ -109,6 +109,11 @@ export default function ZursAiChat({ initialOpen = false }: { initialOpen?: bool
               pushAssistant();
               continue;
             }
+            if (payload.error === "assistant_busy") {
+              assistant = "សេវាជំនួយកំពុងរវល់បន្តិច។ សូមសាកម្ដងទៀតបន្តិចក្រោយ។";
+              pushAssistant();
+              continue;
+            }
             if (payload.delta) {
               assistant += payload.delta;
               pushAssistant();
@@ -118,8 +123,11 @@ export default function ZursAiChat({ initialOpen = false }: { initialOpen?: bool
         }
       }
       if (!assistant) setMessages((current) => [...current, { role: "assistant", content: "សុំអភ័យទោស ខ្ញុំមិនអាចឆ្លើយបានឥឡូវនេះទេ។ សូមសាកម្ដងទៀត។" }]);
-    } catch {
-      setMessages((current) => [...current, { role: "assistant", content: "សុំអភ័យទោស ខ្ញុំមិនអាចឆ្លើយបានឥឡូវនេះទេ។ សូមសាកម្ដងទៀត។" }]);
+    } catch (error) {
+      const content = error instanceof Error && error.message === "assistant_busy"
+        ? "សេវាជំនួយកំពុងរវល់បន្តិច។ សូមសាកម្ដងទៀតបន្តិចក្រោយ។"
+        : "សុំអភ័យទោស ខ្ញុំមិនអាចឆ្លើយបានឥឡូវនេះទេ។ សូមសាកម្ដងទៀត។";
+      setMessages((current) => [...current, { role: "assistant", content }]);
     } finally {
       setIsThinking(false);
       window.setTimeout(() => inputRef.current?.focus(), 20);

@@ -26,6 +26,13 @@ export class ZursAiInputError extends Error {
   }
 }
 
+export class ZursAiUpstreamError extends Error {
+  constructor(public readonly status: number) {
+    super("ai_upstream_unavailable");
+    this.name = "ZursAiUpstreamError";
+  }
+}
+
 export function containsThaiScript(message: string) {
   return THAI_SCRIPT.test(message);
 }
@@ -192,7 +199,7 @@ export async function streamZursAiReply(input: {
     }),
     signal: input.signal ?? AbortSignal.timeout(35_000),
   });
-  if (!response.ok || !response.body) throw new Error("ai_upstream_unavailable");
+  if (!response.ok || !response.body) throw new ZursAiUpstreamError(response.status);
   input.onRecommendations?.(catalogKnowledge.recommendations);
 
   const reader = response.body.getReader();
