@@ -6,6 +6,7 @@ import { adminProcedure, ownerProcedure, protectedProcedure, publicProcedure, ro
 import * as db from "./db";
 import { fetchFzrProviderSyncSnapshot, fetchProviderGameDetails, fetchProviderGames, fetchProviderPackages, fetchProviderPreviewPackages, fetchSmmProviderServices, getProviderAvailabilityCatalog, getProviderCatalogStatus, setProviderAvailability, validateProviderPlayerIdentity } from "./providerCatalog";
 import { toPublicPlayerIdentityResponse } from "./playerIdentityPrivacy";
+import { getProviderCredentialStatus } from "./providerCredentialStatus";
 import { buildZursMemberDisplayName } from "./storefrontDomain";
 import { uploadAdminMediaImage, uploadMarketplaceScreenshot, uploadMarketplaceVerificationEvidence } from "./uploads";
 import { storageGet } from "./storage";
@@ -60,6 +61,7 @@ export const appRouter = router({
   provider: router({
     games: publicProcedure.query(() => fetchProviderGames()),
     gameDetails: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120) })).query(({ input }) => fetchProviderGameDetails(input.gameId)),
+    packageArtwork: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120) })).query(({ input }) => db.getProviderPackageArtworkOverrides(input.gameId)),
     packages: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120), fields: z.record(z.string().trim().max(64), z.string().trim().min(1).max(256)).refine((fields) => Object.keys(fields).length <= 12, "Too many provider fields"), idAccuracyConfirmed: z.boolean().optional().default(false) })).mutation(({ input }) => fetchProviderPackages(input)),
     validatePlayerId: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120), fields: z.record(z.string().trim().max(64), z.string().trim().min(1).max(256)).refine((fields) => Object.keys(fields).length <= 12, "Too many provider fields") })).mutation(async ({ input }) => toPublicPlayerIdentityResponse(await validateProviderPlayerIdentity(input))),
     smmServices: publicProcedure.query(() => fetchSmmProviderServices()),
@@ -141,12 +143,17 @@ export const appRouter = router({
     deleteSmmTier: adminProcedure.input(z.object({ tierId: z.string().min(4).max(64) })).mutation(({ input }) => db.deleteSmmTier(input.tierId)),
     payments: adminProcedure.query(() => db.getPaymentTransactions()),
     paymentControl: ownerProcedure.query(() => db.getPaymentControl()),
+    providerCredentialStatus: ownerProcedure.query(() => getProviderCredentialStatus()),
     setPaymentControl: ownerProcedure.input(z.object({ enabled: z.boolean() })).mutation(({ ctx, input }) => db.setPaymentControl({ ...input, updatedByUserId: ctx.user.id })),
     users: adminProcedure.query(() => db.getAdminUsers()),
     roleAudits: ownerProcedure.query(() => db.getAdminRoleAudits()),
     setUserRole: ownerProcedure.input(z.object({ targetUserId: z.number().int().positive(), nextRole: z.enum(["user", "admin"]), confirmationEmail: z.string().trim().email().max(320), reason: z.string().trim().min(10).max(500) })).mutation(({ ctx, input }) => db.setAdminUserRole({ actorUserId: ctx.user.id, ...input })),
     content: adminProcedure.query(() => db.getSiteContent()),
     saveContent: adminProcedure.input(z.object({ contentKey: z.string().trim().min(2).max(100), titleKh: z.string().trim().max(240).optional(), bodyKh: z.string().trim().max(5000).optional(), mediaUrl: z.string().trim().max(2048).refine((value) => value.startsWith("/manus-storage/") || /^https?:\/\//i.test(value), "Use a secure media URL").optional(), isActive: z.boolean() })).mutation(({ ctx, input }) => db.saveSiteContent({ updatedByUserId: ctx.user.id, ...input })),
+    packageArtwork: adminProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120).optional() }).optional()).query(({ input }) => db.getProviderPackageArtworkOverrides(input?.gameId)),
+    savePackageArtwork: adminProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120), offerId: z.string().trim().min(1).max(180), mediaUrl: z.string().trim().min(1).max(2048).refine((value) => value.startsWith("/manus-storage/") || /^https:\/\//i.test(value), "Use managed storage or an HTTPS artwork URL") })).mutation(({ ctx, input }) => db.saveProviderPackageArtworkOverride({ ...input, updatedByUserId: ctx.user.id })),
+    resetPackageArtwork: adminProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120), offerId: z.string().trim().min(1).max(180) })).mutation(({ ctx, input }) => db.resetProviderPackageArtworkOverride({ ...input, updatedByUserId: ctx.user.id })),
+    packageArtworkAudits: adminProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120).optional() }).optional()).query(({ input }) => db.getProviderPackageArtworkAudits(input?.gameId)),
   }),
 });
 

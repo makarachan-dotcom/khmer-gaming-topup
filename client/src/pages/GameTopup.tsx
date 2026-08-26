@@ -14,11 +14,13 @@ import { isPubgTopupGame, pubgUcArtworkForAmount, pubgUcDisplayAmount, pubgUcFal
 import { suppliedProductArtworkForPackage } from "@/lib/suppliedProductArtwork";
 import { generatedPackageArtworkForPackage, type GeneratedPackageArtworkKind } from "@/lib/generatedPackageArtwork";
 import { trpc } from "@/lib/trpc";
+import { subscribeToPackageArtworkChanges } from "@/lib/packageArtworkBroadcast";
 import { ArrowLeft, BadgePercent, Box, CalendarClock, CheckCircle2, ChevronDown, ChevronRight, CircleAlert, Crown, Eye, Gem, Gift, History, ShieldAlert, Sparkles, TrendingUp, UserRound, WalletCards } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 
 type SavedPlayerEntry = { id: string; fields: Record<string, string>; savedAt: number };
+const PackageArtworkOverridesContext = createContext<Record<string, string>>({});
 type GameField = { key: string; label: string; placeholder?: string | null; required: boolean; kind: string };
 
 const savedPlayerStoragePrefix = "zurs:verified-player:";
@@ -319,12 +321,13 @@ export function partitionProviderPackagesForFullTicketEvent<T extends ProviderPa
 }
 
 function PackageCard({ item, selected, onSelect, gameId, gameName, gameLogoUrl }: { item: ProviderPackage; selected: boolean; onSelect: () => void; gameId: string; gameName: string; gameLogoUrl?: string }) {
+  const artworkOverrides = useContext(PackageArtworkOverridesContext);
   const badge = providerPackageBadge(item.label);
   const mobileLegends = isMobileLegendsGlobalGame(gameId);
   const pubg = isPubgTopupGame(gameId, gameName);
   const diamondLabel = mobileLegendsDiamondLabel(item.label, item.amountLabel);
   const mobileLegendsTone = mobileLegends ? mobileLegendsPackageTone(item.label, item.amountLabel) : null;
-  const suppliedArtwork = suppliedProductArtworkForPackage(gameId, item.amountLabel);
+  const suppliedArtwork = artworkOverrides[item.id] ?? suppliedProductArtworkForPackage(gameId, item.amountLabel);
   const pubgArtwork = pubg ? pubgUcArtworkForAmount(item.amountLabel) : null;
   const generatedArtwork = generatedPackageArtworkForPackage(item.label, item.amountLabel);
   const packageAmount = mobileLegends ? diamondLabel : pubg ? pubgUcDisplayAmount(item.amountLabel) : item.amountLabel;
@@ -344,6 +347,9 @@ function PackageSection({ title, description, icon: Icon, items, selectedPackage
 
 function DiamondPackages({ packages, status, selectedPackageId, onSelect, gameId, gameName, gameLogoUrl }: { packages: ProviderPackage[]; status?: "ready" | "unavailable" | "error" | "verification_required"; selectedPackageId: string; onSelect: (id: string) => void; gameId: string; gameName: string; gameLogoUrl?: string }) {
   const eventContent = trpc.content.active.useQuery();
+  const { data: packageArtworkData, refetch: refetchPackageArtwork } = trpc.provider.packageArtwork.useQuery({ gameId }, { enabled: Boolean(gameId), refetchInterval: 1_000, staleTime: 0 });
+  const artworkOverrides = useMemo(() => Object.fromEntries((packageArtworkData ?? []).map((item) => [item.offerId, item.mediaUrl])), [packageArtworkData]);
+  useEffect(() => subscribeToPackageArtworkChanges((changedGameId) => { if (changedGameId === gameId) void refetchPackageArtwork(); }), [gameId, refetchPackageArtwork]);
   const fullTicketEvent = (eventContent.data ?? []).find((item) => item.contentKey === "topup-event-full-ticket");
   const { eventPackages: fullTicketPackages, storefrontPackages } = partitionProviderPackagesForFullTicketEvent(packages, Boolean(fullTicketEvent));
   const gamePackages = sortProviderPackagesByPrice([...storefrontPackages, ...fullTicketPackages]);
@@ -352,5 +358,5 @@ function DiamondPackages({ packages, status, selectedPackageId, onSelect, gameId
   const standardTitle = mobileLegends ? "កញ្ចប់ពេជ្យ" : "កញ្ចប់ធម្មតា";
   const standardDescription = mobileLegends ? "ជ្រើសរើសចំនួនពេជ្យដែលត្រូវការ។" : "កញ្ចប់ top-up ដែល provider បានអនុញ្ញាត។";
 
-  return <div className="mt-4 space-y-3 border-t border-slate-100 pt-4">{status === "ready" && packages.length ? <><PackageSection title={standardTitle} description={standardDescription} icon={Gem} items={groupedPackages.standard} selectedPackageId={selectedPackageId} onSelect={onSelect} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} progressive /><PackageSection title="កញ្ចប់ពេជ្យបន្ថែម" description="កញ្ចប់ដែល provider បញ្ជាក់ថាមាន bonus ឬចំនួនបន្ថែម។" icon={Gem} items={groupedPackages.bonus} selectedPackageId={selectedPackageId} onSelect={onSelect} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} progressive /><PackageSection title={mobileLegends ? "Elite Pass និង Pass" : "Pass និង Membership"} description="កញ្ចប់ Pass, Membership ឬ Subscription ដែល provider បានបញ្ជាក់។" icon={WalletCards} items={groupedPackages.passes} selectedPackageId={selectedPackageId} onSelect={onSelect} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} /><PackageSection title="កញ្ចប់ពិសេស" description={fullTicketEvent?.bodyKh ? "កញ្ចប់ Promo, Special និង Event ដែលកំពុងមាន។" : "កញ្ចប់ Promo ឬ Special ដែល provider បានបញ្ជាក់។"} icon={CheckCircle2} items={groupedPackages.special} selectedPackageId={selectedPackageId} onSelect={onSelect} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} /></> : <div className="mt-3 rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-xs leading-5 text-slate-600">មិនអាចបង្ហាញកញ្ចប់សេវាសម្រាប់ពេលនេះទេ។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។</div>}</div>;
+  return <PackageArtworkOverridesContext.Provider value={artworkOverrides}><div className="mt-4 space-y-3 border-t border-slate-100 pt-4">{status === "ready" && packages.length ? <><PackageSection title={standardTitle} description={standardDescription} icon={Gem} items={groupedPackages.standard} selectedPackageId={selectedPackageId} onSelect={onSelect} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} progressive /><PackageSection title="កញ្ចប់ពេជ្យបន្ថែម" description="កញ្ចប់ដែល provider បញ្ជាក់ថាមាន bonus ឬចំនួនបន្ថែម។" icon={Gem} items={groupedPackages.bonus} selectedPackageId={selectedPackageId} onSelect={onSelect} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} progressive /><PackageSection title={mobileLegends ? "Elite Pass និង Pass" : "Pass និង Membership"} description="កញ្ចប់ Pass, Membership ឬ Subscription ដែល provider បានបញ្ជាក់។" icon={WalletCards} items={groupedPackages.passes} selectedPackageId={selectedPackageId} onSelect={onSelect} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} /><PackageSection title="កញ្ចប់ពិសេស" description={fullTicketEvent?.bodyKh ? "កញ្ចប់ Promo, Special និង Event ដែលកំពុងមាន។" : "កញ្ចប់ Promo ឬ Special ដែល provider បានបញ្ជាក់។"} icon={CheckCircle2} items={groupedPackages.special} selectedPackageId={selectedPackageId} onSelect={onSelect} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} /></> : <div className="mt-3 rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-xs leading-5 text-slate-600">មិនអាចបង្ហាញកញ្ចប់សេវាសម្រាប់ពេលនេះទេ។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។</div>}</div></PackageArtworkOverridesContext.Provider>;
 }

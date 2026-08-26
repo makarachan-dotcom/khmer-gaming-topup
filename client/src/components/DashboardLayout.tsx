@@ -26,9 +26,11 @@ const menuItems = [
   { icon: ReceiptText, label: "ការកម្មង់", path: "/admin?tab=orders" },
   { icon: Boxes, label: "កាតាឡុក", path: "/admin?tab=catalog" },
   { icon: ImagePlus, label: "Banner & Promo", path: "/admin/media" },
+  { icon: ImagePlus, label: "រូបភាពកញ្ចប់", path: "/admin/package-artwork" },
   { icon: Users, label: "ប្រតិបត្តិការ", path: "/admin?tab=operations" },
   { icon: ShieldCheck, label: "សិទ្ធិ Admin", path: "/admin/access" },
   { icon: CreditCard, label: "Payment Control", path: "/admin/payment" },
+  { icon: ShieldCheck, label: "Provider Security", path: "/admin/provider-security" },
   { icon: CircleDollarSign, label: "តម្លៃ និង Margin", path: "/admin/pricing" },
 ];
 

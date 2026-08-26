@@ -308,5 +308,27 @@ export const siteContent = mysqlTable("site_content", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
+export const providerPackageArtworkOverrides = mysqlTable("provider_package_artwork_overrides", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  gameId: varchar("gameId", { length: 120 }).notNull(),
+  offerId: varchar("offerId", { length: 180 }).notNull(),
+  mediaUrl: varchar("mediaUrl", { length: 2048 }).notNull(),
+  storageKey: varchar("storageKey", { length: 512 }),
+  updatedByUserId: int("updatedByUserId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [uniqueIndex("provider_package_artwork_unique").on(table.gameId, table.offerId), index("provider_package_artwork_game_idx").on(table.gameId)]);
+
+export const providerPackageArtworkAudits = mysqlTable("provider_package_artwork_audits", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  gameId: varchar("gameId", { length: 120 }).notNull(),
+  offerId: varchar("offerId", { length: 180 }).notNull(),
+  action: mysqlEnum("action", ["set", "reset"]).notNull(),
+  previousMediaUrl: varchar("previousMediaUrl", { length: 2048 }),
+  nextMediaUrl: varchar("nextMediaUrl", { length: 2048 }),
+  actorUserId: int("actorUserId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [index("provider_package_artwork_audit_offer_idx").on(table.gameId, table.offerId), index("provider_package_artwork_audit_actor_idx").on(table.actorUserId)]);
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;

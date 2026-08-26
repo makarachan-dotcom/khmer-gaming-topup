@@ -3,7 +3,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { drizzle } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
 import {
-  adminRoleAudits, customerWallets, gamePackages, gameProducts, gmailSenderConnections, InsertUser, marketplaceContacts, marketplaceDisclosureRequests, marketplaceEvidenceAccessLogs, marketplaceFavorites, marketplaceFraudReports, marketplaceListings, marketplaceVerificationEvidence, marketplaceVerifications, orders, orderStatusEvents, orderSupportTickets, paymentTransactions, savedPlayerIds, siteContent, smmServices, smmTiers, User, users, walletTopups, welcomeEmailDeliveries,
+  adminRoleAudits, customerWallets, gamePackages, gameProducts, gmailSenderConnections, InsertUser, marketplaceContacts, marketplaceDisclosureRequests, marketplaceEvidenceAccessLogs, marketplaceFavorites, marketplaceFraudReports, marketplaceListings, marketplaceVerificationEvidence, marketplaceVerifications, orders, orderStatusEvents, orderSupportTickets, paymentTransactions, providerPackageArtworkAudits, providerPackageArtworkOverrides, savedPlayerIds, siteContent, smmServices, smmTiers, User, users, walletTopups, welcomeEmailDeliveries,
 } from "../drizzle/schema";
 import { createAppwriteMarketplaceListing, createAppwriteWalletTopup, deleteAppwriteMarketplaceListing, getAppwriteAdminRoleAudits, getAppwriteCustomerOrders, getAppwriteCustomerPaymentHistory, getAppwritePaymentControl, getAppwriteProviderCatalog, getAppwriteUserByEmail, getAppwriteUserByOpenId, getAppwriteWalletSummary, getAppwriteWalletTopup, isAppwriteStoreConfigured, listAppwriteMarketplaceListings, listAppwriteUsers, setAppwritePaymentControl, setAppwriteUserRole, syncAppwriteFzrCatalog, syncAppwriteSmmCatalog, updateAppwriteMarketplaceListing, updateAppwriteProviderOffer, updateAppwriteUserDisplayName, updateAppwriteWalletTopup, upsertAppwriteUser } from "./appwriteStore";
 import { buildOrderNumber, isSingleAdminEmail } from "./storefrontDomain";
@@ -1010,4 +1010,57 @@ export async function saveSiteContent(input: { contentKey: string; titleKh?: str
   if (existing[0]) await db.update(siteContent).set(values).where(eq(siteContent.id, existing[0].id));
   else await db.insert(siteContent).values({ id: nanoid(), contentKey: input.contentKey.trim(), ...values });
   return { success: true };
+}
+
+function isSafeArtworkMediaUrl(mediaUrl: string) {
+  if (mediaUrl.startsWith("/manus-storage/")) return true;
+  try { return new URL(mediaUrl).protocol === "https:"; } catch { return false; }
+}
+
+function artworkStorageKey(mediaUrl: string) {
+  return mediaUrl.startsWith("/manus-storage/") ? mediaUrl.slice("/manus-storage/".length) : null;
+}
+
+export async function getProviderPackageArtworkOverrides(gameId?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = gameId
+    ? await db.select().from(providerPackageArtworkOverrides).where(eq(providerPackageArtworkOverrides.gameId, gameId.trim())).orderBy(desc(providerPackageArtworkOverrides.updatedAt))
+    : await db.select().from(providerPackageArtworkOverrides).orderBy(desc(providerPackageArtworkOverrides.updatedAt));
+  return rows.map((row) => ({ gameId: row.gameId, offerId: row.offerId, mediaUrl: row.mediaUrl, updatedAt: row.updatedAt, updatedByUserId: row.updatedByUserId }));
+}
+
+export async function saveProviderPackageArtworkOverride(input: { gameId: string; offerId: string; mediaUrl: string; updatedByUserId: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Artwork override storage is unavailable");
+  const gameId = input.gameId.trim();
+  const offerId = input.offerId.trim();
+  const mediaUrl = input.mediaUrl.trim();
+  if (!isSafeArtworkMediaUrl(mediaUrl)) throw new Error("Artwork URL must use managed storage or HTTPS");
+  const current = await db.select().from(providerPackageArtworkOverrides).where(and(eq(providerPackageArtworkOverrides.gameId, gameId), eq(providerPackageArtworkOverrides.offerId, offerId))).limit(1);
+  const values = { mediaUrl, storageKey: artworkStorageKey(mediaUrl), updatedByUserId: input.updatedByUserId };
+  if (current[0]) await db.update(providerPackageArtworkOverrides).set(values).where(eq(providerPackageArtworkOverrides.id, current[0].id));
+  else await db.insert(providerPackageArtworkOverrides).values({ id: nanoid(), gameId, offerId, ...values });
+  await db.insert(providerPackageArtworkAudits).values({ id: nanoid(), gameId, offerId, action: "set", previousMediaUrl: current[0]?.mediaUrl ?? null, nextMediaUrl: mediaUrl, actorUserId: input.updatedByUserId });
+  return { success: true };
+}
+
+export async function resetProviderPackageArtworkOverride(input: { gameId: string; offerId: string; updatedByUserId: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Artwork override storage is unavailable");
+  const gameId = input.gameId.trim();
+  const offerId = input.offerId.trim();
+  const current = await db.select().from(providerPackageArtworkOverrides).where(and(eq(providerPackageArtworkOverrides.gameId, gameId), eq(providerPackageArtworkOverrides.offerId, offerId))).limit(1);
+  if (!current[0]) return { success: true, reset: false };
+  await db.delete(providerPackageArtworkOverrides).where(eq(providerPackageArtworkOverrides.id, current[0].id));
+  await db.insert(providerPackageArtworkAudits).values({ id: nanoid(), gameId, offerId, action: "reset", previousMediaUrl: current[0].mediaUrl, nextMediaUrl: null, actorUserId: input.updatedByUserId });
+  return { success: true, reset: true };
+}
+
+export async function getProviderPackageArtworkAudits(gameId?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const query = db.select().from(providerPackageArtworkAudits).orderBy(desc(providerPackageArtworkAudits.createdAt)).limit(100);
+  const rows = gameId ? await query.where(eq(providerPackageArtworkAudits.gameId, gameId.trim())) : await query;
+  return rows.map((row) => ({ gameId: row.gameId, offerId: row.offerId, action: row.action, previousMediaUrl: row.previousMediaUrl, nextMediaUrl: row.nextMediaUrl, actorUserId: row.actorUserId, createdAt: row.createdAt }));
 }

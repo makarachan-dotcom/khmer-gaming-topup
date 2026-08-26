@@ -19,6 +19,8 @@ import AdminPricing from "./pages/AdminPricing";
 import AdminPayment from "./pages/AdminPayment";
 import Checkout from "./pages/Checkout";
 import AdminMedia from "./pages/AdminMedia";
+import AdminPackageArtwork from "./pages/AdminPackageArtwork";
+import AdminProviderSecurity from "./pages/AdminProviderSecurity";
 import Legal from "./pages/Legal";
 import GameTopup from "./pages/GameTopup";
 
@@ -47,6 +49,8 @@ function Router() {
       <Route path="/admin/marketplace-safety" component={AdminMarketplaceSafety} />
       <Route path={"/checkout/:orderId"} component={Checkout} />
       <Route path={"/admin/media"} component={AdminMedia} />
+      <Route path={"/admin/package-artwork"} component={AdminPackageArtwork} />
+      <Route path={"/admin/provider-security"} component={AdminProviderSecurity} />
       <Route path="/privacy" component={() => <Legal kind="privacy" />} />
       <Route path="/terms" component={() => <Legal kind="terms" />} />
       <Route path={"/404"} component={NotFound} />
