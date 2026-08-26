@@ -911,8 +911,9 @@ body { font-family: "Kantumruy Pro", "Noto Sans Khmer", "DM Sans", sans-serif; l
 .zurs-game-card-arrow { display: none; }
 
 .game-detail-hero { isolation: isolate; border: 1px solid color-mix(in oklab, var(--hero-accent, #46d8ff) 36%, white 18%); background: #061128; }
-.game-detail-hero__art { position: absolute; inset: 0; z-index: -2; display: block; height: 100%; width: 100%; object-fit: cover; filter: saturate(1.06) contrast(1.04); transform: scale(1.015); }
-.game-detail-hero__scrim { position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, oklch(0.06 0.035 260 / 0.97) 0%, oklch(0.06 0.035 260 / 0.87) 39%, oklch(0.06 0.035 260 / 0.28) 78%, oklch(0.06 0.035 260 / 0.14) 100%), linear-gradient(0deg, oklch(0.04 0.02 260 / 0.50), transparent 54%); }
+.game-detail-hero__art { position: absolute; inset: 0; z-index: 0; display: block; height: 100%; width: 100%; object-fit: cover; filter: saturate(1.06) contrast(1.04); transform: scale(1.015); }
+.game-detail-hero__scrim { position: absolute; inset: 0; z-index: 1; background: linear-gradient(90deg, oklch(0.06 0.035 260 / 0.97) 0%, oklch(0.06 0.035 260 / 0.87) 39%, oklch(0.06 0.035 260 / 0.28) 78%, oklch(0.06 0.035 260 / 0.14) 100%), linear-gradient(0deg, oklch(0.04 0.02 260 / 0.50), transparent 54%); }
+.game-detail-hero > :not(.game-detail-hero__art):not(.game-detail-hero__scrim) { position: relative; z-index: 2; }
 .game-detail-hero__eyebrow { color: color-mix(in oklab, var(--hero-accent, #46d8ff) 62%, white 38%); font-size: 0.64rem; font-weight: 700; letter-spacing: 0.13em; line-height: 1.4; }
 .game-detail-hero__title { font-family: "Chakra Petch", "Kantumruy Pro", "Noto Sans Khmer", sans-serif; font-size: clamp(1.75rem, 5vw, 2.75rem); font-weight: 700; line-height: 1.3; text-shadow: 0 2px 20px oklch(0.04 0.02 260 / 0.56); }
 .game-detail-hero__account-chip { display: inline-flex; align-items: center; gap: 0.45rem; border: 1px solid color-mix(in oklab, var(--hero-accent, #46d8ff) 46%, white 22%); border-radius: 999px; background: oklch(0.08 0.04 263 / 0.55); box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.14); color: white; padding: 0.38rem 0.7rem; font-size: 0.68rem; font-weight: 700; line-height: 1.4; backdrop-filter: blur(10px); }
