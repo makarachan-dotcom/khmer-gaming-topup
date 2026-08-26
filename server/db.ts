@@ -971,6 +971,77 @@ export async function getSiteContent() {
 }
 
 const paymentControlContentKey = "system-payment-control";
+const paymentMethodContentPrefix = "payment-method:";
+
+type PaymentMethodConfig = {
+  id: string;
+  name: string;
+  descriptionKh: string;
+  iconUrl: string | null;
+  providerKey: "bakong_khqr" | "manual";
+  isActive: boolean;
+  sortOrder: number;
+  updatedAt: Date;
+};
+
+const paymentMethodSeeds: Array<Omit<PaymentMethodConfig, "updatedAt">> = [
+  { id: "khqr", name: "KHQR", descriptionKh: "ទូទាត់ដោយស្កេនតាមកម្មវិធីធនាគារ ឬ Bakong ដែលគាំទ្រ", iconUrl: null, providerKey: "bakong_khqr", isActive: true, sortOrder: 10 },
+];
+
+function paymentMethodContentKey(id: string) { return `${paymentMethodContentPrefix}${id}`; }
+
+function paymentMethodFromContent(row: typeof siteContent.$inferSelect): PaymentMethodConfig | null {
+  if (!row.contentKey.startsWith(paymentMethodContentPrefix)) return null;
+  const id = row.contentKey.slice(paymentMethodContentPrefix.length);
+  const seed = paymentMethodSeeds.find((method) => method.id === id);
+  const data = parseJsonRecord(row.bodyKh);
+  const providerKey = data.providerKey === "bakong_khqr" ? "bakong_khqr" : "manual";
+  return {
+    id,
+    name: row.titleKh ?? seed?.name ?? id,
+    descriptionKh: typeof data.descriptionKh === "string" ? data.descriptionKh : seed?.descriptionKh ?? "",
+    iconUrl: row.mediaUrl ?? seed?.iconUrl ?? null,
+    providerKey,
+    isActive: row.isActive,
+    sortOrder: typeof data.sortOrder === "number" ? data.sortOrder : seed?.sortOrder ?? 999,
+    updatedAt: row.updatedAt,
+  };
+}
+
+async function ensurePaymentMethodSeeds() {
+  const db = await getDb();
+  if (!db) return;
+  const rows = await db.select({ contentKey: siteContent.contentKey }).from(siteContent);
+  const keys = new Set(rows.map((row) => row.contentKey));
+  for (const method of paymentMethodSeeds) {
+    const contentKey = paymentMethodContentKey(method.id);
+    if (keys.has(contentKey)) continue;
+    await db.insert(siteContent).values({ id: nanoid(), contentKey, titleKh: method.name, bodyKh: JSON.stringify({ descriptionKh: method.descriptionKh, providerKey: method.providerKey, sortOrder: method.sortOrder }), mediaUrl: method.iconUrl, isActive: method.isActive, updatedByUserId: null });
+  }
+}
+
+export async function getPaymentMethods(includeHidden = false) {
+  const db = await getDb();
+  if (!db) return includeHidden ? paymentMethodSeeds.map((method) => ({ ...method, updatedAt: new Date(0) })) : paymentMethodSeeds.filter((method) => method.isActive).map((method) => ({ ...method, updatedAt: new Date(0) }));
+  await ensurePaymentMethodSeeds();
+  const methods = (await db.select().from(siteContent)).map(paymentMethodFromContent).filter((method): method is PaymentMethodConfig => Boolean(method));
+  return methods.filter((method) => includeHidden || method.isActive).sort((left, right) => left.sortOrder - right.sortOrder || left.name.localeCompare(right.name));
+}
+
+export async function savePaymentMethod(input: { id: string; name: string; descriptionKh: string; iconUrl?: string | null; providerKey: "bakong_khqr" | "manual"; isActive: boolean; sortOrder: number; updatedByUserId: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Payment-method storage is unavailable.");
+  const id = input.id.trim().toLowerCase();
+  if (!/^[a-z][a-z0-9_-]{1,47}$/.test(id)) throw new Error("Payment method ID must use lowercase letters, numbers, dashes, or underscores.");
+  const iconUrl = input.iconUrl?.trim() || null;
+  if (iconUrl && !isSafeArtworkMediaUrl(iconUrl)) throw new Error("Payment method icon must use managed storage or HTTPS.");
+  const contentKey = paymentMethodContentKey(id);
+  const existing = await db.select({ id: siteContent.id }).from(siteContent).where(eq(siteContent.contentKey, contentKey)).limit(1);
+  const values = { titleKh: input.name.trim(), bodyKh: JSON.stringify({ descriptionKh: input.descriptionKh.trim(), providerKey: input.providerKey, sortOrder: input.sortOrder }), mediaUrl: iconUrl, isActive: input.isActive, updatedByUserId: input.updatedByUserId };
+  if (existing[0]) await db.update(siteContent).set(values).where(eq(siteContent.id, existing[0].id));
+  else await db.insert(siteContent).values({ id: nanoid(), contentKey, ...values });
+  return { success: true };
+}
 
 export async function getPaymentControl() {
   const db = await getDb();

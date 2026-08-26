@@ -54,6 +54,8 @@ export const appRouter = router({
   }),
   payments: router({
     readiness: publicProcedure.query(() => db.getPublicPaymentAvailability()),
+    gate: publicProcedure.query(async () => ({ enabled: (await db.getPaymentControl()).enabled })),
+    methods: publicProcedure.query(() => db.getPaymentMethods()),
   }),
   wallet: router({
     summary: protectedProcedure.query(({ ctx }) => db.getCustomerWalletSummary(ctx.user.id)),
@@ -152,6 +154,8 @@ export const appRouter = router({
     deleteSmmTier: adminProcedure.input(z.object({ tierId: z.string().min(4).max(64) })).mutation(({ input }) => db.deleteSmmTier(input.tierId)),
     payments: adminProcedure.query(() => db.getPaymentTransactions()),
     paymentControl: ownerProcedure.query(() => db.getPaymentControl()),
+    paymentMethods: ownerProcedure.query(() => db.getPaymentMethods(true)),
+    savePaymentMethod: ownerProcedure.input(z.object({ id: z.string().trim().min(2).max(48), name: z.string().trim().min(2).max(120), descriptionKh: z.string().trim().min(2).max(240), iconUrl: z.string().trim().max(2048).refine((value) => value.startsWith("/manus-storage/") || /^https:\/\//i.test(value), "Use managed storage or an HTTPS icon URL").nullable().optional(), providerKey: z.enum(["bakong_khqr", "manual"]), isActive: z.boolean(), sortOrder: z.number().int().min(0).max(10_000) })).mutation(({ ctx, input }) => db.savePaymentMethod({ ...input, updatedByUserId: ctx.user.id })),
     providerCredentialStatus: ownerProcedure.query(async () => getProviderCredentialStatus()),
     providerCredentialHistory: ownerProcedure.query(() => getProviderCredentialHistory()),
     rotateProviderCredential: ownerProcedure.input(z.object({ provider: z.enum(["fazercards", "bakong"]), credential: z.string().trim().min(8).max(4096), confirmation: z.string().trim().max(40), reason: z.string().trim().min(10).max(240) })).mutation(async ({ ctx, input }) => {

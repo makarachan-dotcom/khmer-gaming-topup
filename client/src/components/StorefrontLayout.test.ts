@@ -114,4 +114,18 @@ describe("storefront media protection", () => {
     expect(styleSource).toContain(".contact-admin-fab--payment");
     expect(styleSource).toContain("touch-action: pan-x pan-y");
   });
+
+  it("routes selected packages through the payment-method gate and preserves the master-switch affordance", () => {
+    const layoutSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
+    const gateSource = readFileSync(join(process.cwd(), "client/src/components/PaymentMethodGate.tsx"), "utf8");
+    const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
+    expect(layoutSource).toContain("<PaymentMethodGate product={selectedProduct} open={paymentGateOpen}");
+    expect(layoutSource).toContain("onOpenPaymentGate={() => setPaymentGateOpen(true)}");
+    expect(gateSource).toContain("ជ្រើសរើសវិធីបង់ប្រាក់");
+    expect(gateSource).toContain("ការបង់ប្រាក់កំពុងត្រូវបានរៀបចំ — សូមរង់ចាំបន្តិច");
+    expect(gateSource).toContain("aria-disabled={!paymentsEnabled}");
+    expect(gateSource).toContain("payment-fast-forward__chevrons");
+    expect(styleSource).toContain("payment-fast-forward-wave");
+    expect(styleSource).toContain("prefers-reduced-motion: no-preference");
+  });
 });

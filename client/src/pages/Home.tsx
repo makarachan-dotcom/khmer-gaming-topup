@@ -63,6 +63,9 @@ function HomeBanner() {
             className="zurs-banner-slide absolute inset-0 h-full w-full object-cover"
             style={{ opacity: index === activeSlide ? 1 : 0, transform: `translateX(${(activeSlide - index) * 100}%)` }}
             loading={index === 0 ? "eager" : "lazy"}
+            fetchPriority={index === 0 ? "high" : "auto"}
+            decoding="async"
+            sizes="100vw"
           />
         ))}
         <div className="absolute inset-x-0 bottom-0 flex items-end justify-between bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent px-3 pb-3 pt-12 sm:px-5 sm:pb-4">
@@ -139,6 +142,8 @@ function HomepageMedia() {
                       src={media}
                       alt={item.titleKh ?? "ZURS STORE media"}
                       loading="lazy"
+                      decoding="async"
+                      sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 33vw"
                     />
                   )}
                   <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-slate-950/75 px-2 py-1 text-[9px] font-bold text-white backdrop-blur">
@@ -220,7 +225,7 @@ function HomeGameCard({
         className={`zurs-mobile-glass group block rounded-2xl zurs-game-card h-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${popular ? "zurs-game-card--popular" : ""}`}
       >
         <div className="zurs-game-card-media relative aspect-[16/10] overflow-hidden rounded-[0.95rem]" style={{ "--game-accent": originalArtwork?.accent ?? "#46d8ff" } as React.CSSProperties}>
-          {originalArtwork ? <img src={originalArtwork.src} alt="" className="zurs-game-card-art" style={{ objectPosition: originalArtwork.position ?? "center" }} loading={visible ? "eager" : "lazy"} decoding="async" /> : <ProviderGameArtwork name={game.name} region={game.region} logoUrl={logoUrl} className="h-11 w-11 rounded-xl" showCountryFlag={false} />}
+          {originalArtwork ? <img src={originalArtwork.src} alt="" className="zurs-game-card-art" style={{ objectPosition: originalArtwork.position ?? "center" }} loading={visible ? "eager" : "lazy"} fetchPriority={popular && visible ? "high" : "auto"} decoding="async" sizes="(max-width: 639px) 50vw, (max-width: 1023px) 33vw, 25vw" /> : <ProviderGameArtwork name={game.name} region={game.region} logoUrl={logoUrl} className="h-11 w-11 rounded-xl" showCountryFlag={false} />}
           <span className="zurs-game-card-overlay" aria-hidden="true" />
           {popular ? <span className="zurs-game-card-popular">🔥 ពេញនិយម</span> : null}
           <span className="zurs-game-card-cambodia" aria-hidden="true">🇰🇭</span>

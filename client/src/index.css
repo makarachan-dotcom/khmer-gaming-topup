@@ -963,3 +963,53 @@ body { font-family: "Kantumruy Pro", "Noto Sans Khmer", "DM Sans", sans-serif; l
 @media (prefers-reduced-motion: reduce) { .contact-admin-fab, .contact-admin-layer, .contact-admin-sheet, .contact-admin-sheet__close, .contact-admin-telegram { animation: none; transition: none; } }
 
 @media (max-width: 639px) { html, body { touch-action: pan-x pan-y; } }
+
+/* Payment method gate */
+.payment-method-gate { position: fixed; z-index: 340; inset: 0; display: grid; place-items: end center; padding: 0.75rem; }
+.payment-method-gate__backdrop { position: absolute; inset: 0; background: oklch(0.06 0.035 260 / 0.68); backdrop-filter: blur(9px); }
+.payment-method-gate__panel { position: relative; width: min(100%, 35rem); max-height: min(86vh, 44rem); overflow-y: auto; border: 1px solid oklch(1 0 0 / 0.76); border-radius: 1.6rem; background: linear-gradient(145deg, oklch(0.99 0.008 255 / 0.98), oklch(0.94 0.025 245 / 0.96)); box-shadow: 0 25px 80px oklch(0.05 0.04 260 / 0.42), inset 0 1px 0 oklch(1 0 0 / 0.86); padding: 1.1rem; }
+.payment-method-gate__header { display: flex; align-items: start; justify-content: space-between; gap: 1rem; }
+.payment-method-gate__eyebrow { color: oklch(0.5 0.15 245); font-size: 0.62rem; font-weight: 850; letter-spacing: 0.14em; }
+.payment-method-gate__header h2 { margin-top: 0.2rem; color: oklch(0.2 0.06 255); font-family: var(--font-display); font-size: 1.18rem; font-weight: 800; }
+.payment-method-gate__close { display: grid; height: 2.25rem; width: 2.25rem; place-items: center; border: 1px solid oklch(0.84 0.035 245); border-radius: 0.8rem; background: oklch(1 0 0 / 0.82); color: oklch(0.35 0.07 255); transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), background-color 160ms cubic-bezier(0.23, 1, 0.32, 1); }
+.payment-method-gate__close:hover { transform: translateY(-1px); background: oklch(0.95 0.04 240); }
+.payment-method-gate__close:active { transform: scale(0.95); }
+.payment-method-gate__copy { margin-top: 0.8rem; color: oklch(0.42 0.04 255); font-size: 0.76rem; line-height: 1.45; }
+.payment-method-gate__methods { display: grid; gap: 0.55rem; margin-top: 0.85rem; }
+.payment-method-option { display: flex; min-height: 4.2rem; width: 100%; align-items: center; gap: 0.7rem; border: 1px solid oklch(0.84 0.035 245); border-radius: 1rem; background: oklch(1 0 0 / 0.77); padding: 0.65rem; text-align: left; transition: transform 170ms cubic-bezier(0.23, 1, 0.32, 1), border-color 170ms cubic-bezier(0.23, 1, 0.32, 1), background-color 170ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 170ms cubic-bezier(0.23, 1, 0.32, 1); }
+.payment-method-option:not(.payment-method-option--placeholder):hover { transform: translateY(-1px); border-color: oklch(0.68 0.14 230); background: oklch(0.97 0.025 235); }
+.payment-method-option--selected { border-color: oklch(0.67 0.15 218); background: linear-gradient(135deg, oklch(0.96 0.04 225), oklch(0.95 0.035 92)); box-shadow: 0 8px 20px oklch(0.43 0.12 225 / 0.14); }
+.payment-method-option--placeholder { opacity: 0.65; }
+.payment-method-option__icon { display: grid; height: 2.65rem; width: 2.65rem; flex: 0 0 auto; place-items: center; border-radius: 0.85rem; background: oklch(0.94 0.035 238); color: oklch(0.42 0.13 235); }
+img.payment-method-option__icon { padding: 0.34rem; }
+.payment-method-option__copy { min-width: 0; flex: 1; }
+.payment-method-option__copy strong, .payment-method-option__copy span { display: block; }
+.payment-method-option__copy strong { color: oklch(0.24 0.05 255); font-size: 0.78rem; font-weight: 850; }
+.payment-method-option__copy span { margin-top: 0.18rem; color: oklch(0.48 0.035 255); font-size: 0.66rem; line-height: 1.35; }
+.payment-method-option__check { display: grid; height: 1.35rem; width: 1.35rem; flex: 0 0 auto; place-items: center; border: 1px solid oklch(0.82 0.03 245); border-radius: 999px; color: transparent; }
+.payment-method-option--selected .payment-method-option__check { border-color: oklch(0.6 0.16 220); background: oklch(0.58 0.16 220); color: white; }
+.payment-method-gate__advance-row { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; margin-top: 0.95rem; border-top: 1px solid oklch(0.85 0.025 245); padding-top: 0.85rem; }
+.payment-method-gate__chosen { display: inline-flex; min-width: 0; align-items: center; gap: 0.4rem; color: oklch(0.35 0.12 225); font-size: 0.72rem; font-weight: 800; }
+.payment-fast-forward { display: grid; height: 2.85rem; width: 3.35rem; flex: 0 0 auto; place-items: center; border: 1px solid oklch(0.68 0.12 225); border-radius: 1rem; background: linear-gradient(135deg, oklch(0.98 0.025 235 / 0.98), oklch(0.86 0.09 225 / 0.9)); box-shadow: 0 8px 18px oklch(0.35 0.1 225 / 0.18), inset 0 1px 0 oklch(1 0 0 / 0.86); transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), opacity 160ms ease, box-shadow 160ms ease; }
+.payment-fast-forward--active:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 13px 25px oklch(0.45 0.16 220 / 0.34), inset 0 1px 0 oklch(1 0 0 / 0.94); }
+.payment-fast-forward--active:active { transform: scale(0.95); }
+.payment-fast-forward--muted { cursor: not-allowed; border-color: oklch(0.78 0.015 250); background: oklch(0.87 0.018 250 / 0.86); box-shadow: none; opacity: 0.62; }
+.payment-fast-forward__chevrons { display: flex; align-items: center; gap: 0.08rem; }
+.payment-fast-forward__chevrons i { display: block; height: 0.67rem; width: 0.67rem; border-right: 0.18rem solid oklch(0.25 0.04 255); border-top: 0.18rem solid oklch(0.25 0.04 255); transform: rotate(45deg); }
+.payment-fast-forward--active .payment-fast-forward__chevrons i:last-child { border-color: oklch(0.66 0.16 205); filter: drop-shadow(0 0 0.23rem oklch(0.66 0.16 205 / 0.68)); }
+.payment-fast-forward--muted .payment-fast-forward__chevrons i { border-color: oklch(0.52 0.02 250); filter: none; }
+.payment-method-gate__hint { margin-top: 0.85rem; color: oklch(0.48 0.035 255); font-size: 0.7rem; }
+.payment-method-gate__info { display: flex; align-items: start; gap: 0.55rem; margin-top: 0.85rem; border: 1px solid oklch(0.78 0.055 225); border-radius: 0.85rem; background: oklch(0.95 0.035 225); color: oklch(0.34 0.075 235); padding: 0.7rem; font-size: 0.72rem; font-weight: 700; line-height: 1.4; }
+.payment-method-gate__review { margin-top: 1rem; }
+.payment-method-gate__review-card { display: flex; align-items: center; gap: 0.65rem; border: 1px solid oklch(0.82 0.035 245); border-radius: 1rem; background: oklch(1 0 0 / 0.78); padding: 0.8rem; }
+.payment-method-gate__review-card > strong { margin-left: auto; color: oklch(0.37 0.13 226); font-family: var(--font-display); font-size: 0.85rem; }
+.payment-method-gate__review-line { display: flex; justify-content: space-between; gap: 1rem; border-bottom: 1px dashed oklch(0.8 0.025 245); padding: 0.75rem 0.1rem; color: oklch(0.46 0.035 255); font-size: 0.72rem; }
+.payment-method-gate__review-line strong { color: oklch(0.24 0.05 255); text-align: right; }
+.payment-method-gate__review-info { display: flex; align-items: start; gap: 0.5rem; margin-top: 0.85rem; border-radius: 0.9rem; background: oklch(0.95 0.03 225); color: oklch(0.34 0.06 238); padding: 0.75rem; font-size: 0.7rem; line-height: 1.45; }
+.payment-method-gate__back { margin-top: 0.85rem; display: inline-flex; height: 2.5rem; width: 100%; align-items: center; justify-content: center; border-radius: 0.85rem; background: oklch(0.18 0.055 255); color: white; font-size: 0.73rem; font-weight: 800; transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), background-color 160ms ease; }
+.payment-method-gate__back:hover { background: oklch(0.28 0.1 245); }
+.payment-method-gate__back:active { transform: scale(0.97); }
+@media (min-width: 640px) { .payment-method-gate { place-items: center; } .payment-method-gate__panel { padding: 1.35rem; } }
+@media (prefers-reduced-motion: no-preference) { .payment-fast-forward--active .payment-fast-forward__chevrons i { animation: payment-fast-forward-wave 1.15s infinite; } .payment-fast-forward--active .payment-fast-forward__chevrons i:nth-child(2) { animation-delay: 0.18s; } .payment-fast-forward--active .payment-fast-forward__chevrons i:nth-child(3) { animation-delay: 0.36s; } }
+@keyframes payment-fast-forward-wave { 0%, 100% { opacity: 0.56; transform: translateX(0) rotate(45deg); } 38% { opacity: 1; transform: translateX(0.14rem) rotate(45deg); } }
+@media (prefers-reduced-motion: reduce) { .payment-method-gate__panel, .payment-fast-forward, .payment-method-option { transition: none; } }

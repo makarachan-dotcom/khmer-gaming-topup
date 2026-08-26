@@ -180,6 +180,16 @@ describe("provider catalog", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it("keeps PUBG Mobile and Blood Strike IDs local when no owner-approved checker exists", async () => {
+    process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
+    process.env.FZR_CARDS_API_KEY = "server-only-key";
+    vi.stubGlobal("fetch", vi.fn());
+    for (const gameId of ["pubg_mobile_auto", "blood_strike"]) {
+      await expect(validateProviderPlayerIdentity({ gameId, fields: { user_id: "12345678" } })).resolves.toEqual({ status: "not_supported", playerName: null, playerId: null, region: null });
+    }
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("uses the owner-approved Free Fire API only server-side when FZR does not support name validation", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "server-only-key";
