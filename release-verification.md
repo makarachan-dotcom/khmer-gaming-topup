@@ -42,3 +42,9 @@ The requested Jeenastore fallback could not be authorized from public informatio
 On 2026-08-26, the owner-authorized Heroku player-check bridge passed a non-financial `/health` request. The project uses it only through a server-side HTTPS fallback after the existing free MLBB provider is unavailable; the public response contract does not expose bridge credentials, raw upstream payloads, or player IDs.
 
 The official `https://www.zurs.me/?release=8dedb722` homepage visibly rendered 9 public games, persistent deep-blue dot grain, and softened translucent catalog/header surfaces. Customer purchase controls remained disabled; no payment, QR, merchant, or player data was inspected or recorded.
+
+## Encrypted provider-credential rotation release
+
+On 2026-08-26, Vercel reported Production deployment `dpl_AFNcejCahv5KcWKvfDSG1s3sHPkS` for GitHub checkpoint `2429c6887175d82d7d22d6e9aa41c3a0a45431ef` as `READY`.
+
+The cache-bypass protected route `https://www.zurs.me/admin/provider-security?release=2429c688` rendered the owner rotation workspace: password-only replacement input, provider selector, required audit reason, explicit confirmation text, rollback controls, and metadata-only audit surface. It rendered opaque configured states only; no token, token prefix, provider URL, envelope field, environment-variable name, merchant detail, QR data, or player data appeared. Payment Control was stated as separate and remained OFF. No credential replacement or rollback was submitted during this verification.
