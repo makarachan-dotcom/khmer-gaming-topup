@@ -5,8 +5,10 @@ import { resolve } from "node:path";
 describe("compact banner and tab-only AI entry", () => {
   it("uses both supplied deployment-safe banner assets with gentle automatic rotation", () => {
     const home = readFileSync(resolve(process.cwd(), "client/src/pages/Home.tsx"), "utf8");
-    expect(home).toContain("zurs-banner-portrait-hero_1b00fc5c.png");
-    expect(home).toContain("zurs-banner-topup-wide_b851022a.png");
+    expect(home).toContain("https://files.manuscdn.com/user_upload_by_module/");
+    expect(home).toContain("xftKPqLVBztUvpUZ.png");
+    expect(home).toContain("mMwkxBRkmMXfalck.png");
+    expect(home).not.toContain("storage.manus.com/manus-storage");
     expect(home).toContain("setInterval");
     expect(home).toContain("prefers-reduced-motion: reduce");
     expect(home).toContain("Sign in");

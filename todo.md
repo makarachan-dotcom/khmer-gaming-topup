@@ -1,5 +1,8 @@
 # Project TODO
 
+- [ ] Publish the CDN banner-asset fix to GitHub and Vercel production with a new checkpoint.
+- [ ] Verify the new Vercel production deployment and zurs.me render both homepage banner images after publication.
+- [x] Repair the production banner asset references: the Vercel READY deployment loads the carousel shell but not the two banner images. Replaced inaccessible private paths with two verified image/png public CDN URLs; focused and full tests, TypeScript, production build, and desktop/mobile visual checks passed.
 - [x] Synchronize the validated latest ZURS release to GitHub main and verify whether the official zurs.me deployment serves it; GitHub main and the Vercel READY production deployment both reference commit ec2beed1.
 
 - [x] Preserve the failed 100 KHR test as uncredited and document the provider response as unpaid without exposing payment identifiers.

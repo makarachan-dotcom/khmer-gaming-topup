@@ -28,8 +28,8 @@ import { Link } from "wouter";
 import { gameTopupPath } from "./GameTopup";
 
 const bannerSlides = [
-  { src: "/manus-storage/zurs-banner-portrait-hero_1b00fc5c.png", alt: "ZURS.me game top-up banner" },
-  { src: "/manus-storage/zurs-banner-topup-wide_b851022a.png", alt: "ZURS.me top-up diamond banner" },
+  { src: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/xftKPqLVBztUvpUZ.png", alt: "ZURS.me game top-up banner" },
+  { src: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/mMwkxBRkmMXfalck.png", alt: "ZURS.me top-up diamond banner" },
 ];
 
 export default function Home() {
