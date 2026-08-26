@@ -1,5 +1,7 @@
 # Project TODO
 
+- [x] Synchronize the validated latest ZURS release to GitHub main and verify whether the official zurs.me deployment serves it; GitHub main and the Vercel READY production deployment both reference commit ec2beed1.
+
 - [x] Preserve the failed 100 KHR test as uncredited and document the provider response as unpaid without exposing payment identifiers.
 - [ ] Re-run one authoritative merchant-account verification from the same production environment as live payments and resolve the VPS-versus-production preflight mismatch.
 - [ ] Record only safe provider-response fields for the failed 100 KHR test together with the authoritative merchant verification outcome before closing transaction-recognition diagnosis.
