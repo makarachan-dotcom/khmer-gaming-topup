@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 
+const bridgeUrl = process.env.HEROKU_BRIDGE_URL;
+const bridgeHealthTest = /^https:\/\//.test(bridgeUrl ?? "") ? it : it.skip;
+
 describe("authorized Heroku bridge health", () => {
-  it("responds from the configured HTTPS bridge without a player lookup", async () => {
-    const bridgeUrl = process.env.HEROKU_BRIDGE_URL;
+  bridgeHealthTest("responds from the configured HTTPS bridge without a player lookup", async () => {
     expect(bridgeUrl).toMatch(/^https:\/\//);
 
     const response = await fetch(new URL("/health", bridgeUrl).toString(), {

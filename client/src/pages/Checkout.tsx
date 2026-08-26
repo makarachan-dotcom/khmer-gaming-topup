@@ -5,6 +5,7 @@ import { AnimatedBackButton } from "@/components/AnimatedBackButton";
 import { AnimatedGlyph } from "@/components/AnimatedGlyph";
 import { OutlineLoader } from "@/components/OutlineLoader";
 import { ProviderGameArtwork } from "@/components/ProviderGameIdentity";
+import { PaymentMethodIcon } from "@/components/PaymentMethodIcon";
 import { trpc } from "@/lib/trpc";
 import { khqrLogoUrl } from "@/lib/mobileLegendsAssets";
 import { BadgeCheck, Check, CheckCircle2, ChevronRight, Clock3, Copy, CreditCard, Download, ExternalLink, FileText, Home, LockKeyhole, PackageCheck, RefreshCw, ShieldCheck, XCircle } from "lucide-react";
@@ -130,8 +131,7 @@ function PaymentUnavailable() {
 }
 
 function MethodLogo({ method }: { method: PaymentMethod }) {
-  if (method.iconUrl) return <img src={method.iconUrl} alt="" className="checkout-method-card__icon object-contain" loading="lazy" decoding="async" />;
-  return <span className="checkout-method-card__icon">{method.providerKey === "bakong_khqr" ? <img src={khqrLogoUrl} alt="KHQR" className="h-6 w-6 object-contain" /> : <CreditCard className="h-5 w-5" />}</span>;
+  return <PaymentMethodIcon method={method} className="checkout-method-card__icon object-contain" />;
 }
 
 function KhqrPaymentExperience({ payment, order, selectedMethod, waiting, refreshing, expired, onRefresh, onViewReceipt }: { payment: LedgerPayment; order: LedgerOrder; selectedMethod: PaymentMethod | null; waiting: boolean; refreshing: boolean; expired: boolean; onRefresh: () => void; onViewReceipt: () => void }) {

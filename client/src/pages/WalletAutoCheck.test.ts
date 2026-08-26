@@ -4,13 +4,13 @@ import { resolve } from "node:path";
 
 const walletSource = readFileSync(resolve(import.meta.dirname, "Wallet.tsx"), "utf8");
 
-describe("Wallet automatic KHQR payment status", () => {
-  it("observes a pending Wallet session every ten seconds without initiating provider verification from the browser", () => {
-    expect(walletSource).toContain('if (!topupId || active?.status !== "pending") return;');
-    expect(walletSource).toContain("window.setInterval");
-    expect(walletSource).toContain("10_000");
-    expect(walletSource).toContain("void session.refetch()");
-    expect(walletSource).not.toContain('refresh.mutate({ topupId })');
-    expect(walletSource).toContain("window.clearInterval(timer)");
+describe("Wallet pause contract", () => {
+  it("does not poll or initiate a Wallet payment session while direct KHQR checkout is active", () => {
+    expect(walletSource).toContain("Wallet បិទជាបណ្តោះអាសន្ន");
+    expect(walletSource).toContain("បន្តទូទាត់តាម KHQR");
+    expect(walletSource).not.toContain("window.setInterval");
+    expect(walletSource).not.toContain("session.refetch()");
+    expect(walletSource).not.toContain("trpc.wallet");
+    expect(walletSource).not.toContain("beginTopup");
   });
 });

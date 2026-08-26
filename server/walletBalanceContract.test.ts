@@ -14,16 +14,16 @@ describe("customer wallet balance contract", () => {
     expect(router).toContain('summary: protectedProcedure');
   });
 
-  it("keeps the header balance hidden until the signed-in customer chooses to reveal it", () => {
+  it("replaces the signed-in customer wallet control with a non-interactive paused status", () => {
     const header = readFileSync(resolve(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
-    expect(header).toContain('trpc.wallet.summary.useQuery');
-    expect(header).toContain('useState(false)');
-    expect(header).toContain('"••••"');
-    expect(header).toContain('aria-pressed={balanceVisible}');
-    expect(header).toContain('balance-control--visible');
+    expect(header).toContain('wallet-paused-control');
+    expect(header).toContain('role="status"');
+    expect(header).toContain('Wallet កំពុងបិទជាបណ្តោះអាសន្ន');
+    expect(header).not.toContain('trpc.wallet.summary.useQuery');
+    expect(header).not.toContain('balance-control--visible');
   });
 
-  it("adds wallet funds only through a verified Bakong top-up while the owner-controlled payment gate defaults to off", () => {
+  it("preserves wallet records while the customer UI prevents new wallet top-ups during the KHQR-only pause", () => {
     const schema = readFileSync(resolve(process.cwd(), "drizzle/schema.ts"), "utf8");
     const db = readFileSync(resolve(process.cwd(), "server/db.ts"), "utf8");
     const appwrite = readFileSync(resolve(process.cwd(), "server/appwriteStore.ts"), "utf8");
@@ -39,9 +39,11 @@ describe("customer wallet balance contract", () => {
     expect(appwrite).toContain('topup.status === "paid"');
     expect(router).toContain('beginTopup: protectedProcedure');
     expect(router).toContain('refreshTopup: protectedProcedure');
-    expect(walletPage).toContain('បញ្ចូលប្រាក់');
-    expect(walletPage).toContain('session.refetch()');
-    expect(walletPage).not.toContain('refresh.mutate({ topupId: active.id })');
+    expect(walletPage).toContain('Wallet បិទជាបណ្តោះអាសន្ន');
+    expect(walletPage).toContain('បន្តទូទាត់តាម KHQR');
+    expect(walletPage).toContain('មិនមាន Wallet balance, top-up QR ឬ Wallet transaction ថ្មី');
+    expect(walletPage).not.toContain('trpc.wallet');
+    expect(walletPage).not.toContain('session.refetch()');
     expect(readiness).toContain('reason: "payment_switch_off"');
     expect(readiness).toContain('getPublicPaymentReadiness');
     expect(db).toContain('requirePublicPaymentEnabled();');

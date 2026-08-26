@@ -9,7 +9,13 @@ export type PreparedAdminImage = {
   warning: string | null;
 };
 
+export type PreparedPaymentMethodIcon = Omit<PreparedAdminImage, "contentType"> & {
+  contentType: "image/webp" | "image/svg+xml";
+};
+
 const acceptedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+const paymentIconTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/svg+xml"]);
+const paymentIconMaxBytes = 2 * 1024 * 1024;
 
 function targetFor(slot: AdminImageSlot) {
   return slot === "square" ? { width: 512, height: 512 } : { width: 1600, height: 1000 };
@@ -32,6 +38,17 @@ function loadImage(file: File) {
     image.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Unable to open this image")); };
     image.src = url;
   });
+}
+
+export async function preparePaymentMethodIcon(file: File): Promise<PreparedPaymentMethodIcon> {
+  if (!paymentIconTypes.has(file.type)) throw new Error("សូមជ្រើស JPG, PNG, WEBP ឬ SVG ប៉ុណ្ណោះ");
+  if (file.size > paymentIconMaxBytes) throw new Error("payment icon ត្រូវមានទំហំក្រោម 2 MB");
+  if (file.type === "image/svg+xml") {
+    const svg = await file.text();
+    if (!/^\s*<svg[\s>]/i.test(svg) || /<\s*(?:script|foreignObject)\b|\bon\w+\s*=|javascript\s*:/i.test(svg)) throw new Error("SVG នេះមិនមានសុវត្ថិភាពសម្រាប់ upload ទេ");
+    return { dataUrl: await dataUrlFor(file), fileName: file.name.replace(/\.[^.]+$/, "") + "-payment-icon.svg", contentType: "image/svg+xml", width: 0, height: 0, warning: null };
+  }
+  return prepareAdminImage(file, "square");
 }
 
 export async function prepareAdminImage(file: File, slot: AdminImageSlot): Promise<PreparedAdminImage> {

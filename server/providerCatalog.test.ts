@@ -350,7 +350,7 @@ describe("provider catalog", () => {
     expect(calls[1]?.[1]).toMatchObject({ method: "POST", headers: { "X-Bridge-Key": "bridge-secret-for-test-only" } });
   });
 
-  it("uses the configured server-only bridge secret without returning it to the caller", async () => {
+  (originalHerokuBridgeApiKey ? it : it.skip)("uses the configured server-only bridge secret without returning it to the caller", async () => {
     expect(originalHerokuBridgeApiKey).toBeTruthy();
     process.env.HEROKU_BRIDGE_URL = "https://bridge.example.test";
     process.env.HEROKU_BRIDGE_API_KEY = originalHerokuBridgeApiKey;

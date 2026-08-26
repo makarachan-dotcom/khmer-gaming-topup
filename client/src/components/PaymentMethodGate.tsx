@@ -2,6 +2,7 @@ import { Check, CreditCard, Info, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { PaymentMethodIcon } from "@/components/PaymentMethodIcon";
 import { SelectedProduct, useSelectedProduct } from "@/contexts/SelectedProductContext";
 
 type PaymentMethod = {
@@ -135,8 +136,7 @@ function PaymentReview({ product, method, busy, error, onBack, onConfirm }: { pr
 }
 
 function MethodIcon({ method }: { method: PaymentMethod }) {
-  if (method.iconUrl) return <img src={method.iconUrl} alt="" className="payment-method-option__icon object-contain" loading="lazy" decoding="async" />;
-  return <span className="payment-method-option__icon"><CreditCard className="h-5 w-5" /></span>;
+  return <PaymentMethodIcon method={method} className="payment-method-option__icon object-contain" />;
 }
 
 function MethodPlaceholder({ empty = false }: { empty?: boolean }) {
