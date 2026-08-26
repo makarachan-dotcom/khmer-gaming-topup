@@ -330,5 +330,31 @@ export const providerPackageArtworkAudits = mysqlTable("provider_package_artwork
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (table) => [index("provider_package_artwork_audit_offer_idx").on(table.gameId, table.offerId), index("provider_package_artwork_audit_actor_idx").on(table.actorUserId)]);
 
+export const providerCredentialVersions = mysqlTable("provider_credential_versions", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  provider: mysqlEnum("provider", ["fazercards", "bakong"]).notNull(),
+  envelopeVersion: int("envelopeVersion").default(1).notNull(),
+  ciphertext: text("ciphertext").notNull(),
+  iv: varchar("iv", { length: 64 }).notNull(),
+  authTag: varchar("authTag", { length: 64 }).notNull(),
+  state: mysqlEnum("state", ["active", "superseded"]).default("active").notNull(),
+  validationStatus: mysqlEnum("validationStatus", ["validated"]).default("validated").notNull(),
+  createdByUserId: int("createdByUserId").notNull(),
+  activatedAt: timestamp("activatedAt").defaultNow().notNull(),
+  supersededAt: timestamp("supersededAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [index("provider_credential_version_active_idx").on(table.provider, table.state), index("provider_credential_version_actor_idx").on(table.createdByUserId), index("provider_credential_version_created_idx").on(table.createdAt)]);
+
+export const providerCredentialAudits = mysqlTable("provider_credential_audits", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  provider: mysqlEnum("provider", ["fazercards", "bakong"]).notNull(),
+  action: mysqlEnum("action", ["activate", "rollback_to_version", "rollback_to_env", "validation_rejected"]).notNull(),
+  fromVersionId: varchar("fromVersionId", { length: 64 }),
+  toVersionId: varchar("toVersionId", { length: 64 }),
+  actorUserId: int("actorUserId").notNull(),
+  reason: varchar("reason", { length: 240 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [index("provider_credential_audit_provider_idx").on(table.provider, table.createdAt), index("provider_credential_audit_actor_idx").on(table.actorUserId)]);
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;

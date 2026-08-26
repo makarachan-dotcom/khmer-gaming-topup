@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { resolveProviderCredential } from "./providerCredentialResolver";
 import { getAppwriteProviderAvailability, getAppwriteProviderCatalog, isAppwriteStoreConfigured, type AppwriteProviderCatalog, updateAppwriteProviderAvailability } from "./appwriteStore";
 
 export const providerFieldSchema = z.object({
@@ -137,7 +138,7 @@ class FzrRequestError extends Error {
 
 async function fzrRequest(path: string, init: RequestInit = {}) {
   const baseUrl = process.env.FZR_CARDS_API_BASE_URL;
-  const apiKey = process.env.FZR_CARDS_API_KEY;
+  const apiKey = await resolveProviderCredential("fazercards", process.env.FZR_CARDS_API_KEY);
   if (!baseUrl || !apiKey) return null;
   const response = await fetch(`${baseUrl}${path}`, { ...init, headers: { "X-API-Key": apiKey, ...init.headers }, signal: AbortSignal.timeout(15_000) });
   if (!response.ok) throw new FzrRequestError(response.status);
@@ -304,7 +305,7 @@ async function cachedPublicProviderGamesDuringOutage(availability: Awaited<Retur
 }
 
 export async function fetchProviderGames(options: { includeInactive?: boolean } = {}): Promise<ProviderGameResponse> {
-  if (!process.env.FZR_CARDS_API_BASE_URL || !process.env.FZR_CARDS_API_KEY) {
+  if (!process.env.FZR_CARDS_API_BASE_URL || !(await resolveProviderCredential("fazercards", process.env.FZR_CARDS_API_KEY))) {
     return { status: "unavailable", games: [] };
   }
   const [catalog, availability] = await Promise.all([fetchFzrTopupCatalog(), providerAvailability()]);
@@ -377,7 +378,7 @@ function hasProviderIdentityField(fields: Record<string, string>) {
 }
 
 export async function fetchProviderPackages(input: ProviderPackageRequest): Promise<ProviderPackageResponse> {
-  if (!process.env.FZR_CARDS_API_BASE_URL || !process.env.FZR_CARDS_API_KEY) return { status: "unavailable", packages: [] };
+  if (!process.env.FZR_CARDS_API_BASE_URL || !(await resolveProviderCredential("fazercards", process.env.FZR_CARDS_API_KEY))) return { status: "unavailable", packages: [] };
   if (!hasProviderIdentityField(input.fields)) {
     const details = await fetchProviderGameDetails(input.gameId);
     return details.status === "ready" ? { status: "ready", packages: details.packages } : { status: details.status, packages: [] };

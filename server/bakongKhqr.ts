@@ -1,6 +1,7 @@
 import bakongKhqr from "bakong-khqr";
 import QRCode from "qrcode";
 import { getKhqrWorkerCredentials } from "./khqrWorkerSecrets";
+import { resolveProviderCredential } from "./providerCredentialResolver";
 
 const { BakongKHQR, IndividualInfo, khqrData } = bakongKhqr as any;
 const apiBaseUrl = "https://api-bakong.nbc.gov.kh";
@@ -14,8 +15,8 @@ export type BakongMerchantPreflightStatus = "verified" | "account_not_found" | "
 const merchantPreflightCacheTtlMs = 60_000;
 let merchantPreflightCache: { status: BakongMerchantPreflightStatus; checkedAt: number } | null = null;
 
-function getConfig(): BakongConfig | null {
-  const token = process.env.BAKONG_API_TOKEN?.trim();
+async function getConfig(): Promise<BakongConfig | null> {
+  const token = await resolveProviderCredential("bakong", process.env.BAKONG_API_TOKEN);
   const accountId = process.env.BAKONG_ACCOUNT_ID?.trim();
   const merchantName = process.env.BAKONG_MERCHANT_NAME?.trim();
   const merchantCity = process.env.BAKONG_MERCHANT_CITY?.trim();
@@ -40,7 +41,7 @@ function rememberMerchantPreflight(status: BakongMerchantPreflightStatus) {
 }
 
 export async function getBakongPaymentReadiness() {
-  if (!getConfig()) return { ready: false, reason: "automatic_payment_pending" as const };
+  if (!(await getConfig())) return { ready: false, reason: "automatic_payment_pending" as const };
   const status = getCachedMerchantPreflight() ?? await verifyBakongMerchantAccount();
   return status === "verified"
     ? { ready: true, reason: "ready" as const }
@@ -48,7 +49,7 @@ export async function getBakongPaymentReadiness() {
 }
 
 export async function verifyBakongMerchantAccount() {
-  const config = getConfig();
+  const config = await getConfig();
   if (!config) return rememberMerchantPreflight("configuration_missing");
   try {
     const response = await fetch(`${apiBaseUrl}/v1/check_bakong_account`, {
@@ -77,7 +78,7 @@ async function readBakongJson(response: Response): Promise<BakongResponse | null
 }
 
 export async function createBakongKhqrPayment(input: { trackingCode: string; amount: string; currency: Currency }) {
-  const config = getConfig();
+  const config = await getConfig();
   if (!config) throw new Error("Bakong KHQR is not configured");
   const amount = validAmount(input.amount);
   // Keep QR validity aligned with the worker's five-minute automatic-check window.
@@ -100,7 +101,7 @@ export async function createBakongKhqrPayment(input: { trackingCode: string; amo
 }
 
 export async function checkBakongKhqrPayment(input: { md5: string; expectedAmount: string; expectedCurrency: Currency; expectedMerchantAccountId?: string }) {
-  const config = getConfig();
+  const config = await getConfig();
   if (!config) throw new Error("Bakong KHQR is not configured");
   const response = await fetch(`${apiBaseUrl}/v1/check_transaction_by_md5`, { method: "POST", headers: { Authorization: `Bearer ${config.token}`, "Content-Type": "application/json" }, body: JSON.stringify({ md5: input.md5 }) });
   const payload = await readBakongJson(response);

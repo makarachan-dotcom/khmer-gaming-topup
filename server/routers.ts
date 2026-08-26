@@ -7,6 +7,10 @@ import * as db from "./db";
 import { fetchFzrProviderSyncSnapshot, fetchProviderGameDetails, fetchProviderGames, fetchProviderPackages, fetchProviderPreviewPackages, fetchSmmProviderServices, getProviderAvailabilityCatalog, getProviderCatalogStatus, setProviderAvailability, validateProviderPlayerIdentity } from "./providerCatalog";
 import { toPublicPlayerIdentityResponse } from "./playerIdentityPrivacy";
 import { getProviderCredentialStatus } from "./providerCredentialStatus";
+import { encryptCredential } from "./credentialEnvelope";
+import { activateEncryptedProviderCredential, getProviderCredentialHistory, recordProviderCredentialValidationRejected, rollbackProviderCredential } from "./providerCredentialStore";
+import { validateProviderCredentialCandidate } from "./providerCredentialValidation";
+import { resetBakongMerchantPreflightCache } from "./bakongKhqr";
 import { buildZursMemberDisplayName } from "./storefrontDomain";
 import { uploadAdminMediaImage, uploadMarketplaceScreenshot, uploadMarketplaceVerificationEvidence } from "./uploads";
 import { storageGet } from "./storage";
@@ -143,7 +147,27 @@ export const appRouter = router({
     deleteSmmTier: adminProcedure.input(z.object({ tierId: z.string().min(4).max(64) })).mutation(({ input }) => db.deleteSmmTier(input.tierId)),
     payments: adminProcedure.query(() => db.getPaymentTransactions()),
     paymentControl: ownerProcedure.query(() => db.getPaymentControl()),
-    providerCredentialStatus: ownerProcedure.query(() => getProviderCredentialStatus()),
+    providerCredentialStatus: ownerProcedure.query(async () => getProviderCredentialStatus()),
+    providerCredentialHistory: ownerProcedure.query(() => getProviderCredentialHistory()),
+    rotateProviderCredential: ownerProcedure.input(z.object({ provider: z.enum(["fazercards", "bakong"]), credential: z.string().trim().min(8).max(4096), confirmation: z.string().trim().max(40), reason: z.string().trim().min(10).max(240) })).mutation(async ({ ctx, input }) => {
+      const expectedConfirmation = input.provider === "fazercards" ? "ROTATE FAZERCARDS" : "ROTATE BAKONG";
+      if (input.confirmation !== expectedConfirmation) throw new Error("Confirmation text does not match the selected provider");
+      const validation = await validateProviderCredentialCandidate(input.provider, input.credential);
+      if (validation !== "validated") {
+        await recordProviderCredentialValidationRejected({ provider: input.provider, actorUserId: ctx.user.id, reason: validation === "unavailable" ? "Provider validation unavailable; no credential stored" : "Candidate validation rejected; no credential stored" });
+        throw new Error(validation === "unavailable" ? "Provider validation is temporarily unavailable; no credential was stored" : "Credential validation failed; no credential was stored");
+      }
+      const result = await activateEncryptedProviderCredential({ provider: input.provider, envelope: encryptCredential(input.credential), actorUserId: ctx.user.id, reason: input.reason });
+      if (input.provider === "bakong") resetBakongMerchantPreflightCache();
+      return { provider: input.provider, rotated: true, versionId: result.versionId };
+    }),
+    rollbackProviderCredential: ownerProcedure.input(z.object({ provider: z.enum(["fazercards", "bakong"]), targetVersionId: z.string().min(4).max(64).optional(), confirmation: z.string().trim().max(40), reason: z.string().trim().min(10).max(240) })).mutation(async ({ ctx, input }) => {
+      const expectedConfirmation = input.provider === "fazercards" ? "ROLLBACK FAZERCARDS" : "ROLLBACK BAKONG";
+      if (input.confirmation !== expectedConfirmation) throw new Error("Confirmation text does not match the selected provider");
+      const result = await rollbackProviderCredential({ provider: input.provider, targetVersionId: input.targetVersionId, actorUserId: ctx.user.id, reason: input.reason });
+      if (input.provider === "bakong") resetBakongMerchantPreflightCache();
+      return { provider: input.provider, rolledBack: true, activeVersionId: result.activeVersionId };
+    }),
     setPaymentControl: ownerProcedure.input(z.object({ enabled: z.boolean() })).mutation(({ ctx, input }) => db.setPaymentControl({ ...input, updatedByUserId: ctx.user.id })),
     users: adminProcedure.query(() => db.getAdminUsers()),
     roleAudits: ownerProcedure.query(() => db.getAdminRoleAudits()),
