@@ -75,8 +75,8 @@ function ContactAdminSheet({ open, onClose }: { open: boolean; onClose: () => vo
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="zurs-eyebrow">ZURS SUPPORT</p>
-            <h2 id="contact-admin-heading" className="mt-1 font-display text-2xl font-bold text-slate-950">ទំនាក់ទំនង Admin</h2>
-            <p className="mt-1 text-xs leading-5 text-slate-500">ជ្រើសរើស Admin ដែលងាយស្រួលសម្រាប់អ្នក។ ពេលវេលាធ្វើការគិតតាមម៉ោងកម្ពុជា។</p>
+            <h2 id="contact-admin-heading" className="mt-1 font-display text-2xl font-bold text-slate-950">ជំនួយពី Admin</h2>
+            <p className="mt-1 text-xs leading-5 text-slate-500">ជ្រើសរើស Admin ម្នាក់ ហើយបន្តទៅ Telegram ដោយផ្ទាល់។ ម៉ោងធ្វើការគិតតាមម៉ោងកម្ពុជា។</p>
           </div>
           <button type="button" onClick={onClose} className="contact-admin-sheet__close" aria-label="បិទផ្ទាំងទំនាក់ទំនង"><X className="h-5 w-5" /></button>
         </div>
@@ -120,7 +120,8 @@ export function ContactAdminControl({ paymentBarVisible }: { paymentBarVisible: 
   return (
     <>
       <button type="button" onClick={() => setOpen(true)} className={`contact-admin-fab ${paymentBarVisible ? "contact-admin-fab--payment" : ""}`} aria-label="ទំនាក់ទំនង Admin" aria-haspopup="dialog" aria-expanded={open}>
-        <Headset className="h-5 w-5" strokeWidth={2.15} />
+        <Headset className="h-4.5 w-4.5" strokeWidth={2.15} />
+        <span className="contact-admin-fab__label">ជំនួយ</span>
       </button>
       <ContactAdminSheet open={open} onClose={() => setOpen(false)} />
     </>

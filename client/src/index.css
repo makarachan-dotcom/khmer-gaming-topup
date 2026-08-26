@@ -1013,3 +1013,72 @@ img.payment-method-option__icon { padding: 0.34rem; }
 @media (prefers-reduced-motion: no-preference) { .payment-fast-forward--active .payment-fast-forward__chevrons i { animation: payment-fast-forward-wave 1.15s infinite; } .payment-fast-forward--active .payment-fast-forward__chevrons i:nth-child(2) { animation-delay: 0.18s; } .payment-fast-forward--active .payment-fast-forward__chevrons i:nth-child(3) { animation-delay: 0.36s; } }
 @keyframes payment-fast-forward-wave { 0%, 100% { opacity: 0.56; transform: translateX(0) rotate(45deg); } 38% { opacity: 1; transform: translateX(0.14rem) rotate(45deg); } }
 @media (prefers-reduced-motion: reduce) { .payment-method-gate__panel, .payment-fast-forward, .payment-method-option { transition: none; } }
+
+/* Contact Admin mobile refinement: keep support visible without competing with the tab pill. */
+.contact-admin-fab {
+  z-index: 260;
+}
+.contact-admin-fab__label {
+  font-family: "Chakra Petch", "Kantumruy Pro", sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+@media (max-width: 639px) {
+  .contact-admin-fab,
+  .contact-admin-fab--payment {
+    right: max(0.55rem, env(safe-area-inset-right));
+    bottom: calc(max(0.7rem, env(safe-area-inset-bottom)) + 4.15rem);
+    left: auto;
+    display: inline-flex;
+    height: 2.75rem;
+    width: auto;
+    min-width: 4.35rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.36rem;
+    padding: 0 0.72rem;
+    border-color: oklch(1 0 0 / 0.8);
+    background: linear-gradient(145deg, oklch(0.985 0.015 260 / 0.96), oklch(0.9 0.06 250 / 0.9));
+    box-shadow: 0 9px 22px oklch(0.05 0.04 260 / 0.28), inset 0 1px 0 oklch(1 0 0 / 0.92);
+    transform: none;
+  }
+  .contact-admin-fab--payment {
+    bottom: calc(max(0.8rem, env(safe-area-inset-bottom)) + 8.1rem);
+  }
+  .contact-admin-fab:hover,
+  .contact-admin-fab--payment:hover {
+    transform: translateY(-2px);
+  }
+  .contact-admin-sheet {
+    width: calc(100% - 1rem);
+    max-height: min(76dvh, 36rem);
+    border-radius: 1.45rem 1.45rem 1rem 1rem;
+    padding: 0.85rem 0.85rem max(0.9rem, env(safe-area-inset-bottom));
+  }
+  .contact-admin-sheet__handle {
+    margin-bottom: 0.55rem;
+  }
+  .contact-admin-card {
+    border-radius: 1rem;
+    padding: 0.8rem;
+  }
+  .contact-admin-avatar {
+    height: 3.15rem;
+    width: 3.15rem;
+  }
+  .contact-admin-telegram {
+    min-height: 2.55rem;
+    margin-top: 0.72rem;
+  }
+}
+@media (min-width: 640px) {
+  .contact-admin-fab__label {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: no-preference) and (max-width: 639px) {
+  .contact-admin-fab {
+    animation: none;
+  }
+}
