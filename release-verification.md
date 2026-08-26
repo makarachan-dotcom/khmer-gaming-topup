@@ -26,3 +26,7 @@ Vercel marked the GitHub main deployment for checkpoint `be1f15e5` as `READY` in
 The official `https://www.zurs.me/?release=be1f15e` page completed its catalog request and visibly rendered the public catalog. Its extracted content listed 9 of 9 games, including 8 Ball Pool, Blood Strike, EAFC Mobile, FRAG Pro Shooter, Free Fire, Honor of Kings, Magic Chess Go Go, Mobile Legends, and PUBG Mobile.
 
 The official AI stream endpoint returned HTTP 200 with `text/event-stream`. Using the server's actual framing, the privacy-safe probe observed one non-empty delta, one recommendations frame, a `[DONE]` marker, and no error frame. This confirms the no-IAMHC catalog fallback is active in Production without disclosing assistant content or provider credentials.
+
+## Current release-candidate local review
+
+On 2026-08-26, the local desktop and 375px mobile review showed the rounded sticky header, the two-item Home/Account mobile control, deep-blue staggered particle background, and visible public game catalog. The MLBB top-up page loaded the game card and Player ID/Server ID form after catalog data resolved. These observations are local candidate evidence only and do not yet confirm production deployment.

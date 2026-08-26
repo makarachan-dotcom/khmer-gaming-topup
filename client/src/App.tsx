@@ -21,27 +21,22 @@ import Checkout from "./pages/Checkout";
 import AdminMedia from "./pages/AdminMedia";
 import Legal from "./pages/Legal";
 import GameTopup from "./pages/GameTopup";
-import ZursAiChat from "./components/ZursAiChat";
-
-function AiEntry() {
-  return <ZursAiChat initialOpen />;
-}
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
-      <Route path="/ai" component={AiEntry} />
+      <Route path="/ai"><Redirect to="/" /></Route>
       <Route path={"/"} component={Home} />
       <Route path="/topup/:gameId" component={GameTopup} />
       <Route path={"/topup"}><Redirect to="/" /></Route>
-      <Route path={"/smm"}><Redirect to="/ai" /></Route>
-      <Route path="/marketplace/sell"><Redirect to="/ai" /></Route>
-      <Route path="/marketplace/verify"><Redirect to="/ai" /></Route>
-      <Route path="/marketplace/manage"><Redirect to="/ai" /></Route>
-      <Route path={"/marketplace"}><Redirect to="/ai" /></Route>
+      <Route path={"/smm"}><Redirect to="/" /></Route>
+      <Route path="/marketplace/sell"><Redirect to="/" /></Route>
+      <Route path="/marketplace/verify"><Redirect to="/" /></Route>
+      <Route path="/marketplace/manage"><Redirect to="/" /></Route>
+      <Route path={"/marketplace"}><Redirect to="/" /></Route>
       <Route path={"/account"} component={Account} />
-      <Route path={"/favorites"}><Redirect to="/ai" /></Route>
+      <Route path={"/favorites"}><Redirect to="/account" /></Route>
       <Route path={"/wallet"} component={Wallet} />
       <Route path={"/order-status"} component={OrderStatus} />
       <Route path="/admin" component={Admin} />

@@ -9,11 +9,15 @@ const originalNeferbyteApiKey = process.env.NEFERBYTE_API_KEY;
 const originalRapidApiKey = process.env.RAPIDAPI_ID_GAME_CHECKER_KEY;
 const originalWorkerUrl = process.env.VPS_WORKER_URL;
 const originalWorkerSecret = process.env.WORKER_SECRET;
+const originalHerokuBridgeUrl = process.env.HEROKU_BRIDGE_URL;
+const originalHerokuBridgeApiKey = process.env.HEROKU_BRIDGE_API_KEY;
 
 beforeEach(() => {
   resetProviderCatalogCacheForTests();
   delete process.env.VPS_WORKER_URL;
   delete process.env.WORKER_SECRET;
+  delete process.env.HEROKU_BRIDGE_URL;
+  delete process.env.HEROKU_BRIDGE_API_KEY;
   vi.spyOn(console, "warn").mockImplementation(() => undefined);
 });
 
@@ -36,6 +40,10 @@ afterEach(() => {
   else process.env.VPS_WORKER_URL = originalWorkerUrl;
   if (originalWorkerSecret === undefined) delete process.env.WORKER_SECRET;
   else process.env.WORKER_SECRET = originalWorkerSecret;
+  if (originalHerokuBridgeUrl === undefined) delete process.env.HEROKU_BRIDGE_URL;
+  else process.env.HEROKU_BRIDGE_URL = originalHerokuBridgeUrl;
+  if (originalHerokuBridgeApiKey === undefined) delete process.env.HEROKU_BRIDGE_API_KEY;
+  else process.env.HEROKU_BRIDGE_API_KEY = originalHerokuBridgeApiKey;
 });
 
 describe("provider catalog", () => {
@@ -311,6 +319,55 @@ describe("provider catalog", () => {
   it("stops after one unavailable free API request without rotating fallback providers", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "server-only-key";
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 503, json: async () => ({ success: false }) }));
+
+    await expect(validateProviderPlayerIdentity({ gameId: "mobile_legends_global", fields: { player_id: "596323155", server_id: "10085" } })).resolves.toEqual({ status: "unavailable", playerName: null, playerId: null, region: null });
+    expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1);
+  });
+
+  it("uses the authorized HTTPS MLBB bridge only after the free check is unavailable", async () => {
+    process.env.HEROKU_BRIDGE_URL = "https://bridge.example.test";
+    process.env.HEROKU_BRIDGE_API_KEY = "bridge-secret-for-test-only";
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({ success: false }) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ success: true, username: "Verified Bridge Player" }) }));
+
+    await expect(validateProviderPlayerIdentity({ gameId: "mobile_legends_global", fields: { player_id: "596323155", server_id: "10085" } })).resolves.toEqual({ status: "verified", playerName: "Verified Bridge Player", playerId: "596323155", region: "Global" });
+    const calls = (fetch as ReturnType<typeof vi.fn>).mock.calls;
+    expect(calls).toHaveLength(2);
+    expect(String(calls[0]?.[0])).toContain("/nickname/ml?");
+    expect(String(calls[1]?.[0])).toBe("https://bridge.example.test/api/check-player");
+    expect(calls[1]?.[1]).toMatchObject({ method: "POST", headers: { "X-Bridge-Key": "bridge-secret-for-test-only" } });
+  });
+
+  it("uses the configured server-only bridge secret without returning it to the caller", async () => {
+    expect(originalHerokuBridgeApiKey).toBeTruthy();
+    process.env.HEROKU_BRIDGE_URL = "https://bridge.example.test";
+    process.env.HEROKU_BRIDGE_API_KEY = originalHerokuBridgeApiKey;
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({ success: false }) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ success: true, username: "Verified Bridge Player" }) }));
+
+    const result = await validateProviderPlayerIdentity({ gameId: "mobile_legends_global", fields: { player_id: "596323155", server_id: "10085" } });
+    const bridgeOptions = (fetch as ReturnType<typeof vi.fn>).mock.calls[1]?.[1] as RequestInit;
+
+    expect(result).toMatchObject({ status: "verified", playerName: "Verified Bridge Player" });
+    expect(bridgeOptions.headers).toMatchObject({ "X-Bridge-Key": originalHerokuBridgeApiKey });
+    expect(JSON.stringify(result)).not.toContain(originalHerokuBridgeApiKey ?? "");
+  });
+
+  it("does not call the bridge after a definitive invalid free API result", async () => {
+    process.env.HEROKU_BRIDGE_URL = "https://bridge.example.test";
+    process.env.HEROKU_BRIDGE_API_KEY = "bridge-secret-for-test-only";
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ success: false }) }));
+
+    await expect(validateProviderPlayerIdentity({ gameId: "mobile_legends_global", fields: { player_id: "596323155", server_id: "10085" } })).resolves.toEqual({ status: "invalid", playerName: null, playerId: null, region: null });
+    expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1);
+  });
+
+  it("rejects an insecure bridge URL and preserves the free-provider unavailable status", async () => {
+    process.env.HEROKU_BRIDGE_URL = "http://bridge.example.test";
+    process.env.HEROKU_BRIDGE_API_KEY = "bridge-secret-for-test-only";
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 503, json: async () => ({ success: false }) }));
 
     await expect(validateProviderPlayerIdentity({ gameId: "mobile_legends_global", fields: { player_id: "596323155", server_id: "10085" } })).resolves.toEqual({ status: "unavailable", playerName: null, playerId: null, region: null });

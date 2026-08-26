@@ -402,6 +402,7 @@ const fzrPlayerIdentitySchema = z.object({
 
 const isanPlayerNameSchema = z.object({ success: z.literal(true), name: z.string().trim().min(1).max(180), country: z.string().trim().min(1).max(120).optional() });
 const eightBallPoolPlayerNameSchema = z.object({ status: z.literal(true), nickname: z.string().trim().min(1).max(180) });
+const bridgePlayerNameSchema = z.object({ success: z.literal(true), username: z.string().trim().min(1).max(180) });
 
 function mobileLegendsIdentityFields(fields: Record<string, string>) {
   const playerId = fields.player_id ?? fields.user_id ?? fields.id ?? "";
@@ -473,13 +474,45 @@ async function validateWithOwnerApprovedFreeApi(input: ProviderPackageRequest): 
   return emptyIdentity("unavailable");
 }
 
+function authorizedMlbbBridgeEndpoint() {
+  const rawUrl = process.env.HEROKU_BRIDGE_URL?.trim();
+  const bridgeKey = process.env.HEROKU_BRIDGE_API_KEY?.trim();
+  if (!rawUrl || !bridgeKey) return null;
+  try {
+    const baseUrl = new URL(rawUrl);
+    if (baseUrl.protocol !== "https:") return null;
+    return { url: new URL("/api/check-player", baseUrl).toString(), bridgeKey };
+  } catch { return null; }
+}
+
+async function validateWithAuthorizedMlbbBridge(input: ProviderPackageRequest): Promise<ProviderPlayerIdentityResponse | null> {
+  if (!isMobileLegendsGame(input.gameId)) return null;
+  const identityFields = mobileLegendsIdentityFields(input.fields);
+  const bridge = authorizedMlbbBridgeEndpoint();
+  if (!identityFields || !bridge) return null;
+  try {
+    const response = await fetch(bridge.url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Bridge-Key": bridge.bridgeKey },
+      body: JSON.stringify({ userId: identityFields.playerId, zoneId: identityFields.serverId, game: "mobile-legends" }),
+      signal: AbortSignal.timeout(8_000),
+    });
+    const payload = await response.json().catch(() => null);
+    const success = bridgePlayerNameSchema.safeParse(payload);
+    if (response.ok && success.success) return { status: "verified", playerName: success.data.username, playerId: identityFields.playerId, region: "Global" };
+    if (response.status === 400 || response.status === 404 || (payload && typeof payload === "object" && "success" in payload && (payload as { success?: unknown }).success === false)) return emptyIdentity("invalid");
+  } catch { /* An authorized bridge is optional and never changes payment behavior. */ }
+  return emptyIdentity("unavailable");
+}
+
 function emptyIdentity(status: Extract<ProviderPlayerIdentityResponse, { status: "invalid" | "not_supported" | "unavailable" | "error" }> ["status"]): ProviderPlayerIdentityResponse {
   return { status, playerName: null, playerId: null, region: null };
 }
 
 export async function validateProviderPlayerIdentity(input: ProviderPackageRequest): Promise<ProviderPlayerIdentityResponse> {
   const freeApiResult = await validateWithOwnerApprovedFreeApi(input);
-  return freeApiResult ?? emptyIdentity("not_supported");
+  if (!freeApiResult || freeApiResult.status !== "unavailable") return freeApiResult ?? emptyIdentity("not_supported");
+  return (await validateWithAuthorizedMlbbBridge(input)) ?? freeApiResult;
 }
 
 export async function fetchSmmProviderServices(options: { includeHidden?: boolean } = {}): Promise<SmmProviderCatalogResponse> {

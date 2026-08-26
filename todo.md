@@ -1,5 +1,23 @@
 # Project TODO
 
+- [ ] Assess and implement an authorized MLBB ID-check bridge service with caching, CORS allowlist, rate limits, and Heroku deployment files.
+- [ ] Use a documented or owner-authorized nickname provider endpoint; do not automate protected browser sessions or bypass provider access controls.
+- [ ] Assess Jeenastore only as a documented or owner-authorized fallback provider; do not use its storefront/UI URL as an automated verification endpoint.
+- [x] Validate the current AI-free storefront, sticky verified-player header, rounded navigation, and particle background before publishing the accumulated release to GitHub main and zurs.me. TypeScript, 71 active Vitest files/212 tests, production build, and desktop/mobile release-candidate reviews passed.
+- [ ] Configure the owner-provided bridge secret as `HEROKU_BRIDGE_API_KEY` in Vercel and match it to Heroku `BRIDGE_API_KEY`; do not use the legacy `HEROKU_BRIDGE_KEY` name in source or deployment instructions.
+- [x] Add an optional server-side MLBB bridge fallback that runs only after the existing free check is unavailable, accepts only an authorized HTTPS bridge URL, and never sends bridge credentials or player data to the browser. Coverage proves free-provider priority, definitive-invalid stop, HTTPS enforcement, server-only header use, and non-disclosure; the fallback stays dormant until an authorized bridge URL is configured.
+- [ ] Perform a browser-verified mobile test of the sticky verified-account bar using a permitted verified MLBB identity; confirm header spacing, compact-bar appearance after scroll, and edit-ID focus behavior.
+- [ ] Define and enforce the minimal public identity-response contract for MLBB verification: never expose bridge credentials or raw provider payloads, and return only the player display name required by the UI plus non-sensitive verification status.
+- [x] Prepare a standalone copy-paste-ready Heroku Express service and Vercel/React integration template for the authorized MLBB provider contract. Source and source-contract tests are in `/home/ubuntu/mlbb-check-bridge`; live provider configuration is intentionally pending authorization.
+- [ ] Add an admin-only public package image override system that updates visible package artwork immediately without changing provider package records.
+- [ ] Add secret-safe admin credential rotation controls for Fazercards and Bakong that never reveal existing tokens, validate replacements, and keep Payment Control OFF.
+- [ ] Audit admin authorization, audit logging, and rollback behavior for image and credential changes before publishing controls.
+- [ ] Align the public storefront background with the banner's deep blue palette and add restrained staggered twinkling particles that respect reduced-motion.
+- [ ] Repair the verified-player sticky header so scrolling past Game ID fields shows the confirmed username/game and provides a safe way to change the ID.
+- [ ] Give the top header a compact rounded treatment that visually matches the redesigned mobile Tabbar without reducing usability.
+- [ ] Remove all public website AI entry points, fullscreen chat UI, and the /ai route while preserving unrelated protected admin/history data.
+- [ ] Replace the three-item mobile Tabbar with a compact two-item Home/Account control with clearly rounded outer ends and accessible active state.
+- [ ] Redirect former public AI-only legacy paths to a non-AI destination without altering protected admin marketplace routes.
 - [x] Verify on official zurs.me after deployment that homepage game cards visibly render again with inspectable evidence. On the READY be1f15e release, www.zurs.me completed catalog loading and visibly listed 9 of 9 public games.
 - [x] Publish the IAMHC-missing catalog fallback patch, then verify the production AI stream returns a safe non-empty response. Official be1f15e AI stream returned one delta, one recommendations frame, `[DONE]`, and no error frame.
 - [x] Add IAMHC_API_KEY to Vercel Production/Preview or document the approved blocker, then recheck live AI behavior on zurs.me. The Vercel key remains absent; the approved bounded catalog fallback is live and verified instead, without claiming general-provider availability.

@@ -34,6 +34,11 @@ describe("ZURS AI safety policy", () => {
     expect(source).not.toContain("./khqrWorker");
   });
 
+  it("keeps the AI adapter available for future integrations without exposing a public website chat endpoint", () => {
+    const appSource = require("node:fs").readFileSync(require("node:path").resolve(process.cwd(), "server/app.ts"), "utf8");
+    expect(appSource).not.toContain('app.post("/api/ai/chat/stream"');
+  });
+
   it("uses an allowlisted game keyword rather than forwarding a raw customer event message to search", () => {
     expect(buildSafeEventSearchQuery("Mobile Legends event for 012345678 and name Sokha")).toBe("mobile legends event update");
     expect(buildSafeEventSearchQuery("ព្រឹត្តិការណ៍ថ្មី សូមទាក់ទងខ្ញុំ 012345678")).toBe("game event update");

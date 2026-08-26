@@ -13,13 +13,13 @@ describe("marketplace favorites contract", () => {
     expect(db).toContain("eq(marketplaceFavorites.userId, userId)");
   });
 
-  it("preserves private favorites data while the retired customer route redirects users to AI", () => {
+  it("preserves private favorites data while the retired customer route redirects users to Account", () => {
     const marketplace = readFileSync(resolve(process.cwd(), "client/src/pages/Marketplace.tsx"), "utf8");
     const app = readFileSync(resolve(process.cwd(), "client/src/App.tsx"), "utf8");
     expect(marketplace).toContain("marketplace.addFavorite");
     expect(marketplace).toContain("marketplace.removeFavorite");
     expect(marketplace).not.toContain("function InfoCard");
-    expect(app).toContain('<Route path={"/favorites"}><Redirect to="/ai" /></Route>');
+    expect(app).toContain('<Route path={"/favorites"}><Redirect to="/account" /></Route>');
     expect(app).toContain('path="/admin/marketplace-safety" component={AdminMarketplaceSafety}');
   });
 });

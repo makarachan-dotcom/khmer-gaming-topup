@@ -7,11 +7,9 @@ import { OverflowMarquee } from "@/components/OverflowMarquee";
 import { useSelectedProduct } from "@/contexts/SelectedProductContext";
 import { trpc } from "@/lib/trpc";
 import { animate } from "animejs";
-import { ArrowUp, Bot, ChevronDown, CircleDollarSign, Crown, Eye, EyeOff, House, LogIn, ShieldCheck, UserRound, WalletCards } from "lucide-react";
+import { ArrowUp, ChevronDown, CircleDollarSign, Crown, Eye, EyeOff, House, LogIn, ShieldCheck, UserRound, WalletCards } from "lucide-react";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
-import ZursAiChat from "./ZursAiChat";
-import { openZursAiChat } from "@/lib/zursAiEvents";
 
 const logoUrl = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/kBXeVXEnNVEuNZKS.jpg";
 
@@ -21,9 +19,16 @@ export function isProtectedMediaTarget(target: EventTarget | null) {
 
 const mobileNavigation = [
   { href: "/", label: "ទំព័រដើម", icon: House, animation: "home" as const },
-  { href: "/ai", label: "AI", icon: Bot, ai: true },
   { href: "/account", label: "គណនី", icon: UserRound },
 ];
+
+const particleSlots = [
+  ["6%", "9%", "2px", "-1.1s"], ["15%", "31%", "1px", "-3.7s"], ["24%", "17%", "2px", "-5.2s"],
+  ["38%", "8%", "1px", "-2.4s"], ["49%", "27%", "2px", "-6.3s"], ["61%", "13%", "1px", "-4.6s"],
+  ["74%", "36%", "2px", "-7.1s"], ["87%", "16%", "1px", "-2.9s"], ["93%", "47%", "2px", "-5.8s"],
+  ["9%", "62%", "1px", "-6.7s"], ["31%", "73%", "2px", "-3.1s"], ["55%", "64%", "1px", "-7.5s"],
+  ["69%", "81%", "2px", "-1.8s"], ["82%", "68%", "1px", "-4.1s"], ["45%", "91%", "1px", "-6.0s"],
+] as const;
 
 export default function StorefrontLayout({ children }: { children: ReactNode }) {
   return <StorefrontShell>{children}</StorefrontShell>;
@@ -81,8 +86,9 @@ function StorefrontShell({ children }: { children: ReactNode }) {
 
   return (
     <div ref={shellRef} className="zurs-dotted-shell min-h-screen pb-20 sm:pb-0">
-	      <header className="zurs-compact-header sticky top-0 z-50 border-b border-white/80 bg-white/72 backdrop-blur-2xl">
-	        <div className="container flex h-14 items-center justify-between gap-2 sm:h-16 sm:gap-3">
+      <div className="zurs-particle-field" aria-hidden="true">{particleSlots.map(([x, y, size, delay], index) => <span key={index} style={{ "--particle-x": x, "--particle-y": y, "--particle-size": size, "--particle-delay": delay } as React.CSSProperties} />)}</div>
+      <header className="zurs-compact-header sticky top-2 z-50 mx-3 rounded-[1.25rem] border border-white/80 bg-white/72 backdrop-blur-2xl sm:top-3 sm:mx-4 sm:rounded-2xl">
+        <div className="container flex h-12 items-center justify-between gap-2 sm:h-14 sm:gap-3">
 	          <Link href="/" className="flex min-w-0 shrink items-center gap-2" aria-label="ZURS.me home">
 	            <img src={logoUrl} alt="ZURS logo" className="h-8 w-8 shrink-0 rounded-xl object-cover ring-1 ring-white/90 shadow-sm sm:h-9 sm:w-9" />
 	            <div className="fx-zurs-me" aria-label="ZURS.me"><span style={{ "--i": 0 } as React.CSSProperties}>Z</span><span style={{ "--i": 1 } as React.CSSProperties}>U</span><span style={{ "--i": 2 } as React.CSSProperties}>R</span><span style={{ "--i": 3 } as React.CSSProperties}>S</span><i aria-hidden="true">.</i><span style={{ "--i": 4 } as React.CSSProperties}>m</span><span style={{ "--i": 5 } as React.CSSProperties}>e</span></div>
@@ -108,12 +114,11 @@ function StorefrontShell({ children }: { children: ReactNode }) {
         </div>
       </footer>
 
-      {selectedProduct ? <SelectedProductActionBar product={selectedProduct} isAuthenticated={Boolean(user)} isAuthenticationLoading={loading} signInHref={googleSignInHref} /> : <nav className="liquid-tabbar zurs-mobile-tabbar fixed inset-x-3 bottom-2 z-40 grid h-14 grid-cols-3 gap-0.5 rounded-[1.1rem] p-1 shadow-[0_10px_24px_rgba(15,23,42,0.11)] sm:hidden" style={{ "--mobile-tab-index": activeMobileTabIndex } as React.CSSProperties} aria-label="Mobile primary navigation">
+      {selectedProduct ? <SelectedProductActionBar product={selectedProduct} isAuthenticated={Boolean(user)} isAuthenticationLoading={loading} signInHref={googleSignInHref} /> : <nav className="liquid-tabbar zurs-mobile-tabbar fixed inset-x-8 bottom-2 z-40 grid h-[3.25rem] grid-cols-2 gap-0.5 rounded-full p-1 shadow-[0_10px_24px_rgba(15,23,42,0.11)] sm:hidden" style={{ "--mobile-tab-index": activeMobileTabIndex } as React.CSSProperties} aria-label="Mobile primary navigation">
         <span className="zurs-mobile-tab-indicator" aria-hidden="true" />
-        {mobileNavigation.map(({ href, label, icon: Icon, animation, ai }) => { const active = location === href; const classes = cn("zurs-mobile-tab relative z-10 flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1 text-[9px] font-bold transition-colors", active ? "zurs-mobile-tab--active text-slate-950" : "text-slate-500 hover:bg-white/75 hover:text-slate-800"); return ai ? <button type="button" key={href} onClick={() => setLocation("/ai")} className={classes} aria-label="បើក ZURS AI"><Icon className={cn("h-4 w-4", active ? "text-cyan-700" : "text-slate-500")} strokeWidth={2.1} /><span className="truncate">{label}</span></button> : <Link key={href} href={href} aria-current={active ? "page" : undefined} className={classes}>{active && animation ? <AnimatedGlyph name={animation} size={17} color="#312e81" /> : <Icon className={cn("h-4 w-4", active && "tab-icon-active")} strokeWidth={active ? 2.25 : 1.9} />}<span className="truncate">{label}</span></Link>; })}
+        {mobileNavigation.map(({ href, label, icon: Icon, animation }) => { const active = location === href; const classes = cn("zurs-mobile-tab relative z-10 flex min-w-0 flex-row items-center justify-center gap-1 rounded-full px-2 py-1 text-[9px] font-bold transition-colors", active ? "zurs-mobile-tab--active text-slate-950" : "text-slate-500 hover:bg-white/75 hover:text-slate-800"); return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={classes}>{active && animation ? <AnimatedGlyph name={animation} size={16} color="#312e81" /> : <Icon className={cn("h-3.5 w-3.5", active && "tab-icon-active")} strokeWidth={active ? 2.25 : 1.9} />}<span className="truncate">{label}</span></Link>; })}
       </nav>}
       <button type="button" onClick={navigateToTop} aria-label="ត្រឡប់ទៅខាងលើ" className={cn("fixed right-4 z-[45] hidden h-11 w-11 place-items-center rounded-2xl border border-white/80 bg-slate-950 text-white shadow-lg shadow-slate-950/20 transition-[opacity,transform,background-color] duration-200 hover:-translate-y-1 hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 sm:grid sm:bottom-6", showScrollTop ? "opacity-100" : "pointer-events-none translate-y-3 opacity-0")}><ArrowUp className="h-5 w-5" strokeWidth={2.25} /></button>
-      <ZursAiChat />
     </div>
   );
 }

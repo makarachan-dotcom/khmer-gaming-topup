@@ -80,12 +80,14 @@ describe("dedicated game top-up routes", () => {
     expect(source).toContain("package-choice--mlbb-${mobileLegendsTone}");
   });
 
-  it("uses a scroll-position threshold and focuses an editable ID field from the compact verified bar", () => {
+  it("changes to the verified username bar as the fields leave the mobile viewport and restores ID editing safely", () => {
     const source = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
     expect(source).toContain('window.matchMedia("(max-width: 767px)").matches');
-    expect(source).toContain("anchor.getBoundingClientRect().bottom <= 76");
+    expect(source).toContain("anchor.getBoundingClientRect().top <= 92");
     expect(source).toContain('window.addEventListener("scroll", updateCompactState');
     expect(source).toContain('querySelector<HTMLInputElement>("input[required], input")');
+    expect(source).toContain("setCompact(false);");
+    expect(source).toContain("fields={providerFields ?? {}}");
   });
 
   it("shows ten diamond packages first and reveals the provider-authorized remainder only after expansion", () => {

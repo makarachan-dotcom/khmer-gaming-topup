@@ -13,7 +13,6 @@ import { registerProviderArtworkRoutes } from "./providerArtwork";
 import crypto from "node:crypto";
 import { parseKhqrWorkerCallback, verifyKhqrWorkerSignature } from "./khqrWorkerWebhook";
 import { getKhqrWorkerCredentials } from "./khqrWorkerSecrets";
-import { consumeZursAiRateLimit, streamZursAiReply, ZursAiInputError, ZursAiUpstreamError, type ZursAiMessage } from "./zursAi";
 
 /**
  * Builds the shared Express application for the local long-running server and
@@ -48,46 +47,6 @@ export function createApp() {
   });
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
-  app.post("/api/ai/chat/stream", async (req, res) => {
-    const session = typeof req.header("x-zurs-chat-session") === "string" && /^[a-zA-Z0-9_-]{12,80}$/.test(req.header("x-zurs-chat-session")!)
-      ? req.header("x-zurs-chat-session")!
-      : "anonymous";
-    const ipIdentity = req.ip || req.socket.remoteAddress || "unknown";
-    const sessionAllowed = session === "anonymous" || consumeZursAiRateLimit(`session:${session}`);
-    if (!consumeZursAiRateLimit(`ip:${ipIdentity}`) || !sessionAllowed) return res.status(429).json({ error: "rate_limited" });
-    const messages = Array.isArray(req.body?.messages) ? req.body.messages as ZursAiMessage[] : [];
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 35_000);
-    let finished = false;
-    res.on("close", () => { if (!finished) controller.abort(); });
-    res.status(200).set({
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache, no-transform",
-      Connection: "keep-alive",
-      "X-Accel-Buffering": "no",
-    });
-    res.flushHeaders();
-    try {
-      await streamZursAiReply({
-        messages,
-        signal: controller.signal,
-        onDelta: (delta) => { if (!res.writableEnded && !res.destroyed) res.write(`data: ${JSON.stringify({ delta })}\n\n`); },
-        onRecommendations: (recommendations) => { if (!res.writableEnded && !res.destroyed) res.write(`data: ${JSON.stringify({ recommendations })}\n\n`); },
-      });
-      if (!res.writableEnded && !res.destroyed) res.write("data: [DONE]\n\n");
-    } catch (error) {
-      const code = error instanceof ZursAiInputError && error.message === "retry_message"
-        ? "retry_message"
-        : error instanceof ZursAiUpstreamError && error.status === 429
-          ? "assistant_busy"
-          : "assistant_unavailable";
-      if (!res.writableEnded && !res.destroyed) res.write(`data: ${JSON.stringify({ error: code })}\n\n`);
-    } finally {
-      finished = true;
-      clearTimeout(timeout);
-      if (!res.writableEnded && !res.destroyed) res.end();
-    }
-  });
   // The managed hosting integration relies on Manus-only credentials. Vercel
   // receives a portable API surface instead of routes that would redirect to
   // an unavailable identity provider. The storage proxy remains enabled in
