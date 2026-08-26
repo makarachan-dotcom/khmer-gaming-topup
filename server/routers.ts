@@ -4,7 +4,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, ownerProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import * as db from "./db";
-import { fetchFzrProviderSyncSnapshot, fetchProviderGameDetails, fetchProviderGames, fetchProviderPackages, fetchProviderPreviewPackages, fetchSmmProviderServices, getProviderAvailabilityCatalog, getProviderCatalogStatus, setProviderAvailability, validateProviderPlayerIdentity } from "./providerCatalog";
+import { fetchFzrProviderSyncSnapshot, fetchProviderGameDetails, fetchProviderGames, fetchProviderPackages, fetchProviderPreviewPackages, fetchPublicProviderPackagePreview, fetchSmmProviderServices, getProviderAvailabilityCatalog, getProviderCatalogStatus, setProviderAvailability, validateProviderPlayerIdentity } from "./providerCatalog";
 import { toPublicPlayerIdentityResponse } from "./playerIdentityPrivacy";
 import { getProviderCredentialStatus } from "./providerCredentialStatus";
 import { encryptCredential } from "./credentialEnvelope";
@@ -66,6 +66,7 @@ export const appRouter = router({
     games: publicProcedure.query(() => fetchProviderGames()),
     gameDetails: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120) })).query(({ input }) => fetchProviderGameDetails(input.gameId)),
     packageArtwork: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120) })).query(({ input }) => db.getProviderPackageArtworkOverrides(input.gameId)),
+    packagePreview: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120) })).query(({ input }) => fetchPublicProviderPackagePreview(input.gameId)),
     packages: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120), fields: z.record(z.string().trim().max(64), z.string().trim().min(1).max(256)).refine((fields) => Object.keys(fields).length <= 12, "Too many provider fields"), idAccuracyConfirmed: z.boolean().optional().default(false) })).mutation(({ input }) => fetchProviderPackages(input)),
     validatePlayerId: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120), fields: z.record(z.string().trim().max(64), z.string().trim().min(1).max(256)).refine((fields) => Object.keys(fields).length <= 12, "Too many provider fields") })).mutation(async ({ input }) => toPublicPlayerIdentityResponse(await validateProviderPlayerIdentity(input))),
     smmServices: publicProcedure.query(() => fetchSmmProviderServices()),

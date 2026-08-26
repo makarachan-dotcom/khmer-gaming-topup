@@ -90,7 +90,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
   return (
     <div ref={shellRef} className="zurs-dotted-shell min-h-screen pb-20 sm:pb-0">
       <div className="zurs-particle-field" aria-hidden="true">{particleSlots.map(([x, y, size, delay], index) => <span key={index} style={{ "--particle-x": x, "--particle-y": y, "--particle-size": size, "--particle-delay": delay } as React.CSSProperties} />)}</div>
-      <header className="zurs-compact-header sticky top-2 z-50 mx-3 rounded-[1.25rem] border border-white/80 bg-white/72 backdrop-blur-2xl sm:top-3 sm:mx-4 sm:rounded-2xl">
+      <header className="zurs-compact-header sticky top-2 z-50 mx-2 rounded-[1.25rem] border border-white/80 bg-white/72 backdrop-blur-2xl sm:top-3 sm:mx-4 sm:rounded-2xl">
         <div className="container flex h-12 items-center justify-between gap-2 sm:h-14 sm:gap-3">
 	          <Link href="/" className="flex min-w-0 shrink items-center gap-2" aria-label="ZURS.me home">
 	            <img src={logoUrl} alt="ZURS logo" className="h-8 w-8 shrink-0 rounded-xl object-cover ring-1 ring-white/90 shadow-sm sm:h-9 sm:w-9" />
@@ -109,11 +109,26 @@ function StorefrontShell({ children }: { children: ReactNode }) {
 
       {children}
 
-      <footer className="zurs-footer-glass mt-16 border-t pb-28 pt-8 sm:py-8">
-        <div className="container grid gap-5 text-xs text-slate-500 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
-          <div className="flex items-center gap-3"><img src={logoUrl} alt="ZURS STORE logo" className="h-9 w-9 rounded-xl object-cover" /><div><p className="font-display font-extrabold text-slate-900">ZURS STORE</p><p className="mt-1 khmer-body">សេវាកម្មហ្គេម និងឌីជីថល សម្រាប់អ្នកលេងកម្ពុជា។</p><p className="mt-1 text-[10px] font-semibold text-slate-500">© ZURS STORE · by ZURS STORE</p><div className="mt-2 inline-flex items-center gap-2 rounded-lg bg-emerald-50/85 px-3 py-2 text-emerald-800"><ShieldCheck className="h-4 w-4" /><span className="khmer-tight">សេវាកម្មរហ័ស និងមានទំនុកចិត្ត</span></div></div></div>
-          <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-[11px] font-semibold text-slate-500"><Link href="/privacy" onClick={() => window.scrollTo({ top: 0, behavior: "auto" })} className="hover:text-indigo-700">Privacy Policy</Link><Link href="/terms" onClick={() => window.scrollTo({ top: 0, behavior: "auto" })} className="hover:text-indigo-700">Terms of Service</Link></div>
-          <div className="hidden sm:block" />
+      <footer className="zurs-footer-glass zurs-footer mt-14 border-t pb-28 pt-8 sm:mt-20 sm:py-10">
+        <div className="container">
+          <div className="zurs-footer-inner grid gap-7 rounded-[1.35rem] p-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-6 sm:p-6">
+            <div className="flex min-w-0 items-start gap-3.5">
+              <img src={logoUrl} alt="ZURS STORE logo" className="h-10 w-10 shrink-0 rounded-xl object-cover ring-1 ring-white/15" />
+              <div className="min-w-0">
+                <p className="font-display text-sm font-extrabold tracking-wide text-white">ZURS STORE</p>
+                <p className="mt-1 max-w-md text-xs leading-5 text-slate-300 khmer-body">សេវាកម្មហ្គេម និងឌីជីថល សម្រាប់អ្នកលេងកម្ពុជា។</p>
+                <p className="mt-3 inline-flex items-center gap-2 text-[11px] font-semibold text-cyan-100"><ShieldCheck className="h-4 w-4 text-cyan-300" /><span className="khmer-tight">សេវាកម្មរហ័ស និងមានទំនុកចិត្ត</span></p>
+              </div>
+            </div>
+            <nav aria-label="Footer links" className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-semibold sm:justify-end">
+              <Link href="/privacy" onClick={() => window.scrollTo({ top: 0, behavior: "auto" })} className="zurs-footer-link">Privacy Policy</Link>
+              <Link href="/terms" onClick={() => window.scrollTo({ top: 0, behavior: "auto" })} className="zurs-footer-link">Terms of Service</Link>
+            </nav>
+          </div>
+          <div className="zurs-footer-meta flex flex-col gap-1 px-1 pt-4 text-[10px] font-medium sm:flex-row sm:items-center sm:justify-between">
+            <span>© ZURS STORE · by ZURS STORE</span>
+            <span className="khmer-tight">រក្សាសិទ្ធិគ្រប់យ៉ាង · សម្រាប់សហគមន៍អ្នកលេងកម្ពុជា</span>
+          </div>
         </div>
       </footer>
 
