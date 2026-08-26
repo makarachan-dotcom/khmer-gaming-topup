@@ -1,6 +1,15 @@
 import { createContext, ReactNode, useContext, useMemo, useState } from "react";
 
-export type SelectedProduct = { id: string; label: string; amountLabel: string; priceLabel: string; gameName: string; gameLogoUrl?: string };
+export type SelectedProduct = {
+  id: string;
+  label: string;
+  amountLabel: string;
+  priceLabel: string;
+  gameName: string;
+  gameLogoUrl?: string;
+  playerId?: string;
+  zoneId?: string | null;
+};
 
 type SelectedProductContextValue = {
   selectedProduct: SelectedProduct | null;

@@ -97,6 +97,7 @@ export default function GameTopup() {
     if (!game || !fieldsReady) return null;
     return Object.fromEntries(game.requiredFields.filter((field) => field.required || Boolean(details[field.key]?.trim())).map((field) => [field.key, details[field.key]!.trim()]));
   }, [details, fieldsReady, game]);
+  const checkoutAccount = checkoutAccountFields(providerFields);
   const identityRequired = requiresPlayerIdentityCheck(game?.requiredFields ?? []);
   const validationInput = useMemo(() => game && providerFields && identityRequired ? { gameId: game.id, fields: providerFields } : null, [game, identityRequired, providerFields]);
   const adminPreviewActive = isOwnerAdmin && adminPreviewEnabled;
@@ -118,7 +119,7 @@ export default function GameTopup() {
     }
     setSelectedPackageIdState(id);
     const selected = packages.find((item) => item.id === id);
-    if (selected && !adminPreviewActive && canBrowsePackages) setSelectedProduct({ ...selected, gameName: game?.name ?? "", gameLogoUrl });
+    if (selected && !adminPreviewActive && canBrowsePackages) setSelectedProduct({ ...selected, gameName: game?.name ?? "", gameLogoUrl, playerId: checkoutAccount.playerId ?? undefined, zoneId: checkoutAccount.zoneId });
     else clearSelectedProduct();
   };
 
@@ -218,6 +219,13 @@ function SavedPlayerPicker({ entries, fields, onChoose }: { entries: SavedPlayer
   const usableEntries = entries.filter((entry) => fields.filter((field) => field.required).every((field) => Boolean(entry.fields[field.key])));
   if (!usableEntries.length) return null;
   return <section className="saved-player-picker mt-4 rounded-xl p-3"><div className="flex items-start gap-2"><span className="saved-player-picker-icon"><History className="h-4 w-4" /></span><div className="min-w-0"><p className="text-xs font-extrabold text-slate-900">ID ដែលបានបញ្ជាក់ពីមុន</p><p className="mt-0.5 text-[10px] leading-4 text-slate-600">ជ្រើសមួយ ដើម្បីបំពេញព័ត៌មានដោយស្វ័យប្រវត្តិលើឧបករណ៍នេះ។ មិនរក្សាទុកឈ្មោះគណនីឡើយ។</p></div></div><div className="mt-2 flex flex-wrap gap-2">{usableEntries.map((entry) => <button key={entry.id} type="button" onClick={() => onChoose(entry)} className="saved-player-choice">{savedPlayerLabel(entry.fields)}</button>)}</div></section>;
+}
+
+function checkoutAccountFields(fields: Record<string, string> | null) {
+  const entries = Object.entries(fields ?? {});
+  const playerId = entries.find(([key]) => /(?:player|user|account|game|uid).*id|id.*(?:player|user|account|game|uid)/i.test(key))?.[1] ?? null;
+  const zoneId = entries.find(([key]) => /(?:zone|server|region).*id|id.*(?:zone|server|region)|^(?:zone|server|region)$/i.test(key))?.[1] ?? null;
+  return { playerId, zoneId };
 }
 
 export function canBrowseVerifiedPackages(fieldsReady: boolean, status?: string) {

@@ -1,15 +1,8 @@
 import { Check, CreditCard, Info, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
-import { useSelectedProduct } from "@/contexts/SelectedProductContext";
-
-type SelectedPackage = {
-  label: string;
-  amountLabel: string;
-  priceLabel: string;
-  gameName: string;
-  gameLogoUrl?: string;
-};
+import { SelectedProduct, useSelectedProduct } from "@/contexts/SelectedProductContext";
 
 type PaymentMethod = {
   id: string;
@@ -45,20 +38,26 @@ export function PaymentMethodPreselect() {
   </section>;
 }
 
-export function PaymentMethodGate({ product, open, onOpenChange }: { product: SelectedPackage | null; open: boolean; onOpenChange: (open: boolean) => void }) {
+export function PaymentMethodGate({ product, open, onOpenChange }: { product: SelectedProduct | null; open: boolean; onOpenChange: (open: boolean) => void }) {
+  const [, setLocation] = useLocation();
   const methodsQuery = trpc.payments.methods.useQuery(undefined, { staleTime: 30_000, refetchInterval: 15_000 });
   const gateQuery = trpc.payments.gate.useQuery(undefined, { staleTime: 15_000, refetchInterval: 15_000 });
+  const createTopup = trpc.orders.createTopup.useMutation();
+  const beginPayment = trpc.orders.beginPayment.useMutation();
   const methods = methodsQuery.data ?? [];
-  const { selectedPaymentMethodId, setSelectedPaymentMethodId } = useSelectedProduct();
+  const { selectedPaymentMethodId, setSelectedPaymentMethodId, clearSelectedProduct } = useSelectedProduct();
   const [showInfo, setShowInfo] = useState(false);
   const [paymentScreen, setPaymentScreen] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const selectedMethod = useMemo(() => methods.find((method) => method.id === selectedPaymentMethodId) ?? null, [methods, selectedPaymentMethodId]);
   const paymentsEnabled = gateQuery.data?.enabled === true;
+  const busy = createTopup.isPending || beginPayment.isPending;
 
   useEffect(() => {
     if (!open) {
       setShowInfo(false);
       setPaymentScreen(false);
+      setCheckoutError(null);
     }
   }, [open]);
 
@@ -76,18 +75,39 @@ export function PaymentMethodGate({ product, open, onOpenChange }: { product: Se
       return;
     }
     setShowInfo(false);
+    setCheckoutError(null);
     setPaymentScreen(true);
+  };
+  const confirmCheckout = async () => {
+    if (!selectedMethod || !product.playerId) {
+      setCheckoutError("មិនអាចបញ្ជាក់ Player ID សម្រាប់បង្កើត order បានទេ។ សូមត្រឡប់ទៅកែ ID ហើយជ្រើសកញ្ចប់ម្ដងទៀត។");
+      return;
+    }
+    if (selectedMethod.providerKey !== "bakong_khqr") {
+      setCheckoutError("វិធីបង់ប្រាក់នេះកំពុងត្រូវបានរៀបចំ។ សូមជ្រើស KHQR ឬរង់ចាំ admin បើកការគាំទ្រសិន។");
+      return;
+    }
+    try {
+      setCheckoutError(null);
+      const order = await createTopup.mutateAsync({ packageId: product.id, playerId: product.playerId, zoneId: product.zoneId || undefined, quantity: 1 });
+      const session = await beginPayment.mutateAsync({ orderId: order.id });
+      clearSelectedProduct();
+      close();
+      setLocation(`/checkout/${session.order.id}`);
+    } catch (error) {
+      setCheckoutError(error instanceof Error ? error.message : "មិនអាចបង្កើត payment session បានទេ។ សូមព្យាយាមម្ដងទៀត។");
+    }
   };
 
   return <div className="payment-method-gate" role="dialog" aria-modal="true" aria-labelledby="payment-gate-title">
     <button type="button" className="payment-method-gate__backdrop" aria-label="បិទផ្ទាំងពិនិត្យការទូទាត់" onClick={close} />
     <section className="payment-method-gate__panel">
       <header className="payment-method-gate__header">
-        <div><p className="payment-method-gate__eyebrow">CHECKOUT GATE</p><h2 id="payment-gate-title">{paymentScreen ? "ពិនិត្យព័ត៌មានការទូទាត់" : "ពិនិត្យវិធីបង់ប្រាក់"}</h2></div>
+        <div><p className="payment-method-gate__eyebrow">CHECKOUT GATE</p><h2 id="payment-gate-title">{paymentScreen ? "បញ្ជាក់ការទូទាត់" : "ពិនិត្យវិធីបង់ប្រាក់"}</h2></div>
         <button type="button" className="payment-method-gate__close" aria-label="បិទ" onClick={close}><X className="h-5 w-5" /></button>
       </header>
 
-      {paymentScreen ? <PaymentReview product={product} method={selectedMethod} onBack={() => setPaymentScreen(false)} /> : selectedMethod ? <div className="payment-method-gate__summary">
+      {paymentScreen ? <PaymentReview product={product} method={selectedMethod} busy={busy} error={checkoutError} onBack={() => setPaymentScreen(false)} onConfirm={() => void confirmCheckout()} /> : selectedMethod ? <div className="payment-method-gate__summary">
         <p className="payment-method-gate__copy">វិធីបង់ប្រាក់ត្រូវបានជ្រើសរួចមុន package។ សូមពិនិត្យព័ត៌មាន ហើយបន្តនៅពេលហាងបានបើកការទូទាត់។</p>
         <PaymentSummary product={product} method={selectedMethod} />
         <div className="payment-method-gate__advance-row">
@@ -102,7 +122,7 @@ export function PaymentMethodGate({ product, open, onOpenChange }: { product: Se
   </div>;
 }
 
-function PaymentSummary({ product, method }: { product: SelectedPackage; method: PaymentMethod }) {
+function PaymentSummary({ product, method }: { product: SelectedProduct; method: PaymentMethod }) {
   return <div className="payment-method-gate__review">
     <div className="payment-method-gate__review-card"><span className="grid h-10 w-10 place-items-center rounded-xl bg-cyan-50 text-cyan-700"><CreditCard className="h-5 w-5" /></span><div><p className="text-xs font-extrabold text-slate-950">{product.gameName}</p><p className="mt-0.5 text-[11px] text-slate-600">{product.label}</p></div><strong>{product.priceLabel}</strong></div>
     <div className="payment-method-gate__review-line"><span>កញ្ចប់</span><strong>{product.amountLabel}</strong></div>
@@ -110,8 +130,8 @@ function PaymentSummary({ product, method }: { product: SelectedPackage; method:
   </div>;
 }
 
-function PaymentReview({ product, method, onBack }: { product: SelectedPackage; method: PaymentMethod | null; onBack: () => void }) {
-  return <div className="payment-method-gate__review"><PaymentSummary product={product} method={method ?? { id: "", name: "—", descriptionKh: "", iconUrl: null, providerKey: "manual" }} /><div className="payment-method-gate__review-info"><Info className="h-4 w-4" /><p>ព័ត៌មានកញ្ចប់ និងវិធីបង់ប្រាក់ត្រូវបានរក្សាទុកក្នុង payment gate។ ការបង្កើត payment session ពិតនៅតែគោរព payment processor និង security readiness ដែលមានស្រាប់។</p></div><button type="button" className="payment-method-gate__back" onClick={onBack}>ត្រឡប់ទៅពិនិត្យ</button></div>;
+function PaymentReview({ product, method, busy, error, onBack, onConfirm }: { product: SelectedProduct; method: PaymentMethod | null; busy: boolean; error: string | null; onBack: () => void; onConfirm: () => void }) {
+  return <div className="payment-method-gate__review"><PaymentSummary product={product} method={method ?? { id: "", name: "—", descriptionKh: "", iconUrl: null, providerKey: "manual" }} /><div className="payment-method-gate__review-info"><Info className="h-4 w-4" /><p>បន្ទាប់ពីអ្នកបញ្ជាក់ ប្រព័ន្ធនឹងបង្កើត QR payment session សម្រាប់ order នេះ រួចបើកទំព័រទូទាត់សុវត្ថិភាព។</p></div>{error ? <div className="payment-method-gate__info payment-method-gate__info--error" role="alert"><Info className="h-4 w-4" /><span>{error}</span></div> : null}<button type="button" disabled={busy} className="payment-method-gate__confirm" onClick={onConfirm}>{busy ? "កំពុងបង្កើត QR សុវត្ថិភាព…" : "បញ្ជាក់ និងបន្តទៅទំព័រទូទាត់"}</button><button type="button" disabled={busy} className="payment-method-gate__back" onClick={onBack}>ត្រឡប់ទៅពិនិត្យ</button></div>;
 }
 
 function MethodIcon({ method }: { method: PaymentMethod }) {

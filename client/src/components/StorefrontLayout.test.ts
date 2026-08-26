@@ -129,6 +129,10 @@ describe("storefront media protection", () => {
     expect(gateSource).toContain("aria-disabled={!paymentsEnabled}");
     expect(gateSource).toContain("payment-fast-forward__chevrons");
     expect(gateSource).toContain("មិនទាន់ជ្រើសវិធីបង់ប្រាក់");
+    expect(gateSource).toContain("trpc.orders.createTopup.useMutation()");
+    expect(gateSource).toContain("trpc.orders.beginPayment.useMutation()");
+    expect(gateSource).toContain("បញ្ជាក់ និងបន្តទៅទំព័រទូទាត់");
+    expect(gateSource).toContain("setLocation(`/checkout/${session.order.id}`)");
     expect(styleSource).toContain(".payment-method-preselect");
     expect(styleSource).toContain("payment-fast-forward-wave");
     expect(styleSource).toContain("prefers-reduced-motion: no-preference");
