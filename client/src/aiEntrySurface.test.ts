@@ -11,8 +11,9 @@ describe("compact banner and tab-only AI entry", () => {
     expect(home).not.toContain("storage.manus.com/manus-storage");
     expect(home).toContain("setInterval");
     expect(home).toContain("prefers-reduced-motion: reduce");
-    expect(home).toContain("Sign in");
-    expect(home).toContain("Sign up");
+    expect(home).not.toContain("startLogin");
+    expect(home).not.toContain("Sign in");
+    expect(home).not.toContain("Sign up");
   });
 
   it("keeps AI opening only on the mobile AI tab", () => {

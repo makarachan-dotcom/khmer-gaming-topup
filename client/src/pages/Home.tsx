@@ -15,7 +15,6 @@ import {
   type ProviderGameFilter,
 } from "@/lib/providerPresentation";
 import { trpc } from "@/lib/trpc";
-import { startLogin } from "@/const";
 import {
   Image as ImageIcon,
   Search,
@@ -51,7 +50,7 @@ function HomeBanner() {
     const timer = window.setInterval(() => setActiveSlide((current) => (current + 1) % bannerSlides.length), 6_500);
     return () => window.clearInterval(timer);
   }, []);
-  return <section className="container pt-4 sm:pt-6" aria-label="ZURS banner"><div className="zurs-banner-frame relative isolate aspect-[16/6] overflow-hidden rounded-2xl border border-slate-900/60 bg-slate-950 shadow-xl shadow-slate-950/15 sm:rounded-[1.65rem]">{bannerSlides.map((slide, index) => <img key={slide.src} src={slide.src} alt={slide.alt} className="zurs-banner-slide absolute inset-0 h-full w-full object-cover" style={{ opacity: index === activeSlide ? 1 : 0, transform: `translateX(${(activeSlide - index) * 100}%)` }} loading={index === 0 ? "eager" : "lazy"} />)}<div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-3 bg-gradient-to-t from-slate-950/85 via-slate-950/35 to-transparent px-3 pb-3 pt-10 sm:px-5 sm:pb-4"><div className="flex gap-1.5" aria-label="Banner slides">{bannerSlides.map((slide, index) => <button key={slide.src} type="button" onClick={() => setActiveSlide(index)} className={`h-1.5 rounded-full transition-all ${index === activeSlide ? "w-5 bg-cyan-300" : "w-1.5 bg-white/55 hover:bg-white"}`} aria-label={`Banner ${index + 1}`} aria-current={index === activeSlide ? "true" : undefined} />)}</div><div className="flex items-center gap-1.5"><button type="button" onClick={startLogin} className="inline-flex h-8 items-center rounded-lg border border-white/45 bg-white/10 px-2.5 text-[10px] font-extrabold text-white backdrop-blur-sm transition hover:bg-white/20 sm:h-9 sm:px-3 sm:text-xs">Sign in</button><button type="button" onClick={startLogin} className="inline-flex h-8 items-center rounded-lg bg-cyan-300 px-2.5 text-[10px] font-extrabold text-slate-950 transition hover:bg-cyan-200 sm:h-9 sm:px-3 sm:text-xs">Sign up</button></div></div></div></section>;
+  return <section className="container pt-4 sm:pt-6" aria-label="ZURS banner"><div className="zurs-banner-frame relative isolate aspect-[16/6] overflow-hidden rounded-2xl border border-slate-900/60 bg-slate-950 shadow-xl shadow-slate-950/15 sm:rounded-[1.65rem]">{bannerSlides.map((slide, index) => <img key={slide.src} src={slide.src} alt={slide.alt} className="zurs-banner-slide absolute inset-0 h-full w-full object-cover" style={{ opacity: index === activeSlide ? 1 : 0, transform: `translateX(${(activeSlide - index) * 100}%)` }} loading={index === 0 ? "eager" : "lazy"} />)}<div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/85 via-slate-950/35 to-transparent px-3 pb-3 pt-10 sm:px-5 sm:pb-4"><div className="flex gap-1.5" aria-label="Banner slides">{bannerSlides.map((slide, index) => <button key={slide.src} type="button" onClick={() => setActiveSlide(index)} className={`h-1.5 rounded-full transition-all ${index === activeSlide ? "w-5 bg-cyan-300" : "w-1.5 bg-white/55 hover:bg-white"}`} aria-label={`Banner ${index + 1}`} aria-current={index === activeSlide ? "true" : undefined} />)}</div></div></div></section>;
 }
 
 function HomepageMedia() {

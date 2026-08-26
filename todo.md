@@ -1,7 +1,15 @@
 # Project TODO
 
-- [ ] Publish the CDN banner-asset fix to GitHub and Vercel production with a new checkpoint.
-- [ ] Verify the new Vercel production deployment and zurs.me render both homepage banner images after publication.
+- [x] Diagnose and repair the reported mobile Tabbar layout, navigation, active state, or overlap issue without reintroducing extra AI entry points. Corrected the active indicator from a four-tab calculation to the current three-tab geometry; mobile Home and Account visual checks passed.
+- [ ] Recheck the final banner simplification across source contracts, desktop, mobile, carousel slides, images, and application validation before publication.
+- [x] Remove the Sign in and Sign up buttons from the homepage banner while retaining accessible slide controls and carousel behavior; the button-free banner passed source-contract, desktop, and mobile checks.
+- [ ] Re-verify www.zurs.me and zurs.me with inspectable visual evidence that both banner slides visibly render after the 86e284d rollout.
+- [ ] If either official-domain banner appears empty during visual re-verification, diagnose the custom-domain image-loading path and publish a repair before closing verification.
+- [x] Re-verify www.zurs.me and zurs.me with inspectable evidence that both homepage banner images load after the 86e284d production rollout; www.zurs.me Banner 1 was visibly rendered, Banner 2 was selected, and the live DOM contained two carousel image elements with both CDN source URLs.
+- [x] Diagnose and repair the live custom-domain image-loading path if either banner remains empty during the evidence-based re-verification; no further repair was required because the official page rendered the banner and its DOM contained both image elements.
+- [x] Resolve the zurs.me custom-domain routing gap: Vercel deployment `zurs-oxwghlj9j-makarachan-dotcoms-projects.vercel.app` renders the new banner, while zurs.me still shows the prior empty carousel. Propagation completed without a domain-setting change; the production alias includes both zurs.me and www.zurs.me, and the official page now renders the banner.
+- [x] Publish the CDN banner-asset fix to GitHub and Vercel production with a new checkpoint; checkpoint 86e284d0 synchronized to GitHub main and Vercel created a READY production deployment.
+- [x] Verify the new Vercel production deployment and zurs.me render both homepage banner images after publication; Vercel deployment 86e284d is READY and an official www.zurs.me browser check rendered the compact banner successfully.
 - [x] Repair the production banner asset references: the Vercel READY deployment loads the carousel shell but not the two banner images. Replaced inaccessible private paths with two verified image/png public CDN URLs; focused and full tests, TypeScript, production build, and desktop/mobile visual checks passed.
 - [x] Synchronize the validated latest ZURS release to GitHub main and verify whether the official zurs.me deployment serves it; GitHub main and the Vercel READY production deployment both reference commit ec2beed1.
 
