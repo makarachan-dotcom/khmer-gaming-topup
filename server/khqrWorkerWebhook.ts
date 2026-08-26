@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 type KhqrWorkerCallbackBase = { md5: string; orderId: string; amount: string | number; currency: "KHR" | "USD"; timestamp: string };
 export type KhqrWorkerCallback =
   | (KhqrWorkerCallbackBase & { event: "payment.paid" })
+  | (KhqrWorkerCallbackBase & { event: "payment.expired" })
   | (KhqrWorkerCallbackBase & { event: "payment.verification_deferred"; reason: "bakong_daily_request_limit" });
 
 export function verifyKhqrWorkerSignature(rawBody: Buffer, signature: string | undefined, secret: string | undefined) {
@@ -19,6 +20,7 @@ export function parseKhqrWorkerCallback(rawBody: Buffer): KhqrWorkerCallback | n
     if (!hasValidBase) return null;
     const base: KhqrWorkerCallbackBase = { md5: input.md5 as string, orderId: input.orderId as string, amount: input.amount as string | number, currency: input.currency as "KHR" | "USD", timestamp: input.timestamp as string };
     if (input.event === "payment.paid") return { event: "payment.paid", ...base };
+    if (input.event === "payment.expired") return { event: "payment.expired", ...base };
     if (input.event === "payment.verification_deferred" && input.reason === "bakong_daily_request_limit") return { event: "payment.verification_deferred", reason: "bakong_daily_request_limit", ...base };
     return null;
   } catch { return null; }

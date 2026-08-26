@@ -1,0 +1,51 @@
+{
+  "name": "zurs-khqr-payment-worker",
+  "description": "Authenticated Bakong KHQR polling worker for payment sessions created by the ZURS main ledger.",
+  "repository": "https://github.com/makarachan-dotcom/khmer-gaming-topup",
+  "keywords": ["zurs", "bakong", "khqr", "payment-worker"],
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "basic"
+    }
+  },
+  "env": {
+    "DATABASE_URL": {
+      "description": "PostgreSQL connection URL for the worker watch ledger.",
+      "required": true
+    },
+    "DATABASE_SSL": {
+      "description": "Set to true for managed Heroku PostgreSQL.",
+      "value": "true",
+      "required": true
+    },
+    "WORKER_API_KEY": {
+      "description": "High-entropy shared API key accepted only from the ZURS main site.",
+      "required": true
+    },
+    "CALLBACK_HMAC_SECRET": {
+      "description": "High-entropy HMAC-SHA256 secret shared with the ZURS main site callback verifier.",
+      "required": true
+    },
+    "BAKONG_REGISTERED_EMAIL": {
+      "description": "Bakong-registered email used only for the official token renewal request.",
+      "required": true
+    },
+    "BAKONG_ACCESS_TOKEN": {
+      "description": "Current Bakong bearer token. It is renewed through the official API when configured credentials permit.",
+      "required": true
+    },
+    "BAKONG_API_BASE_URL": {
+      "value": "https://api-bakong.nbc.gov.kh",
+      "required": true
+    },
+    "POLL_INTERVAL_MS": {
+      "value": "3500",
+      "required": true
+    },
+    "MAX_ACTIVE_WATCHES": {
+      "value": "500",
+      "required": true
+    }
+  }
+}

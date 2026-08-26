@@ -162,7 +162,7 @@ export async function beginWalletTopup(input: { userId: number; amountKhr: strin
   if (!db) return walletTopupPayload(await createAppwriteWalletTopup(record));
   await db.insert(walletTopups).values(record);
   try {
-    await registerBakongKhqrWorkerWatch({ md5: generated.md5, orderId: `wallet:${record.id}`, amount: String(amount), currency: "KHR" });
+    await registerBakongKhqrWorkerWatch({ md5: generated.md5, orderId: `wallet:${record.id}`, amount: String(amount), currency: "KHR", expiresAt: generated.expiresAt });
   } catch (error) {
     await db.update(walletTopups).set({ status: "failed" }).where(and(eq(walletTopups.id, record.id), eq(walletTopups.status, "pending")));
     throw error;
@@ -398,7 +398,7 @@ export async function beginStagedPayment(input: { orderId: string; userId: numbe
   const transaction = existing[0] && canReuse ? existing[0] : { id: nanoid(), orderId: input.orderId, provider: "bakong_khqr", providerRequestId: generated!.md5, status: "pending" as const, amount: order[0].subtotal, currency, checkoutUrl: generated!.deeplink ?? `/checkout/${input.orderId}`, callbackPayload: { bakongMd5: generated!.md5, merchantAccountId: generated!.merchantAccountId, qrImageDataUrl: generated!.qrImageDataUrl, deeplink: generated!.deeplink }, expiresAt: generated!.expiresAt };
   if (!canReuse) {
     await db.insert(paymentTransactions).values(transaction);
-    await registerBakongKhqrWorkerWatch({ md5: generated!.md5, orderId: input.orderId, amount: String(order[0].subtotal), currency });
+    await registerBakongKhqrWorkerWatch({ md5: generated!.md5, orderId: input.orderId, amount: String(order[0].subtotal), currency, expiresAt: generated!.expiresAt });
   }
   if (order[0].status !== "awaiting_payment") await appendOrderStatusEvent({ orderId: input.orderId, eventType: "payment_session_created", status: "awaiting_payment", actorType: "system", messageKh: statusMessageKh("awaiting_payment") });
   await db.update(orders).set({ status: "awaiting_payment" }).where(eq(orders.id, input.orderId));
@@ -453,6 +453,38 @@ export async function recordKhqrWorkerVerificationDeferred(input: { md5: string;
   if (!payment || payment.status !== "pending" || String(payment.amount) !== String(input.amount) || payment.currency !== input.currency) throw new Error("Deferred verification did not match an eligible checkout payment session.");
   await db.update(paymentTransactions).set({ callbackPayload: { ...payload, lastWorkerVerificationAt: recordedAt, lastWorkerVerificationMd5: input.md5, lastWorkerVerificationStatus: "verification_deferred", lastWorkerVerificationError: input.reason } }).where(and(eq(paymentTransactions.id, payment.id), eq(paymentTransactions.status, "pending")));
   return { recorded: true };
+}
+
+export async function recordKhqrWorkerPaymentExpired(input: { md5: string; orderId: string; amount: string | number; currency: "KHR" | "USD" }) {
+  const db = await getDb();
+  if (!db) throw new Error("Payment expiry status requires the primary ledger database.");
+  if (input.orderId.startsWith("wallet:")) {
+    const walletId = input.orderId.slice("wallet:".length);
+    const rows = await db.select().from(walletTopups).where(eq(walletTopups.id, walletId)).limit(1);
+    const wallet = rows[0];
+    const payload = wallet?.paymentPayload && typeof wallet.paymentPayload === "object" ? wallet.paymentPayload as Record<string, unknown> : {};
+    const storedMd5 = typeof payload.bakongMd5 === "string" ? payload.bakongMd5 : "";
+    if (!wallet || wallet.provider !== "bakong_khqr" || storedMd5 !== input.md5 || String(wallet.amountKhr) !== String(input.amount) || input.currency !== "KHR") throw new Error("Expiry callback did not match an eligible wallet session.");
+    if (wallet.status === "expired") return { idempotent: true };
+    if (wallet.status !== "pending") throw new Error("Expiry callback did not match a pending wallet session.");
+    await db.update(walletTopups).set({ status: "expired" }).where(and(eq(walletTopups.id, wallet.id), eq(walletTopups.status, "pending")));
+    return { idempotent: false };
+  }
+  const match = await db.select({ payment: paymentTransactions, order: orders }).from(paymentTransactions).innerJoin(orders, eq(paymentTransactions.orderId, orders.id)).where(and(eq(paymentTransactions.provider, "bakong_khqr"), eq(paymentTransactions.providerRequestId, input.md5), eq(paymentTransactions.orderId, input.orderId))).limit(1);
+  const record = match[0];
+  if (!record || record.payment.provider !== "bakong_khqr" || record.payment.providerRequestId !== input.md5 || String(record.payment.amount) !== String(input.amount) || record.payment.currency !== input.currency) throw new Error("Expiry callback did not match an eligible checkout payment session.");
+  if (record.payment.status === "expired" && record.order.status === "expired") return { idempotent: true };
+  if (record.payment.status !== "pending" || record.order.status !== "awaiting_payment") throw new Error("Expiry callback did not match a pending checkout payment session.");
+  let transitioned = false;
+  await db.transaction(async (tx) => {
+    const transition = await tx.update(paymentTransactions).set({ status: "expired" }).where(and(eq(paymentTransactions.id, record.payment.id), eq(paymentTransactions.status, "pending")));
+    const affectedRows = Array.isArray(transition) ? Number((transition[0] as { affectedRows?: number } | undefined)?.affectedRows ?? 0) : 0;
+    if (affectedRows <= 0) return;
+    transitioned = true;
+    await tx.update(orders).set({ status: "expired" }).where(and(eq(orders.id, record.order.id), eq(orders.status, "awaiting_payment")));
+    await tx.insert(orderStatusEvents).values({ id: nanoid(), orderId: record.order.id, eventType: "payment_expired", status: "expired", actorType: "system", messageKh: statusMessageKh("expired"), providerReference: input.md5 });
+  });
+  return { idempotent: !transitioned };
 }
 
 export async function reconcileKhqrWorkerPayment(input: { md5: string; orderId: string; amount: string | number; currency: "KHR" | "USD" }) {
