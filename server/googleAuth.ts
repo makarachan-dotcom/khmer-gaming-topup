@@ -36,6 +36,10 @@ export function getGoogleOAuthStatus(env = process.env) {
   return { configured, callbackPath: "/api/auth/google/callback", reason: configured ? null : "Google OAuth credentials have not been configured yet." } as const;
 }
 
+export function getPublicGoogleOAuthStatus(env = process.env) {
+  return getGoogleOAuthStatus(env);
+}
+
 export function getGoogleStateCookieOptions(req: Pick<Request, "protocol" | "headers">) {
   const base = getZursSessionCookieOptions(req);
   return { ...base, sameSite: base.secure ? "none" as const : "lax" as const };
@@ -86,29 +90,33 @@ async function sendWelcomeIfEligible(user: { id: number; email: string | null; n
 }
 
 export function registerGoogleAuthRoutes(app: Express) {
-  app.get("/api/auth/google/status", async (req, res) => { const sender = await db.getGmailSenderConnection(); res.json({ ...getGoogleOAuthStatus(), callbackUrl: getGoogleCallbackUrl(req), gmailSenderConnected: Boolean(sender), senderEmail: sender?.senderEmail ?? null }); });
+  app.get("/api/auth/google/status", (req, res) => { res.setHeader("Cache-Control", "public, max-age=300"); res.json({ ...getPublicGoogleOAuthStatus(), callbackUrl: getGoogleCallbackUrl(req) }); });
   app.get("/api/auth/google/diagnostic", (req, res) => { res.setHeader("Cache-Control", "no-store"); res.json({ routeVersion: "oauth-callback-v3", callbackUrl: getGoogleCallbackUrl(req), databaseConfigured: Boolean(process.env.DATABASE_URL) }); });
   app.get("/api/auth/google", (req, res) => redirectToGoogle(req, res, "sign_in", typeof req.query.returnTo === "string" ? req.query.returnTo : "/account"));
   app.get("/api/auth/google/sender", async (req, res) => { const openId = await readZursSession(req); const user = openId ? await db.getUserByOpenId(openId) : null; if (!user || !isSingleAdminEmail(user.email)) return res.status(401).json({ error: "Sign in as the designated administrator before authorizing Gmail." }); return redirectToGoogle(req, res, "gmail_sender", "/account?gmail=connected"); });
-  app.get("/api/auth/google/callback", async (req, res) => { const saved = readState(req); res.setHeader("Cache-Control", "private, no-store, max-age=0"); res.clearCookie(STATE_COOKIE, getGoogleStateCookieOptions(req)); if (!saved || saved.state !== req.query.state || typeof req.query.code !== "string") return res.status(400).send("Google authorization state expired or did not match. Please try again."); try { const token = await exchangeCode(saved.callbackUrl, req.query.code); const profile = await fetchProfile(token.access_token!); const email = profile.email.toLowerCase(); if (saved.intent === "gmail_sender") { const openId = await readZursSession(req); const currentUser = openId ? await db.getUserByOpenId(openId) : null; if (!currentUser || !isSingleAdminEmail(currentUser.email) || email !== "chanmakara672@gmail.com") return res.status(403).send("The Gmail sender must be authorized by the designated administrator account."); if (!token.refresh_token) return res.status(400).send("Google did not return a refresh token. Remove the app from your Google account and authorize Gmail again."); await db.upsertGmailSenderConnection({ ownerUserId: currentUser.id, senderEmail: email, encryptedRefreshToken: encryptRefreshToken(token.refresh_token) }); return res.redirect(saved.returnPath); }
+  app.get("/api/auth/google/callback", async (req, res) => { const saved = readState(req); res.setHeader("Cache-Control", "private, no-store, max-age=0"); res.clearCookie(STATE_COOKIE, getGoogleStateCookieOptions(req)); if (!saved || saved.state !== req.query.state || typeof req.query.code !== "string") return res.status(400).send("Google authorization state expired or did not match. Please try again."); let stage: "token" | "profile" | "user" | "session" | "welcome" = "token"; try { const token = await exchangeCode(saved.callbackUrl, req.query.code); stage = "profile"; const profile = await fetchProfile(token.access_token!); const email = profile.email.toLowerCase(); if (saved.intent === "gmail_sender") { stage = "user"; const openId = await readZursSession(req); const currentUser = openId ? await db.getUserByOpenId(openId) : null; if (!currentUser || !isSingleAdminEmail(currentUser.email) || email !== "chanmakara672@gmail.com") return res.status(403).send("The Gmail sender must be authorized by the designated administrator account."); if (!token.refresh_token) return res.status(400).send("Google did not return a refresh token. Remove the app from your Google account and authorize Gmail again."); await db.upsertGmailSenderConnection({ ownerUserId: currentUser.id, senderEmail: email, encryptedRefreshToken: encryptRefreshToken(token.refresh_token) }); return res.redirect(saved.returnPath); }
     const fallbackOpenId = `google:${profile.id}`;
     try {
       // Google subject IDs are stable. Using them directly avoids a collection-wide
       // Appwrite email scan on every sign-in, which can exhaust the read quota.
       const openId = fallbackOpenId;
+      stage = "user";
       const persistedUser = await db.upsertUser({ openId, name: profile.name ?? null, email, loginMethod: "google", lastSignedIn: new Date() });
       const user = persistedUser ?? await db.getUserByOpenId(openId);
       if (!user) throw new Error("Unable to create Google user session");
+      stage = "session";
       const session = await createZursSession(openId, { email, name: profile.name ?? null, loginMethod: "google" });
       res.cookie(ZURS_SESSION_COOKIE, session, getZursSessionCookieOptions(req));
+      stage = "welcome";
       await sendWelcomeIfEligible(user);
       return res.redirect(saved.returnPath);
     } catch (error) {
       if (!isAppwriteQuotaFailure(error)) throw error;
+      stage = "session";
       console.warn("[Google OAuth] Appwrite quota exhausted; using signed session fallback until persistence recovers");
       const session = await createZursSession(fallbackOpenId, { email, name: profile.name ?? null, loginMethod: "google" });
       res.cookie(ZURS_SESSION_COOKIE, session, getZursSessionCookieOptions(req));
       return res.redirect(saved.returnPath);
     }
-  } catch (error) { const detail = error instanceof Error ? error.message : "unknown error"; console.error("[Google OAuth] callback failed", detail); return res.status(500).send("Google sign-in could not be completed. Please try again."); } });
+  } catch (error) { const detail = error instanceof Error ? error.message : "unknown error"; console.error("[Google OAuth] callback failed", detail); return res.status(500).send(`Google sign-in could not be completed. Please try again. Reference: ${getGoogleCallbackFailureReference(stage)}`); } });
 }

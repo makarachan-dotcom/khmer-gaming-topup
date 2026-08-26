@@ -13,7 +13,8 @@ describe("Bakong KHQR payment contract", () => {
     expect(adapter).toContain('matchesAmount');
     expect(adapter).toContain('matchesCurrency');
     expect(adapter).toContain('matchesReceiver');
-    expect(adapter).toContain('!returnedReceiver || returnedReceiver === config.accountId.toLowerCase()');
+    expect(adapter).toContain('const expectedMerchantAccountId = (input.expectedMerchantAccountId ?? config.accountId).trim().toLowerCase()');
+    expect(adapter).toContain('!returnedReceiver || returnedReceiver === expectedMerchantAccountId');
     expect(db).toContain('provider: "bakong_khqr"');
     expect(db).toContain('createBakongKhqrPayment');
     expect(db).toContain('checkBakongKhqrPayment');

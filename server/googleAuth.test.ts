@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getGoogleCallbackFailureReference, getGoogleCallbackUrl, getGoogleOAuthStatus, getGoogleStateCookieOptions, isAppwriteQuotaFailure, resolveGoogleUserOpenId, shouldQueueWelcomeEmail } from "./googleAuth";
+import { getGoogleCallbackFailureReference, getGoogleCallbackUrl, getGoogleOAuthStatus, getGoogleStateCookieOptions, getPublicGoogleOAuthStatus, isAppwriteQuotaFailure, resolveGoogleUserOpenId, shouldQueueWelcomeEmail } from "./googleAuth";
 
 describe("Google OAuth staging", () => {
   it("stays inactive without user-owned Google OAuth credentials", () => {
@@ -8,6 +8,10 @@ describe("Google OAuth staging", () => {
 
   it("reports ready only when both Google OAuth credentials are present", () => {
     expect(getGoogleOAuthStatus({ GOOGLE_OAUTH_CLIENT_ID: "client-id", GOOGLE_OAUTH_CLIENT_SECRET: "client-secret" })).toMatchObject({ configured: true, callbackPath: "/api/auth/google/callback", reason: null });
+  });
+
+  it("keeps public OAuth status limited to configuration metadata", () => {
+    expect(getPublicGoogleOAuthStatus({ GOOGLE_OAUTH_CLIENT_ID: "client-id", GOOGLE_OAUTH_CLIENT_SECRET: "client-secret" })).toEqual({ configured: true, callbackPath: "/api/auth/google/callback", reason: null });
   });
 
   it("uses HTTPS for managed live domains and local HTTP only for localhost", () => {
@@ -45,6 +49,8 @@ describe("Google OAuth staging", () => {
   it("maps callback stages to non-sensitive diagnostic references", () => {
     expect(getGoogleCallbackFailureReference("token")).toBe("GOOGLE_TOKEN_FAILED");
     expect(getGoogleCallbackFailureReference("user")).toBe("GOOGLE_USER_FAILED");
+    expect(getGoogleCallbackFailureReference("profile")).toBe("GOOGLE_PROFILE_FAILED");
+    expect(getGoogleCallbackFailureReference("session")).toBe("GOOGLE_SESSION_FAILED");
     expect(getGoogleCallbackFailureReference("welcome")).toBe("GOOGLE_WELCOME_FAILED");
   });
 });

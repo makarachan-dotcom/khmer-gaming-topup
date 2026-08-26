@@ -99,7 +99,7 @@ export async function createBakongKhqrPayment(input: { trackingCode: string; amo
   return { md5, qrImageDataUrl, deeplink, expiresAt: expiry };
 }
 
-export async function checkBakongKhqrPayment(input: { md5: string; expectedAmount: string; expectedCurrency: Currency }) {
+export async function checkBakongKhqrPayment(input: { md5: string; expectedAmount: string; expectedCurrency: Currency; expectedMerchantAccountId?: string }) {
   const config = getConfig();
   if (!config) throw new Error("Bakong KHQR is not configured");
   const response = await fetch(`${apiBaseUrl}/v1/check_transaction_by_md5`, { method: "POST", headers: { Authorization: `Bearer ${config.token}`, "Content-Type": "application/json" }, body: JSON.stringify({ md5: input.md5 }) });
@@ -108,9 +108,12 @@ export async function checkBakongKhqrPayment(input: { md5: string; expectedAmoun
   if (!response.ok || payload.responseCode !== 0 || !payload.data) return { status: payload.errorCode === 1 ? "unpaid" as const : "unavailable" as const };
   const matchesAmount = Math.abs(Number(payload.data.amount) - Number(input.expectedAmount)) < 0.00001;
   const matchesCurrency = payload.data.currency === input.expectedCurrency;
+  const expectedMerchantAccountId = (input.expectedMerchantAccountId ?? config.accountId).trim().toLowerCase();
+  // The private stored MD5 plus exact amount and currency are mandatory. Bakong
+  // may omit the optional receiver field; when it is supplied, it must match.
   const returnedReceiver = payload.data.toAccountId?.trim().toLowerCase();
-  const matchesReceiver = !returnedReceiver || returnedReceiver === config.accountId.toLowerCase();
-  if (!matchesAmount || !matchesCurrency || !matchesReceiver || !payload.data.hash) return { status: "unavailable" as const };
+  const matchesReceiver = !returnedReceiver || returnedReceiver === expectedMerchantAccountId;
+  if (!matchesAmount || !matchesCurrency || !matchesReceiver || !payload.data.hash) return { status: "unavailable" as const, reason: "bakong_transaction_did_not_match_stored_session" };
   return { status: "paid" as const, transactionHash: payload.data.hash };
 }
 
