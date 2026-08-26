@@ -28,6 +28,9 @@ const particleSlots = [
   ["74%", "36%", "2px", "-7.1s"], ["87%", "16%", "1px", "-2.9s"], ["93%", "47%", "2px", "-5.8s"],
   ["9%", "62%", "1px", "-6.7s"], ["31%", "73%", "2px", "-3.1s"], ["55%", "64%", "1px", "-7.5s"],
   ["69%", "81%", "2px", "-1.8s"], ["82%", "68%", "1px", "-4.1s"], ["45%", "91%", "1px", "-6.0s"],
+  ["4%", "45%", "1px", "-4.9s"], ["18%", "84%", "2px", "-2.2s"], ["27%", "48%", "1px", "-6.9s"],
+  ["41%", "39%", "1px", "-1.4s"], ["58%", "46%", "2px", "-5.5s"], ["72%", "56%", "1px", "-3.4s"],
+  ["89%", "76%", "2px", "-7.4s"], ["96%", "29%", "1px", "-2.6s"],
 ] as const;
 
 export default function StorefrontLayout({ children }: { children: ReactNode }) {
@@ -106,7 +109,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
 
       {children}
 
-	      <footer className="mt-16 border-t border-white/80 bg-white/70 pb-28 pt-8 backdrop-blur-xl sm:py-8">
+      <footer className="zurs-footer-glass mt-16 border-t pb-28 pt-8 sm:py-8">
         <div className="container grid gap-5 text-xs text-slate-500 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
           <div className="flex items-center gap-3"><img src={logoUrl} alt="ZURS STORE logo" className="h-9 w-9 rounded-xl object-cover" /><div><p className="font-display font-extrabold text-slate-900">ZURS STORE</p><p className="mt-1 khmer-body">សេវាកម្មហ្គេម និងឌីជីថល សម្រាប់អ្នកលេងកម្ពុជា។</p><p className="mt-1 text-[10px] font-semibold text-slate-500">© ZURS STORE · by ZURS STORE</p><div className="mt-2 inline-flex items-center gap-2 rounded-lg bg-emerald-50/85 px-3 py-2 text-emerald-800"><ShieldCheck className="h-4 w-4" /><span className="khmer-tight">សេវាកម្មរហ័ស និងមានទំនុកចិត្ត</span></div></div></div>
           <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-[11px] font-semibold text-slate-500"><Link href="/privacy" onClick={() => window.scrollTo({ top: 0, behavior: "auto" })} className="hover:text-indigo-700">Privacy Policy</Link><Link href="/terms" onClick={() => window.scrollTo({ top: 0, behavior: "auto" })} className="hover:text-indigo-700">Terms of Service</Link></div>

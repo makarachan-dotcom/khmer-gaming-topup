@@ -180,7 +180,7 @@ function HomeGameCard({
     <div ref={cardRef}>
       <Link
         href={gameTopupPath(game.id)}
-        className="game-catalog-card group block rounded-2xl border border-slate-200 bg-white p-3 text-left transition hover:border-indigo-300"
+        className="game-catalog-card zurs-mobile-glass group block rounded-2xl border p-3 text-left transition hover:border-indigo-300"
       >
         <div className="flex items-center gap-3">
           <ProviderGameArtwork
@@ -216,7 +216,7 @@ function ProviderGameCatalogGroup({ baseName, games }: { baseName: string; games
   if (normalizedBaseName === "pubg mobile" || games.some(game => game.id === "pubg_mobile_auto" || game.id === "pubg_mobile_fast")) {
     return <HomeGameCard game={{ ...primary, id: "pubg_mobile", name: "PUBG Mobile" }} displayName="PUBG Mobile" />;
   }
-  return <section className="col-span-full rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/80 via-white to-cyan-50/80 p-3 shadow-sm"><div className="flex items-center gap-2"><ProviderGameArtwork name={primary.name} region={primary.region} logoUrl={primary.logoUrl} className="h-9 w-9 rounded-xl" showCountryFlag={false} /><div className="min-w-0"><OverflowMarquee text={baseName} className="block text-sm font-extrabold text-slate-950" /><p className="mt-0.5 text-[10px] font-semibold text-indigo-700">គាំទ្រសម្រាប់កម្ពុជា · ជ្រើសរើសប្រភេទ top-up</p></div></div><div className={games.length === 1 ? "mx-auto mt-3 grid w-full max-w-[12rem] grid-cols-1 gap-3" : "mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"}>{games.map(game => <HomeGameCard key={game.id} game={game} displayName={providerGameVariantLabel(game)} />)}</div></section>;
+  return <section className="zurs-mobile-glass col-span-full rounded-2xl border p-3"><div className="flex items-center gap-2"><ProviderGameArtwork name={primary.name} region={primary.region} logoUrl={primary.logoUrl} className="h-9 w-9 rounded-xl" showCountryFlag={false} /><div className="min-w-0"><OverflowMarquee text={baseName} className="block text-sm font-extrabold text-slate-950" /><p className="mt-0.5 text-[10px] font-semibold text-indigo-700">គាំទ្រសម្រាប់កម្ពុជា · ជ្រើសរើសប្រភេទ top-up</p></div></div><div className={games.length === 1 ? "mx-auto mt-3 grid w-full max-w-[12rem] grid-cols-1 gap-3" : "mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"}>{games.map(game => <HomeGameCard key={game.id} game={game} displayName={providerGameVariantLabel(game)} />)}</div></section>;
 }
 
 const catalogFilters: Array<{ value: ProviderGameFilter; label: string }> = [
@@ -296,7 +296,7 @@ function HomeTopupExperience() {
                   value={query}
                   onChange={event => setQuery(event.target.value)}
                   placeholder="ស្វែងរកហ្គេម…"
-                  className="h-11 w-full rounded-xl border border-slate-200 bg-white py-2 pl-10 pr-10 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  className="zurs-mobile-glass h-11 w-full rounded-xl border py-2 pl-10 pr-10 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                 />
                 {query ? (
                   <button
@@ -310,7 +310,7 @@ function HomeTopupExperience() {
                 ) : null}
               </label>
               <div
-                className="flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-slate-50 p-1"
+                className="zurs-mobile-glass flex gap-1 overflow-x-auto rounded-xl border p-1"
                 role="group"
                 aria-label="តម្រៀបតាមតំបន់"
               >

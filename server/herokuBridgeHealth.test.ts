@@ -1,0 +1,18 @@
+import { describe, expect, it } from "vitest";
+
+describe("authorized Heroku bridge health", () => {
+  it("responds from the configured HTTPS bridge without a player lookup", async () => {
+    const bridgeUrl = process.env.HEROKU_BRIDGE_URL;
+    expect(bridgeUrl).toMatch(/^https:\/\//);
+
+    const response = await fetch(new URL("/health", bridgeUrl).toString(), {
+      headers: { accept: "application/json" },
+      signal: AbortSignal.timeout(8_000),
+    });
+    expect(response.ok).toBe(true);
+
+    const payload = await response.json() as { ok?: boolean; configured?: boolean };
+    expect(payload.ok).toBe(true);
+    expect(payload.configured).toBe(true);
+  }, 12_000);
+});
