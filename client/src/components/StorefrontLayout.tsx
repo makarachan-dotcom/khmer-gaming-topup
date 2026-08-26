@@ -7,16 +7,13 @@ import { OverflowMarquee } from "@/components/OverflowMarquee";
 import { useSelectedProduct } from "@/contexts/SelectedProductContext";
 import { trpc } from "@/lib/trpc";
 import { animate } from "animejs";
-import { ArrowUp, BarChart3, ChevronDown, CircleDollarSign, Crown, Eye, EyeOff, House, LogIn, ShieldCheck, Store, UserRound, WalletCards } from "lucide-react";
+import { ArrowUp, Bot, ChevronDown, CircleDollarSign, Crown, Eye, EyeOff, House, LogIn, ShieldCheck, UserRound, WalletCards } from "lucide-react";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
+import ZursAiChat, { ZursAiFloatingButton } from "./ZursAiChat";
+import { openZursAiChat } from "@/lib/zursAiEvents";
 
 const logoUrl = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/kBXeVXEnNVEuNZKS.jpg";
-
-const navigation = [
-  { href: "/smm", label: "SMM" },
-  { href: "/marketplace", label: "ទីផ្សារគណនី" },
-];
 
 export function isProtectedMediaTarget(target: EventTarget | null) {
   return typeof Element !== "undefined" && target instanceof Element && Boolean(target.closest("img, video"));
@@ -24,8 +21,7 @@ export function isProtectedMediaTarget(target: EventTarget | null) {
 
 const mobileNavigation = [
   { href: "/", label: "ទំព័រដើម", icon: House, animation: "home" as const },
-  { href: "/smm", label: "SMM", icon: BarChart3 },
-  { href: "/marketplace", label: "ទីផ្សារ", icon: Store },
+  { href: "/ai", label: "AI", icon: Bot, ai: true },
   { href: "/account", label: "គណនី", icon: UserRound },
 ];
 
@@ -92,9 +88,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
 	            <div className="fx-zurs-me" aria-label="ZURS.me"><span style={{ "--i": 0 } as React.CSSProperties}>Z</span><span style={{ "--i": 1 } as React.CSSProperties}>U</span><span style={{ "--i": 2 } as React.CSSProperties}>R</span><span style={{ "--i": 3 } as React.CSSProperties}>S</span><i aria-hidden="true">.</i><span style={{ "--i": 4 } as React.CSSProperties}>m</span><span style={{ "--i": 5 } as React.CSSProperties}>e</span></div>
 	          </Link>
 
-          <nav className="hidden items-center gap-1 lg:flex" aria-label="Main navigation">
-            {navigation.map((item) => { const Icon = item.href === "/smm" ? BarChart3 : Store; return <Link key={item.href} href={item.href} className={cn("inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition-all hover:-translate-y-0.5", location === item.href ? "bg-indigo-50 text-indigo-700 shadow-sm" : "text-slate-600 hover:bg-white/80 hover:text-slate-950")}><Icon className="h-3.5 w-3.5" />{item.label}</Link>; })}
-          </nav>
+          <nav className="hidden items-center gap-1 lg:flex" aria-label="Main navigation"><button type="button" onClick={openZursAiChat} className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-bold text-cyan-800 transition-all hover:-translate-y-0.5 hover:bg-cyan-50"><Bot className="h-3.5 w-3.5" />AI ជំនួយការ</button></nav>
 
           <div className="flex items-center gap-1.5 sm:gap-2">
             {user ? <div className="relative"><button type="button" onClick={() => setBalanceVisible((current) => !current)} aria-expanded={balanceVisible} aria-pressed={balanceVisible} aria-label={balanceVisible ? "លាក់សមតុល្យ" : "បង្ហាញសមតុល្យ"} className={cn("balance-control group inline-flex h-9 items-center gap-1.5 rounded-xl border border-emerald-100 bg-emerald-50/85 px-2.5 text-emerald-800 shadow-sm transition-all hover:-translate-y-0.5 hover:border-emerald-200 hover:bg-emerald-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 sm:px-3", balanceVisible && "balance-control--visible")}><span className="grid h-5 w-5 place-items-center rounded-lg bg-white text-emerald-600 shadow-sm"><WalletCards className="balance-wallet-icon h-3.5 w-3.5 transition-transform duration-300 group-hover:rotate-[-8deg]" /></span><span className="hidden text-left sm:block"><span className="block text-[8px] font-extrabold tracking-[0.12em] text-emerald-700/80">ZURS BALANCE</span><span className="-mt-0.5 block font-mono text-xs font-extrabold tabular-nums">{wallet.isLoading ? "…" : balanceVisible ? `៛ ${displayedBalance}` : "••••"}</span></span>{balanceVisible ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}<ChevronDown className={cn("hidden h-3 w-3 transition-transform sm:block", balanceVisible && "rotate-180")} /></button>{balanceVisible && <div className="absolute right-0 top-[calc(100%+0.5rem)] w-64 overflow-hidden rounded-2xl border border-emerald-100 bg-white p-3 shadow-xl shadow-slate-950/10"><div className="flex items-start gap-2"><div className="grid h-8 w-8 place-items-center rounded-xl bg-emerald-50 text-emerald-600"><CircleDollarSign className="h-4 w-4" /></div><div><p className="text-xs font-extrabold text-slate-900">សមតុល្យ ZURS Wallet</p><p className="mt-0.5 text-[10px] leading-4 text-slate-500">សមតុល្យនេះបង្ហាញតែទិន្នន័យ Wallet ដែលបានកត់ត្រាដោយប្រព័ន្ធ។</p></div></div><div className="mt-3 flex items-center justify-between rounded-xl bg-slate-950 px-3 py-2 text-white"><span className="text-[10px] font-bold text-slate-300">Available</span><span className="font-mono text-sm font-extrabold tabular-nums">៛ {displayedBalance} {balanceCurrency}</span></div><Link href="/wallet" onClick={() => setBalanceVisible(false)} className="mt-3 inline-flex h-9 w-full items-center justify-center rounded-xl bg-emerald-600 px-3 text-xs font-bold text-white transition hover:bg-emerald-700">បញ្ចូលប្រាក់</Link></div>}</div> : null}
@@ -116,11 +110,13 @@ function StorefrontShell({ children }: { children: ReactNode }) {
         </div>
       </footer>
 
-      {selectedProduct ? <SelectedProductActionBar product={selectedProduct} isAuthenticated={Boolean(user)} isAuthenticationLoading={loading} signInHref={googleSignInHref} /> : <nav className="liquid-tabbar zurs-mobile-tabbar fixed inset-x-3 bottom-3 z-40 grid grid-cols-4 gap-1 rounded-[1.35rem] p-1.5 sm:hidden" style={{ "--mobile-tab-index": activeMobileTabIndex } as React.CSSProperties} aria-label="Mobile primary navigation">
+      {selectedProduct ? <SelectedProductActionBar product={selectedProduct} isAuthenticated={Boolean(user)} isAuthenticationLoading={loading} signInHref={googleSignInHref} /> : <nav className="liquid-tabbar zurs-mobile-tabbar fixed inset-x-3 bottom-3 z-40 grid grid-cols-3 gap-1 rounded-[1.35rem] p-1.5 sm:hidden" style={{ "--mobile-tab-index": activeMobileTabIndex } as React.CSSProperties} aria-label="Mobile primary navigation">
         <span className="zurs-mobile-tab-indicator" aria-hidden="true" />
-        {mobileNavigation.map(({ href, label, icon: Icon, animation }) => { const active = location === href; return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={cn("zurs-mobile-tab relative z-10 flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-bold transition-all", active ? "zurs-mobile-tab--active text-slate-950" : "text-slate-500 hover:bg-white/75 hover:text-indigo-700")}>{active && animation ? <AnimatedGlyph name={animation} size={21} color="#312e81" /> : <Icon className={cn("h-4 w-4", active && "tab-icon-active")} strokeWidth={active ? 2.35 : 1.9} />}<span className="truncate">{label}</span></Link>; })}
+        {mobileNavigation.map(({ href, label, icon: Icon, animation, ai }) => { const active = !ai && location === href; const classes = cn("zurs-mobile-tab relative z-10 flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-bold transition-all", active ? "zurs-mobile-tab--active text-slate-950" : "text-slate-500 hover:bg-white/75 hover:text-indigo-700"); return ai ? <button type="button" key={href} onClick={openZursAiChat} className={classes} aria-label="បើក ZURS AI"><Icon className="h-4 w-4 text-cyan-600" strokeWidth={2.2} /><span className="truncate">{label}</span></button> : <Link key={href} href={href} aria-current={active ? "page" : undefined} className={classes}>{active && animation ? <AnimatedGlyph name={animation} size={21} color="#312e81" /> : <Icon className={cn("h-4 w-4", active && "tab-icon-active")} strokeWidth={active ? 2.35 : 1.9} />}<span className="truncate">{label}</span></Link>; })}
       </nav>}
       <button type="button" onClick={navigateToTop} aria-label="ត្រឡប់ទៅខាងលើ" className={cn("fixed right-4 z-[45] grid h-11 w-11 place-items-center rounded-2xl border border-white/80 bg-slate-950 text-white shadow-lg shadow-slate-950/20 transition-[opacity,transform,background-color] duration-200 hover:-translate-y-1 hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 sm:bottom-6", showScrollTop ? "bottom-[5.5rem] opacity-100" : "pointer-events-none bottom-[4.5rem] translate-y-3 opacity-0")}><ArrowUp className="h-5 w-5" strokeWidth={2.25} /></button>
+      <ZursAiFloatingButton />
+      <ZursAiChat />
     </div>
   );
 }

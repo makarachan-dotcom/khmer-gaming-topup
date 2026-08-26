@@ -265,6 +265,9 @@ button, input, textarea, select { font: inherit; }
 @keyframes hero-chip-pop { 0% { transform: scale(1); } 45% { transform: scale(1.22) rotate(-6deg); } 100% { transform: scale(1) rotate(0deg); } }
 @keyframes homepage-orb-float { 0%, 100% { transform: translate3d(0, 0, 0); } 50% { transform: translate3d(-5px, 8px, 0); } }
 @keyframes diamond-drift { 0%, 100% { translate: 0 0; rotate: -5deg; } 50% { translate: -5px -8px; rotate: 7deg; } }
+@keyframes zurs-ai-orb-pulse { 0%, 100% { box-shadow: 0 0 0 0 oklch(0.86 0.14 205 / 0.12), 0 0 22px oklch(0.78 0.12 218 / 0.18); transform: scale(1); } 50% { box-shadow: 0 0 0 12px oklch(0.86 0.14 205 / 0), 0 0 38px oklch(0.78 0.12 218 / 0.3); transform: scale(1.035); } }
+.zurs-ai-orb { animation: zurs-ai-orb-pulse 2.35s cubic-bezier(0.77, 0, 0.175, 1) infinite; }
+@media (prefers-reduced-motion: reduce) { .zurs-ai-orb { animation: none !important; } }
 
 /* Floating particles — នាងបក់នាងបោយ ✦ (homepage hero) */
 .hero-particles { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }

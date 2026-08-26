@@ -25,28 +25,22 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
 import { gameTopupPath } from "./GameTopup";
+import { openZursAiChat } from "@/lib/zursAiEvents";
 
 export default function Home() {
   return (
     <StorefrontLayout>
       <main>
-        <section className="container pt-5 sm:pt-10">
-          <div className="homepage-banner overflow-hidden rounded-[1.5rem] bg-transparent sm:rounded-[2rem]">
-            <img
-              src="/zurs-banner.png"
-              alt="ZURS STORE — Topup Diamond and SMM"
-              className="block h-auto w-full"
-              loading="eager"
-              fetchPriority="high"
-              decoding="async"
-            />
-          </div>
-        </section>
         <HomepageMedia />
+        <ZursAiHomeCard />
         <HomeTopupExperience />
       </main>
     </StorefrontLayout>
   );
+}
+
+function ZursAiHomeCard() {
+  return <section className="container mt-5 sm:mt-8"><div className="overflow-hidden rounded-[1.5rem] border border-cyan-200/70 bg-gradient-to-br from-slate-950 via-[#10233e] to-cyan-950 p-5 text-white shadow-xl shadow-cyan-950/15 sm:p-7"><div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-start gap-4"><div className="zurs-ai-orb grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-cyan-200/20 bg-cyan-300/10 motion-reduce:animate-none"><AnimatedGlyph name="activity" size={24} color="#a5f3fc" /></div><div><p className="text-[10px] font-extrabold tracking-[0.16em] text-cyan-200">ZURS AI · 24/7</p><h2 className="mt-1 text-xl font-extrabold sm:text-2xl">សួរអំពីហ្គេម និងកញ្ចប់បានភ្លាមៗ</h2><p className="mt-2 max-w-xl text-sm leading-6 text-slate-300">ឲ្យ ZURS AI ជួយណែនាំកញ្ចប់, ពន្យល់របៀបដាក់លេខ ID និងស្វែងរកព័ត៌មាន event ថ្មីៗ។</p></div></div><button type="button" onClick={openZursAiChat} className="inline-flex h-11 shrink-0 items-center justify-center rounded-xl bg-cyan-300 px-4 text-sm font-extrabold text-slate-950 transition hover:-translate-y-0.5 hover:bg-cyan-200">ចាប់ផ្ដើមឆាត</button></div></div></section>;
 }
 
 function HomepageMedia() {

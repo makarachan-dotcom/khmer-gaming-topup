@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+vi.mock("streamdown", () => ({ Streamdown: () => null }));
 import { canBrowseTopupPackages, canBrowseVerifiedPackages, gameIdFromTopupPath, gameThemedArtworkForPackage, gameTopupPath, groupProviderPackagesByMeaning, initialDiamondPackageLimit, partitionProviderPackagesForFullTicketEvent, readVerifiedPlayerEntries, requiresPlayerIdentityCheck, saveVerifiedPlayerEntry, sortProviderPackagesByPrice, usesLegacyMobileLegendsArtwork, usesMobileLegendsDiamondChestArtwork, visibleDiamondPackageItems } from "./GameTopup";
 
 describe("dedicated game top-up routes", () => {

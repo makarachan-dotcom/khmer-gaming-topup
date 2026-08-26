@@ -46,10 +46,18 @@
 - [x] Change the OAuth state cookie from `SameSite=None` to secure top-level-navigation-compatible `SameSite=Lax`, with regression coverage for mobile callback cookie handling.
 - [x] Verify the deployed Google OAuth start route emits a secure `SameSite=Lax` state cookie after publication.
 - [x] Complete one owner-approved mobile Google sign-in callback test and confirm the prior state-mismatch error no longer appears, or capture only the new non-sensitive failure reference if it persists; owner confirmed normal completion.
+- [x] Retire customer-facing SMM and account-marketplace routes, navigation, catalog mentions, and promotional copy without deleting protected historical data or admin audit records.
+- [x] Add a fullscreen Khmer-first ZURS AI Chat overlay with shared floating/home/top-up entry points, header/tab-bar suppression, accessible close controls, and reduced-motion-safe response state.
+- [ ] Integrate the selected AI and search providers only through server-side secrets after verifying provider documentation, supported models, pricing, vision, and streaming capabilities.
+- [x] Add server-side chat routing, bounded contextual product knowledge, rate/message limits, Thai-script quiet refusal, privacy guardrails, and payment-bypass prevention.
+- [x] Add safe AI product-recommendation mini-cards that route users to the existing top-up flow; do not generate KHQR, create orders, or process payments from chat while Payment Control is OFF.
+- [x] Replace retired SMM/marketplace placements with AI Chat entry points across the homepage, game top-up pages, and mobile navigation.
 - [x] Restrict public Google OAuth status output so it does not disclose the configured Gmail sender address or other account-specific metadata.
 - [ ] Obtain Bakong developer support confirmation for the current dynamic-transaction lookup failure (non-success responseCode 1/errorCode 17 with no data), then rerun preflight before any additional paid test.
 - [x] Re-upload Oracle SSH key before mirroring the newly supplied API token to the private worker environment; never paste the key or token in chat.
 - [x] Use the renewed SSH key to mirror the newly supplied Bakong token to the worker, reload PM2, and record only safe status codes; PM2 reloaded, public worker health returned ok, and project/worker token fingerprint comparison returned MATCH.
+- [x] Audit all active customer-facing pages/components and remove or redirect every remaining SMM/marketplace mention/copy while preserving admin marketplace-safety and historical data.
+- [x] Expand ZURS AI server context to include safe bounded catalog details (packages/prices where available, top-up requirements, FAQ/policies/support guidance) and add tests proving chat cannot trigger wallet/order/KHQR/admin/payment paths.
 - [x] Re-run a worker-side privacy-safe provider probe after the renewed-key token sync and record only HTTP, responseCode, and errorCode outcomes; latest-job lookup returned HTTP 200, responseCode 1, errorCode 17, with no data.
 - [ ] Validate the active project/runtime Bakong credentials return VERIFIED in the lightweight credential test before considering another paid test.
 - [x] Refactor Wallet ten-second automatic status updates to use the owner-scoped primary ledger rather than duplicate direct Bakong transaction checks; retain the worker as automatic provider verifier and retain exactly two manual provider checks.

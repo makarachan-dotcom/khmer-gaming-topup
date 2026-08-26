@@ -2,16 +2,12 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
 import { Redirect, Route, Switch } from "wouter";
+import { useEffect } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { SelectedProductProvider } from "./contexts/SelectedProductContext";
 import Home from "./pages/Home";
-import Smm from "./pages/Smm";
-import Marketplace from "./pages/Marketplace";
-import SellAccount from "@/pages/SellAccount";
-import MarketplaceVerify from "@/pages/MarketplaceVerify";
 import AdminMarketplaceSafety from "@/pages/AdminMarketplaceSafety";
-import MyMarketplaceListings from "@/pages/MyMarketplaceListings";
 import Account from "./pages/Account";
 import Favorites from "./pages/Favorites";
 import Wallet from "./pages/Wallet";
@@ -25,21 +21,27 @@ import Checkout from "./pages/Checkout";
 import AdminMedia from "./pages/AdminMedia";
 import Legal from "./pages/Legal";
 import GameTopup from "./pages/GameTopup";
+import ZursAiChat from "./components/ZursAiChat";
+
+function AiEntry() {
+  return <ZursAiChat initialOpen />;
+}
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
+      <Route path="/ai" component={AiEntry} />
       <Route path={"/"} component={Home} />
       <Route path="/topup/:gameId" component={GameTopup} />
       <Route path={"/topup"}><Redirect to="/" /></Route>
-      <Route path={"/smm"} component={Smm} />
-      <Route path={"/marketplace"} component={Marketplace} />
-      <Route path="/marketplace/sell" component={SellAccount} />
-      <Route path="/marketplace/verify" component={MarketplaceVerify} />
-      <Route path="/marketplace/manage" component={MyMarketplaceListings} />
+      <Route path={"/smm"}><Redirect to="/ai" /></Route>
+      <Route path="/marketplace/sell"><Redirect to="/ai" /></Route>
+      <Route path="/marketplace/verify"><Redirect to="/ai" /></Route>
+      <Route path="/marketplace/manage"><Redirect to="/ai" /></Route>
+      <Route path={"/marketplace"}><Redirect to="/ai" /></Route>
       <Route path={"/account"} component={Account} />
-      <Route path={"/favorites"} component={Favorites} />
+      <Route path={"/favorites"}><Redirect to="/ai" /></Route>
       <Route path={"/wallet"} component={Wallet} />
       <Route path={"/order-status"} component={OrderStatus} />
       <Route path="/admin" component={Admin} />

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+vi.mock("streamdown", () => ({ Streamdown: () => null }));
 import { isProtectedMediaTarget } from "./StorefrontLayout";
 
 class MediaElement {
@@ -37,12 +38,13 @@ describe("storefront media protection", () => {
     expect(styleSource).not.toContain(".fx-topographic");
   });
 
-  it("removes the Gaming & Digital subtitle and retains a clean four-item mobile tab bar", () => {
+  it("removes the Gaming & Digital subtitle and retains a clean AI-first mobile tab bar", () => {
     const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
     const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
     expect(componentSource).not.toContain("GAMING &amp; DIGITAL");
     expect(componentSource).toContain("zurs-mobile-tabbar");
     expect(componentSource).toContain("zurs-mobile-tab--active");
+    expect(componentSource).toContain('label: "AI"');
     expect(styleSource).toContain("radial-gradient(circle, oklch(0.49 0.05 267 / 0.18)");
   });
 
