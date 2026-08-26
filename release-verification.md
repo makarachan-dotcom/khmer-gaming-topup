@@ -34,3 +34,5 @@ On 2026-08-26, the local desktop and 375px mobile review showed the rounded stic
 ## Checkpoint bf544633 production verification
 
 On 2026-08-26, `https://www.zurs.me/?release=bf544633` completed its initial catalog request and visibly rendered 9 of 9 public games: 8 Ball Pool, Blood Strike, EAFC Mobile (KH), FRAG Pro Shooter, Free Fire (MY/SG), Honor of Kings, Magic Chess Go Go (Global), Mobile Legends, and PUBG Mobile (Auto). The official page rendered the compact banner, showed the payment-disabled customer notice, and did not expose public AI navigation. No credential, player ID, QR, or merchant data was recorded.
+
+The requested Jeenastore fallback could not be authorized from public information: a public search found no Jeenastore MLBB verification API documentation, and `https://jeenastore.com/` did not resolve during text extraction. It remains disabled pending a documented/owner-authorized HTTPS endpoint and provider contract.
