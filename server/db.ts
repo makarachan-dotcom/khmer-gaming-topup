@@ -6,9 +6,10 @@ import {
     adminRoleAudits, customerWallets, gamePackages, gameProducts, gmailSenderConnections, InsertUser, marketplaceContacts, marketplaceDisclosureRequests, marketplaceEvidenceAccessLogs, marketplaceFavorites, marketplaceFraudReports, marketplaceListings, marketplaceVerificationEvidence, marketplaceVerifications, orders, orderStatusEvents, orderSupportTickets, paymentTransactions, providerPackageArtworkAudits, providerPackageArtworkOverrides, savedPlayerIds, siteContent, smmServices, smmTiers, User,
 users, walletTopups, welcomeEmailDeliveries,
 } from "../drizzle/schema";
-import { createAppwriteMarketplaceListing, createAppwriteWalletTopup, deleteAppwriteMarketplaceListing, getAppwriteAdminRoleAudits, getAppwriteCustomerOrders, getAppwriteCustomerPaymentHistory, getAppwritePaymentControl, getAppwriteProviderCatalog, getAppwriteUserByEmail, getAppwriteUserByOpenId, getAppwriteWalletSummary, getAppwriteWalletTopup, isAppwriteStoreConfigured, listAppwriteMarketplaceListings, listAppwriteUsers, setAppwritePaymentControl, setAppwriteUserRole, syncAppwriteFzrCatalog, syncAppwriteSmmCatalog, updateAppwriteMarketplaceListing, updateAppwriteProviderOffer, updateAppwriteUserDisplayName, updateAppwriteWalletTopup, upsertAppwriteUser } from "./appwriteStore";
+import { createAppwriteMarketplaceListing, createAppwriteWalletTopup, deleteAppwriteMarketplaceListing, getAppwriteAdminPermissions, getAppwriteAdminRoleAudits, getAppwriteCustomerOrders, getAppwriteCustomerPaymentHistory, getAppwritePaymentControl, getAppwriteProviderCatalog, getAppwriteUserByEmail, getAppwriteUserByOpenId, getAppwriteWalletSummary, getAppwriteWalletTopup, isAppwriteStoreConfigured, listAppwriteMarketplaceListings, listAppwriteUsers, setAppwriteAdminPermissions, setAppwritePaymentControl, setAppwriteUserRole, syncAppwriteFzrCatalog, syncAppwriteSmmCatalog, updateAppwriteMarketplaceListing, updateAppwriteProviderOffer, updateAppwriteUserDisplayName, updateAppwriteWalletTopup, upsertAppwriteUser } from "./appwriteStore";
 import { buildOrderNumber, isSingleAdminEmail } from "./storefrontDomain";
 import { validateAdminRoleChange } from "./adminRoles";
+import { delegatedAdminPermissionKeys, normalizeDelegatedAdminPermissions, type DelegatedAdminPermission } from "./adminPermissions";
 import { buildEvidenceRetentionAuditReason, canApproveMarketplaceVerification, hasOnlyOwnedMarketplaceScreenshotKeys, type DisclosureRequestStatus, type FraudReportStatus } from "./marketplaceSafety";
 import { getPublicPaymentReadiness } from "./paymentReadiness";
 import { checkBakongKhqrPayment, createBakongKhqrPayment, registerBakongKhqrWorkerWatch } from "./bakongKhqr";
@@ -42,9 +43,13 @@ export async function upsertUser(user: InsertUser): Promise<User | undefined> {
     const email = user.email?.trim().toLowerCase() ?? null;
     values.email = email;
     updateSet.email = email;
-    const role = isSingleAdminEmail(email) ? "admin" : "user";
-    values.role = role;
-    updateSet.role = role;
+    // A sign-in refresh must never demote an Owner-approved delegated Admin.
+    // Only the designated owner is force-promoted; all other stored roles are
+    // preserved and can be changed exclusively through the owner-only role route.
+    if (isSingleAdminEmail(email)) {
+      values.role = "admin";
+      updateSet.role = "admin";
+    }
   }
   await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
   return undefined;
@@ -56,6 +61,32 @@ export async function getUserByOpenId(openId: string) {
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
   return normalizeOwnerRole(result[0]);
 }
+
+const delegatedAdminPermissionsContentKey = (userId: number) => `admin-permissions:${userId}`;
+
+export async function getDelegatedAdminPermissions(userId: number): Promise<DelegatedAdminPermission[]> {
+  const db = await getDb();
+  if (!db) return isAppwriteStoreConfigured() ? getAppwriteAdminPermissions(userId) : [];
+  const rows = await db.select({ bodyKh: siteContent.bodyKh }).from(siteContent).where(eq(siteContent.contentKey, delegatedAdminPermissionsContentKey(userId))).limit(1);
+  if (!rows[0]?.bodyKh) return [];
+  try { return normalizeDelegatedAdminPermissions(JSON.parse(rows[0].bodyKh)); } catch { return []; }
+}
+
+export async function setDelegatedAdminPermissions(input: { actorUserId: number; targetUserId: number; permissions: DelegatedAdminPermission[] }) {
+  const permissions = normalizeDelegatedAdminPermissions(input.permissions);
+  const db = await getDb();
+  if (!db) {
+    if (!isAppwriteStoreConfigured()) throw new Error("Delegated Admin permission storage is unavailable.");
+    return setAppwriteAdminPermissions({ userId: input.targetUserId, permissions, updatedByUserId: input.actorUserId });
+  }
+  const target = await db.select({ role: users.role }).from(users).where(eq(users.id, input.targetUserId)).limit(1);
+  if (!target[0] || target[0].role !== "admin") throw new Error("Only an existing delegated Admin can receive Admin permissions.");
+  const key = delegatedAdminPermissionsContentKey(input.targetUserId);
+  await db.insert(siteContent).values({ id: nanoid(), contentKey: key, titleKh: "Delegated Admin permissions", bodyKh: JSON.stringify(permissions), isActive: false, updatedByUserId: input.actorUserId }).onDuplicateKeyUpdate({ set: { bodyKh: JSON.stringify(permissions), isActive: false, updatedByUserId: input.actorUserId } });
+  return { permissions };
+}
+
+export function getOwnerAdminPermissions() { return [...delegatedAdminPermissionKeys]; }
 
 export async function getUserByEmail(email: string) {
   const db = await getDb();

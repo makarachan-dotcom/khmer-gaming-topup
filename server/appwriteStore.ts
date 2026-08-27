@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { nanoid } from "nanoid";
 import type { InsertUser, User } from "../drizzle/schema";
 import { validateAdminRoleChange } from "./adminRoles";
+import { normalizeDelegatedAdminPermissions, type DelegatedAdminPermission } from "./adminPermissions";
 import { isSingleAdminEmail } from "./storefrontDomain";
 import type { FzrProviderSyncSnapshot, SmmProviderCatalogResponse } from "./providerCatalog";
 
@@ -15,6 +16,7 @@ export type AppwriteProviderCatalog = { games: Array<{ id: string; providerSourc
 type AppwriteProviderCatalogIndex = { gameSourceIds: string[]; smmSourceIds: string[]; updatedAt: string };
 export type AppwriteAdminRoleAudit = { id: string; actorUserId: number; targetUserId: number; previousRole: "user" | "admin"; nextRole: "user" | "admin"; reason: string; createdAt: Date };
 export type AppwritePaymentControl = { enabled: boolean; updatedByUserId: number | null; updatedAt: Date };
+export type AppwriteAdminPermissions = { userId: number; permissions: DelegatedAdminPermission[]; updatedByUserId: number; updatedAt: Date };
 
 const databaseId = () => process.env.APPWRITE_DATABASE_ID || "zurs_store";
 const collectionId = "zurs_records";
@@ -322,6 +324,10 @@ function adminRoleAuditDocumentPath(auditId: string) {
   return `/databases/${databaseId()}/collections/${collectionId}/documents/${documentId(`admin_role_audits:${auditId}`)}`;
 }
 
+function adminPermissionsDocumentPath(userId: number) {
+  return `/databases/${databaseId()}/collections/${collectionId}/documents/${documentId(`admin_permissions:${userId}`)}`;
+}
+
 async function pagedRecords(pageSize: number, buildPath: (offset: number) => string) {
   const records: AppwriteRecord[] = [];
   for (let offset = 0; offset < 10_000; offset += pageSize) {
@@ -411,6 +417,32 @@ export async function setAppwriteUserRole(input: { actorUserId: number; targetUs
     throw error;
   }
   return { success: true };
+}
+
+export async function getAppwriteAdminPermissions(userId: number) {
+  if (!config()) return [];
+  try {
+    const record = await request("GET", adminPermissionsDocumentPath(userId)) as AppwriteRecord | null;
+    const value = record && record.sourceTable === "admin_permissions" ? parsePayload<Partial<AppwriteAdminPermissions>>(record) : null;
+    return normalizeDelegatedAdminPermissions(value?.permissions);
+  } catch {
+    return [];
+  }
+}
+
+export async function setAppwriteAdminPermissions(input: { userId: number; permissions: DelegatedAdminPermission[]; updatedByUserId: number }) {
+  if (!config()) throw new Error("Delegated Admin permission storage is unavailable.");
+  const updatedAt = new Date();
+  const payload: AppwriteAdminPermissions = { userId: input.userId, permissions: normalizeDelegatedAdminPermissions(input.permissions), updatedByUserId: input.updatedByUserId, updatedAt };
+  const body = { data: { sourceTable: "admin_permissions", sourceId: String(input.userId), payload: JSON.stringify(payload), sourceUpdatedAt: updatedAt.toISOString() } };
+  const path = adminPermissionsDocumentPath(input.userId);
+  try {
+    await request("POST", `/databases/${databaseId()}/collections/${collectionId}/documents`, { documentId: documentId(`admin_permissions:${input.userId}`), ...body });
+  } catch (error) {
+    if (!shouldRetryAppwriteCreateAsUpdate(error)) throw error;
+    await request("PUT", path, body);
+  }
+  return { permissions: payload.permissions };
 }
 
 export async function getAppwriteAdminRoleAudits() {
