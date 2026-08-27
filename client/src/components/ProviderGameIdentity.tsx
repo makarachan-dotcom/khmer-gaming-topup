@@ -22,7 +22,11 @@ export function hasProviderApprovedGameLogo(logoUrl?: string) {
 }
 
 export function resolveProviderGameLogo(name: string, logoUrl?: string) {
-  return managedProviderArtwork.find((item) => item.matches.test(name))?.url ?? logoUrl;
+  // An Admin-uploaded managed-storage logo is an explicit override. Use the
+  // generated fallback only when no safe override is available.
+  const override = logoUrl?.trim();
+  if (canRenderProviderArtwork(override)) return override;
+  return managedProviderArtwork.find((item) => item.matches.test(name))?.url;
 }
 
 export function canRenderProviderArtwork(url?: string) {
