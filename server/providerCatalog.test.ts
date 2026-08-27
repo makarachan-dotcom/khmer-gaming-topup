@@ -363,17 +363,46 @@ describe("provider catalog", () => {
     expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1);
   });
 
-  it("treats Honor of Kings as unsupported without calling the VPS Worker", async () => {
+  it("uses the authorized bridge for Honor of Kings without exposing its server credential", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "provider-server-only-key";
-    process.env.VPS_WORKER_URL = "https://worker.example.test/api/check-id";
-    process.env.WORKER_SECRET = "worker-server-only-secret";
-    vi.stubGlobal("fetch", vi.fn());
+    process.env.HEROKU_BRIDGE_URL = "https://bridge.example.test";
+    process.env.HEROKU_BRIDGE_API_KEY = "bridge-secret-for-test-only";
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ success: true, username: "Verified HOK Player" }) }));
 
     const result = await validateProviderPlayerIdentity({ gameId: "honor_of_kings", fields: { player_id: "8329784098348463649" } });
 
-    expect(result).toEqual({ status: "not_supported", playerName: null, playerId: null, region: null });
-    expect(fetch).not.toHaveBeenCalled();
+    expect(result).toEqual({ status: "verified", playerName: "Verified HOK Player", playerId: "8329784098348463649", region: "Global" });
+    const call = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(String(call?.[0])).toBe("https://bridge.example.test/api/check-player");
+    expect(String((call?.[1] as RequestInit).body)).toContain('"game":"honor-of-kings"');
+    expect(JSON.stringify(result)).not.toContain("bridge-secret-for-test-only");
+  });
+
+  it("uses the authorized bridge for PUBG Mobile and Blood Strike player-name checks", async () => {
+    process.env.HEROKU_BRIDGE_URL = "https://bridge.example.test";
+    process.env.HEROKU_BRIDGE_API_KEY = "bridge-secret-for-test-only";
+    for (const [gameId, bridgeGame] of [["pubg_mobile_auto", "pubg-mobile"], ["blood_strike", "blood-strike"]] as const) {
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ success: true, username: "Verified Bridge Player" }) }));
+      await expect(validateProviderPlayerIdentity({ gameId, fields: { user_id: "12345678" } })).resolves.toMatchObject({ status: "verified", playerName: "Verified Bridge Player", playerId: "12345678" });
+      const call = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+      expect(String((call?.[1] as RequestInit).body)).toContain(`"game":"${bridgeGame}"`);
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("uses the authorized bridge for Magic Chess only after its free name check is temporarily unavailable", async () => {
+    process.env.HEROKU_BRIDGE_URL = "https://bridge.example.test";
+    process.env.HEROKU_BRIDGE_API_KEY = "bridge-secret-for-test-only";
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({ success: false }) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ success: true, username: "Verified Magic Chess Player" }) }));
+
+    await expect(validateProviderPlayerIdentity({ gameId: "magic_chess_gogo_global", fields: { user_id: "12345678", server_id: "123" } })).resolves.toMatchObject({ status: "verified", playerName: "Verified Magic Chess Player", playerId: "12345678" });
+    const calls = (fetch as ReturnType<typeof vi.fn>).mock.calls;
+    expect(String(calls[0]?.[0])).toContain("/nickname/mcgg?");
+    expect(String((calls[1]?.[1] as RequestInit).body)).toContain('"game":"magic-chess"');
+    expect(String((calls[1]?.[1] as RequestInit).body)).toContain('"zoneId":"123"');
   });
 
   it("uses the documented Free Fire endpoint and never sends IDs to the VPS Worker", async () => {
@@ -400,7 +429,7 @@ describe("provider catalog", () => {
     expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1);
   });
 
-  it("uses the authorized HTTPS MLBB bridge only after the free check is unavailable", async () => {
+  it("uses the authorized HTTPS bridge for Mobile Legends only after the free check is unavailable", async () => {
     process.env.HEROKU_BRIDGE_URL = "https://bridge.example.test";
     process.env.HEROKU_BRIDGE_API_KEY = "bridge-secret-for-test-only";
     vi.stubGlobal("fetch", vi.fn()

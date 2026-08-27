@@ -470,6 +470,18 @@ function isHonorOfKingsGame(gameId: string) {
   return /^honor_of_kings(?:_|$)/i.test(gameId);
 }
 
+function isPubgMobileGame(gameId: string) {
+  return /^pubg_mobile(?:_|$)/i.test(gameId);
+}
+
+function isBloodStrikeGame(gameId: string) {
+  return /^blood_strike(?:_|$)/i.test(gameId);
+}
+
+function isMagicChessGame(gameId: string) {
+  return /^magic_chess(?:_|$)/i.test(gameId);
+}
+
 type OwnerApprovedFreeIdentityRequest = { kind: "isan" | "eight_ball_pool"; url: string; playerId: string } | { kind: "invalid" };
 
 function ownerApprovedFreeIdentityRequest(input: ProviderPackageRequest): OwnerApprovedFreeIdentityRequest | null {
@@ -525,7 +537,7 @@ async function validateWithOwnerApprovedFreeApi(input: ProviderPackageRequest): 
   return emptyIdentity("unavailable");
 }
 
-function authorizedMlbbBridgeEndpoint() {
+function authorizedPlayerBridgeEndpoint() {
   const rawUrl = process.env.HEROKU_BRIDGE_URL?.trim();
   const bridgeKey = process.env.HEROKU_BRIDGE_API_KEY?.trim();
   if (!rawUrl || !bridgeKey) return null;
@@ -536,16 +548,36 @@ function authorizedMlbbBridgeEndpoint() {
   } catch { return null; }
 }
 
-async function validateWithAuthorizedMlbbBridge(input: ProviderPackageRequest): Promise<ProviderPlayerIdentityResponse | null> {
-  if (!isMobileLegendsGame(input.gameId)) return null;
-  const identityFields = mobileLegendsIdentityFields(input.fields);
-  const bridge = authorizedMlbbBridgeEndpoint();
+function authorizedBridgeGame(input: ProviderPackageRequest) {
+  const gameId = input.gameId.trim().toLowerCase();
+  if (isMobileLegendsGame(gameId)) return { bridgeGame: "mobile-legends", requiresServer: true } as const;
+  if (isHonorOfKingsGame(gameId)) return { bridgeGame: "honor-of-kings", requiresServer: false } as const;
+  if (isPubgMobileGame(gameId)) return { bridgeGame: "pubg-mobile", requiresServer: false } as const;
+  if (isBloodStrikeGame(gameId)) return { bridgeGame: "blood-strike", requiresServer: false } as const;
+  if (isMagicChessGame(gameId)) return { bridgeGame: "magic-chess", requiresServer: true } as const;
+  return null;
+}
+
+function bridgeIdentityFields(fields: Record<string, string>, requiresServer: boolean) {
+  const playerId = (fields.player_id ?? fields.user_id ?? fields.account_id ?? fields.id ?? "").trim();
+  const serverId = (fields.server_id ?? fields.zone_id ?? fields.server ?? "").trim();
+  if (!/^\d{4,20}$/.test(playerId)) return null;
+  if (requiresServer && !/^\d{1,12}$/.test(serverId)) return null;
+  return { playerId, serverId: serverId || null };
+}
+
+async function validateWithAuthorizedPlayerBridge(input: ProviderPackageRequest): Promise<ProviderPlayerIdentityResponse | null> {
+  const game = authorizedBridgeGame(input);
+  if (!game) return null;
+  const identityFields = bridgeIdentityFields(input.fields, game.requiresServer);
+  const bridge = authorizedPlayerBridgeEndpoint();
   if (!identityFields || !bridge) return null;
   try {
+    const body = { userId: identityFields.playerId, game: game.bridgeGame, ...(identityFields.serverId ? { zoneId: identityFields.serverId } : {}) };
     const response = await fetch(bridge.url, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-Bridge-Key": bridge.bridgeKey },
-      body: JSON.stringify({ userId: identityFields.playerId, zoneId: identityFields.serverId, game: "mobile-legends" }),
+      body: JSON.stringify(body),
       signal: AbortSignal.timeout(8_000),
     });
     const payload = await response.json().catch(() => null);
@@ -562,8 +594,9 @@ function emptyIdentity(status: Extract<ProviderPlayerIdentityResponse, { status:
 
 export async function validateProviderPlayerIdentity(input: ProviderPackageRequest): Promise<ProviderPlayerIdentityResponse> {
   const freeApiResult = await validateWithOwnerApprovedFreeApi(input);
-  if (!freeApiResult || freeApiResult.status !== "unavailable") return freeApiResult ?? emptyIdentity("not_supported");
-  return (await validateWithAuthorizedMlbbBridge(input)) ?? freeApiResult;
+  if (freeApiResult && freeApiResult.status !== "unavailable") return freeApiResult;
+  const bridgeResult = await validateWithAuthorizedPlayerBridge(input);
+  return bridgeResult ?? freeApiResult ?? emptyIdentity("not_supported");
 }
 
 export async function fetchSmmProviderServices(options: { includeHidden?: boolean } = {}): Promise<SmmProviderCatalogResponse> {
