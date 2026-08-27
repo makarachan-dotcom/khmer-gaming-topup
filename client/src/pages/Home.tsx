@@ -19,7 +19,7 @@ import { trpc } from "@/lib/trpc";
 import { subscribeToPublicAssetChanges } from "@/lib/publicAssetBroadcast";
 import {
   Image as ImageIcon,
-  Info,
+  MapPin,
   Search,
   Video,
   X,
@@ -274,7 +274,7 @@ function HomeTopupExperience() {
   const utils = trpc.useUtils();
   const gamesQuery = trpc.provider.games.useQuery();
   const gameImages = trpc.provider.gameImages.useQuery(undefined, { staleTime: 0, refetchInterval: 5_000 });
-  const paymentReadiness = trpc.payments.readiness.useQuery();
+  const siteContent = trpc.content.active.useQuery();
   const [query, setQuery] = useState("");
   const [regionFilter, setRegionFilter] = useState<ProviderGameFilter>("all");
   useEffect(() => subscribeToPublicAssetChanges((area) => { if (area === "game-images") void utils.provider.gameImages.invalidate(); }), [utils]);
@@ -286,6 +286,7 @@ function HomeTopupExperience() {
   const hasFilters = Boolean(query.trim()) || regionFilter !== "all";
   const imageOverrides = useMemo(() => new Map((gameImages.data ?? []).map((item) => [item.gameId, item])), [gameImages.data]);
   const catalogGroups = useMemo(() => groupProviderGamesByBaseName(visibleGames), [visibleGames]);
+  const paymentLocation = (siteContent.data ?? []).find((item) => item.contentKey === "payment-location")?.bodyKh?.trim() || "អាសយដ្ឋានទទួលការទូទាត់នឹងត្រូវបានកំណត់ដោយ Admin។";
 
   return (
     <section id="topup-games" className="container mt-5 pb-8 sm:mt-9 sm:pb-10">
@@ -312,15 +313,15 @@ function HomeTopupExperience() {
             </p>
           ) : null}
         </div>
-        {!paymentReadiness.isLoading ? (
-          <div className="zurs-status-notice mt-5 flex items-start gap-2.5 rounded-xl p-3.5 text-xs leading-5 sm:text-sm">
-            <span className="zurs-status-notice-icon"><Info className="h-4 w-4" /></span>
-            <p>
-              អ្នកអាចជ្រើសរើសហ្គេម និងពិនិត្យកញ្ចប់បាន។
-              <span className="block text-slate-600">ការទិញកំពុងត្រូវបានរៀបចំឲ្យមានសុវត្ថិភាពបន្ថែម។</span>
-            </p>
+        <section className="mt-4 rounded-2xl border border-amber-200/80 bg-gradient-to-r from-amber-50 to-white p-3.5 shadow-sm sm:p-4" aria-labelledby="accept-payment-title">
+          <div className="flex items-start gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-slate-950 text-amber-300 shadow-sm"><MapPin className="h-5 w-5" aria-hidden="true" /></span>
+            <div className="min-w-0">
+              <p id="accept-payment-title" className="text-[10px] font-extrabold tracking-[0.16em] text-amber-800">ACCEPT PAYMENT</p>
+              <p className="mt-1 break-words text-sm font-semibold leading-6 text-slate-800">{paymentLocation}</p>
+            </div>
           </div>
-        ) : null}
+        </section>
         {gamesQuery.isLoading ? (
           <div className="mt-4 grid min-h-36 place-items-center rounded-2xl bg-slate-50 text-xs text-slate-500">
             <OutlineLoader size={30} color="#4f46e5" />

@@ -122,6 +122,13 @@ describe("storefront media protection", () => {
     expect(styleSource).toContain("prefers-reduced-motion: no-preference");
   });
 
+  it("uses the requested footer attribution and Facebook destination", () => {
+    const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
+    expect(componentSource).toContain("បង្កើតឡើងដោយ CHAN MEKARA");
+    expect(componentSource).toContain("https://www.facebook.com/share/19QooXtndH/?mibextid=wwXIfr");
+    expect(componentSource).toContain('aria-label="បើកទំព័រ Facebook របស់ ZURS"');
+  });
+
   it("docks the Contact Admin control above storefront actions and locks the mobile viewport scale", () => {
     const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
     const contactSource = readFileSync(join(process.cwd(), "client/src/components/ContactAdminControl.tsx"), "utf8");

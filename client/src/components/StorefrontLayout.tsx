@@ -136,11 +136,15 @@ function StorefrontShell({ children }: { children: ReactNode }) {
             <nav aria-label="Footer links" className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-semibold sm:justify-end">
               <Link href="/privacy" onClick={() => window.scrollTo({ top: 0, behavior: "auto" })} className="zurs-footer-link">Privacy Policy</Link>
               <Link href="/terms" onClick={() => window.scrollTo({ top: 0, behavior: "auto" })} className="zurs-footer-link">Terms of Service</Link>
+              <a href="https://www.facebook.com/share/19QooXtndH/?mibextid=wwXIfr" target="_blank" rel="noreferrer" aria-label="បើកទំព័រ Facebook របស់ ZURS" className="group inline-flex min-h-10 items-center gap-2 rounded-xl border border-amber-200/25 bg-white/[0.06] px-3 text-amber-100 transition-[transform,background-color,border-color] duration-200 hover:-translate-y-0.5 hover:border-amber-200/65 hover:bg-amber-200/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-200 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 active:scale-[0.97]">
+                <span className="grid h-6 w-6 place-items-center rounded-lg bg-amber-300 text-slate-950 shadow-sm transition-transform duration-200 group-hover:scale-105" aria-hidden="true"><svg viewBox="0 0 24 24" className="h-4 w-4 fill-current"><path d="M13.5 21v-8h2.75l.41-3H13.5V8.08c0-.87.24-1.46 1.5-1.46h1.79V3.94c-.31-.04-1.37-.13-2.61-.13-2.58 0-4.35 1.57-4.35 4.46V10H7v3h2.83v8h3.67Z" /></svg></span>
+                <span>Facebook</span>
+              </a>
             </nav>
           </div>
           <div className="zurs-footer-meta flex flex-col gap-1 px-1 pt-4 text-[10px] font-medium sm:flex-row sm:items-center sm:justify-between">
             <span className="khmer-tight">រក្សាសិទ្ធិគ្រប់យ៉ាងដោយ zurs.me</span>
-            <span className="khmer-tight">សម្រាប់សហគមន៍អ្នកលេងកម្ពុជា</span>
+            <span className="khmer-tight">បង្កើតឡើងដោយ CHAN MEKARA</span>
           </div>
         </div>
       </footer>

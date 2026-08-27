@@ -25,4 +25,12 @@ describe("storefront image loading performance", () => {
     expect(homeSource).not.toContain("LiveSpinPromo");
     expect(homeSource).not.toContain("Weekly Loyalty Giveaway");
   });
+
+  it("uses one game-count display and a public configurable payment-location section", () => {
+    const homeSource = readFileSync(resolve(process.cwd(), "client/src/pages/Home.tsx"), "utf8");
+    expect(homeSource).toContain('contentKey === "payment-location"');
+    expect(homeSource).toContain("ACCEPT PAYMENT");
+    expect(homeSource).toContain("អាសយដ្ឋានទទួលការទូទាត់នឹងត្រូវបានកំណត់ដោយ Admin");
+    expect(homeSource).not.toContain("zurs-status-notice");
+  });
 });
