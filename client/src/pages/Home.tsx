@@ -17,9 +17,9 @@ import {
 } from "@/lib/providerPresentation";
 import { trpc } from "@/lib/trpc";
 import { subscribeToPublicAssetChanges } from "@/lib/publicAssetBroadcast";
+import { khqrLogoUrl } from "@/lib/mobileLegendsAssets";
 import {
   Image as ImageIcon,
-  MapPin,
   Search,
   Video,
   X,
@@ -274,7 +274,6 @@ function HomeTopupExperience() {
   const utils = trpc.useUtils();
   const gamesQuery = trpc.provider.games.useQuery();
   const gameImages = trpc.provider.gameImages.useQuery(undefined, { staleTime: 0, refetchInterval: 5_000 });
-  const siteContent = trpc.content.active.useQuery();
   const [query, setQuery] = useState("");
   const [regionFilter, setRegionFilter] = useState<ProviderGameFilter>("all");
   useEffect(() => subscribeToPublicAssetChanges((area) => { if (area === "game-images") void utils.provider.gameImages.invalidate(); }), [utils]);
@@ -286,7 +285,6 @@ function HomeTopupExperience() {
   const hasFilters = Boolean(query.trim()) || regionFilter !== "all";
   const imageOverrides = useMemo(() => new Map((gameImages.data ?? []).map((item) => [item.gameId, item])), [gameImages.data]);
   const catalogGroups = useMemo(() => groupProviderGamesByBaseName(visibleGames), [visibleGames]);
-  const paymentLocation = (siteContent.data ?? []).find((item) => item.contentKey === "payment-location")?.bodyKh?.trim() || "អាសយដ្ឋានទទួលការទូទាត់នឹងត្រូវបានកំណត់ដោយ Admin។";
 
   return (
     <section id="topup-games" className="container mt-5 pb-8 sm:mt-9 sm:pb-10">
@@ -306,21 +304,10 @@ function HomeTopupExperience() {
               ដើម្បីចូលទៅកាន់ទំព័រ Top-up សម្រាប់ហ្គេមនោះ។
             </p>
           </div>
-          {games.length ? (
-            <p className="zurs-game-count" aria-live="polite">
-              <strong>{catalogGroups.length.toLocaleString()} ហ្គេម</strong>
-              <span>បង្ហាញពី {groupProviderGamesByBaseName(games).length.toLocaleString()} ហ្គេម</span>
-            </p>
-          ) : null}
         </div>
-        <section className="mt-4 rounded-2xl border border-amber-200/80 bg-gradient-to-r from-amber-50 to-white p-3.5 shadow-sm sm:p-4" aria-labelledby="accept-payment-title">
-          <div className="flex items-start gap-3">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-slate-950 text-amber-300 shadow-sm"><MapPin className="h-5 w-5" aria-hidden="true" /></span>
-            <div className="min-w-0">
-              <p id="accept-payment-title" className="text-[10px] font-extrabold tracking-[0.16em] text-amber-800">ACCEPT PAYMENT</p>
-              <p className="mt-1 break-words text-sm font-semibold leading-6 text-slate-800">{paymentLocation}</p>
-            </div>
-          </div>
+        <section className="mt-4 flex min-h-16 items-center justify-between gap-4 rounded-2xl border border-amber-200/80 bg-gradient-to-r from-amber-50 to-white px-4 py-3 shadow-sm sm:px-5" aria-labelledby="accept-payment-title">
+          <p id="accept-payment-title" className="text-[10px] font-extrabold tracking-[0.16em] text-amber-800">ACCEPT PAYMENT</p>
+          <img src={khqrLogoUrl} alt="KHQR" className="h-9 w-auto max-w-28 object-contain sm:h-10" loading="eager" decoding="async" />
         </section>
         {gamesQuery.isLoading ? (
           <div className="mt-4 grid min-h-36 place-items-center rounded-2xl bg-slate-50 text-xs text-slate-500">

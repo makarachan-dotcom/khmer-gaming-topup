@@ -20,12 +20,9 @@ describe("owner-only KHQR test offer", () => {
     expect(db).toContain("noProviderFulfillment");
   });
 
-  it("keeps the homepage payment location editable only through the Owner operations view", () => {
+  it("does not render the retired homepage payment-location editor", () => {
     const adminPage = readFileSync(resolve(process.cwd(), "client/src/pages/Admin.tsx"), "utf8");
-    expect(adminPage).toContain("function PaymentLocationSettings()");
-    expect(adminPage).toContain('contentKey: "payment-location"');
-    expect(adminPage).toContain("HOMEPAGE PAYMENT LOCATION");
-    expect(adminPage).toContain("utils.content.active.invalidate()");
-    expect(adminPage).toContain("isOwner ? <PaymentLocationSettings /> : null");
+    expect(adminPage).not.toContain("isOwner ? <PaymentLocationSettings /> : null");
+    expect(adminPage).not.toContain("<PaymentLocationSettings />");
   });
 });

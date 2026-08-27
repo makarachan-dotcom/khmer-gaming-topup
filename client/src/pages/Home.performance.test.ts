@@ -26,11 +26,13 @@ describe("storefront image loading performance", () => {
     expect(homeSource).not.toContain("Weekly Loyalty Giveaway");
   });
 
-  it("uses one game-count display and a public configurable payment-location section", () => {
+  it("uses an address-free Accept Payment strip with a right-aligned KHQR logo", () => {
     const homeSource = readFileSync(resolve(process.cwd(), "client/src/pages/Home.tsx"), "utf8");
-    expect(homeSource).toContain('contentKey === "payment-location"');
     expect(homeSource).toContain("ACCEPT PAYMENT");
-    expect(homeSource).toContain("អាសយដ្ឋានទទួលការទូទាត់នឹងត្រូវបានកំណត់ដោយ Admin");
+    expect(homeSource).toContain('src={khqrLogoUrl}');
+    expect(homeSource).toContain('alt="KHQR"');
+    expect(homeSource).not.toContain("zurs-game-count");
+    expect(homeSource).not.toContain("payment-location");
     expect(homeSource).not.toContain("zurs-status-notice");
   });
 });
