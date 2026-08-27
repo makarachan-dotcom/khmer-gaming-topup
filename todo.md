@@ -492,3 +492,5 @@
 - [x] Deferred at the owner's request: remove the oversized local `khmer-sampeah.png` delivery reference for now so it cannot block publication. The owner will supply a File Storage URL later; no replacement image is fabricated.
 
 - [x] Restore the owner-approved `khmer-sampeah.png` image through approved external File Storage and reinstate only its Live Spin ending-view reference; do not modify Catalog Control, product data, payment state, or other Live Spin behavior. The original image is now served through the approved external storage URL rather than bundled in the project, and focused Live Spin tests, TypeScript, and production build passed.
+
+- [x] Correct only the Khmer Sampeah image reference to use the absolute managed-storage origin because the Vercel custom domain does not proxy relative `/manus-storage/` requests. The original image was verified from the managed storage origin; focused Live Spin tests, TypeScript, and production build passed.
