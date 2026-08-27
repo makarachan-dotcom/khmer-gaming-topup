@@ -43,6 +43,13 @@ const particleSlots = [
   ["89%", "76%", "2px", "-7.4s"], ["96%", "29%", "1px", "-2.6s"],
 ] as const;
 
+const christmasSnowSlots = [
+  ["5%", "-1.6s", "9.6s", "16px", "12px"], ["13%", "-5.2s", "11.4s", "11px", "-18px"], ["21%", "-7.3s", "10.2s", "14px", "14px"],
+  ["31%", "-2.7s", "12.2s", "10px", "-14px"], ["42%", "-8.5s", "9.8s", "15px", "17px"], ["54%", "-4.1s", "11.8s", "12px", "-10px"],
+  ["64%", "-6.6s", "10.6s", "16px", "18px"], ["74%", "-3.4s", "12.6s", "11px", "-16px"], ["84%", "-9.1s", "9.4s", "14px", "11px"],
+  ["94%", "-5.8s", "11.1s", "10px", "-12px"],
+] as const;
+
 export default function StorefrontLayout({ children }: { children: ReactNode }) {
   return <StorefrontShell>{children}</StorefrontShell>;
 }
@@ -102,6 +109,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
   return (
     <div ref={shellRef} className="zurs-dotted-shell min-h-screen pb-[calc(5rem+env(safe-area-inset-bottom))] sm:pb-0">
       <div className="zurs-particle-field" aria-hidden="true">{particleSlots.map(([x, y, size, delay], index) => <span key={index} style={{ "--particle-x": x, "--particle-y": y, "--particle-size": size, "--particle-delay": delay } as React.CSSProperties} />)}</div>
+      <ChristmasOverlay />
       <header className="zurs-compact-header sticky top-2 z-50 mx-2 rounded-[1.25rem] border border-white/80 bg-white/72 backdrop-blur-2xl sm:top-3 sm:mx-4 sm:rounded-2xl">
         <div className="container flex h-12 items-center justify-between gap-2 sm:h-14 sm:gap-3">
 	          <Link href="/" className="flex min-w-0 shrink items-center gap-2" aria-label="ZURS.me home">
@@ -160,6 +168,10 @@ function StorefrontShell({ children }: { children: ReactNode }) {
       <button type="button" onClick={navigateToTop} aria-label="ត្រឡប់ទៅខាងលើ" className={cn("fixed right-4 z-[45] hidden h-11 w-11 place-items-center rounded-2xl border border-white/80 bg-slate-950 text-white shadow-lg shadow-slate-950/20 transition-[opacity,transform,background-color] duration-200 hover:-translate-y-1 hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 sm:grid sm:bottom-6", showScrollTop ? "opacity-100" : "pointer-events-none translate-y-3 opacity-0")}><ArrowUp className="h-5 w-5" strokeWidth={2.25} /></button>
     </div>
   );
+}
+
+function ChristmasOverlay() {
+  return <><div className="zurs-christmas-snow-layer" aria-hidden="true">{christmasSnowSlots.map(([left, delay, duration, size, sway], index) => <span key={index} className="zurs-christmas-snowflake" style={{ "--snow-left": left, "--snow-delay": delay, "--snow-duration": duration, "--snow-size": size, "--snow-sway": sway } as React.CSSProperties}>✦</span>)}</div><div className="zurs-christmas-garland" aria-hidden="true"><span className="zurs-christmas-garland__cord" />{["gold", "red", "gold", "red", "gold", "red", "gold"].map((tone, index) => <span key={index} className={`zurs-christmas-ornament zurs-christmas-ornament--${tone}`} style={{ "--ornament-x": `${8 + index * 14}%`, "--ornament-drop": `${8 + (index % 3) * 6}px` } as React.CSSProperties} />)}</div></>;
 }
 
 function LiveSpinAnnouncement({ event }: { event: { status: string; scheduledAt: Date | string } | null }) {

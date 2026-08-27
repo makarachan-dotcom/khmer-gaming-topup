@@ -496,3 +496,7 @@
 - [x] Correct only the Khmer Sampeah image reference to use the absolute managed-storage origin because the Vercel custom domain does not proxy relative `/manus-storage/` requests. The original image was verified from the managed storage origin; focused Live Spin tests, TypeScript, and production build passed.
 
 - [x] Replace only the Live Spin ending's looping rain-like particle effect with a one-time cascade of bright yellow flower petals that plays on entry and then remains still. The effect is active only in the ending phase, has no repeat transition, and preserves the Khmer Sampeah image, result content, and all Live Spin logic.
+
+- [x] Analyze the owner-provided Christmas visual reference and implement a lightweight, accessible festive treatment within an explicitly scoped ZURS surface, without changing product, catalog, payment, account, or admin functionality. The public storefront now has a red-and-gold hanging ornament garland and pointer-safe snowfall layer; both respect reduced-motion settings.
+
+- [x] Diagnose and publish the missing Christmas treatment reported as visible in preview but absent from `zurs.me`, while preserving all non-festive functionality and avoiding unrelated changes. The prior published branch contained no festive source; the scoped implementation has desktop/mobile visual verification, focused regression tests, TypeScript, and production-build evidence before release.

@@ -113,6 +113,18 @@ describe("storefront media protection", () => {
     expect(styleSource).toContain("oklch(0.19 0.08 261)");
   });
 
+  it("layers a lightweight Christmas garland and snowfall above the public storefront without blocking interactions", () => {
+    const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
+    const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
+    expect(componentSource).toContain("ChristmasOverlay");
+    expect(componentSource).toContain("christmasSnowSlots");
+    expect(componentSource).toContain("zurs-christmas-garland");
+    expect(styleSource).toContain(".zurs-christmas-snow-layer");
+    expect(styleSource).toContain("pointer-events: none");
+    expect(styleSource).toContain("zurs-christmas-snowfall");
+    expect(styleSource).toContain("prefers-reduced-motion: no-preference");
+  });
+
   it("uses Kantumruy Pro for the storefront and Hanuman for long Khmer copy", () => {
     const documentSource = readFileSync(join(process.cwd(), "client/index.html"), "utf8");
     const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
