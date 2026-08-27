@@ -140,12 +140,12 @@ function StorefrontShell({ children }: { children: ReactNode }) {
                 <p className="mt-1 max-w-md text-xs leading-5 text-slate-300 khmer-body">សេវាកម្មហ្គេម និងឌីជីថល សម្រាប់អ្នកលេងកម្ពុជា។</p>
               </div>
             </div>
-            <p className="mt-3 inline-flex items-center gap-2 text-[11px] font-semibold text-amber-100"><ShieldCheck className="h-4 w-4 text-amber-300" /><span className="khmer-tight">សេវាកម្មរហ័ស និងមានទំនុកចិត្ត</span></p>
-            <nav aria-label="Footer links" className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-semibold">
+            <p className="mt-3 flex items-center justify-center gap-2 text-center text-[11px] font-semibold text-amber-100"><ShieldCheck className="h-4 w-4 text-amber-300" /><span className="khmer-tight">សេវាកម្មរហ័ស និងមានទំនុកចិត្ត</span></p>
+            <nav aria-label="Footer links" className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs font-semibold">
               <Link href="/privacy" onClick={() => window.scrollTo({ top: 0, behavior: "auto" })} className="zurs-footer-link">Privacy Policy</Link>
               <Link href="/terms" onClick={() => window.scrollTo({ top: 0, behavior: "auto" })} className="zurs-footer-link">Terms of Service</Link>
             </nav>
-            <a href="https://www.facebook.com/share/19QooXtndH/?mibextid=wwXIfr" target="_blank" rel="noreferrer" aria-label="បើកទំព័រ Facebook របស់ ZURS" className="group mt-3 inline-flex h-10 items-center gap-2 rounded-full border border-amber-200/35 bg-white/[0.045] py-1 pl-1 pr-4 text-xs font-semibold text-slate-100 transition-[transform,background-color,border-color] duration-200 hover:-translate-y-0.5 hover:border-amber-200/70 hover:bg-white/[0.10] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-200 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 active:scale-[0.97]">
+            <a href="https://www.facebook.com/share/19QooXtndH/?mibextid=wwXIfr" target="_blank" rel="noreferrer" aria-label="បើកទំព័រ Facebook របស់ ZURS" className="group mx-auto mt-3 flex h-10 w-fit items-center gap-2 rounded-full border border-amber-200/35 bg-white/[0.045] py-1 pl-1 pr-4 text-xs font-semibold text-slate-100 transition-[transform,background-color,border-color] duration-200 hover:-translate-y-0.5 hover:border-amber-200/70 hover:bg-white/[0.10] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-200 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 active:scale-[0.97]">
               <span className="grid h-8 w-8 place-items-center rounded-full bg-[#1877F2] text-white shadow-sm transition-transform duration-200 group-hover:scale-105" aria-hidden="true"><svg viewBox="0 0 24 24" className="h-4 w-4 fill-current"><path d="M13.5 21v-8h2.75l.41-3H13.5V8.08c0-.87.24-1.46 1.5-1.46h1.79V3.94c-.31-.04-1.37-.13-2.61-.13-2.58 0-4.35 1.57-4.35 4.46V10H7v3h2.83v8h3.67Z" /></svg></span>
               <span>Facebook</span>
             </a>

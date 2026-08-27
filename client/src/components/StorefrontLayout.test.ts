@@ -144,6 +144,9 @@ describe("storefront media protection", () => {
     expect(componentSource).toContain("https://www.facebook.com/share/19QooXtndH/?mibextid=wwXIfr");
     expect(componentSource).toContain('aria-label="បើកទំព័រ Facebook របស់ ZURS"');
     expect(componentSource).toContain("bg-[#1877F2]");
+    expect(componentSource).toContain("mt-3 flex items-center justify-center gap-2 text-center");
+    expect(componentSource).toContain("mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2");
+    expect(componentSource).toContain("group mx-auto mt-3 flex h-10 w-fit items-center");
     expect(styleSource).toContain("oklch(0.82 0.15 84)");
   });
 
