@@ -18,6 +18,7 @@ import { generatedPackageArtworkForPackage, type GeneratedPackageArtworkKind } f
 import { providerGameImageKey, resolvedGameArtworkFor } from "@/lib/originalGameArtwork";
 import { trpc } from "@/lib/trpc";
 import { subscribeToPackageArtworkChanges } from "@/lib/packageArtworkBroadcast";
+import { subscribeToPublicAssetChanges } from "@/lib/publicAssetBroadcast";
 import { ArrowLeft, BadgePercent, Box, CalendarClock, CheckCircle2, ChevronDown, ChevronRight, CircleAlert, Crown, Eye, Gem, Gift, History, ShieldAlert, Sparkles, TrendingUp, UserRound, WalletCards } from "lucide-react";
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
@@ -67,10 +68,11 @@ function savedPlayerLabel(fields: Record<string, string>) {
 
 export default function GameTopup() {
   const [location] = useLocation();
+  const utils = trpc.useUtils();
   const gameId = gameIdFromTopupPath(location);
   const gameInput = useMemo(() => ({ gameId }), [gameId]);
   const gameQuery = trpc.provider.gameDetails.useQuery(gameInput, { enabled: Boolean(gameId) });
-  const gameImages = trpc.provider.gameImages.useQuery(undefined, { staleTime: 30_000, refetchInterval: 15_000 });
+  const gameImages = trpc.provider.gameImages.useQuery(undefined, { staleTime: 0, refetchInterval: 5_000 });
   const paymentReadiness = trpc.payments.readiness.useQuery();
   const { user } = useAuth();
   const { setPlayerTitle } = useStorefrontHeader();
@@ -84,6 +86,7 @@ export default function GameTopup() {
   const [savedPlayers, setSavedPlayers] = useState<SavedPlayerEntry[]>([]);
   const [autofillVersion, setAutofillVersion] = useState(0);
   const [idAccuracyConfirmed, setIdAccuracyConfirmed] = useState(false);
+  useEffect(() => subscribeToPublicAssetChanges((area) => { if (area === "game-images") void utils.provider.gameImages.invalidate(); }), [utils]);
   const [identityCollapsed, setIdentityCollapsed] = useState(false);
   const identityFormRef = useRef<HTMLFormElement>(null);
   const verifiedCardRef = useRef<HTMLElement>(null);

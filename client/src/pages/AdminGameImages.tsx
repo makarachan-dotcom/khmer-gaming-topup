@@ -5,6 +5,7 @@ import { LoadingV2 } from "@/components/OutlineLoader";
 import { prepareAdminImage } from "@/lib/adminImageUpload";
 import { toWebsiteMediaUrl } from "@/lib/mediaUrl";
 import { originalGameArtworkFor, providerGameImageKey } from "@/lib/originalGameArtwork";
+import { notifyPublicAssetChanged } from "@/lib/publicAssetBroadcast";
 import { trpc } from "@/lib/trpc";
 import { ImagePlus, Link as LinkIcon, RotateCcw, Save, ShieldAlert, Upload } from "lucide-react";
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
@@ -41,8 +42,8 @@ function GameImageEditor({ game, initial }: { game: Game; initial: ImageDraft | 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const upload = trpc.uploads.adminMediaImage.useMutation();
-  const save = trpc.admin.saveGameImages.useMutation({ onSuccess: () => { void utils.admin.gameImages.invalidate(); void utils.provider.gameImages.invalidate(); } });
-  const reset = trpc.admin.resetGameImage.useMutation({ onSuccess: () => { void utils.admin.gameImages.invalidate(); void utils.provider.gameImages.invalidate(); } });
+  const save = trpc.admin.saveGameImages.useMutation({ onSuccess: () => { notifyPublicAssetChanged("game-images"); void utils.admin.gameImages.invalidate(); void utils.provider.gameImages.invalidate(); } });
+  const reset = trpc.admin.resetGameImage.useMutation({ onSuccess: () => { notifyPublicAssetChanged("game-images"); void utils.admin.gameImages.invalidate(); void utils.provider.gameImages.invalidate(); } });
   useEffect(() => setDraft({ logoUrl: initial?.logoUrl ? toWebsiteMediaUrl(initial.logoUrl) : null, cardArtworkUrl: initial?.cardArtworkUrl ? toWebsiteMediaUrl(initial.cardArtworkUrl) : null }), [initial?.logoUrl, initial?.cardArtworkUrl]);
   const defaultArtwork = originalGameArtworkFor(game.id, game.name);
   const cardArtwork = toWebsiteMediaUrl(draft.cardArtworkUrl) || defaultArtwork?.src || toWebsiteMediaUrl(game.logoUrl) || "";

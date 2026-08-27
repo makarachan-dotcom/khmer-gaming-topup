@@ -1,4 +1,6 @@
 import { trpc } from "@/lib/trpc";
+import { toWebsiteMediaUrl } from "@/lib/mediaUrl";
+import { subscribeToPublicAssetChanges } from "@/lib/publicAssetBroadcast";
 import { Headset, MessageCircle, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -40,9 +42,12 @@ function initials(name: string) {
 }
 
 function ContactAdminSheet({ open, onClose, paymentBarVisible }: { open: boolean; onClose: () => void; paymentBarVisible: boolean }) {
+  const utils = trpc.useUtils();
   const [mounted, setMounted] = useState(open);
   const [visible, setVisible] = useState(open);
-  const admins = trpc.support.contactAdmins.useQuery(undefined, { enabled: mounted, staleTime: 30_000, refetchInterval: 15_000 });
+  const admins = trpc.support.contactAdmins.useQuery(undefined, { enabled: mounted, staleTime: 0, refetchInterval: 5_000 });
+
+  useEffect(() => subscribeToPublicAssetChanges((area) => { if (area === "contact-admins") void utils.support.contactAdmins.invalidate(); }), [utils]);
 
   useEffect(() => {
     if (open) {
@@ -95,7 +100,7 @@ function ContactAdminCard({ admin }: { admin: ContactAdmin }) {
     <article className="contact-admin-card">
       <div className="flex min-w-0 items-center gap-3.5">
         <div className="contact-admin-avatar">
-          {admin.photoUrl ? <img src={admin.photoUrl} alt={admin.displayName} className="h-full w-full object-cover" /> : <span>{initials(admin.displayName)}</span>}
+          {admin.photoUrl ? <img src={toWebsiteMediaUrl(admin.photoUrl)} alt={admin.displayName} className="h-full w-full object-cover" /> : <span>{initials(admin.displayName)}</span>}
           <span className={`contact-admin-status-dot ${online ? "contact-admin-status-dot--online" : ""}`} aria-label={online ? "កំពុង online" : "ក្រៅម៉ោង"} />
         </div>
         <div className="min-w-0">

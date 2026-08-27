@@ -16,6 +16,7 @@ import {
   type ProviderGameFilter,
 } from "@/lib/providerPresentation";
 import { trpc } from "@/lib/trpc";
+import { subscribeToPublicAssetChanges } from "@/lib/publicAssetBroadcast";
 import {
   Image as ImageIcon,
   Info,
@@ -267,11 +268,13 @@ const catalogFilters: Array<{ value: ProviderGameFilter; label: string }> = [
 ];
 
 function HomeTopupExperience() {
+  const utils = trpc.useUtils();
   const gamesQuery = trpc.provider.games.useQuery();
-  const gameImages = trpc.provider.gameImages.useQuery(undefined, { staleTime: 30_000, refetchInterval: 15_000 });
+  const gameImages = trpc.provider.gameImages.useQuery(undefined, { staleTime: 0, refetchInterval: 5_000 });
   const paymentReadiness = trpc.payments.readiness.useQuery();
   const [query, setQuery] = useState("");
   const [regionFilter, setRegionFilter] = useState<ProviderGameFilter>("all");
+  useEffect(() => subscribeToPublicAssetChanges((area) => { if (area === "game-images") void utils.provider.gameImages.invalidate(); }), [utils]);
   const games = orderProviderGames(gamesQuery.data?.games ?? []);
   const visibleGames = useMemo(
     () => filterProviderGames(games, query, regionFilter),
