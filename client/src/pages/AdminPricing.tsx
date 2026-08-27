@@ -25,6 +25,13 @@ type AvailabilityItem = { id: string; name: string; category?: string; isActive:
 type CatalogKind = "game" | "smm";
 type EventContent = { id: string; contentKey: string; titleKh?: string | null; bodyKh?: string | null; isActive: boolean };
 
+function catalogAvailabilityErrorMessage(error: { message: string }) {
+  if (/no synchronized fzr cards catalog/i.test(error.message)) return "មិនអាចរក្សាទុកឥឡូវនេះបានទេ ព្រោះបញ្ជី FazerCards ដែលបាន Sync មិនទាន់អាចប្រើបាន។ សូម Sync ម្តងទៀត នៅពេល provider ភ្ជាប់វិញ។";
+  if (/selected game is not available/i.test(error.message)) return "ហ្គេមដែលជ្រើសមិនមាននៅក្នុងបញ្ជី FazerCards ដែលបាន Sync ទេ។ ការកំណត់ចាស់មិនត្រូវបានប្តូរ។";
+  if (/availability control is not configured/i.test(error.message)) return "មិនទាន់មាន persistent storage សម្រាប់ control នេះទេ។ ការកំណត់ចាស់មិនត្រូវបានប្តូរ។";
+  return "មិនអាចរក្សាទុកការកែប្រែបានទេ។ ការកំណត់ចាស់មិនត្រូវបានប្តូរ។ សូមព្យាយាមម្ដងទៀត បន្ទាប់ពីពិនិត្យការភ្ជាប់ Admin storage។";
+}
+
 function ActivityLoader({ size = 22, color = "#4f46e5", label }: { size?: number; color?: string; label?: string }) {
   return <span className="inline-flex items-center gap-2" aria-live="polite"><OutlineLoader size={size} color={color} />{label ? <span>{label}</span> : null}</span>;
 }
@@ -126,8 +133,9 @@ function PricingWorkspace() {
       updateAvailabilityCache(input);
       return { previous };
     },
-    onError: (_error, _input, context) => {
+    onError: (error, _input, context) => {
       utils.admin.providerAvailability.setData(undefined, context?.previous);
+      setAvailabilityNotice(catalogAvailabilityErrorMessage(error));
     },
     onSuccess: (_result, input) => {
       setAvailabilityNotice(input.isActive ? "បានបង្ហាញ product ក្នុងហាងវិញ និងរក្សាទុករួចរាល់។" : "បានដក product ចេញពីហាង និងរក្សាទុករួចរាល់។ អ្នកអាចបើកវិញបាននៅតម្រង ‘បានដកចេញ’។");
@@ -164,7 +172,7 @@ function PricingWorkspace() {
     </header>
 
     {actionError ? <AdminError error={actionError} /> : null}
-    {availabilityNotice ? <div role="status" className="mt-5 flex items-start gap-2 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-xs leading-5 text-emerald-900"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /><p>{availabilityNotice}</p></div> : null}
+    {availabilityNotice ? <div role="status" className={`mt-5 flex items-start gap-2 rounded-2xl border p-4 text-xs leading-5 ${toggleAvailability.error ? "border-rose-100 bg-rose-50 text-rose-900" : "border-emerald-100 bg-emerald-50 text-emerald-900"}`}>{toggleAvailability.error ? <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" /> : <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />}<p>{availabilityNotice}</p></div> : null}
     {syncNotice ? <div className="mt-5 flex items-start gap-2 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-xs leading-5 text-emerald-900"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /><p>{syncNotice}</p></div> : null}
     <CatalogInventoryControls loading={availability.isLoading} inventory={availability.data} search={catalogSearch} kindFilter={catalogKind} visibilityFilter={catalogVisibility} selectedIds={selectedCatalogIds} busy={toggleAvailability.isPending || batchBusy} onSearch={setCatalogSearch} onKindFilter={setCatalogKind} onVisibilityFilter={setCatalogVisibility} onToggle={(kind, providerId, isActive) => toggleAvailability.mutate({ kind, providerId, isActive })} onToggleSelected={(key) => setSelectedCatalogIds((current) => { const next = new Set(current); next.has(key) ? next.delete(key) : next.add(key); return next; })} onSetSelectedVisibility={setSelectedVisibility} />
     <FullTicketEventControl content={eventContent.data} loading={eventContent.isLoading} saving={saveFullTicketEvent.isPending} onSave={(input) => saveFullTicketEvent.mutate(input)} />
@@ -210,7 +218,7 @@ function CatalogInventoryControls({ loading, inventory, search, kindFilter, visi
 }
 
 function AdminError({ error }: { error: { message: string } }) {
-  const message = /availability control is not configured/i.test(error.message) ? "មិនទាន់មាន persistent storage សម្រាប់ control នេះទេ។ សូមកុំគិតថាការកែប្រែបានរក្សាទុក—ប្រព័ន្ធមិនបានប្តូរផលិតផលណាមួយឡើយ។" : "មិនអាចរក្សាទុកការកែប្រែបានទេ។ ការកំណត់ចាស់មិនត្រូវបានប្តូរ។ សូមព្យាយាមម្ដងទៀត បន្ទាប់ពីពិនិត្យការភ្ជាប់ Admin storage។";
+  const message = catalogAvailabilityErrorMessage(error);
   return <div className="mt-5 flex items-start gap-2 rounded-2xl border border-rose-100 bg-rose-50 p-4 text-xs leading-5 text-rose-900"><ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" /><p>{message}</p></div>;
 }
 

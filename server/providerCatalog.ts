@@ -310,6 +310,22 @@ export function cachedPublicProviderGames(catalog: AppwriteProviderCatalog, avai
   });
 }
 
+/**
+ * Keep owner inventory operable during a temporary FZR read outage. The list is
+ * composed solely of previously synchronized provider records, and mutations
+ * still use their original provider source IDs.
+ */
+export function cachedProviderAvailabilityGames(catalog: AppwriteProviderCatalog, availability: Awaited<ReturnType<typeof providerAvailability>>) {
+  const activeIds = publicProviderGameIds(availability);
+  const hiddenIds = new Set(availability.hiddenGameIds);
+  return catalog.games.flatMap((game) => {
+    const providerId = game.providerSourceId?.trim();
+    const name = game.titleEn?.trim() || game.titleKh?.trim();
+    if (!providerId || !name || isThailandProviderProduct(`${providerId} ${name}`)) return [];
+    return [{ id: providerId, name, isActive: activeIds.has(providerId) && !hiddenIds.has(providerId) }];
+  });
+}
+
 async function cachedPublicProviderGamesDuringOutage(availability: Awaited<ReturnType<typeof providerAvailability>>) {
   if (!publicProviderGameIds(availability).size) return [];
   try { return cachedPublicProviderGames(await getAppwriteProviderCatalog(), availability); } catch { return []; }
@@ -567,8 +583,11 @@ export async function getProviderAvailabilityCatalog(): Promise<ProviderAvailabi
   const [catalog, smmResponse, availability] = await Promise.all([fetchFzrTopupCatalog(), fetchSmmProviderServices({ includeHidden: true }), providerAvailability()]);
   const activeGames = catalog.status === "ready" ? publicProviderGameIds(availability) : new Set<string>();
   const hiddenSmm = new Set(availability.hiddenSmmServiceIds);
+  const fallbackGames = catalog.status === "ready" ? null : await getAppwriteProviderCatalog().catch(() => null);
   return {
-    games: catalog.status === "ready" ? asProviderGames(catalog.items).map((game) => ({ id: game.id, name: game.name, isActive: activeGames.has(game.id) && !availability.hiddenGameIds.includes(game.id) })) : [],
+    games: catalog.status === "ready"
+      ? asProviderGames(catalog.items).map((game) => ({ id: game.id, name: game.name, isActive: activeGames.has(game.id) && !availability.hiddenGameIds.includes(game.id) }))
+      : fallbackGames ? cachedProviderAvailabilityGames(fallbackGames, availability) : [],
     smm: smmResponse.status === "ready" ? smmResponse.services.map((service) => ({ id: service.providerServiceId, name: service.name, category: service.category, isActive: !hiddenSmm.has(service.providerServiceId) })) : [],
   };
 }
@@ -582,9 +601,15 @@ export async function setProviderAvailability(input: { kind: "game" | "smm"; pro
     return next;
   }
   const [catalog, availability] = await Promise.all([fetchFzrTopupCatalog(), providerAvailability()]);
-  if (catalog.status !== "ready") throw new Error("FZR Cards catalog is currently unavailable");
-  const validGameIds = new Set(asProviderGames(catalog.items).map((game) => game.id));
-  if (!validGameIds.has(input.providerId)) throw new Error("Selected game is not available from FZR Cards");
+  const validGameIds = catalog.status === "ready"
+    ? new Set(asProviderGames(catalog.items).map((game) => game.id))
+    : new Set((await getAppwriteProviderCatalog().catch(() => ({ games: [], smm: [] }))).games.flatMap((game) => {
+      const providerId = game.providerSourceId?.trim();
+      const name = game.titleEn?.trim() || game.titleKh?.trim();
+      return providerId && name && !isThailandProviderProduct(`${providerId} ${name}`) ? [providerId] : [];
+    }));
+  if (!validGameIds.size) throw new Error("No synchronized FZR Cards catalog is available for this change");
+  if (!validGameIds.has(input.providerId)) throw new Error("Selected game is not available from the synchronized FZR Cards catalog");
   const legacyActiveGameIds = availability.activeGameIds ?? initialApprovedPublicGameIds.filter((id) => !availability.hiddenGameIds.includes(id));
   const next = await updateAppwriteProviderAvailability({ ...input, legacyActiveGameIds });
   // Availability is read by both the admin inventory and the public storefront.

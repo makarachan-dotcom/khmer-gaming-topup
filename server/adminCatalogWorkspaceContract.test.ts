@@ -10,6 +10,8 @@ describe("admin catalog workspace", () => {
     const topup = fs.readFileSync(path.join(projectRoot, "client/src/pages/GameTopup.tsx"), "utf8");
 
     expect(pricing).toContain("CatalogInventoryControls");
+    expect(pricing).toContain("catalogAvailabilityErrorMessage");
+    expect(pricing).toContain("បញ្ជី FazerCards ដែលបាន Sync");
     expect(pricing).toContain("បញ្ជីហ្គេម FazerCards ទាំងអស់");
     expect(pricing).toContain("បន្ថែមចូលហាង");
     expect(pricing).toContain("onSetSelectedVisibility");

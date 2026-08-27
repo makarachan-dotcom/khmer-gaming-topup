@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { balanceSocialProviderServices, cachedPublicProviderGames, fetchProviderGameDetails, fetchProviderGames, fetchProviderPackages, fetchProviderPreviewPackages, fetchSmmProviderServices, getProviderAvailabilityCatalog, getProviderCatalogStatus, isThailandProviderProduct, providerPackageRecordId, resetProviderCatalogCacheForTests, setProviderAvailability, submitSmmProviderOrder, validateProviderPlayerIdentity } from "./providerCatalog";
+import { balanceSocialProviderServices, cachedProviderAvailabilityGames, cachedPublicProviderGames, fetchProviderGameDetails, fetchProviderGames, fetchProviderPackages, fetchProviderPreviewPackages, fetchSmmProviderServices, getProviderAvailabilityCatalog, getProviderCatalogStatus, isThailandProviderProduct, providerPackageRecordId, resetProviderCatalogCacheForTests, setProviderAvailability, submitSmmProviderOrder, validateProviderPlayerIdentity } from "./providerCatalog";
 
 const originalEndpoint = process.env.FZR_CARDS_API_BASE_URL;
 const originalApiKey = process.env.FZR_CARDS_API_KEY;
@@ -88,6 +88,23 @@ describe("provider catalog", () => {
     });
 
     expect(games).toEqual([{ id: "public-game", name: "Public Game", region: "Global", provider: "FZR Cards", requiredFields: [] }]);
+  });
+
+  it("keeps synchronized provider games available to the owner inventory during a live FZR outage", () => {
+    const games = cachedProviderAvailabilityGames({
+      games: [
+        { id: "cached-free-fire", providerSourceId: "free_fire_bd", titleKh: "Free Fire (BD)", titleEn: "Free Fire (BD)", packages: [] },
+        { id: "cached-thai", providerSourceId: "thai-game", titleKh: "Thai Game", titleEn: "Thai Game", packages: [] },
+      ],
+      smm: [],
+    }, {
+      activeGameIds: ["free_fire_bd"],
+      hiddenGameIds: [],
+      hiddenSmmServiceIds: [],
+      updatedAt: new Date(),
+    });
+
+    expect(games).toEqual([{ id: "free_fire_bd", name: "Free Fire (BD)", isActive: true }]);
   });
 
   it("shows complete paginated FazerCards inventory only to admin and never automatically publicizes the first provider page", async () => {
