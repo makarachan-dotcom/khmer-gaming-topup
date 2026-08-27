@@ -36,9 +36,11 @@ describe("delegated Admin permissions", () => {
 
   it("filters the client navigation using the same self-permission contract", () => {
     const dashboard = source("client/src/components/DashboardLayout.tsx");
+    const adminAccess = source("client/src/pages/AdminAccess.tsx");
     expect(dashboard).toContain("trpc.admin.myPermissions.useQuery");
     expect(dashboard).toContain("visibleMenuItems");
     expect(dashboard).toContain('path: "/admin?tab=operations", permission: "operations"');
     expect(dashboard).toContain("ownerOnly: true");
+    expect(adminAccess).toContain('setNextRole("admin")');
   });
 });

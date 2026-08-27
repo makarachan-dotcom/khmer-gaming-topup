@@ -96,7 +96,7 @@ export const appRouter = router({
   }),
   uploads: router({
     marketplaceScreenshot: protectedProcedure.input(z.object({ fileName: z.string().trim().min(1).max(180), contentType: z.enum(["image/jpeg", "image/png", "image/webp"]), dataUrl: z.string().min(50).max(7_000_000) })).mutation(async ({ ctx, input }) => { const upload = await uploadMarketplaceScreenshot({ userId: ctx.user.id, ...input }); return { key: upload.key }; }),
-    adminMediaImage: adminProcedure.input(z.object({ fileName: z.string().trim().min(1).max(180), contentType: z.enum(["image/jpeg", "image/png", "image/webp"]), dataUrl: z.string().min(50).max(7_000_000) })).mutation(async ({ ctx, input }) => uploadAdminMediaImage({ adminUserId: ctx.user.id, ...input })),
+    adminMediaImage: scopedAdminProcedure("media").input(z.object({ fileName: z.string().trim().min(1).max(180), contentType: z.enum(["image/jpeg", "image/png", "image/webp"]), dataUrl: z.string().min(50).max(7_000_000) })).mutation(async ({ ctx, input }) => uploadAdminMediaImage({ adminUserId: ctx.user.id, ...input })),
     adminPaymentMethodIcon: ownerProcedure.input(z.object({ fileName: z.string().trim().min(1).max(180), contentType: z.enum(["image/jpeg", "image/png", "image/webp", "image/svg+xml"]), dataUrl: z.string().min(50).max(3_000_000) })).mutation(async ({ ctx, input }) => uploadAdminPaymentMethodIcon({ adminUserId: ctx.user.id, ...input })),
   }),
   content: router({

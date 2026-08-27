@@ -51,7 +51,9 @@ function AccessWorkspace() {
     setReason("");
     setError(null);
     setPermissions([]);
-    setNextRole(member.role === "admin" ? "user" : "admin");
+    // Existing delegated Admins should open directly in permission-edit mode.
+    // The Owner can explicitly choose removal from the role selector if needed.
+    setNextRole("admin");
   };
 
   const togglePermission = (permission: PermissionKey) => {
