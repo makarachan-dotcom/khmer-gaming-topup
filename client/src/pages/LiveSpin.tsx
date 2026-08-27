@@ -2,7 +2,7 @@ import StorefrontLayout from "@/components/StorefrontLayout";
 import { trpc } from "@/lib/trpc";
 import Ably from "ably";
 import { Crown, Eye, Gift, LockKeyhole, Sparkles, Ticket, Trophy, Volume2, VolumeX } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "wouter";
 
 type LiveSpinEvent = {
@@ -72,6 +72,44 @@ function plusSeconds(value: Date | string | null | undefined, seconds: number) {
   return Number.isFinite(time) ? new Date(time + seconds * 1000) : null;
 }
 
+const liveSpinSounds = {
+  intro: "/live-spin-audio/sound1-intro.mp3",
+  countdown: "/live-spin-audio/sound2-countdown.aac",
+  heartbeat: "/live-spin-audio/sound3-heartbeat.aac",
+  result: "/live-spin-audio/sound4-result.aac",
+  outro: "/live-spin-audio/sound5-outro.mp3",
+} as const;
+
+type LiveSpinSound = keyof typeof liveSpinSounds;
+
+function useLiveSpinAudio({ event, muted, finalCountdown, stripRemaining }: { event: LiveSpinEvent; muted: boolean; finalCountdown: boolean; stripRemaining: number }) {
+  const players = useRef<Partial<Record<LiveSpinSound, HTMLAudioElement>>>({});
+  const lastCue = useRef<string | null>(null);
+  useEffect(() => {
+    (Object.entries(liveSpinSounds) as [LiveSpinSound, string][]).forEach(([name, source]) => {
+      const player = new Audio(source);
+      player.preload = "auto";
+      player.load();
+      players.current[name] = player;
+    });
+    return () => Object.values(players.current).forEach((player) => { player?.pause(); player && (player.src = ""); });
+  }, [event.id]);
+  useEffect(() => {
+    const all = Object.values(players.current);
+    if (muted) { all.forEach((player) => player?.pause()); return; }
+    const cue: LiveSpinSound | null = event.status === "live" ? "heartbeat" : event.status === "winner_revealed" ? "result" : event.status === "ended" ? "outro" : finalCountdown ? "countdown" : ["announced", "locked", "waiting"].includes(event.status) ? "intro" : null;
+    all.forEach((player) => { if (player && player !== players.current[cue ?? "intro"]) player.pause(); });
+    if (!cue) return;
+    const player = players.current[cue];
+    if (!player) return;
+    player.loop = cue === "intro" || cue === "heartbeat";
+    player.volume = cue === "heartbeat" ? 0.42 : cue === "outro" ? 0.5 : 0.72;
+    if (cue === "heartbeat") player.playbackRate = stripRemaining <= 2 ? 1.5 : stripRemaining <= 4 ? 1.25 : 1;
+    const key = `${event.id}:${event.status}:${cue}`;
+    if (lastCue.current !== key || (cue === "heartbeat" && player.paused)) { lastCue.current = key; player.currentTime = cue === "heartbeat" || cue === "intro" ? 0 : player.currentTime; void player.play().catch(() => undefined); }
+  }, [event.id, event.status, finalCountdown, muted, stripRemaining]);
+}
+
 function LiveSpinRealtime({ eventId, enabled, onState }: { eventId: string; enabled: boolean; onState: () => void }) {
   const auth = trpc.liveSpin.realtimeAuth.useQuery({ eventId }, { enabled, staleTime: 45 * 60_000, refetchInterval: 45 * 60_000, retry: false });
   useEffect(() => {
@@ -100,9 +138,11 @@ function LiveSpinStage({ state }: { state: LiveSpinState }) {
   const spoiler = useCountdown(plusSeconds(event.winnerRevealedAt, event.winnerSpoilerSeconds), serverNow);
   const prizeCountdown = useCountdown(plusSeconds(event.prizeCountdownStartedAt, event.prizeCountdownSeconds), serverNow);
   const [muted, setMuted] = useState(true);
+  const finalCountdown = event.status === "waiting" && waiting.remaining > 0 && waiting.remaining <= 10;
+  useLiveSpinAudio({ event, muted, finalCountdown, stripRemaining: nameStrip.remaining });
   const statusTitle: Record<string, string> = { announced: "កំពុងរៀបចំ Live Spin", locked: "បញ្ជីអ្នកចូលរួមត្រូវបាន lock", waiting: "Waiting Lobby", live: "Live Spin កំពុងដំណើរការ", winner_revealed: "អ្នកឈ្នះត្រូវបានជ្រើស", prize_countdown: "រង្វាន់ជិតបង្ហាញ", prize_revealed: "រង្វាន់ត្រូវបានបង្ហាញ", ended: "Live Spin បានបញ្ចប់" };
   const inLiveWindow = ["waiting", "live", "winner_revealed", "prize_countdown", "prize_revealed"].includes(event.status);
-  return <div className="mt-7">{event.isTest ? <div className="mb-4 rounded-xl border border-amber-200/40 bg-amber-200/10 px-3 py-2 text-center text-[11px] font-bold text-amber-100">LIVE SPIN TEST · អ្នកអាចមើល realtime បានតែប៉ុណ្ណោះ។ Test នេះមិនផ្តល់ ticket ឬរង្វាន់សម្រាប់ customer ទេ។</div> : null}<div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-bold tracking-[0.14em] text-cyan-200">{inLiveWindow ? "LIVE STATUS" : "UPCOMING"}</p><h2 className="mt-1 font-display text-2xl font-bold">{statusTitle[event.status] ?? "Live Spin"}</h2></div><div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-right"><p className="text-[10px] font-bold tracking-[0.14em] text-slate-300">PARTICIPANTS</p><p className="mt-1 font-display text-xl font-bold text-amber-200">{state.participantCount} <span className="text-sm text-slate-300">/ {event.minParticipantCount}</span></p></div></div>{event.status === "waiting" ? <AdGate url={event.adMediaUrl} duration={event.adDurationSeconds} muted={muted} onToggleMute={() => setMuted((value) => !value)} countdown={waiting} serverNow={serverNow} /> : null}{event.status === "live" ? <NameStrip entryCount={state.entryCount} countdown={nameStrip} /> : null}{event.status === "winner_revealed" ? <WinnerReveal alias={state.winner?.alias ?? "ZRS-••••"} countdown={spoiler} /> : null}{event.status === "prize_countdown" ? <PrizeCountdown alias={state.winner?.alias ?? "ZRS-••••"} countdown={prizeCountdown} /> : null}{event.status === "prize_revealed" || event.status === "ended" ? <PrizeReveal name={state.prize?.nameKh} value={state.prize?.valueLabel} mediaUrl={state.prize?.mediaUrl} alias={state.winner?.alias} ended={event.status === "ended"} /> : null}{["announced", "locked"].includes(event.status) ? <WaitingLobby countdown={waiting} state={state} /> : null}<div className="mt-5 grid gap-3 md:grid-cols-2"><div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4"><div className="flex items-center gap-2 text-cyan-100"><LockKeyhole className="h-4 w-4" /><p className="text-xs font-bold">Fairness commitment</p></div><p className="mt-2 break-all font-mono text-[10px] leading-5 text-slate-400">{event.fairnessCommitmentHash ?? "Commitment will be published before Live Spin."}</p><p className="mt-2 text-[11px] leading-5 text-slate-300">Server បង្កើត seed ដោយសុវត្ថិភាព, lock participant snapshot មុន spin ហើយបង្ហាញ seed បន្ទាប់ពី prize reveal។</p></div><div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4"><div className="flex items-center gap-2 text-amber-200"><Trophy className="h-4 w-4" /><p className="text-xs font-bold">Sunday · 3:00 PM</p></div><p className="mt-2 text-[11px] leading-5 text-slate-300">ម៉ោងកម្ពុជា (Asia/Phnom_Penh)។ ការរាប់ថយក្រោយប្រើ server time ដែលបាន sync ជាមួយ device របស់អ្នក។</p></div></div></div>;
+  return <div className="mt-7">{event.isTest ? <div className="mb-4 rounded-xl border border-amber-200/40 bg-amber-200/10 px-3 py-2 text-center text-[11px] font-bold text-amber-100">LIVE SPIN TEST · អ្នកអាចមើល realtime បានតែប៉ុណ្ណោះ។ Test នេះមិនផ្តល់ ticket ឬរង្វាន់សម្រាប់ customer ទេ។</div> : null}<div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-bold tracking-[0.14em] text-cyan-200">{inLiveWindow ? "LIVE STATUS" : "UPCOMING"}</p><h2 className="mt-1 font-display text-2xl font-bold">{statusTitle[event.status] ?? "Live Spin"}</h2></div><div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-right"><p className="text-[10px] font-bold tracking-[0.14em] text-slate-300">PARTICIPANTS</p><p className="mt-1 font-display text-xl font-bold text-amber-200">{state.participantCount} <span className="text-sm text-slate-300">/ {event.minParticipantCount}</span></p></div></div>{event.status === "waiting" ? <AdGate url={event.adMediaUrl} duration={event.adDurationSeconds} muted={muted} onToggleMute={() => setMuted((value) => !value)} countdown={waiting} serverNow={serverNow} /> : null}{["announced", "locked", "live", "winner_revealed", "prize_countdown", "prize_revealed", "ended"].includes(event.status) ? <button type="button" onClick={() => setMuted((value) => !value)} className="mt-4 inline-flex h-9 items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-3 text-xs font-bold text-white transition hover:bg-white/15" aria-label={muted ? "បើកសំឡេង Live Spin" : "បិទសំឡេង Live Spin"}>{muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}{muted ? "ចុចបើកសំឡេង" : "បិទសំឡេង"}</button> : null}{event.status === "live" ? <NameStrip entryCount={state.entryCount} countdown={nameStrip} /> : null}{event.status === "winner_revealed" ? <WinnerReveal alias={state.winner?.alias ?? "ZRS-••••"} countdown={spoiler} /> : null}{event.status === "prize_countdown" ? <PrizeCountdown alias={state.winner?.alias ?? "ZRS-••••"} countdown={prizeCountdown} /> : null}{event.status === "prize_revealed" || event.status === "ended" ? <PrizeReveal name={state.prize?.nameKh} value={state.prize?.valueLabel} mediaUrl={state.prize?.mediaUrl} alias={state.winner?.alias} ended={event.status === "ended"} /> : null}{["announced", "locked"].includes(event.status) ? <WaitingLobby countdown={waiting} state={state} /> : null}<div className="mt-5 grid gap-3 md:grid-cols-2"><div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4"><div className="flex items-center gap-2 text-cyan-100"><LockKeyhole className="h-4 w-4" /><p className="text-xs font-bold">Fairness commitment</p></div><p className="mt-2 break-all font-mono text-[10px] leading-5 text-slate-400">{event.fairnessCommitmentHash ?? "Commitment will be published before Live Spin."}</p><p className="mt-2 text-[11px] leading-5 text-slate-300">Server បង្កើត seed ដោយសុវត្ថិភាព, lock participant snapshot មុន spin ហើយបង្ហាញ seed បន្ទាប់ពី prize reveal។</p></div><div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4"><div className="flex items-center gap-2 text-amber-200"><Trophy className="h-4 w-4" /><p className="text-xs font-bold">Sunday · 3:00 PM</p></div><p className="mt-2 text-[11px] leading-5 text-slate-300">ម៉ោងកម្ពុជា (Asia/Phnom_Penh)។ ការរាប់ថយក្រោយប្រើ server time ដែលបាន sync ជាមួយ device របស់អ្នក។</p></div></div></div>;
 }
 
 function AdGate({ url, duration, muted, onToggleMute, countdown, serverNow }: { url: string | null; duration: number; muted: boolean; onToggleMute: () => void; countdown: ReturnType<typeof useCountdown>; serverNow: number }) {
