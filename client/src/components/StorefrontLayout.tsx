@@ -22,6 +22,12 @@ const mobileNavigation = [
   { href: "/account", label: "គណនី", icon: UserRound },
 ];
 
+export function mobileTabHrefForPath(pathname: string) {
+  const path = pathname.split("?")[0]?.split("#")[0] || "/";
+  if (path === "/account" || path.startsWith("/account/") || path === "/wallet" || path === "/order-status") return "/account";
+  return "/";
+}
+
 const particleSlots = [
   ["6%", "9%", "2px", "-1.1s"], ["15%", "31%", "1px", "-3.7s"], ["24%", "17%", "2px", "-5.2s"],
   ["38%", "8%", "1px", "-2.4s"], ["49%", "27%", "2px", "-6.3s"], ["61%", "13%", "1px", "-4.6s"],
@@ -50,7 +56,8 @@ function StorefrontShell({ children }: { children: ReactNode }) {
   const wallet = trpc.wallet.summary.useQuery(undefined, { enabled: Boolean(user) });
   const displayedBalance = Number(wallet.data?.balanceKhr ?? 0).toLocaleString("km-KH", { maximumFractionDigits: 2 });
   const balanceCurrency = wallet.data?.currency ?? "KHR";
-  const activeMobileTabIndex = Math.max(0, mobileNavigation.findIndex((item) => item.href === location));
+  const activeMobileTabHref = mobileTabHrefForPath(location);
+  const activeMobileTabIndex = Math.max(0, mobileNavigation.findIndex((item) => item.href === activeMobileTabHref));
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -88,7 +95,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
   const navigateToTop = () => window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
 
   return (
-    <div ref={shellRef} className="zurs-dotted-shell min-h-screen pb-20 sm:pb-0">
+    <div ref={shellRef} className="zurs-dotted-shell min-h-screen pb-[calc(5rem+env(safe-area-inset-bottom))] sm:pb-0">
       <div className="zurs-particle-field" aria-hidden="true">{particleSlots.map(([x, y, size, delay], index) => <span key={index} style={{ "--particle-x": x, "--particle-y": y, "--particle-size": size, "--particle-delay": delay } as React.CSSProperties} />)}</div>
       <header className="zurs-compact-header sticky top-2 z-50 mx-3 rounded-[1.25rem] border border-white/80 bg-white/72 backdrop-blur-2xl sm:top-3 sm:mx-4 sm:rounded-2xl">
         <div className="container flex h-12 items-center justify-between gap-2 sm:h-14 sm:gap-3">
@@ -117,9 +124,9 @@ function StorefrontShell({ children }: { children: ReactNode }) {
         </div>
       </footer>
 
-      {selectedProduct ? <SelectedProductActionBar product={selectedProduct} isAuthenticated={Boolean(user)} isAuthenticationLoading={loading} signInHref={googleSignInHref} /> : <nav className="liquid-tabbar zurs-mobile-tabbar fixed inset-x-8 bottom-2 z-40 grid h-[3.25rem] grid-cols-2 gap-0.5 rounded-full p-1 shadow-[0_10px_24px_rgba(15,23,42,0.11)] sm:hidden" style={{ "--mobile-tab-index": activeMobileTabIndex } as React.CSSProperties} aria-label="Mobile primary navigation">
+      {selectedProduct ? <SelectedProductActionBar product={selectedProduct} isAuthenticated={Boolean(user)} isAuthenticationLoading={loading} signInHref={googleSignInHref} /> : <nav className="liquid-tabbar zurs-mobile-tabbar fixed z-40 grid h-[3.25rem] grid-cols-2 gap-0.5 rounded-full p-1 shadow-[0_10px_24px_rgba(15,23,42,0.11)] sm:hidden" style={{ "--mobile-tab-index": activeMobileTabIndex } as React.CSSProperties} aria-label="Mobile primary navigation">
         <span className="zurs-mobile-tab-indicator" aria-hidden="true" />
-        {mobileNavigation.map(({ href, label, icon: Icon, animation }) => { const active = location === href; const classes = cn("zurs-mobile-tab relative z-10 flex min-w-0 flex-row items-center justify-center gap-1 rounded-full px-2 py-1 text-[9px] font-bold transition-colors", active ? "zurs-mobile-tab--active text-slate-950" : "text-slate-500 hover:bg-white/75 hover:text-slate-800"); return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={classes}>{active && animation ? <AnimatedGlyph name={animation} size={16} color="#312e81" /> : <Icon className={cn("h-3.5 w-3.5", active && "tab-icon-active")} strokeWidth={active ? 2.25 : 1.9} />}<span className="truncate">{label}</span></Link>; })}
+        {mobileNavigation.map(({ href, label, icon: Icon, animation }) => { const active = activeMobileTabHref === href; const classes = cn("zurs-mobile-tab relative z-10 flex min-w-0 flex-row items-center justify-center gap-1 rounded-full px-2 py-1 text-[9px] font-bold transition-colors", active ? "zurs-mobile-tab--active text-slate-950" : "text-slate-500 hover:bg-white/75 hover:text-slate-800"); return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={classes}>{active && animation ? <AnimatedGlyph name={animation} size={16} color="#312e81" /> : <Icon className={cn("h-3.5 w-3.5", active && "tab-icon-active")} strokeWidth={active ? 2.25 : 1.9} />}<span className="truncate">{label}</span></Link>; })}
       </nav>}
       <button type="button" onClick={navigateToTop} aria-label="ត្រឡប់ទៅខាងលើ" className={cn("fixed right-4 z-[45] hidden h-11 w-11 place-items-center rounded-2xl border border-white/80 bg-slate-950 text-white shadow-lg shadow-slate-950/20 transition-[opacity,transform,background-color] duration-200 hover:-translate-y-1 hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 sm:grid sm:bottom-6", showScrollTop ? "opacity-100" : "pointer-events-none translate-y-3 opacity-0")}><ArrowUp className="h-5 w-5" strokeWidth={2.25} /></button>
     </div>

@@ -470,3 +470,4 @@
 - [x] Verify the supplied banner image URLs are reachable from the published production deployment and correct any delivery/caching issue without re-reading or editing the uploaded image files.
 - [x] Repair ZURS AI text completion handling so valid non-streaming or alternate OpenAI-compatible response shapes do not appear as an empty customer reply; preserve server-only secrets and payment boundaries.
 - [x] Add reduced-motion-safe animated active-state transitions when users switch mobile tab-bar destinations.
+- [x] Diagnose and repair the user-reported mobile Tabbar glitch on the latest official release, including bottom-safe-area spacing, two-tab geometry, active indicator, and route-switch motion without reintroducing public AI navigation. Nested Top-up paths now retain Home active state, the indicator enter offset matches its stable transition, and safe-area placement is covered by regression tests and 375px visual review.

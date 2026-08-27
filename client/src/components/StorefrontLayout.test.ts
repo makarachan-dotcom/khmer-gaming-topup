@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 vi.mock("streamdown", () => ({ Streamdown: () => null }));
-import { isProtectedMediaTarget } from "./StorefrontLayout";
+import { isProtectedMediaTarget, mobileTabHrefForPath } from "./StorefrontLayout";
 
 class MediaElement {
   constructor(private readonly media: boolean) {}
@@ -58,6 +58,16 @@ describe("storefront media protection", () => {
     expect(styleSource).not.toContain("width: calc((100% - 1.5rem) / 4)");
     expect(styleSource).toContain("zurs-mobile-tab-indicator-enter");
     expect(styleSource).toContain("tab-icon-active");
+    expect(styleSource).toContain("100% + 0.125rem");
+    expect(styleSource).not.toContain("100% + 0.25rem");
+  });
+
+  it("keeps Home active across Top-up paths and assigns account-owned routes to Account", () => {
+    expect(mobileTabHrefForPath("/")).toBe("/");
+    expect(mobileTabHrefForPath("/topup/mobile_legends")).toBe("/");
+    expect(mobileTabHrefForPath("/topup/blood_strike?from_webdev=1")).toBe("/");
+    expect(mobileTabHrefForPath("/account")).toBe("/account");
+    expect(mobileTabHrefForPath("/wallet")).toBe("/account");
   });
 
   it("uses a compact two-item rounded mobile tab bar without public AI entry", () => {
@@ -69,6 +79,7 @@ describe("storefront media protection", () => {
     expect(componentSource).not.toContain('href: "/ai"');
     expect(componentSource).toContain("rounded-full");
     expect(styleSource).toContain("border-radius: 999px");
+    expect(styleSource).toContain("safe-area-inset-bottom");
   });
 
   it("uses a matching rounded top header without changing desktop controls", () => {
