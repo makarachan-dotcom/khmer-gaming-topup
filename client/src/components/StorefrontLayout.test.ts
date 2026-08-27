@@ -54,7 +54,7 @@ describe("storefront media protection", () => {
     expect(componentSource).toContain("zurs-mobile-tab-indicator");
     expect(componentSource).toContain('"--mobile-tab-index": activeMobileTabIndex');
     expect(styleSource).toContain("--mobile-tab-index");
-    expect(styleSource).toContain("width: calc((100% - 1rem) / 3)");
+    expect(styleSource).toContain("width: calc((100% - 1.25rem) / 3)");
     expect(componentSource).toContain('href: "/live-spin"');
     expect(componentSource).toContain("zurs-mobile-tab-label");
     expect(styleSource).toContain("zurs-mobile-tabbar--live");
