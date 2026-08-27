@@ -488,3 +488,5 @@
 - [x] Add clear Khmer package recommendations and a neutral account/Player-ID guidance notice for customers who manage more than one game account, without storing or exposing extra private account data. Recommendations are derived only from authorized provider package labels/prices and saved IDs remain device-local and redacted.
 
 - [x] Diagnose and repair the remaining production Catalog Control Add/Remove mutation failure reported after release `708ffa48`; keep the fix confined to availability persistence/feedback and do not alter provider source products, credentials, media, orders, or Payment Control. The owner inventory and availability validation now fall back to previously synchronized provider records during a temporary FZR live-catalog outage, and the UI explains unavailable synchronized inventory in concise Khmer while reverting any optimistic change.
+
+- [x] Deferred at the owner's request: remove the oversized local `khmer-sampeah.png` delivery reference for now so it cannot block publication. The owner will supply a File Storage URL later; no replacement image is fabricated.
