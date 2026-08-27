@@ -5,6 +5,8 @@ export const LIVE_SPIN_QUALIFIED_ORDERS_PER_TICKET = 7;
 export const LIVE_SPIN_MINIMUM_PARTICIPANT_COUNT = 100;
 export const LIVE_SPIN_DEFAULT_SPOILER_SECONDS = 5;
 export const LIVE_SPIN_DEFAULT_PRIZE_COUNTDOWN_SECONDS = 5;
+export const LIVE_SPIN_NAME_STRIP_SECONDS = 5;
+export const LIVE_SPIN_PRIZE_REVEAL_SECONDS = 5;
 export const LIVE_SPIN_TIMEZONE = "Asia/Phnom_Penh";
 
 export type LiveSpinEligibleOrder = {

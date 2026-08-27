@@ -4,9 +4,9 @@ import { nanoid } from "nanoid";
 import { liveSpinAuditLogs, liveSpinEntries, liveSpinEvents, liveSpinPrizeTiers, liveSpinQualifiedOrders, liveSpinResults, liveSpinTickets, orders, paymentTransactions, users } from "../drizzle/schema";
 import { decryptCredential, encryptCredential, type CredentialEnvelope } from "./credentialEnvelope";
 import { getDb } from "./db";
-import { LIVE_SPIN_DEFAULT_PRIZE_COUNTDOWN_SECONDS, LIVE_SPIN_DEFAULT_SPOILER_SECONDS, LIVE_SPIN_MINIMUM_PARTICIPANT_COUNT, LIVE_SPIN_QUALIFIED_ORDERS_PER_TICKET, createLiveSpinFairnessSeed, isLiveSpinEligibleOrder, liveSpinFairnessCommitment, liveSpinSnapshotHash, liveSpinWeekKey, progressForQualifiedOrders, selectLiveSpinOutcome, ticketCountForQualifiedOrders } from "./liveSpinFairness";
+import { LIVE_SPIN_DEFAULT_PRIZE_COUNTDOWN_SECONDS, LIVE_SPIN_DEFAULT_SPOILER_SECONDS, LIVE_SPIN_MINIMUM_PARTICIPANT_COUNT, LIVE_SPIN_NAME_STRIP_SECONDS, LIVE_SPIN_PRIZE_REVEAL_SECONDS, LIVE_SPIN_QUALIFIED_ORDERS_PER_TICKET, createLiveSpinFairnessSeed, isLiveSpinEligibleOrder, liveSpinFairnessCommitment, liveSpinSnapshotHash, liveSpinWeekKey, progressForQualifiedOrders, selectLiveSpinOutcome, ticketCountForQualifiedOrders } from "./liveSpinFairness";
 
-export const liveSpinEventStatuses = ["draft", "announced", "locked", "waiting", "live", "winner_revealed", "prize_revealed", "ended", "skipped"] as const;
+export const liveSpinEventStatuses = ["draft", "announced", "locked", "waiting", "live", "winner_revealed", "prize_countdown", "prize_revealed", "ended", "skipped"] as const;
 export type LiveSpinEventStatus = (typeof liveSpinEventStatuses)[number];
 
 function ensureDb<T>(db: T | null): T {
@@ -23,6 +23,15 @@ function assertWeeklySundayThreePm(scheduledAt: Date) {
   const parts = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Phnom_Penh", weekday: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(scheduledAt);
   const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
   if (values.weekday !== "Sun" || values.hour !== "15" || values.minute !== "00") throw new Error("Live Spin must be scheduled for Sunday at 3:00 PM (Asia/Phnom_Penh).");
+}
+
+function assertAnnouncementWindow(scheduledAt: Date, announcementStartsAt: Date) {
+  const leadTime = scheduledAt.getTime() - announcementStartsAt.getTime();
+  const minimumLeadTime = 24 * 60 * 60_000;
+  const maximumLeadTime = 48 * 60 * 60_000;
+  if (leadTime < minimumLeadTime || leadTime > maximumLeadTime) {
+    throw new Error("Announcement must begin 24 to 48 hours before Live Spin.");
+  }
 }
 
 function encryptedSeed(seed: string) {
@@ -124,7 +133,7 @@ export async function createLiveSpinEvent(input: { actorUserId: number; schedule
   assertWeeklySundayThreePm(input.scheduledAt);
   if (input.scheduledAt.getTime() <= Date.now()) throw new Error("Live Spin must be scheduled in the future.");
   if (input.entryCutoffAt.getTime() !== input.scheduledAt.getTime() - 10 * 60_000) throw new Error("Entry cutoff must be exactly 10 minutes before Live Spin.");
-  if (input.announcementStartsAt.getTime() !== input.scheduledAt.getTime() - 7 * 24 * 60 * 60_000) throw new Error("Announcement must begin exactly one week before Live Spin.");
+  assertAnnouncementWindow(input.scheduledAt, input.announcementStartsAt);
   if (input.lobbyStartsAt.getTime() !== input.scheduledAt.getTime() - 5 * 60_000) throw new Error("The waiting lobby must begin exactly 5 minutes before Live Spin.");
   const weekKey = liveSpinWeekKey(input.scheduledAt);
   const existing = await db.select({ id: liveSpinEvents.id }).from(liveSpinEvents).where(eq(liveSpinEvents.weekKey, weekKey)).limit(1);
@@ -177,7 +186,7 @@ export async function lockLiveSpinParticipants(input: { eventId: string; actorUs
     const holderCount = new Set(tickets.map((ticket) => ticket.userId)).size;
     if (holderCount < event.minParticipantCount) {
       await tx.update(liveSpinEvents).set({ status: "skipped", endedAt: now, skippedReason: "The weekly event did not reach the minimum eligible participant threshold." }).where(eq(liveSpinEvents.id, event.id));
-      await tx.insert(liveSpinAuditLogs).values({ id: nanoid(), eventId: event.id, actorUserId: input.actorUserId, actorType: "owner", action: "event_auto_skipped_below_threshold", details: { holderCount, minParticipantCount: event.minParticipantCount } });
+      await tx.insert(liveSpinAuditLogs).values({ id: nanoid(), eventId: event.id, actorUserId: input.actorUserId, actorType: "owner", action: "event_auto_skipped_below_threshold", details: { holderCount, minParticipantCount: event.minParticipantCount, ticketPolicy: "tickets_remain_active_and_roll_over" } });
       return { status: "skipped" as const, holderCount, minParticipantCount: event.minParticipantCount };
     }
 
@@ -197,7 +206,7 @@ export async function skipLiveSpinWeek(input: { eventId: string; actorUserId: nu
     await tx.execute(sql`SELECT id FROM live_spin_events WHERE id = ${input.eventId} FOR UPDATE`);
     const event = (await tx.select().from(liveSpinEvents).where(eq(liveSpinEvents.id, input.eventId)).limit(1))[0];
     if (!event) throw new Error("Live Spin event not found.");
-    if (["live", "winner_revealed", "prize_revealed", "ended", "skipped"].includes(event.status)) throw new Error("This Live Spin event can no longer be skipped.");
+    if (["live", "winner_revealed", "prize_countdown", "prize_revealed", "ended", "skipped"].includes(event.status)) throw new Error("This Live Spin event can no longer be skipped.");
     await tx.update(liveSpinTickets).set({ status: "active", eventId: null }).where(and(eq(liveSpinTickets.eventId, event.id), eq(liveSpinTickets.status, "locked")));
     await tx.update(liveSpinEvents).set({ status: "skipped", endedAt: new Date(), skippedReason: input.reason.trim() }).where(eq(liveSpinEvents.id, event.id));
     await tx.insert(liveSpinAuditLogs).values({ id: nanoid(), eventId: event.id, actorUserId: input.actorUserId, actorType: "owner", action: "event_skipped_by_owner", details: { reason: input.reason.trim(), ticketPolicy: "tickets_rolled_over" } });
@@ -205,13 +214,15 @@ export async function skipLiveSpinWeek(input: { eventId: string; actorUserId: nu
   });
 }
 
-export async function selectLiveSpinWinner(input: { eventId: string }) {
+export async function selectLiveSpinWinner(input: { eventId: string; now?: Date }) {
   const db = ensureDb(await getDb());
   return db.transaction(async (tx) => {
     await tx.execute(sql`SELECT id FROM live_spin_events WHERE id = ${input.eventId} FOR UPDATE`);
     const event = (await tx.select().from(liveSpinEvents).where(eq(liveSpinEvents.id, input.eventId)).limit(1))[0];
     if (!event) throw new Error("Live Spin event not found.");
     if (event.status !== "live") throw new Error("A winner can only be selected while the event is live.");
+    const now = input.now ?? new Date();
+    if (!event.liveStartedAt || now.getTime() < event.liveStartedAt.getTime() + LIVE_SPIN_NAME_STRIP_SECONDS * 1000) throw new Error("The server-side name strip is still in progress.");
     const existing = await tx.select({ id: liveSpinResults.id }).from(liveSpinResults).where(eq(liveSpinResults.eventId, event.id)).limit(1);
     if (existing[0]) throw new Error("This Live Spin already has a recorded result.");
     const entries = await tx.select().from(liveSpinEntries).where(and(eq(liveSpinEntries.eventId, event.id), eq(liveSpinEntries.status, "locked"))).orderBy(asc(liveSpinEntries.entryIndex));
@@ -224,10 +235,11 @@ export async function selectLiveSpinWinner(input: { eventId: string }) {
     if (!winner || !prize) throw new Error("The deterministic result could not be resolved.");
     const resultId = nanoid();
     await tx.insert(liveSpinResults).values({ id: resultId, eventId: event.id, winnerEntryId: winner.id, prizeTierId: prize.id, winnerIndex: outcome.winnerIndex, prizeIndex: outcome.prizeIndex, selectionProofHash: outcome.selectionProofHash });
+    const selectedAt = now;
     await tx.update(liveSpinEntries).set({ status: "winner" }).where(eq(liveSpinEntries.id, winner.id));
-    await tx.update(liveSpinTickets).set({ status: "used" }).where(eq(liveSpinTickets.id, winner.ticketId));
-    await tx.update(liveSpinEvents).set({ status: "winner_revealed", revealedFairnessSeed: seed }).where(eq(liveSpinEvents.id, event.id));
-    await tx.insert(liveSpinAuditLogs).values({ id: nanoid(), eventId: event.id, actorType: "system", action: "winner_selected_server_side", details: { resultId, winnerEntryId: winner.id, prizeTierId: prize.id, winnerIndex: outcome.winnerIndex, prizeIndex: outcome.prizeIndex, selectionProofHash: outcome.selectionProofHash } });
+    await tx.update(liveSpinTickets).set({ status: "used" }).where(and(eq(liveSpinTickets.eventId, event.id), eq(liveSpinTickets.status, "locked")));
+    await tx.update(liveSpinEvents).set({ status: "winner_revealed", winnerRevealedAt: selectedAt, revealedFairnessSeed: seed }).where(eq(liveSpinEvents.id, event.id));
+    await tx.insert(liveSpinAuditLogs).values({ id: nanoid(), eventId: event.id, actorType: "system", action: "winner_selected_server_side", details: { resultId, winnerEntryId: winner.id, prizeTierId: prize.id, winnerIndex: outcome.winnerIndex, prizeIndex: outcome.prizeIndex, selectionProofHash: outcome.selectionProofHash, consumedEntryCount: entries.length, ticketPolicy: "all_locked_tickets_consumed_after_successful_draw" } });
     return { resultId, winnerAlias: winner.displayAlias, prizeNameKh: prize.nameKh, prizeValueLabel: prize.valueLabel, winnerSpoilerSeconds: event.winnerSpoilerSeconds, prizeCountdownSeconds: event.prizeCountdownSeconds, fairnessCommitmentHash: event.fairnessCommitmentHash, participantSnapshotHash: event.participantSnapshotHash, revealedFairnessSeed: seed, selectionProofHash: outcome.selectionProofHash };
   });
 }
@@ -245,15 +257,18 @@ export async function announceLiveSpinEvent(input: { eventId: string; actorUserI
 export async function saveLiveSpinPrizeTier(input: { eventId: string; actorUserId: number; tierNumber: number; nameKh: string; valueLabel: string; descriptionKh?: string | null; mediaUrl?: string | null; isGrandPrize: boolean; isActive: boolean }) {
   const db = ensureDb(await getDb());
   if (!Number.isInteger(input.tierNumber) || input.tierNumber < 1 || input.tierNumber > 10) throw new Error("A Live Spin event supports exactly ten prize tiers.");
-  const event = (await db.select({ status: liveSpinEvents.status }).from(liveSpinEvents).where(eq(liveSpinEvents.id, input.eventId)).limit(1))[0];
-  if (!event) throw new Error("Live Spin event not found.");
-  if (!["draft", "announced"].includes(event.status)) throw new Error("Prize tiers are locked once participant entries are locked.");
-  const values = { nameKh: input.nameKh.trim(), valueLabel: input.valueLabel.trim(), descriptionKh: input.descriptionKh?.trim() || null, mediaUrl: input.mediaUrl?.trim() || null, isGrandPrize: input.isGrandPrize, isActive: input.isActive };
-  const existing = await db.select({ id: liveSpinPrizeTiers.id }).from(liveSpinPrizeTiers).where(and(eq(liveSpinPrizeTiers.eventId, input.eventId), eq(liveSpinPrizeTiers.tierNumber, input.tierNumber))).limit(1);
-  if (existing[0]) await db.update(liveSpinPrizeTiers).set(values).where(eq(liveSpinPrizeTiers.id, existing[0].id));
-  else await db.insert(liveSpinPrizeTiers).values({ id: nanoid(), eventId: input.eventId, tierNumber: input.tierNumber, ...values });
-  await appendAudit({ eventId: input.eventId, actorUserId: input.actorUserId, actorType: "owner", action: existing[0] ? "prize_tier_updated" : "prize_tier_created", details: { tierNumber: input.tierNumber, isActive: input.isActive, isGrandPrize: input.isGrandPrize } });
-  return { success: true };
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT id FROM live_spin_events WHERE id = ${input.eventId} FOR UPDATE`);
+    const event = (await tx.select({ status: liveSpinEvents.status }).from(liveSpinEvents).where(eq(liveSpinEvents.id, input.eventId)).limit(1))[0];
+    if (!event) throw new Error("Live Spin event not found.");
+    if (!["draft", "announced"].includes(event.status)) throw new Error("Prize tiers are locked once participant entries are locked.");
+    const values = { nameKh: input.nameKh.trim(), valueLabel: input.valueLabel.trim(), descriptionKh: input.descriptionKh?.trim() || null, mediaUrl: input.mediaUrl?.trim() || null, isGrandPrize: input.isGrandPrize, isActive: input.isActive };
+    const existing = await tx.select({ id: liveSpinPrizeTiers.id }).from(liveSpinPrizeTiers).where(and(eq(liveSpinPrizeTiers.eventId, input.eventId), eq(liveSpinPrizeTiers.tierNumber, input.tierNumber))).limit(1);
+    if (existing[0]) await tx.update(liveSpinPrizeTiers).set(values).where(eq(liveSpinPrizeTiers.id, existing[0].id));
+    else await tx.insert(liveSpinPrizeTiers).values({ id: nanoid(), eventId: input.eventId, tierNumber: input.tierNumber, ...values });
+    await tx.insert(liveSpinAuditLogs).values({ id: nanoid(), eventId: input.eventId, actorUserId: input.actorUserId, actorType: "owner", action: existing[0] ? "prize_tier_updated" : "prize_tier_created", details: { tierNumber: input.tierNumber, isActive: input.isActive, isGrandPrize: input.isGrandPrize } });
+    return { success: true };
+  });
 }
 
 export async function getLiveSpinPrizeTiers(eventId: string) {
@@ -282,7 +297,7 @@ export async function endLiveSpinEvent(input: { eventId: string; actorUserId: nu
   const db = ensureDb(await getDb());
   const event = (await db.select().from(liveSpinEvents).where(eq(liveSpinEvents.id, input.eventId)).limit(1))[0];
   if (!event) throw new Error("Live Spin event not found.");
-  if (!["winner_revealed", "prize_revealed"].includes(event.status)) throw new Error("Live Spin can only end after the server has recorded a winner and prize result.");
+  if (event.status !== "prize_revealed") throw new Error("Live Spin can only end after the prize has been revealed.");
   await db.update(liveSpinEvents).set({ status: "ended", endedAt: new Date() }).where(eq(liveSpinEvents.id, event.id));
   await appendAudit({ eventId: event.id, actorUserId: input.actorUserId, actorType: "owner", action: "event_ended_by_owner", details: { reason: input.reason.trim() } });
   return { success: true, status: "ended" as const };
@@ -302,15 +317,16 @@ export async function getLiveSpinOwnerEventDetail(eventId: string) {
 
 export async function getPublicLiveSpinState() {
   const db = await getDb();
-  if (!db) return { event: null, participantCount: 0, entryCount: 0, thresholdReached: false, winner: null, prize: null };
-  const event = (await db.select().from(liveSpinEvents).where(inArray(liveSpinEvents.status, ["announced", "locked", "waiting", "live", "winner_revealed", "prize_revealed", "ended"])).orderBy(desc(liveSpinEvents.scheduledAt)).limit(1))[0];
-  if (!event) return { event: null, participantCount: 0, entryCount: 0, thresholdReached: false, winner: null, prize: null };
-  const isLocked = ["locked", "waiting", "live", "winner_revealed", "prize_revealed", "ended"].includes(event.status);
+  if (!db) return { serverNow: new Date(), event: null, participantCount: 0, entryCount: 0, thresholdReached: false, winner: null, prize: null };
+  const event = (await db.select().from(liveSpinEvents).where(inArray(liveSpinEvents.status, ["announced", "locked", "waiting", "live", "winner_revealed", "prize_countdown", "prize_revealed", "ended"])).orderBy(desc(liveSpinEvents.scheduledAt)).limit(1))[0];
+  if (!event) return { serverNow: new Date(), event: null, participantCount: 0, entryCount: 0, thresholdReached: false, winner: null, prize: null };
+  const isLocked = ["locked", "waiting", "live", "winner_revealed", "prize_countdown", "prize_revealed", "ended"].includes(event.status);
   const activeTicketHolders = isLocked ? event.lockedParticipantCount : new Set((await db.select({ userId: liveSpinTickets.userId }).from(liveSpinTickets).where(eq(liveSpinTickets.status, "active"))).map((ticket) => ticket.userId)).size;
-  const isWinnerRevealed = ["winner_revealed", "prize_revealed", "ended"].includes(event.status);
+  const isWinnerRevealed = ["winner_revealed", "prize_countdown", "prize_revealed", "ended"].includes(event.status);
   const isPrizeRevealed = ["prize_revealed", "ended"].includes(event.status);
   const result = isWinnerRevealed ? (await db.select({ entry: liveSpinEntries, prize: liveSpinPrizeTiers }).from(liveSpinResults).innerJoin(liveSpinEntries, eq(liveSpinResults.winnerEntryId, liveSpinEntries.id)).innerJoin(liveSpinPrizeTiers, eq(liveSpinResults.prizeTierId, liveSpinPrizeTiers.id)).where(eq(liveSpinResults.eventId, event.id)).limit(1))[0] : null;
   return {
+    serverNow: new Date(),
     event: {
       id: event.id,
       status: event.status,
@@ -318,6 +334,11 @@ export async function getPublicLiveSpinState() {
       announcementStartsAt: event.announcementStartsAt,
       entryCutoffAt: event.entryCutoffAt,
       lobbyStartsAt: event.lobbyStartsAt,
+      liveStartedAt: event.liveStartedAt,
+      winnerRevealedAt: event.winnerRevealedAt,
+      prizeCountdownStartedAt: event.prizeCountdownStartedAt,
+      prizeRevealedAt: event.prizeRevealedAt,
+      nameStripSeconds: LIVE_SPIN_NAME_STRIP_SECONDS,
       adMediaUrl: event.adMediaUrl,
       adDurationSeconds: event.adDurationSeconds,
       minParticipantCount: event.minParticipantCount,
@@ -338,21 +359,60 @@ export async function getPublicLiveSpinState() {
 export async function startLiveSpin(input: { eventId: string; actorUserId: number; now?: Date }) {
   const db = ensureDb(await getDb());
   const now = input.now ?? new Date();
-  const event = (await db.select().from(liveSpinEvents).where(eq(liveSpinEvents.id, input.eventId)).limit(1))[0];
-  if (!event) throw new Error("Live Spin event not found.");
-  if (event.status !== "waiting") throw new Error("Only the waiting lobby can begin Live Spin.");
-  if (now.getTime() < event.scheduledAt.getTime()) throw new Error("Live Spin cannot begin before its scheduled time.");
-  await db.update(liveSpinEvents).set({ status: "live", liveStartedAt: now }).where(eq(liveSpinEvents.id, event.id));
-  await appendAudit({ eventId: event.id, actorUserId: input.actorUserId, actorType: "owner", action: "live_spin_started", details: { startedAt: now.toISOString(), lockedEntryCount: event.lockedEntryCount } });
-  return { success: true, status: "live" as const };
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT id FROM live_spin_events WHERE id = ${input.eventId} FOR UPDATE`);
+    const event = (await tx.select().from(liveSpinEvents).where(eq(liveSpinEvents.id, input.eventId)).limit(1))[0];
+    if (!event) throw new Error("Live Spin event not found.");
+    if (event.status !== "waiting") throw new Error("Only the waiting lobby can begin Live Spin.");
+    if (now.getTime() < event.scheduledAt.getTime()) throw new Error("Live Spin cannot begin before its scheduled time.");
+    await tx.update(liveSpinEvents).set({ status: "live", liveStartedAt: now }).where(eq(liveSpinEvents.id, event.id));
+    await tx.insert(liveSpinAuditLogs).values({ id: nanoid(), eventId: event.id, actorUserId: input.actorUserId, actorType: "owner", action: "live_spin_started", details: { startedAt: now.toISOString(), lockedEntryCount: event.lockedEntryCount } });
+    return { success: true, status: "live" as const };
+  });
 }
 
-export async function revealLiveSpinPrize(input: { eventId: string; actorUserId: number }) {
+export async function startLiveSpinPrizeCountdown(input: { eventId: string; actorUserId: number; now?: Date }) {
+  const db = ensureDb(await getDb());
+  const now = input.now ?? new Date();
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT id FROM live_spin_events WHERE id = ${input.eventId} FOR UPDATE`);
+    const event = (await tx.select().from(liveSpinEvents).where(eq(liveSpinEvents.id, input.eventId)).limit(1))[0];
+    if (!event) throw new Error("Live Spin event not found.");
+    if (event.status !== "winner_revealed") throw new Error("Prize countdown can begin only after a server-recorded winner reveal.");
+    if (!event.winnerRevealedAt || now.getTime() < event.winnerRevealedAt.getTime() + event.winnerSpoilerSeconds * 1000) throw new Error("The winner spoiler pause is still in progress.");
+    await tx.update(liveSpinEvents).set({ status: "prize_countdown", prizeCountdownStartedAt: now }).where(eq(liveSpinEvents.id, event.id));
+    await tx.insert(liveSpinAuditLogs).values({ id: nanoid(), eventId: event.id, actorUserId: input.actorUserId, actorType: "owner", action: "prize_countdown_started", details: { startedAt: now.toISOString(), prizeCountdownSeconds: event.prizeCountdownSeconds } });
+    return { success: true, status: "prize_countdown" as const };
+  });
+}
+
+export async function revealLiveSpinPrize(input: { eventId: string; actorUserId: number; now?: Date }) {
+  const db = ensureDb(await getDb());
+  const now = input.now ?? new Date();
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT id FROM live_spin_events WHERE id = ${input.eventId} FOR UPDATE`);
+    const event = (await tx.select().from(liveSpinEvents).where(eq(liveSpinEvents.id, input.eventId)).limit(1))[0];
+    if (!event) throw new Error("Live Spin event not found.");
+    if (event.status !== "prize_countdown") throw new Error("The prize can be revealed only after the server-side prize countdown.");
+    if (!event.prizeCountdownStartedAt || now.getTime() < event.prizeCountdownStartedAt.getTime() + event.prizeCountdownSeconds * 1000) throw new Error("The prize countdown is still in progress.");
+    await tx.update(liveSpinEvents).set({ status: "prize_revealed", prizeRevealedAt: now }).where(eq(liveSpinEvents.id, event.id));
+    await tx.insert(liveSpinAuditLogs).values({ id: nanoid(), eventId: event.id, actorUserId: input.actorUserId, actorType: "owner", action: "prize_revealed", details: { winnerSpoilerSeconds: event.winnerSpoilerSeconds, prizeCountdownSeconds: event.prizeCountdownSeconds, seedPublished: true } });
+    return { success: true, status: "prize_revealed" as const };
+  });
+}
+
+/** Advances only the next server-authoritative phase after its persisted deadline. */
+export async function advanceLiveSpinPhase(input: { eventId: string; actorUserId: number; now?: Date }) {
   const db = ensureDb(await getDb());
   const event = (await db.select().from(liveSpinEvents).where(eq(liveSpinEvents.id, input.eventId)).limit(1))[0];
   if (!event) throw new Error("Live Spin event not found.");
-  if (event.status !== "winner_revealed") throw new Error("The prize can be revealed only after a server-recorded winner reveal.");
-  await db.update(liveSpinEvents).set({ status: "prize_revealed" }).where(eq(liveSpinEvents.id, event.id));
-  await appendAudit({ eventId: event.id, actorUserId: input.actorUserId, actorType: "owner", action: "prize_revealed", details: { winnerSpoilerSeconds: event.winnerSpoilerSeconds, prizeCountdownSeconds: event.prizeCountdownSeconds, seedPublished: true } });
-  return { success: true, status: "prize_revealed" as const };
+  const now = input.now ?? new Date();
+  if (event.status === "live") return selectLiveSpinWinner({ eventId: event.id, now });
+  if (event.status === "winner_revealed") return startLiveSpinPrizeCountdown({ eventId: event.id, actorUserId: input.actorUserId, now });
+  if (event.status === "prize_countdown") return revealLiveSpinPrize({ eventId: event.id, actorUserId: input.actorUserId, now });
+  if (event.status === "prize_revealed") {
+    if (!event.prizeRevealedAt || now.getTime() < event.prizeRevealedAt.getTime() + LIVE_SPIN_PRIZE_REVEAL_SECONDS * 1000) throw new Error("The thank-you reveal screen is still in progress.");
+    return endLiveSpinEvent({ eventId: event.id, actorUserId: input.actorUserId, reason: "The server-side Live Spin sequence completed after the published prize reveal." });
+  }
+  return { success: true, status: event.status, advanced: false as const };
 }

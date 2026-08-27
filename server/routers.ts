@@ -6,7 +6,7 @@ import { adminProcedure, ownerProcedure, protectedProcedure, publicProcedure, ro
 import * as db from "./db";
 import { announceLiveSpinEvent, createLiveSpinEvent, endLiveSpinEvent, getLiveSpinAccountSummary, getLiveSpinAuditLog, getLiveSpinEvents, getLiveSpinOwnerEventDetail, getLiveSpinPrizeTiers, getPublicLiveSpinState, lockLiveSpinParticipants, revealLiveSpinPrize, saveLiveSpinPrizeTier, skipLiveSpinWeek, startLiveSpinLobby } from "./liveSpinStore";
 import { createLiveSpinSubscriberToken } from "./liveSpinRealtime";
-import { runLiveSpinSequence } from "./liveSpinSequence";
+import { advanceLiveSpinSequence, runLiveSpinSequence } from "./liveSpinSequence";
 import { fetchFzrProviderSyncSnapshot, fetchProviderGameDetails, fetchProviderGames, fetchProviderPackages, fetchProviderPreviewPackages, fetchPublicProviderPackagePreview, fetchSmmProviderServices, getProviderAvailabilityCatalog, getProviderCatalogStatus, setProviderAvailability, validateProviderPlayerIdentity } from "./providerCatalog";
 import { toPublicPlayerIdentityResponse } from "./playerIdentityPrivacy";
 import { getProviderCredentialStatus } from "./providerCredentialStatus";
@@ -15,7 +15,7 @@ import { activateEncryptedProviderCredential, getProviderCredentialHistory, reco
 import { validateProviderCredentialCandidate } from "./providerCredentialValidation";
 import { resetBakongMerchantPreflightCache } from "./bakongKhqr";
 import { buildZursMemberDisplayName, isSingleAdminEmail } from "./storefrontDomain";
-import { uploadAdminMediaImage, uploadAdminPaymentMethodIcon, uploadMarketplaceScreenshot, uploadMarketplaceVerificationEvidence } from "./uploads";
+import { uploadAdminLiveSpinMedia, uploadAdminMediaImage, uploadAdminPaymentMethodIcon, uploadMarketplaceScreenshot, uploadMarketplaceVerificationEvidence } from "./uploads";
 import { storageGet } from "./storage";
 import { createDiditHostedSession } from "./didit";
 import { disclosureRequestStatuses, fraudReportStatuses } from "./marketplaceSafety";
@@ -105,6 +105,7 @@ export const appRouter = router({
   uploads: router({
     marketplaceScreenshot: protectedProcedure.input(z.object({ fileName: z.string().trim().min(1).max(180), contentType: z.enum(["image/jpeg", "image/png", "image/webp"]), dataUrl: z.string().min(50).max(7_000_000) })).mutation(async ({ ctx, input }) => { const upload = await uploadMarketplaceScreenshot({ userId: ctx.user.id, ...input }); return { key: upload.key }; }),
     adminMediaImage: scopedAdminProcedure("media").input(z.object({ fileName: z.string().trim().min(1).max(180), contentType: z.enum(["image/jpeg", "image/png", "image/webp"]), dataUrl: z.string().min(50).max(7_000_000) })).mutation(async ({ ctx, input }) => uploadAdminMediaImage({ adminUserId: ctx.user.id, ...input })),
+    adminLiveSpinMedia: ownerProcedure.input(z.object({ fileName: z.string().trim().min(1).max(180), contentType: z.enum(["image/jpeg", "image/png", "image/webp", "video/mp4", "video/webm"]), dataUrl: z.string().min(50).max(5_600_000) })).mutation(async ({ ctx, input }) => uploadAdminLiveSpinMedia({ adminUserId: ctx.user.id, ...input })),
     adminPaymentMethodIcon: ownerProcedure.input(z.object({ fileName: z.string().trim().min(1).max(180), contentType: z.enum(["image/jpeg", "image/png", "image/webp", "image/svg+xml"]), dataUrl: z.string().min(50).max(3_000_000) })).mutation(async ({ ctx, input }) => uploadAdminPaymentMethodIcon({ adminUserId: ctx.user.id, ...input })),
   }),
   content: router({
@@ -173,6 +174,7 @@ export const appRouter = router({
     lockLiveSpinParticipants: ownerProcedure.input(z.object({ eventId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => lockLiveSpinParticipants({ actorUserId: ctx.user.id, ...input })),
     startLiveSpinLobby: ownerProcedure.input(z.object({ eventId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => startLiveSpinLobby({ actorUserId: ctx.user.id, ...input })),
     startLiveSpin: ownerProcedure.input(z.object({ eventId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => runLiveSpinSequence({ actorUserId: ctx.user.id, ...input })),
+    advanceLiveSpinPhase: ownerProcedure.input(z.object({ eventId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => advanceLiveSpinSequence({ actorUserId: ctx.user.id, ...input })),
     revealLiveSpinPrize: ownerProcedure.input(z.object({ eventId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => revealLiveSpinPrize({ actorUserId: ctx.user.id, ...input })),
     endLiveSpinEvent: ownerProcedure.input(z.object({ eventId: z.string().min(4).max(64), reason: z.string().trim().min(10).max(500) })).mutation(({ ctx, input }) => endLiveSpinEvent({ actorUserId: ctx.user.id, ...input })),
     skipLiveSpinWeek: ownerProcedure.input(z.object({ eventId: z.string().min(4).max(64), reason: z.string().trim().min(10).max(500) })).mutation(({ ctx, input }) => skipLiveSpinWeek({ actorUserId: ctx.user.id, ...input })),

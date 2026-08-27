@@ -9,7 +9,7 @@ import { useSelectedProduct } from "@/contexts/SelectedProductContext";
 import { useStorefrontHeader } from "@/contexts/StorefrontHeaderContext";
 import { trpc } from "@/lib/trpc";
 import { animate } from "animejs";
-import { ArrowUp, ChevronRight, Crown, House, LogIn, ShieldCheck, UserRound, WalletCards } from "lucide-react";
+import { ArrowUp, ChevronRight, Crown, House, LogIn, ShieldCheck, Sparkles, UserRound, WalletCards } from "lucide-react";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 
@@ -50,6 +50,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
   const shellRef = useRef<HTMLDivElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const paymentMethods = trpc.payments.methods.useQuery(undefined, { staleTime: 30_000, refetchInterval: 15_000 });
+  const liveSpinState = trpc.liveSpin.state.useQuery(undefined, { staleTime: 30_000, refetchInterval: 60_000, retry: false });
   const selectedPaymentMethod = (paymentMethods.data ?? []).find((method) => method.id === selectedPaymentMethodId) ?? null;
   const activeMobileTabIndex = Math.max(0, mobileNavigation.findIndex((item) => item.href === location));
   const isTopupRoute = location.startsWith("/topup/");
@@ -109,6 +110,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
+      <LiveSpinAnnouncement event={liveSpinState.data?.event ?? null} />
       {children}
 
       <footer className="zurs-footer-glass zurs-footer mt-14 border-t pb-28 pt-8 sm:mt-20 sm:py-10">
@@ -142,6 +144,17 @@ function StorefrontShell({ children }: { children: ReactNode }) {
       <button type="button" onClick={navigateToTop} aria-label="ត្រឡប់ទៅខាងលើ" className={cn("fixed right-4 z-[45] hidden h-11 w-11 place-items-center rounded-2xl border border-white/80 bg-slate-950 text-white shadow-lg shadow-slate-950/20 transition-[opacity,transform,background-color] duration-200 hover:-translate-y-1 hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 sm:grid sm:bottom-6", showScrollTop ? "opacity-100" : "pointer-events-none translate-y-3 opacity-0")}><ArrowUp className="h-5 w-5" strokeWidth={2.25} /></button>
     </div>
   );
+}
+
+function LiveSpinAnnouncement({ event }: { event: { status: string; scheduledAt: Date | string } | null }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 1_000); return () => window.clearInterval(timer); }, []);
+  if (!event || !["announced", "locked", "waiting"].includes(event.status)) return null;
+  const remaining = Math.max(0, Math.ceil((new Date(event.scheduledAt).getTime() - now) / 1_000));
+  const hours = String(Math.floor(remaining / 3_600)).padStart(2, "0");
+  const minutes = String(Math.floor((remaining % 3_600) / 60)).padStart(2, "0");
+  const seconds = String(remaining % 60).padStart(2, "0");
+  return <Link href="/live-spin" className="container mt-2 flex h-9 items-center justify-center gap-2 rounded-xl border border-cyan-200/50 bg-cyan-50 px-3 text-center text-[10px] font-bold text-cyan-950 shadow-sm transition hover:bg-cyan-100 sm:text-xs"><Sparkles className="h-3.5 w-3.5 shrink-0 text-cyan-700" /><span>Live Spin · ថ្ងៃអាទិត្យ 3:00 រសៀល</span><span className="rounded-md bg-cyan-950 px-1.5 py-0.5 font-mono text-[10px] text-white">{hours}:{minutes}:{seconds}</span></Link>;
 }
 
 function SelectedProductActionBar({ product, paymentMethodName, isAuthenticated, isAuthenticationLoading, signInHref, onContinue }: { product: { label: string; amountLabel: string; priceLabel: string; gameName: string; gameLogoUrl?: string } | null; paymentMethodName: string | null; isAuthenticated: boolean; isAuthenticationLoading: boolean; signInHref: string; onContinue: () => void }) {

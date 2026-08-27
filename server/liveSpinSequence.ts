@@ -1,11 +1,6 @@
-import { endLiveSpinEvent, revealLiveSpinPrize, selectLiveSpinWinner, startLiveSpin } from "./liveSpinStore";
+import { advanceLiveSpinPhase, startLiveSpin } from "./liveSpinStore";
+import { LIVE_SPIN_NAME_STRIP_SECONDS } from "./liveSpinFairness";
 import { publishLiveSpinState } from "./liveSpinRealtime";
-
-const NAME_STRIP_SECONDS = 5;
-
-function pause(milliseconds: number) {
-  return new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
-}
 
 async function publishPublicState(eventId: string) {
   try {
@@ -17,25 +12,23 @@ async function publishPublicState(eventId: string) {
 }
 
 /**
- * This process is invoked only from the owner-only Go Live mutation. It keeps
- * the authoritative state machine on the server for the short live sequence;
- * browsers can only subscribe to the sanitized state and animate from it.
+ * Owner-only start action. The durable state machine persists a timestamp for
+ * every phase; another owner-only phase advance can resume it after a retry,
+ * reconnect, or deployment rather than relying on a sleeping serverless call.
  */
+export async function advanceLiveSpinSequence(input: { eventId: string; actorUserId: number }) {
+  const result = await advanceLiveSpinPhase(input);
+  await publishPublicState(input.eventId);
+  return result;
+}
+
 export async function runLiveSpinSequence(input: { eventId: string; actorUserId: number }) {
   const started = await startLiveSpin(input);
   await publishPublicState(input.eventId);
-
-  await pause(NAME_STRIP_SECONDS * 1000);
-  const selection = await selectLiveSpinWinner({ eventId: input.eventId });
-  await publishPublicState(input.eventId);
-
-  await pause(selection.winnerSpoilerSeconds * 1000);
-  await revealLiveSpinPrize(input);
-  await publishPublicState(input.eventId);
-
-  await pause(selection.prizeCountdownSeconds * 1000);
-  await endLiveSpinEvent({ eventId: input.eventId, actorUserId: input.actorUserId, reason: "The server-side Live Spin sequence completed after the published prize reveal." });
-  await publishPublicState(input.eventId);
-
-  return { ...started, completed: true as const, nameStripSeconds: NAME_STRIP_SECONDS, winnerSpoilerSeconds: selection.winnerSpoilerSeconds, prizeCountdownSeconds: selection.prizeCountdownSeconds };
+  return {
+    ...started,
+    completed: false as const,
+    nextPhase: "winner_selection" as const,
+    nextPhaseAfterSeconds: LIVE_SPIN_NAME_STRIP_SECONDS,
+  };
 }

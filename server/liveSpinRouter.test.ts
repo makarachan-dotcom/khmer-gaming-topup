@@ -12,9 +12,13 @@ describe("Live Spin router access boundaries", () => {
   });
 
   it("keeps event creation, participant locks, schedule transitions, prize editing and skip controls owner-only", () => {
-    ["createLiveSpinEvent", "announceLiveSpinEvent", "lockLiveSpinParticipants", "startLiveSpinLobby", "startLiveSpin", "revealLiveSpinPrize", "endLiveSpinEvent", "skipLiveSpinWeek", "saveLiveSpinPrizeTier"].forEach((procedure) => {
+    ["createLiveSpinEvent", "announceLiveSpinEvent", "lockLiveSpinParticipants", "startLiveSpinLobby", "startLiveSpin", "advanceLiveSpinPhase", "revealLiveSpinPrize", "endLiveSpinEvent", "skipLiveSpinWeek", "saveLiveSpinPrizeTier"].forEach((procedure) => {
       expect(source).toContain(`${procedure}: ownerProcedure`);
     });
+  });
+
+  it("keeps Live Spin media upload restricted to the owner", () => {
+    expect(source).toContain("adminLiveSpinMedia: ownerProcedure");
   });
 
   it("does not expose a client-callable winner selection procedure", () => {
