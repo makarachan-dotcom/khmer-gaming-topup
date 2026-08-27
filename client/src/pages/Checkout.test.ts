@@ -49,8 +49,10 @@ describe("secure checkout payment page", () => {
     expect(source).toContain("បង្កាន់ដៃទូទាត់");
     expect(source).toContain("Download / Print Receipt");
     expect(source).toContain("Payment received");
-    expect(source).toContain("Processing top-up");
+    expect(source).toContain("Processing order");
     expect(source).toContain("Completed / Delivered");
+    expect(source).not.toContain("Provider top-up");
+    expect(source).not.toContain("no provider top-up");
     expect(source).toContain("maskCustomerIdentifier");
     expect(styleSource).toContain("@media print");
     expect(styleSource).toContain(".receipt-paper");

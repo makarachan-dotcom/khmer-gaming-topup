@@ -23,8 +23,9 @@ describe("admin KHQR test product", () => {
     expect(db).toContain('const completedStatus = isAdminTestPurchase ? "delivered" as const : "paid" as const');
     expect(db).toContain('eventType: isAdminTestPurchase ? "admin_test_purchase_completed" : "payment_confirmed"');
     expect(checkout).toContain("បានទិញ Test Product ជោគជ័យ!");
-    expect(checkout).toContain("Test completed — no provider top-up");
-    expect(checkout).toContain("Provider top-up");
+    expect(checkout).toContain("Test completed");
+    expect(checkout).toContain('label="Test status" value="Test completed"');
+    expect(checkout).not.toContain("Provider top-up");
   });
 
   it("requires a visible acknowledgement and confirmation before the browser can create the real payment session", () => {
