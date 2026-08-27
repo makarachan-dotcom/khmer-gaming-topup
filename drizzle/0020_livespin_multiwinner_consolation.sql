@@ -6,10 +6,11 @@ ALTER TABLE `live_spin_events` ADD COLUMN `consolationGiftCount` int NOT NULL DE
 --> statement-breakpoint
 ALTER TABLE `live_spin_events` ADD COLUMN `settingsSnapshotHash` varchar(128) AFTER `consolationGiftCount`;
 --> statement-breakpoint
-ALTER TABLE `live_spin_results`
-  DROP INDEX `live_spin_results_eventId_unique`,
-  ADD COLUMN `winnerRank` int NOT NULL DEFAULT 1 AFTER `eventId`,
-  ADD CONSTRAINT `live_spin_results_eventId_winnerRank_unique` UNIQUE(`eventId`,`winnerRank`);
+ALTER TABLE `live_spin_results` DROP INDEX `live_spin_results_eventId_unique`;
+--> statement-breakpoint
+ALTER TABLE `live_spin_results` ADD COLUMN `winnerRank` int NOT NULL DEFAULT 1 AFTER `eventId`;
+--> statement-breakpoint
+ALTER TABLE `live_spin_results` ADD CONSTRAINT `live_spin_results_eventId_winnerRank_unique` UNIQUE(`eventId`,`winnerRank`);
 --> statement-breakpoint
 CREATE TABLE `live_spin_connection_sessions` (
   `id` varchar(64) NOT NULL,

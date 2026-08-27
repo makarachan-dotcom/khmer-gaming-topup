@@ -8,18 +8,18 @@ import { migrate } from "drizzle-orm/mysql2/migrator";
 const migrationsFolder = path.resolve("drizzle");
 const journal = JSON.parse(fs.readFileSync(path.join(migrationsFolder, "meta", "_journal.json"), "utf8"));
 const liveSpinMigration = journal.entries.find((entry) => entry.tag === "0017_livespin_fairness");
+const multiWinnerMigration = journal.entries.find((entry) => entry.tag === "0020_livespin_multiwinner_consolation");
 
-if (!liveSpinMigration) {
+if (!liveSpinMigration || !multiWinnerMigration) {
   throw new Error("Live Spin migration metadata is missing.");
 }
 
-const liveSpinSqlPath = path.join(migrationsFolder, `${liveSpinMigration.tag}.sql`);
-const liveSpinSql = fs.readFileSync(liveSpinSqlPath, "utf8");
-const liveSpinHash = crypto.createHash("sha256").update(liveSpinSql).digest("hex");
-const statements = liveSpinSql
-  .split("--> statement-breakpoint")
-  .map((statement) => statement.trim())
-  .filter(Boolean);
+function migrationContent(entry) {
+  const content = fs.readFileSync(path.join(migrationsFolder, `${entry.tag}.sql`), "utf8");
+  return { content, hash: crypto.createHash("sha256").update(content).digest("hex"), statements: content.split("--> statement-breakpoint").map((statement) => statement.trim()).filter(Boolean) };
+}
+const { hash: liveSpinHash, statements } = migrationContent(liveSpinMigration);
+const multiWinnerContent = migrationContent(multiWinnerMigration);
 
 const requiredLiveSpinTables = [
   "live_spin_audit_logs",
@@ -81,6 +81,23 @@ async function bootstrapExistingDatabase(connection) {
   return { bootstrapped: true };
 }
 
+async function applyPartialSafeMultiWinnerMigration(connection) {
+  const [existing] = await connection.query("SELECT 1 FROM `__drizzle_migrations` WHERE `created_at` = ? LIMIT 1", [multiWinnerMigration.when]);
+  if (existing.length) return;
+  console.log("Resuming additive Live Spin multi-winner migration safely.");
+  for (const statement of multiWinnerContent.statements) {
+    try {
+      await connection.query(statement);
+    } catch (error) {
+      const code = error && typeof error === "object" && "code" in error ? String(error.code) : "";
+      if (!["ER_DUP_FIELDNAME", "ER_TABLE_EXISTS_ERROR", "ER_DUP_KEYNAME", "ER_CANT_DROP_FIELD_OR_KEY"].includes(code)) throw error;
+      console.log(`Skipping already-applied additive Live Spin migration statement (${code}).`);
+    }
+  }
+  await connection.query("INSERT INTO `__drizzle_migrations` (`hash`, `created_at`) VALUES (?, ?)", [multiWinnerContent.hash, multiWinnerMigration.when]);
+  console.log("Live Spin multi-winner migration completed and recorded.");
+}
+
 async function main() {
   if (!process.env.DATABASE_URL) {
     console.log("DATABASE_URL unavailable; migration skipped in safe read-only mode.");
@@ -90,6 +107,7 @@ async function main() {
   const connection = await mysql.createConnection(process.env.DATABASE_URL);
   try {
     const { bootstrapped } = await bootstrapExistingDatabase(connection);
+    await applyPartialSafeMultiWinnerMigration(connection);
     if (bootstrapped) return;
   } finally {
     await connection.end();
