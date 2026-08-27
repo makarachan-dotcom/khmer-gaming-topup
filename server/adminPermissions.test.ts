@@ -27,6 +27,8 @@ describe("delegated Admin permissions", () => {
     expect(router).toContain('orders: scopedAdminProcedure("orders")');
     expect(router).toContain('catalog: scopedAdminProcedure("catalog")');
     expect(router).toContain('gameImages: scopedAdminProcedure("media")');
+    expect(router).toContain('operationUsers: scopedAdminProcedure("operations")');
+    expect(router).toContain('payments: scopedAdminProcedure("operations")');
     expect(router).toContain("paymentControl: ownerProcedure");
     expect(router).toContain("setUserRole: ownerProcedure");
     expect(router).toContain("setUserPermissions: ownerProcedure");
@@ -36,6 +38,7 @@ describe("delegated Admin permissions", () => {
     const dashboard = source("client/src/components/DashboardLayout.tsx");
     expect(dashboard).toContain("trpc.admin.myPermissions.useQuery");
     expect(dashboard).toContain("visibleMenuItems");
+    expect(dashboard).toContain('path: "/admin?tab=operations", permission: "operations"');
     expect(dashboard).toContain("ownerOnly: true");
   });
 });

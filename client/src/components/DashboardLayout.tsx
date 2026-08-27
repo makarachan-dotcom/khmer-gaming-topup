@@ -22,7 +22,7 @@ import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 
-type AdminPermissionKey = "dashboard" | "orders" | "catalog" | "media" | "support" | "marketplace" | "payments";
+type AdminPermissionKey = "dashboard" | "orders" | "catalog" | "media" | "support" | "marketplace" | "payments" | "operations";
 type AdminMenuItem = { icon: ComponentType<{ className?: string }>; label: string; path: string; permission?: AdminPermissionKey; ownerOnly?: boolean };
 
 const menuItems: AdminMenuItem[] = [
@@ -33,7 +33,7 @@ const menuItems: AdminMenuItem[] = [
   { icon: ImagePlus, label: "រូបភាពកញ្ចប់", path: "/admin/package-artwork", permission: "media" },
   { icon: ContactRound, label: "Admin ទំនាក់ទំនង", path: "/admin/contact-admins", permission: "support" },
   { icon: Images, label: "រូបភាពហ្គេម", path: "/admin/game-images", permission: "media" },
-  { icon: Users, label: "ប្រតិបត្តិការ", path: "/admin?tab=operations", ownerOnly: true },
+  { icon: Users, label: "ប្រតិបត្តិការ", path: "/admin?tab=operations", permission: "operations" },
   { icon: ShieldCheck, label: "សិទ្ធិ Admin", path: "/admin/access", ownerOnly: true },
   { icon: CreditCard, label: "Payment Control", path: "/admin/payment", ownerOnly: true },
   { icon: ShieldCheck, label: "Provider Security", path: "/admin/provider-security", ownerOnly: true },

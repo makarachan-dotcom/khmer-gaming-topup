@@ -14,6 +14,7 @@ const permissionOptions = [
   { key: "support", label: "Support", description: "គ្រប់គ្រង ticket និង Contact Admin" },
   { key: "marketplace", label: "Marketplace", description: "ពិនិត្យ listing, verification និង fraud reports" },
   { key: "payments", label: "Payment history", description: "មើល payment transactions តែប៉ុណ្ណោះ" },
+  { key: "operations", label: "ប្រតិបត្តិការ", description: "មើលស្ថានភាព operation និង payment history ដោយគ្មាន Payment Control" },
 ] as const;
 type PermissionKey = (typeof permissionOptions)[number]["key"];
 

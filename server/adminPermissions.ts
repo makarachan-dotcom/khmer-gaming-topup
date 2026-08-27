@@ -6,6 +6,7 @@ export const delegatedAdminPermissionKeys = [
   "support",
   "marketplace",
   "payments",
+  "operations",
 ] as const;
 
 export type DelegatedAdminPermission = (typeof delegatedAdminPermissionKeys)[number];
@@ -29,4 +30,5 @@ export const delegatedAdminPermissionLabels: Record<DelegatedAdminPermission, { 
   support: { labelKh: "Support", descriptionKh: "គ្រប់គ្រង ticket និង Contact Admin" },
   marketplace: { labelKh: "Marketplace", descriptionKh: "ពិនិត្យ listing, verification និង fraud reports" },
   payments: { labelKh: "Payment history", descriptionKh: "មើល payment transactions តែប៉ុណ្ណោះ" },
+  operations: { labelKh: "ប្រតិបត្តិការ", descriptionKh: "មើល payment និងស្ថានភាពប្រតិបត្តិការដោយគ្មាន role/payment-control access" },
 };
