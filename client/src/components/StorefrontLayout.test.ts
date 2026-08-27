@@ -48,23 +48,25 @@ describe("storefront media protection", () => {
     expect(styleSource).toContain("zurs-particle-field");
   });
 
-  it("moves a pill indicator between the two remaining mobile tabs", () => {
+  it("moves a pill indicator between the three mobile tabs including Live", () => {
     const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
     const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
     expect(componentSource).toContain("zurs-mobile-tab-indicator");
     expect(componentSource).toContain('"--mobile-tab-index": activeMobileTabIndex');
     expect(styleSource).toContain("--mobile-tab-index");
-    expect(styleSource).toContain("width: calc((100% - 0.625rem) / 2)");
-    expect(styleSource).not.toContain("width: calc((100% - 1.5rem) / 4)");
+    expect(styleSource).toContain("width: calc((100% - 1rem) / 3)");
+    expect(componentSource).toContain('href: "/live-spin"');
+    expect(componentSource).toContain("zurs-mobile-tab-label");
+    expect(styleSource).toContain("zurs-mobile-tabbar--live");
     expect(styleSource).toContain("zurs-mobile-tab-indicator-enter");
     expect(styleSource).toContain("tab-icon-active");
   });
 
-  it("uses a compact two-item rounded mobile tab bar without public AI entry", () => {
+  it("uses a compact three-item rounded mobile tab bar with a Live entry and no public AI entry", () => {
     const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
     const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
     expect(componentSource).toContain("hidden h-11 w-11");
-    expect(componentSource).toContain("grid h-[3.25rem] w-[min(calc(100vw-1.5rem),15rem)] -translate-x-1/2 grid-cols-2");
+    expect(componentSource).toContain("grid h-14 w-[min(calc(100vw-1.5rem),21rem)] -translate-x-1/2 grid-cols-3");
     expect(componentSource).toContain("gap-0.5");
     expect(componentSource).not.toContain('href: "/ai"');
     expect(componentSource).toContain("rounded-full");
