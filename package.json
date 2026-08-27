@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "NODE_ENV=development tsx watch server/_core/index.ts",
-    "build": "if [ -n \"$DATABASE_URL\" ]; then pnpm db:migrate; else echo 'DATABASE_URL unavailable; Live Spin remains in safe read-only mode.'; fi && vite build && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist && esbuild server/vercelApp.ts --platform=node --packages=external --bundle --format=esm --outfile=dist/vercel-app.mjs",
+    "build": "node scripts/migrate-production.mjs && vite build && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist && esbuild server/vercelApp.ts --platform=node --packages=external --bundle --format=esm --outfile=dist/vercel-app.mjs",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc --noEmit",
     "format": "prettier --write .",
