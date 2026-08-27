@@ -13,6 +13,13 @@ describe("authorized Check-ID bridge timeout contract", () => {
     expect(source).not.toContain("VITE_HEROKU_BRIDGE_KEY");
   });
 
+  it("records only privacy-safe bridge failure classes for production diagnostics", () => {
+    expect(source).toContain("function logAuthorizedBridgeOutcome");
+    expect(source).toContain('logAuthorizedBridgeOutcome("unconfigured")');
+    expect(source).toContain('logAuthorizedBridgeOutcome("unavailable_response", response.status)');
+    expect(source).toContain('logAuthorizedBridgeOutcome(error instanceof DOMException && error.name === "TimeoutError" ? "timeout" : "request_failed")');
+  });
+
   it("normalizes bridge game slugs and preserves the documented Free Fire free-check mapping", () => {
     expect(source).toContain('bridgeGame: "pubg-mobile"');
     expect(source).toContain('bridgeGame: "honor-of-kings"');

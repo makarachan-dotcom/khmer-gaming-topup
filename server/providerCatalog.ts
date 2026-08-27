@@ -567,13 +567,21 @@ function bridgeIdentityFields(fields: Record<string, string>, requiresServer: bo
   return { playerId, serverId: serverId || null };
 }
 
+function logAuthorizedBridgeOutcome(outcome: "unconfigured" | "timeout" | "request_failed" | "unavailable_response", responseStatus?: number) {
+  const status = typeof responseStatus === "number" ? ` status=${responseStatus}` : "";
+  console.warn(`[Check-ID] authorized bridge ${outcome}${status}`);
+}
+
 async function validateWithAuthorizedPlayerBridge(input: ProviderPackageRequest): Promise<ProviderPlayerIdentityResponse | null> {
   const game = authorizedBridgeGame(input);
   if (!game) return null;
   const identityFields = bridgeIdentityFields(input.fields, game.requiresServer);
   const bridge = authorizedPlayerBridgeEndpoint();
   if (!identityFields) return emptyIdentity("invalid");
-  if (!bridge) return null;
+  if (!bridge) {
+    logAuthorizedBridgeOutcome("unconfigured");
+    return null;
+  }
   try {
     const body = { userId: identityFields.playerId, game: game.bridgeGame, ...(identityFields.serverId ? { zoneId: identityFields.serverId } : {}) };
     const response = await fetch(bridge.url, {
@@ -586,7 +594,10 @@ async function validateWithAuthorizedPlayerBridge(input: ProviderPackageRequest)
     const success = bridgePlayerNameSchema.safeParse(payload);
     if (response.ok && success.success) return { status: "verified", playerName: success.data.username, playerId: identityFields.playerId, region: "Global" };
     if (response.status === 400 || response.status === 404 || (payload && typeof payload === "object" && "success" in payload && (payload as { success?: unknown }).success === false)) return emptyIdentity("invalid");
-  } catch { /* An authorized bridge is optional and never changes payment behavior. */ }
+    logAuthorizedBridgeOutcome("unavailable_response", response.status);
+  } catch (error) {
+    logAuthorizedBridgeOutcome(error instanceof DOMException && error.name === "TimeoutError" ? "timeout" : "request_failed");
+  }
   return emptyIdentity("unavailable");
 }
 
