@@ -11,7 +11,6 @@ const originalWorkerUrl = process.env.VPS_WORKER_URL;
 const originalWorkerSecret = process.env.WORKER_SECRET;
 const originalHerokuBridgeUrl = process.env.HEROKU_BRIDGE_URL;
 const originalHerokuBridgeApiKey = process.env.HEROKU_BRIDGE_API_KEY;
-const originalHerokuBridgeKey = process.env.HEROKU_BRIDGE_KEY;
 const originalAppwriteEndpoint = process.env.APPWRITE_ENDPOINT;
 const originalAppwriteProjectId = process.env.APPWRITE_PROJECT_ID;
 const originalAppwriteApiKey = process.env.APPWRITE_API_KEY;
@@ -22,7 +21,6 @@ beforeEach(() => {
   delete process.env.WORKER_SECRET;
   delete process.env.HEROKU_BRIDGE_URL;
   delete process.env.HEROKU_BRIDGE_API_KEY;
-  delete process.env.HEROKU_BRIDGE_KEY;
   vi.spyOn(console, "warn").mockImplementation(() => undefined);
 });
 
@@ -49,8 +47,6 @@ afterEach(() => {
   else process.env.HEROKU_BRIDGE_URL = originalHerokuBridgeUrl;
   if (originalHerokuBridgeApiKey === undefined) delete process.env.HEROKU_BRIDGE_API_KEY;
   else process.env.HEROKU_BRIDGE_API_KEY = originalHerokuBridgeApiKey;
-  if (originalHerokuBridgeKey === undefined) delete process.env.HEROKU_BRIDGE_KEY;
-  else process.env.HEROKU_BRIDGE_KEY = originalHerokuBridgeKey;
   if (originalAppwriteEndpoint === undefined) delete process.env.APPWRITE_ENDPOINT;
   else process.env.APPWRITE_ENDPOINT = originalAppwriteEndpoint;
   if (originalAppwriteProjectId === undefined) delete process.env.APPWRITE_PROJECT_ID;
@@ -411,17 +407,14 @@ describe("provider catalog", () => {
     }
   });
 
-  it("accepts the existing server-only bridge-key alias for PUBG Mobile during secure key-name migration", async () => {
+  it("requires the approved server-only bridge API key for PUBG Mobile", async () => {
     process.env.HEROKU_BRIDGE_URL = "https://bridge.example.test";
-    process.env.HEROKU_BRIDGE_KEY = "legacy-server-only-bridge-key";
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ success: true, username: "Verified Bridge Player" }) }));
+    vi.stubGlobal("fetch", vi.fn());
 
     const result = await validateProviderPlayerIdentity({ gameId: "pubg_mobile_auto", fields: { user_id: "12345678" } });
-    const call = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
 
-    expect(result).toMatchObject({ status: "verified", playerName: "Verified Bridge Player" });
-    expect(call?.[1]).toMatchObject({ headers: { "x-bridge-key": "legacy-server-only-bridge-key" } });
-    expect(JSON.stringify(result)).not.toContain("legacy-server-only-bridge-key");
+    expect(result).toMatchObject({ status: "unavailable", playerName: null, playerId: null });
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it("uses the authorized bridge for Magic Chess only after its free name check is temporarily unavailable", async () => {

@@ -539,8 +539,7 @@ async function validateWithOwnerApprovedFreeApi(input: ProviderPackageRequest): 
 
 function authorizedPlayerBridgeEndpoint() {
   const rawUrl = process.env.HEROKU_BRIDGE_URL?.trim();
-  // Accept the deployed server-only alias during key-name migration. Never use a VITE_* variable here.
-  const bridgeKey = process.env.HEROKU_BRIDGE_API_KEY?.trim() || process.env.HEROKU_BRIDGE_KEY?.trim();
+  const bridgeKey = process.env.HEROKU_BRIDGE_API_KEY?.trim();
   if (!rawUrl || !bridgeKey) return null;
   try {
     const baseUrl = new URL(rawUrl);
