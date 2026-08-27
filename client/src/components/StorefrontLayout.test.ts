@@ -51,14 +51,14 @@ describe("storefront media protection", () => {
   it("moves a pill indicator between the three mobile tabs including Live", () => {
     const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
     const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
-    expect(componentSource).toContain("zurs-mobile-tab-indicator");
-    expect(componentSource).toContain('"--mobile-tab-index": activeMobileTabIndex');
-    expect(styleSource).toContain("--mobile-tab-index");
-    expect(styleSource).toContain("width: calc((100% - 1.25rem) / 3)");
+    expect(componentSource).not.toContain("zurs-mobile-tab-indicator");
+    expect(componentSource).not.toContain('"--mobile-tab-index": activeMobileTabIndex');
+    expect(styleSource).toContain(".zurs-mobile-tab--active");
+    expect(styleSource).toContain(".zurs-mobile-tab--live-active");
     expect(componentSource).toContain('href: "/live-spin"');
     expect(componentSource).toContain("zurs-mobile-tab-label");
-    expect(styleSource).toContain("zurs-mobile-tabbar--live");
-    expect(styleSource).toContain("zurs-mobile-tab-indicator-enter");
+    expect(componentSource).toContain("zurs-mobile-tabbar--live");
+    expect(styleSource).not.toContain("zurs-mobile-tab-indicator-enter");
     expect(styleSource).toContain("tab-icon-active");
     expect(styleSource).toContain("100% + 0.125rem");
     expect(styleSource).not.toContain("100% + 0.25rem");
@@ -80,7 +80,8 @@ describe("storefront media protection", () => {
     const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
     const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
     expect(componentSource).toContain("hidden h-11 w-11");
-    expect(componentSource).toContain("grid h-14 w-[min(calc(100vw-1.5rem),21rem)] -translate-x-1/2 grid-cols-3");
+    expect(componentSource).toContain("grid h-14 w-full -translate-x-1/2 grid-cols-3");
+    expect(styleSource).toContain("width: min(calc(100vw - 1.5rem), 21rem)");
     expect(componentSource).toContain("gap-0.5");
     expect(componentSource).not.toContain('href: "/ai"');
     expect(componentSource).toContain("rounded-full");
@@ -126,7 +127,8 @@ describe("storefront media protection", () => {
     const contactSource = readFileSync(join(process.cwd(), "client/src/components/ContactAdminControl.tsx"), "utf8");
     const documentSource = readFileSync(join(process.cwd(), "client/index.html"), "utf8");
     const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
-    expect(componentSource).toContain("<ContactAdminControl paymentBarVisible={isTopupRoute} />");
+    expect(componentSource).toContain('hideOnMobile={activeMobileTabHref === "/live-spin"}');
+    expect(contactSource).toContain("contact-admin-fab--hide-mobile");
     expect(contactSource).toContain("ទំនាក់ទំនង Admin");
     expect(contactSource).toContain("Asia/Phnom_Penh");
     expect(contactSource).toContain("https://t.me/");
@@ -134,6 +136,7 @@ describe("storefront media protection", () => {
     expect(documentSource).toContain("maximum-scale=1.0");
     expect(styleSource).toContain(".contact-admin-layer");
     expect(styleSource).toContain(".contact-admin-fab--payment");
+    expect(styleSource).toContain(".contact-admin-fab--hide-mobile");
     expect(styleSource).toContain("touch-action: pan-x pan-y");
   });
 

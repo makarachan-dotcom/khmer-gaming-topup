@@ -5,7 +5,13 @@ export const LIVE_SPIN_QUALIFIED_ORDERS_PER_TICKET = 7;
 export const LIVE_SPIN_MINIMUM_PARTICIPANT_COUNT = 100;
 export const LIVE_SPIN_DEFAULT_SPOILER_SECONDS = 5;
 export const LIVE_SPIN_DEFAULT_PRIZE_COUNTDOWN_SECONDS = 5;
-export const LIVE_SPIN_NAME_STRIP_SECONDS = 5;
+/** A short persisted-phase hold so the simultaneous S4 winner celebration remains visible before prize spin. */
+export const LIVE_SPIN_WINNER_CELEBRATION_SECONDS = 8;
+/** Shared public timeline: name arrivals, final countdown, then the slowing slot strip. */
+export const LIVE_SPIN_NAME_ARRIVAL_SECONDS = 58;
+export const LIVE_SPIN_FINAL_COUNTDOWN_SECONDS = 10;
+export const LIVE_SPIN_SLOT_MACHINE_SECONDS = 28;
+export const LIVE_SPIN_NAME_STRIP_SECONDS = LIVE_SPIN_NAME_ARRIVAL_SECONDS + LIVE_SPIN_FINAL_COUNTDOWN_SECONDS + LIVE_SPIN_SLOT_MACHINE_SECONDS;
 export const LIVE_SPIN_PRIZE_REVEAL_SECONDS = 5;
 export const LIVE_SPIN_TIMEZONE = "Asia/Phnom_Penh";
 

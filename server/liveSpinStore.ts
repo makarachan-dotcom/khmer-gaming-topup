@@ -5,7 +5,7 @@ import { liveSpinAuditLogs, liveSpinConnectionSessions, liveSpinConsolationGifts
 import { decryptCredential, encryptCredential, type CredentialEnvelope } from "./credentialEnvelope";
 import { getDb } from "./db";
 import { selectPublicLiveSpinEvent } from "./liveSpinEventPriority";
-import { LIVE_SPIN_DEFAULT_PRIZE_COUNTDOWN_SECONDS, LIVE_SPIN_DEFAULT_SPOILER_SECONDS, LIVE_SPIN_MINIMUM_PARTICIPANT_COUNT, LIVE_SPIN_NAME_STRIP_SECONDS, LIVE_SPIN_PRIZE_REVEAL_SECONDS, LIVE_SPIN_QUALIFIED_ORDERS_PER_TICKET, createLiveSpinFairnessSeed, isLiveSpinEligibleOrder, liveSpinFairnessCommitment, liveSpinRulesSnapshotHash, liveSpinSnapshotHash, liveSpinWeekKey, progressForQualifiedOrders, selectLiveSpinRankedOutcomes, ticketCountForQualifiedOrders } from "./liveSpinFairness";
+import { LIVE_SPIN_DEFAULT_PRIZE_COUNTDOWN_SECONDS, LIVE_SPIN_DEFAULT_SPOILER_SECONDS, LIVE_SPIN_MINIMUM_PARTICIPANT_COUNT, LIVE_SPIN_NAME_STRIP_SECONDS, LIVE_SPIN_PRIZE_REVEAL_SECONDS, LIVE_SPIN_WINNER_CELEBRATION_SECONDS, LIVE_SPIN_QUALIFIED_ORDERS_PER_TICKET, createLiveSpinFairnessSeed, isLiveSpinEligibleOrder, liveSpinFairnessCommitment, liveSpinRulesSnapshotHash, liveSpinSnapshotHash, liveSpinWeekKey, progressForQualifiedOrders, selectLiveSpinRankedOutcomes, ticketCountForQualifiedOrders } from "./liveSpinFairness";
 
 export const liveSpinEventStatuses = ["draft", "announced", "locked", "waiting", "live", "winner_revealed", "prize_countdown", "prize_revealed", "ended", "skipped"] as const;
 export type LiveSpinEventStatus = (typeof liveSpinEventStatuses)[number];
@@ -442,19 +442,20 @@ export async function getLiveSpinOwnerEventDetail(eventId: string) {
     db.select().from(liveSpinConsolationGifts).where(eq(liveSpinConsolationGifts.eventId, eventId)).orderBy(asc(liveSpinConsolationGifts.slotNumber)),
   ]);
   if (!event[0]) throw new Error("Live Spin event not found.");
-  return { event: event[0], prizes, consolationGifts, participants: entries.map(({ entry, user, ticket }) => ({ entryIndex: entry.entryIndex, displayAlias: entry.displayAlias, name: user.displayName ?? user.name ?? null, ticketId: ticket.id, ticketEarnedWeek: ticket.earnedWeekKey, status: entry.status })), audit };
+  return { event: { ...event[0], nameStripSeconds: LIVE_SPIN_NAME_STRIP_SECONDS, winnerCelebrationSeconds: LIVE_SPIN_WINNER_CELEBRATION_SECONDS }, prizes, consolationGifts, participants: entries.map(({ entry, user, ticket }) => ({ entryIndex: entry.entryIndex, displayAlias: entry.displayAlias, name: user.displayName ?? user.name ?? null, ticketId: ticket.id, ticketEarnedWeek: ticket.earnedWeekKey, status: entry.status })), audit };
 }
 
 export async function getPublicLiveSpinState() {
   const db = await getDb();
-  if (!db) return { serverNow: new Date(), event: null, participantCount: 0, entryCount: 0, thresholdReached: false, winner: null, prize: null };
+  if (!db) return { serverNow: new Date(), event: null, participantCount: 0, entryCount: 0, participantAliases: [], thresholdReached: false, winner: null, prize: null, winners: [], consolation: [] };
   const events = await db.select().from(liveSpinEvents).where(inArray(liveSpinEvents.status, ["announced", "locked", "waiting", "live", "winner_revealed", "prize_countdown", "prize_revealed", "ended"]));
   const event = selectPublicLiveSpinEvent(events);
-  if (!event) return { serverNow: new Date(), event: null, participantCount: 0, entryCount: 0, thresholdReached: false, winner: null, prize: null };
+  if (!event) return { serverNow: new Date(), event: null, participantCount: 0, entryCount: 0, participantAliases: [], thresholdReached: false, winner: null, prize: null, winners: [], consolation: [] };
   const isLocked = ["locked", "waiting", "live", "winner_revealed", "prize_countdown", "prize_revealed", "ended"].includes(event.status);
   const activeTicketHolders = isLocked ? event.lockedParticipantCount : new Set((await db.select({ userId: liveSpinTickets.userId }).from(liveSpinTickets).where(and(eq(liveSpinTickets.status, "active"), eq(liveSpinTickets.isTest, event.isTest)))).map((ticket) => ticket.userId)).size;
   const isWinnerRevealed = ["winner_revealed", "prize_countdown", "prize_revealed", "ended"].includes(event.status);
   const isPrizeRevealed = ["prize_revealed", "ended"].includes(event.status);
+  const participantAliases = isLocked ? (await db.select({ displayAlias: liveSpinEntries.displayAlias }).from(liveSpinEntries).where(eq(liveSpinEntries.eventId, event.id)).orderBy(asc(liveSpinEntries.entryIndex))).map((entry) => entry.displayAlias) : [];
   const results = isWinnerRevealed ? await db.select({ result: liveSpinResults, entry: liveSpinEntries, prize: liveSpinPrizeTiers }).from(liveSpinResults).innerJoin(liveSpinEntries, eq(liveSpinResults.winnerEntryId, liveSpinEntries.id)).innerJoin(liveSpinPrizeTiers, eq(liveSpinResults.prizeTierId, liveSpinPrizeTiers.id)).where(eq(liveSpinResults.eventId, event.id)).orderBy(asc(liveSpinResults.winnerRank)) : [];
   const consolation = event.status === "ended" ? await db.select({ result: liveSpinConsolationResults, gift: liveSpinConsolationGifts }).from(liveSpinConsolationResults).leftJoin(liveSpinConsolationGifts, eq(liveSpinConsolationResults.giftId, liveSpinConsolationGifts.id)).where(eq(liveSpinConsolationResults.eventId, event.id)).orderBy(asc(liveSpinConsolationResults.rank)) : [];
   return {
@@ -480,6 +481,7 @@ export async function getPublicLiveSpinState() {
       consolationGiftCount: event.consolationGiftCount,
       settingsSnapshotHash: event.settingsSnapshotHash,
       winnerSpoilerSeconds: event.winnerSpoilerSeconds,
+      winnerCelebrationSeconds: LIVE_SPIN_WINNER_CELEBRATION_SECONDS,
       prizeCountdownSeconds: event.prizeCountdownSeconds,
       fairnessCommitmentHash: event.fairnessCommitmentHash,
       participantSnapshotHash: event.participantSnapshotHash,
@@ -487,6 +489,7 @@ export async function getPublicLiveSpinState() {
     },
     participantCount: activeTicketHolders,
     entryCount: isLocked ? event.lockedEntryCount : 0,
+    participantAliases,
     thresholdReached: activeTicketHolders >= event.minParticipantCount,
     winner: results[0] ? { alias: results[0].entry.displayAlias } : null,
     prize: results[0] && isPrizeRevealed ? { nameKh: results[0].prize.nameKh, valueLabel: results[0].prize.valueLabel, mediaUrl: results[0].prize.mediaUrl } : null,
@@ -518,7 +521,7 @@ export async function startLiveSpinPrizeCountdown(input: { eventId: string; acto
     const event = (await tx.select().from(liveSpinEvents).where(eq(liveSpinEvents.id, input.eventId)).limit(1))[0];
     if (!event) throw new Error("Live Spin event not found.");
     if (event.status !== "winner_revealed") throw new Error("Prize countdown can begin only after a server-recorded winner reveal.");
-    if (!event.winnerRevealedAt || now.getTime() < event.winnerRevealedAt.getTime() + event.winnerSpoilerSeconds * 1000) throw new Error("The winner spoiler pause is still in progress.");
+    if (!event.winnerRevealedAt || now.getTime() < event.winnerRevealedAt.getTime() + (event.winnerSpoilerSeconds + LIVE_SPIN_WINNER_CELEBRATION_SECONDS) * 1000) throw new Error("The winner reveal sequence is still in progress.");
     await tx.update(liveSpinEvents).set({ status: "prize_countdown", prizeCountdownStartedAt: now }).where(eq(liveSpinEvents.id, event.id));
     await tx.insert(liveSpinAuditLogs).values({ id: nanoid(), eventId: event.id, actorUserId: input.actorUserId, actorType: "owner", action: "prize_countdown_started", details: { startedAt: now.toISOString(), prizeCountdownSeconds: event.prizeCountdownSeconds } });
     return { success: true, status: "prize_countdown" as const };
