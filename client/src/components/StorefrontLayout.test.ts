@@ -134,11 +134,17 @@ describe("storefront media protection", () => {
     expect(styleSource).toContain("prefers-reduced-motion: no-preference");
   });
 
-  it("uses the requested footer attribution and Facebook destination", () => {
+  it("keeps the footer credits inside the dark card and uses the requested Facebook destination", () => {
     const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
+    const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
+    expect(componentSource).toContain("រក្សាសិទ្ធិគ្រប់យ៉ាងដោយ zurs.me");
     expect(componentSource).toContain("បង្កើតឡើងដោយ CHAN MEKARA");
+    expect(componentSource).toContain("border-t border-white/12 pt-3 text-center");
+    expect(componentSource).not.toContain("zurs-footer-meta");
     expect(componentSource).toContain("https://www.facebook.com/share/19QooXtndH/?mibextid=wwXIfr");
     expect(componentSource).toContain('aria-label="បើកទំព័រ Facebook របស់ ZURS"');
+    expect(componentSource).toContain("bg-[#1877F2]");
+    expect(styleSource).toContain("oklch(0.82 0.15 84)");
   });
 
   it("docks the Contact Admin control above storefront actions and locks the mobile viewport scale", () => {
