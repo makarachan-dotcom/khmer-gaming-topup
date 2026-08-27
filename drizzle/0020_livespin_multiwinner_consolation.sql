@@ -1,8 +1,10 @@
-ALTER TABLE `live_spin_events`
-  ADD COLUMN `spinEnabled` boolean NOT NULL DEFAULT true AFTER `isTest`,
-  ADD COLUMN `winnerCount` int NOT NULL DEFAULT 3 AFTER `spinEnabled`,
-  ADD COLUMN `consolationGiftCount` int NOT NULL DEFAULT 10 AFTER `winnerCount`,
-  ADD COLUMN `settingsSnapshotHash` varchar(128) AFTER `consolationGiftCount`;
+ALTER TABLE `live_spin_events` ADD COLUMN `spinEnabled` boolean NOT NULL DEFAULT true AFTER `isTest`;
+--> statement-breakpoint
+ALTER TABLE `live_spin_events` ADD COLUMN `winnerCount` int NOT NULL DEFAULT 3 AFTER `spinEnabled`;
+--> statement-breakpoint
+ALTER TABLE `live_spin_events` ADD COLUMN `consolationGiftCount` int NOT NULL DEFAULT 10 AFTER `winnerCount`;
+--> statement-breakpoint
+ALTER TABLE `live_spin_events` ADD COLUMN `settingsSnapshotHash` varchar(128) AFTER `consolationGiftCount`;
 --> statement-breakpoint
 ALTER TABLE `live_spin_results`
   DROP INDEX `live_spin_results_eventId_unique`,
