@@ -28,4 +28,22 @@ describe("Appwrite provider availability", () => {
     expect(payload).toContain("arena_of_valor_id");
     expect(payload).not.toContain("server-only-test-key");
   });
+
+  it("patches the existing availability policy instead of replacing its Appwrite document", async () => {
+    process.env.APPWRITE_ENDPOINT = "https://appwrite.example/v1";
+    process.env.APPWRITE_PROJECT_ID = "zurs-project";
+    process.env.APPWRITE_API_KEY = "server-only-test-key";
+    const requests: Array<{ method?: string; body?: string }> = [];
+    const existing = { $id: "availability", sourceTable: "provider_availability", sourceId: "global", payload: JSON.stringify({ hiddenGameIds: [], hiddenSmmServiceIds: [], activeGameIds: [] }) };
+    vi.stubGlobal("fetch", vi.fn(async (_input: string | URL | Request, init?: RequestInit) => {
+      requests.push({ method: init?.method, body: String(init?.body ?? "") });
+      if (init?.method === "GET") return new Response(JSON.stringify(existing), { status: 200 });
+      return new Response(JSON.stringify({ $id: "availability" }), { status: 200 });
+    }));
+
+    await expect(updateAppwriteProviderAvailability({ kind: "game", providerId: "ace_racer", isActive: true })).resolves.toMatchObject({ activeGameIds: ["ace_racer"] });
+
+    expect(requests.map((request) => request.method)).toContain("PATCH");
+    expect(requests.map((request) => request.method)).not.toContain("PUT");
+  });
 });

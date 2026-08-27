@@ -424,14 +424,20 @@ function PackageSection({ title, description, icon: Icon, items, selectedPackage
   return <section className="package-section"><div className="package-section-header flex items-center gap-2"><span className="diamond-title-icon"><Icon className="h-3.5 w-3.5" /></span><div className="min-w-0"><p className="text-xs font-extrabold text-slate-950">{title}</p>{description ? <p className="mt-0.5 text-[10px] leading-4 text-slate-500">{description}</p> : null}</div><span className="ml-auto shrink-0 rounded-full bg-white/75 px-2 py-0.5 text-[9px] font-bold text-slate-500">{items.length}</span></div><div className={visibleItems.length === 1 ? "mx-auto mt-3 grid w-full max-w-[11.5rem] grid-cols-1 gap-2" : "mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3"}>{visibleItems.map((item) => <PackageCard key={item.id} item={item} selected={selectedPackageId === item.id} onSelect={() => onSelect(item.id)} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} />)}</div>{progressive && items.length > initialDiamondPackageLimit ? <button type="button" aria-expanded={expanded} onClick={() => setExpanded((current) => !current)} className="package-see-more mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-indigo-100 bg-white/80 px-3 text-xs font-extrabold text-indigo-800 shadow-sm"><span>{expanded ? "បង្រួមកញ្ចប់" : `មើលបន្ថែម ${hiddenCount} កញ្ចប់`}</span><ChevronDown className={`package-see-more__icon h-4 w-4 ${expanded ? "package-see-more__icon--expanded" : ""}`} /></button> : null}</section>;
 }
 
+function artworkUrlWithRevision(mediaUrl: string, updatedAt: Date | string) {
+  const revision = new Date(updatedAt).getTime();
+  if (!Number.isFinite(revision)) return mediaUrl;
+  return `${mediaUrl}${mediaUrl.includes("?") ? "&" : "?"}v=${revision}`;
+}
+
 function DiamondPackages({ packages, status, selectedPackageId, onSelect, gameId, gameName, gameLogoUrl }: { packages: ProviderPackage[]; status?: "ready" | "unavailable" | "error" | "verification_required"; selectedPackageId: string; onSelect: (id: string) => void; gameId: string; gameName: string; gameLogoUrl?: string }) {
   const eventContent = trpc.content.active.useQuery();
-  const { data: packageArtworkData, refetch: refetchPackageArtwork } = trpc.provider.packageArtwork.useQuery({ gameId }, { enabled: Boolean(gameId), refetchInterval: 1_000, staleTime: 0 });
+  const { data: packageArtworkData, refetch: refetchPackageArtwork } = trpc.provider.packageArtwork.useQuery({ gameId }, { enabled: Boolean(gameId), refetchInterval: 1_000, refetchIntervalInBackground: true, refetchOnWindowFocus: true, staleTime: 0 });
   const categoryAssignments = trpc.provider.packageCategories.useQuery({ gameId }, { enabled: Boolean(gameId), staleTime: 0 });
   const [selectedCategoryId, setSelectedCategoryId] = useState("all");
   const [packageSearch, setPackageSearch] = useState("");
   const categoryTabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
-  const artworkOverrides = useMemo(() => Object.fromEntries((packageArtworkData ?? []).map((item) => [item.offerId, item.mediaUrl])), [packageArtworkData]);
+  const artworkOverrides = useMemo(() => Object.fromEntries((packageArtworkData ?? []).map((item) => [item.offerId, artworkUrlWithRevision(item.mediaUrl, item.updatedAt)])), [packageArtworkData]);
   const categoryOverrides = useMemo(() => new Map((categoryAssignments.data ?? []).map((item) => [item.offerId, item.categoryLabel])), [categoryAssignments.data]);
   useEffect(() => subscribeToPackageArtworkChanges((changedGameId) => { if (changedGameId === gameId) void refetchPackageArtwork(); }), [gameId, refetchPackageArtwork]);
   const fullTicketEvent = (eventContent.data ?? []).find((item) => item.contentKey === "topup-event-full-ticket");

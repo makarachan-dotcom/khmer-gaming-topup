@@ -489,6 +489,12 @@
 
 - [x] Diagnose and repair the remaining production Catalog Control Add/Remove mutation failure reported after release `708ffa48`; keep the fix confined to availability persistence/feedback and do not alter provider source products, credentials, media, orders, or Payment Control. The owner inventory and availability validation now fall back to previously synchronized provider records during a temporary FZR live-catalog outage, and the UI explains unavailable synchronized inventory in concise Khmer while reverting any optimistic change.
 
+- [ ] Reproduce and repair the newly reported Catalog Control Add/Remove regression on the current production UI, verify state persistence and public catalog reflection repeatedly, and preserve provider records, credentials, payments, and Payment Control OFF.
+
+- [ ] Reproduce and repair the reported admin package-artwork upload issue where an accepted save does not appear promptly on customer pages; preserve the existing package/product records and use the approved media-storage path only.
+
+- [ ] Ensure each successful admin package-artwork save broadcasts an immediate same-origin refresh to active customer pages, so users see the new image without a manual page reload or delayed polling.
+
 - [x] Deferred at the owner's request: remove the oversized local `khmer-sampeah.png` delivery reference for now so it cannot block publication. The owner will supply a File Storage URL later; no replacement image is fabricated.
 
 - [x] Restore the owner-approved `khmer-sampeah.png` image through approved external File Storage and reinstate only its Live Spin ending-view reference; do not modify Catalog Control, product data, payment state, or other Live Spin behavior. The original image is now served through the approved external storage URL rather than bundled in the project, and focused Live Spin tests, TypeScript, and production build passed.

@@ -94,10 +94,12 @@ export async function updateAppwriteProviderAvailability(input: { kind: "game" |
   const body = { data: { sourceTable: "provider_availability", sourceId: providerAvailabilitySourceId, payload: JSON.stringify(next), sourceUpdatedAt: next.updatedAt.toISOString() } };
   const path = providerAvailabilityDocumentPath();
   const existing = await request("GET", path) as AppwriteRecord | null;
-  if (existing) await request("PUT", path, body);
+  // Appwrite updates an existing document with PATCH. Using PUT made the live
+  // availability action fail after the document had been created once.
+  if (existing) await request("PATCH", path, body);
   else {
     try { await request("POST", `/databases/${databaseId()}/collections/${collectionId}/documents`, { documentId: documentId(`provider_availability:${providerAvailabilitySourceId}`), ...body }); }
-    catch (error) { if (!shouldRetryAppwriteCreateAsUpdate(error)) throw error; await request("PUT", path, body); }
+    catch (error) { if (!shouldRetryAppwriteCreateAsUpdate(error)) throw error; await request("PATCH", path, body); }
   }
   return next;
 }
