@@ -4,6 +4,7 @@ import { nanoid } from "nanoid";
 import { liveSpinAuditLogs, liveSpinConnectionSessions, liveSpinConsolationGifts, liveSpinConsolationResults, liveSpinEntries, liveSpinEvents, liveSpinPrizeTiers, liveSpinQualifiedOrders, liveSpinResults, liveSpinTickets, orders, paymentTransactions, users } from "../drizzle/schema";
 import { decryptCredential, encryptCredential, type CredentialEnvelope } from "./credentialEnvelope";
 import { getDb } from "./db";
+import { selectPublicLiveSpinEvent } from "./liveSpinEventPriority";
 import { LIVE_SPIN_DEFAULT_PRIZE_COUNTDOWN_SECONDS, LIVE_SPIN_DEFAULT_SPOILER_SECONDS, LIVE_SPIN_MINIMUM_PARTICIPANT_COUNT, LIVE_SPIN_NAME_STRIP_SECONDS, LIVE_SPIN_PRIZE_REVEAL_SECONDS, LIVE_SPIN_QUALIFIED_ORDERS_PER_TICKET, createLiveSpinFairnessSeed, isLiveSpinEligibleOrder, liveSpinFairnessCommitment, liveSpinRulesSnapshotHash, liveSpinSnapshotHash, liveSpinWeekKey, progressForQualifiedOrders, selectLiveSpinRankedOutcomes, ticketCountForQualifiedOrders } from "./liveSpinFairness";
 
 export const liveSpinEventStatuses = ["draft", "announced", "locked", "waiting", "live", "winner_revealed", "prize_countdown", "prize_revealed", "ended", "skipped"] as const;
@@ -447,7 +448,8 @@ export async function getLiveSpinOwnerEventDetail(eventId: string) {
 export async function getPublicLiveSpinState() {
   const db = await getDb();
   if (!db) return { serverNow: new Date(), event: null, participantCount: 0, entryCount: 0, thresholdReached: false, winner: null, prize: null };
-  const event = (await db.select().from(liveSpinEvents).where(inArray(liveSpinEvents.status, ["announced", "locked", "waiting", "live", "winner_revealed", "prize_countdown", "prize_revealed", "ended"])).orderBy(desc(liveSpinEvents.scheduledAt)).limit(1))[0];
+  const events = await db.select().from(liveSpinEvents).where(inArray(liveSpinEvents.status, ["announced", "locked", "waiting", "live", "winner_revealed", "prize_countdown", "prize_revealed", "ended"]));
+  const event = selectPublicLiveSpinEvent(events);
   if (!event) return { serverNow: new Date(), event: null, participantCount: 0, entryCount: 0, thresholdReached: false, winner: null, prize: null };
   const isLocked = ["locked", "waiting", "live", "winner_revealed", "prize_countdown", "prize_revealed", "ended"].includes(event.status);
   const activeTicketHolders = isLocked ? event.lockedParticipantCount : new Set((await db.select({ userId: liveSpinTickets.userId }).from(liveSpinTickets).where(and(eq(liveSpinTickets.status, "active"), eq(liveSpinTickets.isTest, event.isTest)))).map((ticket) => ticket.userId)).size;
