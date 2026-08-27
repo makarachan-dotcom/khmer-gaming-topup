@@ -355,6 +355,41 @@ export async function createTopupOrder(input: { userId: number; packageId: strin
   return { id, orderNumber, trackingCode, amount: subtotal.toFixed(2), status: "pending" as const };
 }
 
+const adminKhqrTestProduct = {
+  code: "admin-khqr-test-002",
+  name: "Admin KHQR Test Product",
+  amountUsd: "0.02",
+} as const;
+
+/** Creates a ledger-only test purchase. It is callable exclusively through ownerProcedure and is never sent to a top-up provider. */
+export async function createAdminKhqrTestOrder(input: { userId: number }) {
+  await requirePublicPaymentEnabled();
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const id = nanoid();
+  const orderNumber = buildOrderNumber();
+  const trackingCode = buildTrackingCode();
+  await db.insert(orders).values({
+    id,
+    orderNumber,
+    trackingCode,
+    userId: input.userId,
+    orderType: "topup",
+    status: "pending",
+    currency: "USD",
+    subtotal: adminKhqrTestProduct.amountUsd,
+    productName: adminKhqrTestProduct.name,
+    details: {
+      testPurchase: true,
+      testProductCode: adminKhqrTestProduct.code,
+      providerFulfillment: "not_applicable",
+      noProviderFulfillment: true,
+    },
+  });
+  await appendOrderStatusEvent({ orderId: id, eventType: "admin_test_order_created", status: "pending", actorType: "admin", messageKh: "បានបង្កើត Admin KHQR Test Product សម្រាប់សាកល្បងការទូទាត់។" });
+  return { id, orderNumber, trackingCode, amount: adminKhqrTestProduct.amountUsd, status: "pending" as const, productName: adminKhqrTestProduct.name };
+}
+
 export async function createSmmOrder(input: { userId: number; tierId: string; target: string }) {
   await requirePublicPaymentEnabled();
   const db = await getDb();
@@ -539,9 +574,12 @@ export async function reconcileKhqrWorkerPayment(input: { md5: string; orderId: 
     await db.update(paymentTransactions).set({ callbackPayload: { ...existingPayload, lastWorkerVerificationAt: new Date().toISOString(), lastWorkerVerificationMd5: input.md5, lastWorkerVerificationStatus: verification.status, lastWorkerVerificationError: verification.reason } }).where(and(eq(paymentTransactions.id, record.payment.id), eq(paymentTransactions.status, "pending")));
     throw new Error("Bakong did not confirm the stored checkout payment session.");
   }
+  const details = record.order.details && typeof record.order.details === "object" ? record.order.details as Record<string, unknown> : {};
+  const isAdminTestPurchase = details.testPurchase === true && details.testProductCode === adminKhqrTestProduct.code && details.noProviderFulfillment === true;
+  const completedStatus = isAdminTestPurchase ? "delivered" as const : "paid" as const;
   await db.update(paymentTransactions).set({ status: "paid", providerTransactionId: verification.transactionHash, paidAt: new Date(), callbackPayload: { ...existingPayload, workerVerifiedAt: new Date().toISOString(), workerMd5: input.md5, transactionHash: verification.transactionHash } }).where(eq(paymentTransactions.id, record.payment.id));
-  await db.update(orders).set({ status: "paid" }).where(eq(orders.id, record.order.id));
-  await appendOrderStatusEvent({ orderId: record.order.id, eventType: "payment_confirmed", status: "paid", actorType: "system", messageKh: statusMessageKh("paid"), providerReference: input.md5 });
+  await db.update(orders).set({ status: completedStatus }).where(eq(orders.id, record.order.id));
+  await appendOrderStatusEvent({ orderId: record.order.id, eventType: isAdminTestPurchase ? "admin_test_purchase_completed" : "payment_confirmed", status: completedStatus, actorType: "system", messageKh: isAdminTestPurchase ? "ការទូទាត់ Admin KHQR Test Product បានជោគជ័យ។ មិនមាន top-up ពិតត្រូវបានបញ្ជូនទៅ provider ទេ។" : statusMessageKh("paid"), providerReference: input.md5 });
   return { idempotent: false };
 }
 

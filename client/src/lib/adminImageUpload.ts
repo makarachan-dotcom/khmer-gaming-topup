@@ -1,20 +1,23 @@
 export type AdminImageSlot = "square" | "card";
+type PreparedRasterContentType = "image/webp" | "image/jpeg";
 
 export type PreparedAdminImage = {
   dataUrl: string;
   fileName: string;
-  contentType: "image/webp";
+  contentType: PreparedRasterContentType;
   width: number;
   height: number;
   warning: string | null;
 };
 
 export type PreparedPaymentMethodIcon = Omit<PreparedAdminImage, "contentType"> & {
-  contentType: "image/webp" | "image/svg+xml";
+  contentType: PreparedRasterContentType | "image/svg+xml";
 };
 
 const acceptedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 const paymentIconTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/svg+xml"]);
+const maxSourceBytes = 12 * 1024 * 1024;
+const maxPreparedBytes = 4_500_000;
 const paymentIconMaxBytes = 2 * 1024 * 1024;
 
 function targetFor(slot: AdminImageSlot) {
@@ -24,7 +27,7 @@ function targetFor(slot: AdminImageSlot) {
 function dataUrlFor(blob: Blob) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
-    reader.onerror = () => reject(new Error("Unable to read optimized image"));
+    reader.onerror = () => reject(new Error("មិនអាចអានរូបភាពដែលបានរៀបចំបានទេ"));
     reader.onload = () => resolve(String(reader.result));
     reader.readAsDataURL(blob);
   });
@@ -35,9 +38,23 @@ function loadImage(file: File) {
     const url = URL.createObjectURL(file);
     const image = new Image();
     image.onload = () => { URL.revokeObjectURL(url); resolve(image); };
-    image.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Unable to open this image")); };
+    image.onerror = () => { URL.revokeObjectURL(url); reject(new Error("មិនអាចបើករូបភាពនេះបានទេ។ សូមប្រើ JPG, PNG ឬ WEBP ដែលមិនខូច")); };
     image.src = url;
   });
+}
+
+function canvasBlob(canvas: HTMLCanvasElement, contentType: PreparedRasterContentType, quality: number) {
+  return new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, contentType, quality));
+}
+
+async function encodePreparedImage(canvas: HTMLCanvasElement) {
+  for (const contentType of ["image/webp", "image/jpeg"] as const) {
+    for (const quality of [0.86, 0.76, 0.66, 0.56]) {
+      const blob = await canvasBlob(canvas, contentType, quality);
+      if (blob && blob.size > 0 && blob.size <= maxPreparedBytes) return { blob, contentType };
+    }
+  }
+  throw new Error("មិនអាចបង្រួមរូបភាពឲ្យសមស្របសម្រាប់ upload បានទេ។ សូមប្រើរូបភាពដែលមានទំហំតូចជាងនេះ");
 }
 
 export async function preparePaymentMethodIcon(file: File): Promise<PreparedPaymentMethodIcon> {
@@ -53,8 +70,9 @@ export async function preparePaymentMethodIcon(file: File): Promise<PreparedPaym
 
 export async function prepareAdminImage(file: File, slot: AdminImageSlot): Promise<PreparedAdminImage> {
   if (!acceptedTypes.has(file.type)) throw new Error("សូមជ្រើស JPG, PNG ឬ WEBP ប៉ុណ្ណោះ");
-  if (file.size > 12 * 1024 * 1024) throw new Error("រូបភាពធំពេក។ សូមប្រើរូបភាពក្រោម 12 MB");
+  if (file.size > maxSourceBytes) throw new Error("រូបភាពធំពេក។ សូមប្រើរូបភាពក្រោម 12 MB");
   const image = await loadImage(file);
+  if (!image.naturalWidth || !image.naturalHeight) throw new Error("រូបភាពនេះគ្មានទំហំត្រឹមត្រូវសម្រាប់ upload ទេ");
   const target = targetFor(slot);
   const sourceAspect = image.naturalWidth / image.naturalHeight;
   const targetAspect = target.width / target.height;
@@ -73,14 +91,14 @@ export async function prepareAdminImage(file: File, slot: AdminImageSlot): Promi
   canvas.width = target.width;
   canvas.height = target.height;
   const context = canvas.getContext("2d");
-  if (!context) throw new Error("Browser cannot prepare this image");
+  if (!context) throw new Error("browser របស់អ្នកមិនអាចរៀបចំរូបភាពនេះបានទេ");
   context.imageSmoothingEnabled = true;
   context.imageSmoothingQuality = "high";
   context.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, target.width, target.height);
-  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", 0.88));
-  if (!blob) throw new Error("Unable to optimize this image");
+  const encoded = await encodePreparedImage(canvas);
   const warning = image.naturalWidth < target.width || image.naturalHeight < target.height
     ? `រូបភាពដើម ${image.naturalWidth}×${image.naturalHeight} តូចជាងទំហំផ្តល់អនុសាសន៍ ${target.width}×${target.height}`
     : null;
-  return { dataUrl: await dataUrlFor(blob), fileName: `${file.name.replace(/\.[^.]+$/, "")}-${slot}.webp`, contentType: "image/webp", width: target.width, height: target.height, warning };
+  const extension = encoded.contentType === "image/jpeg" ? "jpg" : "webp";
+  return { dataUrl: await dataUrlFor(encoded.blob), fileName: `${file.name.replace(/\.[^.]+$/, "")}-${slot}.${extension}`, contentType: encoded.contentType, width: target.width, height: target.height, warning };
 }
