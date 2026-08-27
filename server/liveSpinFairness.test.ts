@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { LIVE_SPIN_DEFAULT_PRIZE_COUNTDOWN_SECONDS, LIVE_SPIN_DEFAULT_SPOILER_SECONDS, LIVE_SPIN_MINIMUM_PARTICIPANT_COUNT, LIVE_SPIN_QUALIFIED_ORDERS_PER_TICKET, createLiveSpinFairnessSeed, deriveFairIndex, isLiveSpinEligibleOrder, liveSpinFairnessCommitment, liveSpinRulesSnapshotHash, liveSpinSnapshotHash, liveSpinWeekKey, progressForQualifiedOrders, selectLiveSpinOutcome, selectLiveSpinRankedOutcomes, ticketCountForQualifiedOrders, verifyLiveSpinOutcome } from "./liveSpinFairness";
+import { LIVE_SPIN_DEFAULT_PRIZE_COUNTDOWN_SECONDS, LIVE_SPIN_DEFAULT_SPOILER_SECONDS, LIVE_SPIN_FINAL_COUNTDOWN_SECONDS, LIVE_SPIN_MINIMUM_PARTICIPANT_COUNT, LIVE_SPIN_NAME_ARRIVAL_SECONDS, LIVE_SPIN_NAME_STRIP_SECONDS, LIVE_SPIN_QUALIFIED_ORDERS_PER_TICKET, LIVE_SPIN_SLOT_MACHINE_SECONDS, LIVE_SPIN_WINNER_CELEBRATION_SECONDS, createLiveSpinFairnessSeed, deriveFairIndex, isLiveSpinEligibleOrder, liveSpinFairnessCommitment, liveSpinRulesSnapshotHash, liveSpinSnapshotHash, liveSpinWeekKey, progressForQualifiedOrders, selectLiveSpinOutcome, selectLiveSpinRankedOutcomes, ticketCountForQualifiedOrders, verifyLiveSpinOutcome } from "./liveSpinFairness";
 
 describe("Live Spin ticket eligibility", () => {
   const completedAt = new Date("2026-08-30T08:00:00.000Z");
@@ -78,9 +78,14 @@ describe("Live Spin provably fair selection", () => {
     expect(verifyLiveSpinOutcome({ ...base, snapshotHash: liveSpinSnapshotHash(entries.map((entry, index) => index === 1 ? { ...entry, displayAlias: "ZRS_CHANGED" } : entry)) })).toBe(false);
   });
 
-  it("locks the agreed participant threshold and both five-second presentation delays", () => {
+  it("locks the approved server timeline and presentation holds", () => {
     expect(LIVE_SPIN_MINIMUM_PARTICIPANT_COUNT).toBe(100);
+    expect(LIVE_SPIN_NAME_ARRIVAL_SECONDS).toBe(58);
+    expect(LIVE_SPIN_FINAL_COUNTDOWN_SECONDS).toBe(10);
+    expect(LIVE_SPIN_SLOT_MACHINE_SECONDS).toBe(28);
+    expect(LIVE_SPIN_NAME_STRIP_SECONDS).toBe(96);
     expect(LIVE_SPIN_DEFAULT_SPOILER_SECONDS).toBe(5);
+    expect(LIVE_SPIN_WINNER_CELEBRATION_SECONDS).toBe(8);
     expect(LIVE_SPIN_DEFAULT_PRIZE_COUNTDOWN_SECONDS).toBe(5);
   });
 });

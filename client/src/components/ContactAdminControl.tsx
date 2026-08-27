@@ -120,11 +120,11 @@ function ContactAdminCard({ admin }: { admin: ContactAdmin }) {
   );
 }
 
-export function ContactAdminControl({ paymentBarVisible }: { paymentBarVisible: boolean }) {
+export function ContactAdminControl({ paymentBarVisible, hideOnMobile = false }: { paymentBarVisible: boolean; hideOnMobile?: boolean }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className={`contact-admin-fab ${paymentBarVisible ? "contact-admin-fab--payment" : ""}`} aria-label="ទំនាក់ទំនង Admin" aria-haspopup="dialog" aria-expanded={open}>
+      <button type="button" onClick={() => setOpen(true)} className={`contact-admin-fab ${paymentBarVisible ? "contact-admin-fab--payment" : ""} ${hideOnMobile ? "contact-admin-fab--hide-mobile" : ""}`} aria-label="ទំនាក់ទំនង Admin" aria-haspopup="dialog" aria-expanded={open}>
         <Headset className="h-4.5 w-4.5" strokeWidth={2.15} />
         <span className="contact-admin-fab__label">ជំនួយ</span>
       </button>

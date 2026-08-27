@@ -1,9 +1,10 @@
+import LiveSpinExperience, { liveSpinAudioPhase } from "@/components/LiveSpinExperience";
 import StorefrontLayout from "@/components/StorefrontLayout";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import Ably from "ably";
 import { Crown, Eye, Gift, LockKeyhole, Sparkles, Ticket, Trophy, Volume2, VolumeX } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
 
 type LiveSpinEvent = {
@@ -27,6 +28,7 @@ type LiveSpinEvent = {
   consolationGiftCount: number;
   settingsSnapshotHash: string | null;
   winnerSpoilerSeconds: number;
+  winnerCelebrationSeconds: number;
   prizeCountdownSeconds: number;
   fairnessCommitmentHash: string | null;
   participantSnapshotHash: string | null;
@@ -38,6 +40,7 @@ type LiveSpinState = {
   event: LiveSpinEvent | null;
   participantCount: number;
   entryCount: number;
+  participantAliases: string[];
   thresholdReached: boolean;
   winner: { alias: string } | null;
   prize: { nameKh: string; valueLabel: string; mediaUrl: string | null } | null;
@@ -58,8 +61,10 @@ function useServerClock(serverNow: Date | string | undefined) {
     if (Number.isFinite(time)) setOffset(time - Date.now());
   }, [serverNow]);
   useEffect(() => {
-    const timer = window.setInterval(() => setTick(Date.now()), 250);
-    return () => window.clearInterval(timer);
+    let frame = 0;
+    const update = () => { setTick(Date.now()); frame = window.requestAnimationFrame(update); };
+    frame = window.requestAnimationFrame(update);
+    return () => window.cancelAnimationFrame(frame);
   }, []);
   return tick + offset;
 }
@@ -89,7 +94,7 @@ const liveSpinSounds = {
 
 type LiveSpinSound = keyof typeof liveSpinSounds;
 
-function useLiveSpinAudio({ event, muted, finalCountdown, stripRemaining }: { event: LiveSpinEvent; muted: boolean; finalCountdown: boolean; stripRemaining: number }) {
+function useLiveSpinAudio({ event, muted, phase, phaseElapsed, stripRemaining }: { event: LiveSpinEvent; muted: boolean; phase: "intro" | "countdown" | "spin" | "spoiler" | "winner" | "prize" | "ending"; phaseElapsed: number; stripRemaining: number }) {
   const players = useRef<Partial<Record<LiveSpinSound, HTMLAudioElement>>>({});
   const lastCue = useRef<string | null>(null);
   useEffect(() => {
@@ -104,17 +109,18 @@ function useLiveSpinAudio({ event, muted, finalCountdown, stripRemaining }: { ev
   useEffect(() => {
     const all = Object.values(players.current);
     if (muted) { all.forEach((player) => player?.pause()); return; }
-    const cue: LiveSpinSound | null = event.status === "live" ? "heartbeat" : event.status === "winner_revealed" ? "result" : event.status === "ended" ? "outro" : finalCountdown ? "countdown" : ["announced", "locked", "waiting"].includes(event.status) ? "intro" : null;
-    all.forEach((player) => { if (player && player !== players.current[cue ?? "intro"]) player.pause(); });
-    if (!cue) return;
+    const cue: LiveSpinSound | null = phase === "intro" ? "intro" : phase === "countdown" ? "countdown" : phase === "spin" ? "heartbeat" : phase === "winner" ? "result" : phase === "ending" ? "outro" : ["announced", "locked", "waiting"].includes(event.status) ? "intro" : null;
+    if (!cue) { all.forEach((player) => player?.pause()); return; }
+    all.forEach((player) => { if (player && player !== players.current[cue]) player.pause(); });
     const player = players.current[cue];
     if (!player) return;
     player.loop = cue === "intro" || cue === "heartbeat";
     player.volume = cue === "heartbeat" ? 0.42 : cue === "outro" ? 0.5 : 0.72;
-    if (cue === "heartbeat") player.playbackRate = stripRemaining <= 2 ? 1.5 : stripRemaining <= 4 ? 1.25 : 1;
+    const playbackRate = cue === "countdown" ? 0.74 : cue === "heartbeat" ? stripRemaining <= 2 ? 1.5 : stripRemaining <= 4 ? 1.25 : 1 : 1;
+    player.playbackRate = playbackRate;
     const key = `${event.id}:${event.status}:${cue}`;
-    if (lastCue.current !== key || (cue === "heartbeat" && player.paused)) { lastCue.current = key; player.currentTime = cue === "heartbeat" || cue === "intro" ? 0 : player.currentTime; void player.play().catch(() => undefined); }
-  }, [event.id, event.status, finalCountdown, muted, stripRemaining]);
+    if (lastCue.current !== key || player.paused) { lastCue.current = key; const offset = Math.max(0, phaseElapsed * playbackRate); player.currentTime = Number.isFinite(player.duration) ? Math.min(offset, Math.max(0, player.duration - 0.1)) : 0; void player.play().catch(() => undefined); }
+  }, [event.id, event.status, muted, phase, phaseElapsed, stripRemaining]);
 }
 
 function LiveSpinRealtime({ eventId, enabled, onState }: { eventId: string; enabled: boolean; onState: () => void }) {
@@ -130,35 +136,24 @@ function LiveSpinRealtime({ eventId, enabled, onState }: { eventId: string; enab
   return null;
 }
 
+function localAnimationPreview() {
+  if (!import.meta.env.DEV) return null;
+  const phase = new URLSearchParams(window.location.search).get("spinPreview");
+  if (!phase) return null;
+  const now = Date.now();
+  const status = phase === "intro" || phase === "countdown" || phase === "spin" ? "live" : phase === "spoiler" || phase === "winner" ? "winner_revealed" : phase === "prize" ? "prize_countdown" : "ended";
+  const startedAt = phase === "intro" ? now - 8_000 : phase === "countdown" ? now - 61_000 : phase === "spin" ? now - 78_000 : now - 96_000;
+  const event: LiveSpinEvent = { id: "local-motion-preview", status, isTest: true, scheduledAt: new Date(now), announcementStartsAt: new Date(now - 86_400_000), entryCutoffAt: new Date(now - 60_000), lobbyStartsAt: new Date(now - 3_600_000), liveStartedAt: new Date(startedAt), winnerRevealedAt: new Date(now - (phase === "spoiler" ? 2_000 : 7_000)), prizeCountdownStartedAt: new Date(now - 2_000), prizeRevealedAt: new Date(now - 3_000), nameStripSeconds: 96, adMediaUrl: null, adDurationSeconds: 0, minParticipantCount: 100, spinEnabled: true, winnerCount: 3, consolationGiftCount: 10, settingsSnapshotHash: "local-preview", winnerSpoilerSeconds: 5, winnerCelebrationSeconds: 8, prizeCountdownSeconds: 5, fairnessCommitmentHash: "local-preview-only", participantSnapshotHash: "local-preview-only", revealedFairnessSeed: phase === "ending" ? "local-preview-only" : null };
+  return { serverNow: new Date(now), event, participantCount: 128, entryCount: 128, participantAliases: ["ZRS-••A7", "ZRS-••D2", "ZRS-••F9", "ZRS-••K4", "ZRS-••Q8", "ZRS-••M6", "ZRS-••R1", "ZRS-••T3"], thresholdReached: true, winner: { alias: "ZRS-••A7" }, prize: { nameKh: "រង្វាន់ TEST", valueLabel: "Preview only", mediaUrl: null }, winners: [1, 2, 3].map((rank) => ({ rank, alias: `ZRS-••${rank}A`, prize: { nameKh: `រង្វាន់ទី ${rank}`, valueLabel: "Preview only", mediaUrl: null } })), consolation: [1, 2, 3, 4].map((rank) => ({ rank, alias: `ZRS-••${rank}C`, gift: { nameKh: "កាដូលើកទឹកចិត្ត", valueLabel: "Preview only", mediaUrl: null } })) } satisfies LiveSpinState;
+}
+
 export default function LiveSpin() {
   const state = trpc.liveSpin.state.useQuery(undefined, { refetchInterval: 12_000, refetchOnWindowFocus: true });
-  const event = state.data?.event;
+  const preview = localAnimationPreview();
+  const liveState = preview ?? state.data;
+  const event = liveState?.event;
   const refetch = useCallback(() => { void state.refetch(); }, [state]);
-  return <StorefrontLayout>
-    <LiveSpinRealtime eventId={event?.id ?? "waiting"} enabled={Boolean(event)} onState={refetch} />
-    <main className="container pb-6 pt-[calc(env(safe-area-inset-top)+1.5rem)] sm:py-10">
-      <section className="relative mx-auto max-w-5xl overflow-hidden rounded-[2rem] border border-cyan-200/30 bg-slate-950 px-4 py-6 text-white shadow-2xl shadow-cyan-950/25 sm:px-8 sm:py-10">
-        <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-cyan-400/20 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-28 -left-16 h-72 w-72 rounded-full bg-amber-300/15 blur-3xl" />
-        <div className="relative">
-          <header className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/30 bg-cyan-300/10 px-3 py-1.5 text-[10px] font-bold tracking-[0.16em] text-cyan-100"><Sparkles className="h-3.5 w-3.5" />ZURS WEEKLY LIVE SPIN</div>
-              <h1 className="mt-4 max-w-xl break-words font-display text-2xl font-bold leading-tight tracking-tight sm:text-5xl">Live Spin ប្រចាំសប្តាហ៍</h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">កម្មវិធីរង្វាន់សម្រាប់អតិថិជន ZURS។ សំបុត្ររបស់អ្នកត្រូវបានបញ្ជាក់ដោយ server និងលទ្ធផលមាន fairness proof អាចផ្ទៀងផ្ទាត់បាន។</p>
-            </div>
-            <Link href="/account#live-spin-tickets" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-3 text-xs font-bold text-white transition hover:bg-white/15"><Ticket className="h-4 w-4 text-amber-300" />មើល Tickets របស់ខ្ញុំ</Link>
-          </header>
-          {state.isLoading ? <LoadingCard /> : !event ? <UpcomingCard /> : <LiveSpinStage state={state.data!} />}
-        </div>
-      </section>
-      <section className="mx-auto mt-5 grid max-w-5xl gap-3 md:grid-cols-3">
-        <InfoCard icon={<Ticket className="h-4 w-4" />} title="7 orders = 1 ticket" body="ការទិញដែលបានបង់ប្រាក់រួច និងមានតម្លៃយ៉ាងហោច $1 ចំនួន 7 ដងក្នុងសប្តាហ៍ដូចគ្នា នឹងទទួលបាន 1 ticket។" />
-        <InfoCard icon={<LockKeyhole className="h-4 w-4" />} title="Roll-over ដោយស្វ័យប្រវត្តិ" body="ប្រសិនបើមិនទាន់ដល់ 100 អ្នកចូលរួម សប្តាហ៍នោះត្រូវ skip ហើយ tickets នៅសល់ទៅ event បន្ទាប់។" />
-        <InfoCard icon={<Crown className="h-4 w-4" />} title="18+ customer loyalty reward" body="សម្រាប់អតិថិជនអាយុ 18 ឆ្នាំឡើង និងស្ថិតក្រោម Giveaway Terms របស់ ZURS។" />
-      </section>
-    </main>
-  </StorefrontLayout>;
+  return <StorefrontLayout><LiveSpinRealtime eventId={event?.id ?? "waiting"} enabled={Boolean(event) && !preview} onState={refetch} /><main className="container pb-[calc(6.75rem+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top)+1.5rem)] sm:py-10"><section className="relative mx-auto max-w-5xl overflow-hidden rounded-[2rem] border border-cyan-200/30 bg-slate-950 px-4 py-6 text-white shadow-2xl shadow-cyan-950/25 sm:px-8 sm:py-10"><div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-cyan-400/20 blur-3xl" /><div className="pointer-events-none absolute -bottom-28 -left-16 h-72 w-72 rounded-full bg-amber-300/15 blur-3xl" /><div className="relative"><header className="flex flex-wrap items-start justify-between gap-4"><div><div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/30 bg-cyan-300/10 px-3 py-1.5 text-[10px] font-bold tracking-[0.16em] text-cyan-100"><Sparkles className="h-3.5 w-3.5" />ZURS WEEKLY LIVE SPIN</div><h1 className="mt-4 max-w-xl break-words font-display text-2xl font-bold leading-tight tracking-tight sm:text-5xl">Live Spin សង្ឃឹមថា</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">កម្មវិធីរង្វាន់សម្រាប់អតិថិជន ZURS។ សំបុត្ររបស់អ្នកត្រូវបានបញ្ជាក់ដោយ server និងលទ្ធផលមាន fairness proof អាចផ្ទៀងផ្ទាត់បាន។</p></div><Link href="/account" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-3 text-xs font-bold text-white transition hover:bg-white/15"><Ticket className="h-4 w-4 text-amber-300" />មើល Tickets របស់ខ្ញុំ</Link></header>{!preview && state.isLoading ? <LoadingCard /> : !event || !liveState ? <UpcomingCard /> : <LiveSpinStage state={liveState} />}</div></section><section className="mx-auto mt-5 grid max-w-5xl gap-3 md:grid-cols-3"><InfoCard icon={<Ticket className="h-4 w-4" />} title="7 orders = 1 ticket" body="ការទិញដែលបានបង់ប្រាក់រួច និងមានតម្លៃយ៉ាងហោច $1 ចំនួន 7 ដងក្នុងសប្តាហ៍ដូចគ្នា នឹងទទួលបាន 1 ticket។" /><InfoCard icon={<LockKeyhole className="h-4 w-4" />} title="Roll-over ដោយស្វ័យប្រវត្តិ" body="ប្រសិនបើមិនទាន់ដល់ 100 អ្នកចូលរួម សប្តាហ៍នោះត្រូវ skip ហើយ tickets នៅសល់ទៅ event បន្ទាប់។" /><InfoCard icon={<Crown className="h-4 w-4" />} title="18+ customer loyalty reward" body="សម្រាប់អតិថិជនអាយុ 18 ឆ្នាំឡើង និងស្ថិតក្រោម Giveaway Terms របស់ ZURS។" /></section></main></StorefrontLayout>;
 }
 
 function LiveSpinConnectionConsent({ event }: { event: LiveSpinEvent }) {
@@ -181,12 +176,14 @@ function LiveSpinStage({ state }: { state: LiveSpinState }) {
   const spoiler = useCountdown(plusSeconds(event.winnerRevealedAt, event.winnerSpoilerSeconds), serverNow);
   const prizeCountdown = useCountdown(plusSeconds(event.prizeCountdownStartedAt, event.prizeCountdownSeconds), serverNow);
   const [muted, setMuted] = useState(true);
-  const finalCountdown = event.status === "waiting" && waiting.remaining > 0 && waiting.remaining <= 10;
-  useLiveSpinAudio({ event, muted, finalCountdown, stripRemaining: nameStrip.remaining });
+  const motionEvent = { id: event.id, status: event.status as "waiting" | "live" | "winner_revealed" | "prize_countdown" | "prize_revealed" | "ended", liveStartedAt: event.liveStartedAt, winnerRevealedAt: event.winnerRevealedAt, prizeCountdownStartedAt: event.prizeCountdownStartedAt, prizeRevealedAt: event.prizeRevealedAt, nameStripSeconds: event.nameStripSeconds, winnerSpoilerSeconds: event.winnerSpoilerSeconds, winnerCelebrationSeconds: event.winnerCelebrationSeconds, prizeCountdownSeconds: event.prizeCountdownSeconds };
+  const motionPhase = liveSpinAudioPhase(motionEvent, serverNow);
+  const motionPhaseStartedAt = motionPhase === "intro" ? toTime(event.liveStartedAt) : motionPhase === "countdown" ? toTime(event.liveStartedAt) + 58_000 : motionPhase === "spin" ? toTime(event.liveStartedAt) + 68_000 : motionPhase === "winner" ? toTime(event.winnerRevealedAt) + event.winnerSpoilerSeconds * 1_000 : motionPhase === "prize" ? toTime(event.prizeCountdownStartedAt) : motionPhase === "ending" ? toTime(event.prizeRevealedAt) : serverNow;
+  useLiveSpinAudio({ event, muted, phase: motionPhase, phaseElapsed: Math.max(0, (serverNow - motionPhaseStartedAt) / 1_000), stripRemaining: nameStrip.remaining });
   const statusTitle: Record<string, string> = { announced: "កំពុងរៀបចំ Live Spin", locked: "បញ្ជីអ្នកចូលរួមត្រូវបាន lock", waiting: "Waiting Lobby", live: "Live Spin កំពុងដំណើរការ", winner_revealed: "អ្នកឈ្នះត្រូវបានជ្រើស", prize_countdown: "រង្វាន់ជិតបង្ហាញ", prize_revealed: "រង្វាន់ត្រូវបានបង្ហាញ", ended: "Live Spin បានបញ្ចប់" };
   const inLiveWindow = ["waiting", "live", "winner_revealed", "prize_countdown", "prize_revealed"].includes(event.status);
-  const timerLabel = ["announced", "locked", "waiting"].includes(event.status) ? "ចាប់ផ្តើមក្នុង" : "ពេលនៅសល់";
-  return <div className="mt-7">{event.isTest ? <div className="fixed left-1/2 top-[max(4.25rem,calc(env(safe-area-inset-top)+3.75rem))] z-40 w-[min(calc(100vw-2rem),30rem)] -translate-x-1/2 rounded-full border border-amber-200/60 bg-amber-300 px-4 py-2 text-center text-[10px] font-extrabold tracking-[0.12em] text-slate-950 shadow-lg shadow-amber-950/30">LIVE SPIN TEST · TEST ONLY · VIEW-ONLY</div> : null}<div className="grid grid-cols-2 gap-2 sm:gap-3"><div className="col-span-2 rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3"><p className="text-[10px] font-bold tracking-[0.14em] text-cyan-200">{inLiveWindow ? "LIVE STATUS" : "UPCOMING"}</p><h2 className="mt-1 break-words font-display text-xl font-bold leading-snug sm:text-2xl">{statusTitle[event.status] ?? "Live Spin"}</h2></div><div className="rounded-2xl border border-white/10 bg-white/[0.08] p-3"><p className="text-[10px] font-bold tracking-[0.12em] text-slate-300">PARTICIPANTS</p><p className="mt-1 font-display text-lg font-bold text-amber-200">{state.participantCount} <span className="text-xs text-slate-300">/ {event.minParticipantCount}</span></p></div><div className="rounded-2xl border border-white/10 bg-white/[0.08] p-3"><p className="text-[10px] font-bold tracking-[0.12em] text-slate-300">ចំនួនអ្នកឈ្នះ</p><p className="mt-1 font-display text-lg font-bold text-amber-200">{event.winnerCount}</p></div><button type="button" onClick={() => setMuted((value) => !value)} className="min-h-12 rounded-2xl border border-white/10 bg-white/[0.08] p-3 text-left transition hover:bg-white/[0.14]" aria-label={muted ? "បើកសំឡេង Live Spin" : "បិទសំឡេង Live Spin"}><span className="text-[10px] font-bold tracking-[0.12em] text-slate-300">SOUND</span><span className="mt-1 flex items-center gap-2 text-xs font-bold text-white">{muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4 text-amber-200" />}{muted ? "បិទ" : "បើក"}</span></button><div className="rounded-2xl border border-white/10 bg-white/[0.08] p-3"><p className="text-[10px] font-bold tracking-[0.12em] text-slate-300">{timerLabel}</p><p className="mt-1 font-display text-lg font-bold tabular-nums text-white">{waiting.minutes}:{waiting.seconds}</p></div></div>{event.status === "waiting" ? <AdGate url={event.adMediaUrl} duration={event.adDurationSeconds} muted={muted} onToggleMute={() => setMuted((value) => !value)} countdown={waiting} serverNow={serverNow} /> : null}{event.status === "live" ? <NameStrip entryCount={state.entryCount} countdown={nameStrip} /> : null}{event.status === "winner_revealed" ? <WinnerReveal winners={state.winners} countdown={spoiler} /> : null}{event.status === "prize_countdown" ? <PrizeCountdown winners={state.winners} countdown={prizeCountdown} /> : null}{event.status === "prize_revealed" || event.status === "ended" ? <PrizeReveal winners={state.winners} consolation={state.consolation} ended={event.status === "ended"} /> : null}{["announced", "locked"].includes(event.status) ? <WaitingLobby countdown={waiting} state={state} /> : null}<LiveSpinConnectionConsent event={event} /><div className="mt-5 rounded-2xl border border-cyan-200/20 bg-cyan-200/10 p-3 text-xs leading-5 text-cyan-50">{event.spinEnabled ? <>សប្តាហ៍នេះ៖ <strong>អ្នកឈ្នះ {event.winnerCount} នាក់ + កាដូលើកទឹកចិត្ត {event.consolationGiftCount} នាក់</strong> • ត្រូវការ <strong>{event.minParticipantCount}</strong> អ្នកកាន់ ticket។</> : <strong>Live Spin ត្រូវបានផ្អាក ជាបណ្តោះអាសន្ន។ Tickets ដែលមានសិទ្ធិនឹង roll over ទៅ event បន្ទាប់។</strong>}</div><div className="mt-5 grid gap-3 md:grid-cols-2"><div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4"><div className="flex items-center gap-2 text-cyan-100"><LockKeyhole className="h-4 w-4" /><p className="text-xs font-bold">Fairness commitment</p></div><p className="mt-2 break-all font-mono text-[10px] leading-5 text-slate-400">{event.fairnessCommitmentHash ?? "Commitment will be published before Live Spin."}</p><p className="mt-2 text-[11px] leading-5 text-slate-300">Server បង្កើត seed ដោយសុវត្ថិភាព, lock participant snapshot មុន spin ហើយបង្ហាញ seed បន្ទាប់ពី prize reveal។</p></div><div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4"><div className="flex items-center gap-2 text-amber-200"><Trophy className="h-4 w-4" /><p className="text-xs font-bold">Sunday · 3:00 PM</p></div><p className="mt-2 text-[11px] leading-5 text-slate-300">ម៉ោងកម្ពុជា (Asia/Phnom_Penh)។ ការរាប់ថយក្រោយប្រើ server time ដែលបាន sync ជាមួយ device របស់អ្នក។</p></div></div></div>;
+  const statusCaption = event.status === "ended" ? "EVENT STATUS" : inLiveWindow ? "LIVE STATUS" : "UPCOMING";
+  return <div className="mt-7">{event.isTest ? <div className="sticky top-[calc(env(safe-area-inset-top)+4.9rem)] z-30 mx-auto mb-4 w-full rounded-xl border border-amber-200/60 bg-amber-300 px-3 py-2 text-center text-[10px] font-extrabold tracking-[0.1em] text-slate-950 shadow-lg shadow-amber-950/30">LIVE SPIN TEST · TEST ONLY · VIEW-ONLY</div> : null}<div className="grid grid-cols-2 gap-2 sm:gap-3"><div className="col-span-2 rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3"><p className="text-[10px] font-bold tracking-[0.14em] text-cyan-200">{statusCaption}</p><h2 className="mt-1 break-words font-display text-xl font-bold leading-snug sm:text-2xl">{statusTitle[event.status] ?? "Live Spin"}</h2></div><div className="rounded-2xl border border-white/10 bg-white/[0.08] p-3"><p className="text-[10px] font-bold tracking-[0.12em] text-slate-300">PARTICIPANTS</p><p className="mt-1 font-display text-lg font-bold text-amber-200">{state.participantCount} <span className="text-xs text-slate-300">/ {event.minParticipantCount}</span></p></div><div className="rounded-2xl border border-white/10 bg-white/[0.08] p-3"><p className="text-[10px] font-bold tracking-[0.12em] text-slate-300">ចំនួនអ្នកឈ្នះ</p><p className="mt-1 font-display text-lg font-bold text-amber-200">{event.winnerCount}</p></div><button type="button" onClick={() => setMuted((value) => !value)} className="min-h-12 rounded-2xl border border-white/10 bg-white/[0.08] p-3 text-left transition hover:bg-white/[0.14]" aria-label={muted ? "បើកសំឡេង Live Spin" : "បិទសំឡេង Live Spin"}><span className="text-[10px] font-bold tracking-[0.12em] text-slate-300">SOUND</span><span className="mt-1 flex items-center gap-2 text-xs font-bold text-white">{muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4 text-amber-200" />}{muted ? "បិទ" : "បើក"}</span></button><div className="rounded-2xl border border-white/10 bg-white/[0.08] p-3"><p className="text-[10px] font-bold tracking-[0.12em] text-slate-300">TIME</p><p className="mt-1 font-display text-lg font-bold tabular-nums text-white">{waiting.minutes}:{waiting.seconds}</p></div></div>{event.status === "waiting" ? <AdGate url={event.adMediaUrl} duration={event.adDurationSeconds} muted={muted} onToggleMute={() => setMuted((value) => !value)} countdown={waiting} serverNow={serverNow} /> : null}{["live", "winner_revealed", "prize_countdown", "prize_revealed", "ended"].includes(event.status) ? <LiveSpinExperience event={{ id: event.id, status: event.status as "live" | "winner_revealed" | "prize_countdown" | "prize_revealed" | "ended", liveStartedAt: event.liveStartedAt, winnerRevealedAt: event.winnerRevealedAt, prizeCountdownStartedAt: event.prizeCountdownStartedAt, prizeRevealedAt: event.prizeRevealedAt, nameStripSeconds: event.nameStripSeconds, winnerSpoilerSeconds: event.winnerSpoilerSeconds, winnerCelebrationSeconds: event.winnerCelebrationSeconds, prizeCountdownSeconds: event.prizeCountdownSeconds }} serverNow={serverNow} aliases={state.participantAliases} winners={state.winners} consolation={state.consolation} muted={muted} onToggleMute={() => setMuted((value) => !value)} /> : null}{["announced", "locked"].includes(event.status) ? <WaitingLobby countdown={waiting} state={state} /> : null}<LiveSpinConnectionConsent event={event} /><div className="mt-5 rounded-2xl border border-cyan-200/20 bg-cyan-200/10 p-3 text-xs leading-5 text-cyan-50">{event.spinEnabled ? <>សប្តាហ៍នេះ៖ <strong>អ្នកឈ្នះ {event.winnerCount} នាក់ + កាដូលើកទឹកចិត្ត {event.consolationGiftCount} នាក់</strong> • ត្រូវការ <strong>{event.minParticipantCount}</strong> អ្នកកាន់ ticket។</> : <strong>Live Spin ត្រូវបានផ្អាក ជាបណ្តោះអាសន្ន។ Tickets ដែលមានសិទ្ធិនឹង roll over ទៅ event បន្ទាប់។</strong>}</div><div className="mt-5 grid gap-3 md:grid-cols-2"><div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4"><div className="flex items-center gap-2 text-cyan-100"><LockKeyhole className="h-4 w-4" /><p className="text-xs font-bold">Fairness commitment</p></div><p className="mt-2 break-all font-mono text-[10px] leading-5 text-slate-400">{event.fairnessCommitmentHash ?? "Commitment will be published before Live Spin."}</p><p className="mt-2 text-[11px] leading-5 text-slate-300">Server បង្កើត seed ដោយសុវត្ថិភាព, lock participant snapshot មុន spin ហើយបង្ហាញ seed បន្ទាប់ពី prize reveal។</p></div><div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4"><div className="flex items-center gap-2 text-amber-200"><Trophy className="h-4 w-4" /><p className="text-xs font-bold">Sunday · 3:00 PM</p></div><p className="mt-2 text-[11px] leading-5 text-slate-300">ម៉ោងកម្ពុជា (Asia/Phnom_Penh)។ ការរាប់ថយក្រោយប្រើ server time ដែលបាន sync ជាមួយ device របស់អ្នក។</p></div></div></div>;
 }
 
 function AdGate({ url, duration, muted, onToggleMute, countdown, serverNow }: { url: string | null; duration: number; muted: boolean; onToggleMute: () => void; countdown: ReturnType<typeof useCountdown>; serverNow: number }) {
@@ -206,10 +203,7 @@ function WinnerReveal({ winners, countdown }: { winners: LiveSpinState["winners"
 
 function PrizeCountdown({ winners, countdown }: { winners: LiveSpinState["winners"]; countdown: ReturnType<typeof useCountdown> }) { return <div className="mt-6 rounded-3xl border border-amber-200/30 bg-gradient-to-br from-amber-300/15 via-slate-950 to-cyan-950 p-7 text-center"><Gift className="mx-auto h-10 w-10 text-amber-200" /><p className="mt-4 text-xs font-bold tracking-[0.18em] text-amber-100">PRIZES REVEAL IN · {winners.length} WINNERS</p><p className="mt-2 font-display text-6xl font-bold tabular-nums text-white">{countdown.seconds}</p></div>; }
 
-function PrizeReveal({ winners, consolation, ended }: { winners: LiveSpinState["winners"]; consolation: LiveSpinState["consolation"]; ended: boolean }) {
-  const consolationLabelCount = Math.max(10, consolation.length);
-  return <div className="mt-6 rounded-3xl border border-amber-200/30 bg-gradient-to-br from-amber-300/20 via-slate-950 to-cyan-950 p-7 text-center"><Gift className="mx-auto h-10 w-10 text-amber-200" /><p className="mt-4 text-xs font-bold tracking-[0.18em] text-amber-100">{ended ? "LIVE SPIN ENDED" : "PRIZES REVEALED"}</p><div className="mt-4 grid gap-3 sm:grid-cols-3">{winners.map((winner) => <div key={winner.rank} className="rounded-2xl border border-white/10 bg-white/10 p-3"><p className="text-[10px] font-bold text-amber-100">លេខ {winner.rank} · {winner.alias}</p><p className="mt-2 text-sm font-bold text-white">{winner.prize?.nameKh ?? "រង្វាន់កំពុងរៀបចំ"}</p><p className="mt-1 text-xs text-amber-200">{winner.prize?.valueLabel}</p></div>)}</div>{ended ? <div className="mt-5 rounded-2xl bg-white/10 p-4"><p className="font-display text-xl font-bold text-amber-100">Top {consolationLabelCount} អ្នកតភ្ជាប់យូរជាងគេ</p><p className="mt-1 text-[11px] text-slate-300">គិតតាមរយៈពេលតភ្ជាប់ជាមួយ Live (connection time), មិនមែនការមើលអេក្រង់ផ្ទាល់ទេ។</p><div className="mt-3 grid gap-2 sm:grid-cols-2">{consolation.map((item) => <div key={item.rank} className="rounded-xl bg-slate-950/45 px-3 py-2 text-left text-xs text-white"><strong>#{item.rank} · {item.alias}</strong><span className="ml-2 text-amber-200">{item.gift?.nameKh ?? "កាដូលើកទឹកចិត្ត"}</span></div>)}</div></div> : null}<div className="mt-5 rounded-2xl border border-amber-200/20 bg-amber-200/10 p-4"><p className="font-display text-base font-bold text-amber-100">អបអរសាទរអ្នកឈ្នះទាំងអស់</p><p className="mt-1 text-sm text-slate-300">លទ្ធផលត្រូវបានកត់ត្រា និងអាចផ្ទៀងផ្ទាត់ fairness proof បាន។</p></div></div>;
-}
+function PrizeReveal({ winners, consolation, ended }: { winners: LiveSpinState["winners"]; consolation: LiveSpinState["consolation"]; ended: boolean }) { return <div className="mt-6 rounded-3xl border border-amber-200/30 bg-gradient-to-br from-amber-300/20 via-slate-950 to-cyan-950 p-7 text-center"><Gift className="mx-auto h-10 w-10 text-amber-200" /><p className="mt-4 text-xs font-bold tracking-[0.18em] text-amber-100">{ended ? "LIVE SPIN ENDED" : "PRIZES REVEALED"}</p><div className="mt-4 grid gap-3 sm:grid-cols-3">{winners.map((winner) => <div key={winner.rank} className="rounded-2xl border border-white/10 bg-white/10 p-3"><p className="text-[10px] font-bold text-amber-100">លេខ {winner.rank} · {winner.alias}</p><p className="mt-2 text-sm font-bold text-white">{winner.prize?.nameKh ?? "រង្វាន់កំពុងរៀបចំ"}</p><p className="mt-1 text-xs text-amber-200">{winner.prize?.valueLabel}</p></div>)}</div>{ended ? <div className="mt-5 rounded-2xl bg-white/10 p-4"><p className="font-display text-xl font-bold text-amber-100">Top {consolation.length} អ្នកតភ្ជាប់យូរជាងគេ</p><p className="mt-1 text-[11px] text-slate-300">គិតតាមរយៈពេលតភ្ជាប់ជាមួយ Live (connection time), មិនមែនការមើលអេក្រង់ផ្ទាល់ទេ។</p><div className="mt-3 grid gap-2 sm:grid-cols-2">{consolation.map((item) => <div key={item.rank} className="rounded-xl bg-slate-950/45 px-3 py-2 text-left text-xs text-white"><strong>#{item.rank} · {item.alias}</strong><span className="ml-2 text-amber-200">{item.gift?.nameKh ?? "កាដូលើកទឹកចិត្ត"}</span></div>)}</div></div> : null}<div className="mt-5 rounded-2xl border border-amber-200/20 bg-amber-200/10 p-4"><p className="font-display text-base font-bold text-amber-100">អបអរសាទរអ្នកឈ្នះទាំងអស់</p><p className="mt-1 text-sm text-slate-300">លទ្ធផលត្រូវបានកត់ត្រា និងអាចផ្ទៀងផ្ទាត់ fairness proof បាន។</p></div></div>; }
 
 function UpcomingCard() { return <div className="mt-7 rounded-3xl border border-white/10 bg-white/[0.07] p-8 text-center"><CalendarMark /><h2 className="mt-4 font-display text-2xl font-bold">Live Spin ថ្មីកំពុងរៀបចំ</h2><p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-slate-300">សូមចូលគណនី និងបំពេញការទិញដែលមានសិទ្ធិ ដើម្បីតាមដាន ticket របស់អ្នក។ Event ថ្មីនឹងត្រូវប្រកាសនៅទីនេះ។</p><Link href="/account" className="mt-5 inline-flex h-10 items-center rounded-xl bg-cyan-300 px-4 text-xs font-bold text-slate-950">ទៅគណនីរបស់ខ្ញុំ</Link></div>; }
 function LoadingCard() { return <div className="mt-7 h-80 animate-pulse rounded-3xl bg-white/10 motion-reduce:animate-none" />; }

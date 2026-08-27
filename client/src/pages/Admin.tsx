@@ -116,11 +116,11 @@ function LiveSpinControl() {
   };
   useEffect(() => {
     if (!event || advance.isPending) return;
-    const transitionAt = event.status === "live" && event.liveStartedAt ? new Date(event.liveStartedAt).getTime() + 5_000 : event.status === "winner_revealed" && event.winnerRevealedAt ? new Date(event.winnerRevealedAt).getTime() + event.winnerSpoilerSeconds * 1_000 : event.status === "prize_countdown" && event.prizeCountdownStartedAt ? new Date(event.prizeCountdownStartedAt).getTime() + event.prizeCountdownSeconds * 1_000 : event.status === "prize_revealed" && event.prizeRevealedAt ? new Date(event.prizeRevealedAt).getTime() + 5_000 : null;
+    const transitionAt = event.status === "live" && event.liveStartedAt ? new Date(event.liveStartedAt).getTime() + event.nameStripSeconds * 1_000 : event.status === "winner_revealed" && event.winnerRevealedAt ? new Date(event.winnerRevealedAt).getTime() + (event.winnerSpoilerSeconds + event.winnerCelebrationSeconds) * 1_000 : event.status === "prize_countdown" && event.prizeCountdownStartedAt ? new Date(event.prizeCountdownStartedAt).getTime() + event.prizeCountdownSeconds * 1_000 : event.status === "prize_revealed" && event.prizeRevealedAt ? new Date(event.prizeRevealedAt).getTime() + 5_000 : null;
     if (!transitionAt) return;
     const timer = window.setTimeout(() => advance.mutate({ eventId: event.id }), Math.max(500, transitionAt - Date.now() + 500));
     return () => window.clearTimeout(timer);
-  }, [advance, event?.id, event?.liveStartedAt, event?.prizeCountdownSeconds, event?.prizeCountdownStartedAt, event?.prizeRevealedAt, event?.status, event?.winnerRevealedAt, event?.winnerSpoilerSeconds]);
+  }, [advance, event?.id, event?.liveStartedAt, event?.nameStripSeconds, event?.prizeCountdownSeconds, event?.prizeCountdownStartedAt, event?.prizeRevealedAt, event?.status, event?.winnerCelebrationSeconds, event?.winnerRevealedAt, event?.winnerSpoilerSeconds]);
   const action = (type: "announce" | "lock" | "waiting" | "live" | "end" | "skip") => {
     if (!event || busy) return;
     const messages = { announce: "ប្រកាស Live Spin នេះឬ?", lock: "Lock participant snapshot ឥឡូវនេះឬ? ក្រោយ lock មិនអាចកែ prize បានទេ។", waiting: "បើក Waiting Lobby ឥឡូវនេះឬ?", live: "ចាប់ផ្តើម Live Spin ឥឡូវនេះឬ?", end: "បញ្ចប់ Live Spin ឥឡូវនេះឬ?", skip: "Skip this week ឬ? Tickets នឹង roll over ទៅ event បន្ទាប់។" };
