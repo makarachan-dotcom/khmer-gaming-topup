@@ -120,6 +120,13 @@
       "when": 1787755573243,
       "tag": "0016_amazing_miracleman",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "5",
+      "when": 1787827200000,
+      "tag": "0017_livespin_fairness",
+      "breakpoints": true
     }
   ]
 }

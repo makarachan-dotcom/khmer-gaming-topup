@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
 import { Redirect, Route, Switch } from "wouter";
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { SelectedProductProvider } from "./contexts/SelectedProductContext";
@@ -26,6 +26,7 @@ import AdminContactAdmins from "@/pages/AdminContactAdmins";
 import AdminGameImages from "@/pages/AdminGameImages";
 import Legal from "./pages/Legal";
 import GameTopup from "./pages/GameTopup";
+const LiveSpin = lazy(() => import("./pages/LiveSpin"));
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -34,6 +35,7 @@ function Router() {
       <Route path="/ai"><Redirect to="/" /></Route>
       <Route path={"/"} component={Home} />
       <Route path="/topup/:gameId" component={GameTopup} />
+      <Route path="/live-spin" component={() => <Suspense fallback={<div className="min-h-screen bg-slate-50" />}><LiveSpin /></Suspense>} />
       <Route path={"/topup"}><Redirect to="/" /></Route>
       <Route path={"/smm"}><Redirect to="/" /></Route>
       <Route path="/marketplace/sell"><Redirect to="/" /></Route>

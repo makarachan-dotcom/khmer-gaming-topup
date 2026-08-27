@@ -21,6 +21,9 @@ vi.mock("@/lib/trpc", () => ({
       mine: { useQuery: () => ({ data: [], isLoading: false }) },
       paymentHistory: { useQuery: () => ({ data: [], isLoading: false }) },
     },
+    liveSpin: {
+      account: { useQuery: () => ({ data: { weekKey: "2026-W35", progress: { completed: 0, remaining: 7, required: 7 }, activeTicketCount: 0, tickets: [], prizes: [] }, isLoading: false }) },
+    },
   },
 }));
 

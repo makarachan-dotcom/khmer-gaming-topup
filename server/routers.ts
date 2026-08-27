@@ -4,6 +4,9 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, ownerProcedure, protectedProcedure, publicProcedure, router, scopedAdminProcedure } from "./_core/trpc";
 import * as db from "./db";
+import { announceLiveSpinEvent, createLiveSpinEvent, endLiveSpinEvent, getLiveSpinAccountSummary, getLiveSpinAuditLog, getLiveSpinEvents, getLiveSpinOwnerEventDetail, getLiveSpinPrizeTiers, getPublicLiveSpinState, lockLiveSpinParticipants, revealLiveSpinPrize, saveLiveSpinPrizeTier, skipLiveSpinWeek, startLiveSpinLobby } from "./liveSpinStore";
+import { createLiveSpinSubscriberToken } from "./liveSpinRealtime";
+import { runLiveSpinSequence } from "./liveSpinSequence";
 import { fetchFzrProviderSyncSnapshot, fetchProviderGameDetails, fetchProviderGames, fetchProviderPackages, fetchProviderPreviewPackages, fetchPublicProviderPackagePreview, fetchSmmProviderServices, getProviderAvailabilityCatalog, getProviderCatalogStatus, setProviderAvailability, validateProviderPlayerIdentity } from "./providerCatalog";
 import { toPublicPlayerIdentityResponse } from "./playerIdentityPrivacy";
 import { getProviderCredentialStatus } from "./providerCredentialStatus";
@@ -63,6 +66,11 @@ export const appRouter = router({
     beginTopup: protectedProcedure.input(z.object({ amountKhr: z.string().regex(/^\d+$/) })).mutation(({ ctx, input }) => db.beginWalletTopup({ userId: ctx.user.id, ...input })),
     topupSession: protectedProcedure.input(z.object({ topupId: z.string().min(4).max(64) })).query(({ ctx, input }) => db.getWalletTopupSession({ userId: ctx.user.id, ...input })),
     refreshTopup: protectedProcedure.input(z.object({ topupId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => db.refreshWalletTopup({ userId: ctx.user.id, ...input })),
+  }),
+  liveSpin: router({
+    state: publicProcedure.query(() => getPublicLiveSpinState()),
+    realtimeAuth: publicProcedure.input(z.object({ eventId: z.string().min(4).max(64) })).query(({ input }) => createLiveSpinSubscriberToken(input.eventId)),
+    account: protectedProcedure.query(({ ctx }) => getLiveSpinAccountSummary(ctx.user.id)),
   }),
   provider: router({
     games: publicProcedure.query(() => fetchProviderGames()),
@@ -156,6 +164,19 @@ export const appRouter = router({
     deleteSmmTier: scopedAdminProcedure("catalog").input(z.object({ tierId: z.string().min(4).max(64) })).mutation(({ input }) => db.deleteSmmTier(input.tierId)),
     payments: scopedAdminProcedure("operations").query(() => db.getPaymentTransactions()),
     operationUsers: scopedAdminProcedure("operations").query(() => db.getAdminUsers()),
+    liveSpinEvents: ownerProcedure.query(() => getLiveSpinEvents()),
+    liveSpinEventDetail: ownerProcedure.input(z.object({ eventId: z.string().min(4).max(64) })).query(({ input }) => getLiveSpinOwnerEventDetail(input.eventId)),
+    liveSpinPrizeTiers: ownerProcedure.input(z.object({ eventId: z.string().min(4).max(64) })).query(({ input }) => getLiveSpinPrizeTiers(input.eventId)),
+    liveSpinAuditLog: ownerProcedure.input(z.object({ eventId: z.string().min(4).max(64).optional() }).optional()).query(({ input }) => getLiveSpinAuditLog(input?.eventId)),
+    createLiveSpinEvent: ownerProcedure.input(z.object({ scheduledAt: z.coerce.date(), announcementStartsAt: z.coerce.date(), entryCutoffAt: z.coerce.date(), lobbyStartsAt: z.coerce.date(), adMediaUrl: z.string().trim().max(2048).refine((value) => value.startsWith("/api/media/") || value.startsWith("/manus-storage/") || /^https:\/\//i.test(value), "Use a managed media URL or HTTPS video URL").nullable().optional(), adDurationSeconds: z.number().int().min(0).max(7_200).optional(), minParticipantCount: z.number().int().min(100).max(100_000).optional() })).mutation(({ ctx, input }) => createLiveSpinEvent({ actorUserId: ctx.user.id, ...input })),
+    announceLiveSpinEvent: ownerProcedure.input(z.object({ eventId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => announceLiveSpinEvent({ actorUserId: ctx.user.id, ...input })),
+    lockLiveSpinParticipants: ownerProcedure.input(z.object({ eventId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => lockLiveSpinParticipants({ actorUserId: ctx.user.id, ...input })),
+    startLiveSpinLobby: ownerProcedure.input(z.object({ eventId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => startLiveSpinLobby({ actorUserId: ctx.user.id, ...input })),
+    startLiveSpin: ownerProcedure.input(z.object({ eventId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => runLiveSpinSequence({ actorUserId: ctx.user.id, ...input })),
+    revealLiveSpinPrize: ownerProcedure.input(z.object({ eventId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => revealLiveSpinPrize({ actorUserId: ctx.user.id, ...input })),
+    endLiveSpinEvent: ownerProcedure.input(z.object({ eventId: z.string().min(4).max(64), reason: z.string().trim().min(10).max(500) })).mutation(({ ctx, input }) => endLiveSpinEvent({ actorUserId: ctx.user.id, ...input })),
+    skipLiveSpinWeek: ownerProcedure.input(z.object({ eventId: z.string().min(4).max(64), reason: z.string().trim().min(10).max(500) })).mutation(({ ctx, input }) => skipLiveSpinWeek({ actorUserId: ctx.user.id, ...input })),
+    saveLiveSpinPrizeTier: ownerProcedure.input(z.object({ eventId: z.string().min(4).max(64), tierNumber: z.number().int().min(1).max(10), nameKh: z.string().trim().min(2).max(180), valueLabel: z.string().trim().min(1).max(180), descriptionKh: z.string().trim().max(500).nullable().optional(), mediaUrl: z.string().trim().max(2048).refine((value) => value.startsWith("/api/media/") || value.startsWith("/manus-storage/") || /^https:\/\//i.test(value), "Use a managed media URL or HTTPS image URL").nullable().optional(), isGrandPrize: z.boolean(), isActive: z.boolean() })).mutation(({ ctx, input }) => saveLiveSpinPrizeTier({ actorUserId: ctx.user.id, ...input })),
     paymentControl: ownerProcedure.query(() => db.getPaymentControl()),
     paymentMethods: ownerProcedure.query(() => db.getPaymentMethods(true)),
     savePaymentMethod: ownerProcedure.input(z.object({ id: z.string().trim().min(2).max(48), name: z.string().trim().min(2).max(120), descriptionKh: z.string().trim().min(2).max(240), iconUrl: z.string().trim().max(2048).refine((value) => value.startsWith("/api/media/") || value.startsWith("/manus-storage/") || /^https:\/\//i.test(value), "Use managed storage or an HTTPS icon URL").nullable().optional(), providerKey: z.enum(["bakong_khqr", "manual"]), isActive: z.boolean(), sortOrder: z.number().int().min(0).max(10_000) })).mutation(({ ctx, input }) => db.savePaymentMethod({ ...input, updatedByUserId: ctx.user.id })),
