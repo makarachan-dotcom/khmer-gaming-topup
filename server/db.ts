@@ -3,7 +3,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { drizzle } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
 import {
-    adminRoleAudits, customerWallets, gamePackages, gameProducts, gmailSenderConnections, InsertUser, marketplaceContacts, marketplaceDisclosureRequests, marketplaceEvidenceAccessLogs, marketplaceFavorites, marketplaceFraudReports, marketplaceListings, marketplaceVerificationEvidence, marketplaceVerifications, orders, orderStatusEvents, orderSupportTickets, paymentTransactions, providerPackageArtworkAudits, providerPackageArtworkOverrides, savedPlayerIds, siteContent, smmServices, smmTiers, User,
+    adminRoleAudits, customerWallets, gamePackages, gameProducts, gmailSenderConnections, InsertUser, marketplaceContacts, marketplaceDisclosureRequests, marketplaceEvidenceAccessLogs, marketplaceFavorites, marketplaceFraudReports, marketplaceListings, marketplaceVerificationEvidence, marketplaceVerifications, orders, orderStatusEvents, orderSupportTickets, paymentTransactions, providerPackageArtworkAudits, providerPackageArtworkOverrides, providerPackageCategoryAudits, providerPackageCategoryOverrides, savedPlayerIds, siteContent, smmServices, smmTiers, User,
 users, walletTopups, welcomeEmailDeliveries,
 } from "../drizzle/schema";
 import { createAppwriteMarketplaceListing, createAppwriteWalletTopup, deleteAppwriteMarketplaceListing, getAppwriteAdminPermissions, getAppwriteAdminRoleAudits, getAppwriteCustomerOrders, getAppwriteCustomerPaymentHistory, getAppwritePaymentControl, getAppwriteProviderCatalog, getAppwriteUserByEmail, getAppwriteUserByOpenId, getAppwriteWalletSummary, getAppwriteWalletTopup, isAppwriteStoreConfigured, listAppwriteMarketplaceListings, listAppwriteUsers, setAppwriteAdminPermissions, setAppwritePaymentControl, setAppwriteUserRole, syncAppwriteFzrCatalog, syncAppwriteSmmCatalog, updateAppwriteMarketplaceListing, updateAppwriteProviderOffer, updateAppwriteUserDisplayName, updateAppwriteWalletTopup, upsertAppwriteUser } from "./appwriteStore";
@@ -1258,6 +1258,43 @@ export async function getProviderPackageArtworkAudits(gameId?: string) {
   const query = db.select().from(providerPackageArtworkAudits).orderBy(desc(providerPackageArtworkAudits.createdAt)).limit(100);
   const rows = gameId ? await query.where(eq(providerPackageArtworkAudits.gameId, gameId.trim())) : await query;
   return rows.map((row) => ({ gameId: row.gameId, offerId: row.offerId, action: row.action, previousMediaUrl: row.previousMediaUrl, nextMediaUrl: row.nextMediaUrl, actorUserId: row.actorUserId, createdAt: row.createdAt }));
+}
+
+/** Display-only package categories are maintained independently of pricing, checkout, and provider fulfillment. */
+export async function getProviderPackageCategoryOverrides(gameId?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = gameId
+    ? await db.select().from(providerPackageCategoryOverrides).where(eq(providerPackageCategoryOverrides.gameId, gameId.trim())).orderBy(asc(providerPackageCategoryOverrides.categoryLabel))
+    : await db.select().from(providerPackageCategoryOverrides).orderBy(desc(providerPackageCategoryOverrides.updatedAt));
+  return rows.map((row) => ({ gameId: row.gameId, offerId: row.offerId, categoryLabel: row.categoryLabel, updatedAt: row.updatedAt }));
+}
+
+export async function saveProviderPackageCategoryOverride(input: { gameId: string; offerId: string; categoryLabel: string; updatedByUserId: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Package category storage is unavailable");
+  const gameId = input.gameId.trim();
+  const offerId = input.offerId.trim();
+  const categoryLabel = input.categoryLabel.trim();
+  if (!categoryLabel || categoryLabel.length > 80) throw new Error("Package category must be between 1 and 80 characters");
+  const current = await db.select().from(providerPackageCategoryOverrides).where(and(eq(providerPackageCategoryOverrides.gameId, gameId), eq(providerPackageCategoryOverrides.offerId, offerId))).limit(1);
+  const previousCategoryLabel = current[0]?.categoryLabel ?? null;
+  if (current[0]) await db.update(providerPackageCategoryOverrides).set({ categoryLabel, updatedByUserId: input.updatedByUserId }).where(eq(providerPackageCategoryOverrides.id, current[0].id));
+  else await db.insert(providerPackageCategoryOverrides).values({ id: nanoid(), gameId, offerId, categoryLabel, updatedByUserId: input.updatedByUserId });
+  if (previousCategoryLabel !== categoryLabel) await db.insert(providerPackageCategoryAudits).values({ id: nanoid(), gameId, offerId, action: "set", previousCategoryLabel, nextCategoryLabel: categoryLabel, actorUserId: input.updatedByUserId });
+  return { success: true, categoryLabel };
+}
+
+export async function resetProviderPackageCategoryOverride(input: { gameId: string; offerId: string; updatedByUserId: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Package category storage is unavailable");
+  const gameId = input.gameId.trim();
+  const offerId = input.offerId.trim();
+  const current = await db.select().from(providerPackageCategoryOverrides).where(and(eq(providerPackageCategoryOverrides.gameId, gameId), eq(providerPackageCategoryOverrides.offerId, offerId))).limit(1);
+  if (!current[0]) return { success: true, reset: false };
+  await db.delete(providerPackageCategoryOverrides).where(eq(providerPackageCategoryOverrides.id, current[0].id));
+  await db.insert(providerPackageCategoryAudits).values({ id: nanoid(), gameId, offerId, action: "reset", previousCategoryLabel: current[0].categoryLabel, nextCategoryLabel: null, actorUserId: input.updatedByUserId });
+  return { success: true, reset: true };
 }
 
 const contactAdminContentPrefix = "support-contact-admin:";

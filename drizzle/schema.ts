@@ -319,6 +319,28 @@ export const providerPackageArtworkOverrides = mysqlTable("provider_package_artw
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => [uniqueIndex("provider_package_artwork_unique").on(table.gameId, table.offerId), index("provider_package_artwork_game_idx").on(table.gameId)]);
 
+/** Owner/admin display-only category assignment for a provider offer. It never participates in price, order, or fulfillment logic. */
+export const providerPackageCategoryOverrides = mysqlTable("provider_package_category_overrides", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  gameId: varchar("gameId", { length: 120 }).notNull(),
+  offerId: varchar("offerId", { length: 180 }).notNull(),
+  categoryLabel: varchar("categoryLabel", { length: 80 }).notNull(),
+  updatedByUserId: int("updatedByUserId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [uniqueIndex("provider_package_category_unique").on(table.gameId, table.offerId), index("provider_package_category_game_idx").on(table.gameId)]);
+
+export const providerPackageCategoryAudits = mysqlTable("provider_package_category_audits", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  gameId: varchar("gameId", { length: 120 }).notNull(),
+  offerId: varchar("offerId", { length: 180 }).notNull(),
+  action: mysqlEnum("action", ["set", "reset"]).notNull(),
+  previousCategoryLabel: varchar("previousCategoryLabel", { length: 80 }),
+  nextCategoryLabel: varchar("nextCategoryLabel", { length: 80 }),
+  actorUserId: int("actorUserId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [index("provider_package_category_audit_offer_idx").on(table.gameId, table.offerId), index("provider_package_category_audit_actor_idx").on(table.actorUserId)]);
+
 export const providerPackageArtworkAudits = mysqlTable("provider_package_artwork_audits", {
   id: varchar("id", { length: 64 }).primaryKey(),
   gameId: varchar("gameId", { length: 120 }).notNull(),

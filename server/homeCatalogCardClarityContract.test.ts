@@ -18,8 +18,8 @@ describe("Home provider product-card clarity", () => {
     expect(identity).toContain("showCountryFlag?: boolean");
     expect(identity).toContain("showCountryFlag = true");
     expect(identity).toContain("showFlag = true");
-    expect(topup).toContain("recommendedProviderPackage");
-    expect(topup).toContain("កញ្ចប់ណែនាំ");
-    expect(topup).toContain("អ្នកមាន ID គណនីច្រើនជាងមួយ");
+    expect(topup).toContain("package-category-tabs");
+    expect(topup).toContain("ជ្រើសរើសកញ្ចប់");
+    expect(topup).toContain("ស្វែងរកគ្រប់កញ្ចប់");
   });
 });

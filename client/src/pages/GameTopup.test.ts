@@ -55,10 +55,11 @@ describe("dedicated game top-up routes", () => {
     expect(gameThemedArtworkForPackage("mobile_legends", "Weekly Pass", "Weekly Pass")).toBeNull();
   });
 
-  it("renders category-specific fallback artwork rather than a repeated game cover", () => {
+  it("keeps category cards compact while using a package-specific artwork fallback", () => {
     const source = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
-    expect(source).toContain("<img src={themedArtwork ?? artworkUrl}");
-    expect(source).toContain("artworkUrl={generatedArtwork.url}");
+    expect(source).toContain("const visualUrl = suppliedArtwork ?? pubgArtwork");
+    expect(source).toContain('<img src={visualUrl} alt=""');
+    expect(source).toContain('className="package-category-choice__icon"');
     expect(source).not.toContain('className="generated-package-art__game-cover"');
   });
 
@@ -91,19 +92,15 @@ describe("dedicated game top-up routes", () => {
     expect(source).not.toContain('window.addEventListener("scroll", updateCompactState');
   });
 
-  it("uses customer-friendly package copy without provider labels", () => {
+  it("renders a customer-friendly category tab browser with an all-package search", () => {
     const source = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
-    expect(source).toContain("ជ្រើសរើសកញ្ចប់ដែលត្រូវការសម្រាប់ហ្គេមនេះ។");
-    expect(source).toContain("កញ្ចប់ដែលមាន bonus ឬចំនួនបន្ថែម។");
-    expect(source).not.toContain("ពី provider ពេលនេះ");
-    expect(source).not.toContain("ដែល provider បាន");
-  });
-
-  it("shows ten diamond packages first and reveals the package remainder only after expansion", () => {
-    const packages = Array.from({ length: 12 }, (_, index) => ({ id: `diamond-${index + 1}`, label: `${index + 1} Diamonds`, amountLabel: `${index + 1} Diamonds`, priceLabel: `$${index + 1}` }));
-    expect(initialDiamondPackageLimit).toBe(10);
-    expect(visibleDiamondPackageItems(packages, false).map((item) => item.id)).toEqual(packages.slice(0, 10).map((item) => item.id));
-    expect(visibleDiamondPackageItems(packages, true)).toEqual(packages);
+    expect(source).toContain("package-category-tabs");
+    expect(source).toContain("packageCategories.useQuery");
+    expect(source).toContain("buildPackageCategories(gamePackages, categoryOverrides)");
+    expect(source).toContain("filterPackagesByCategory(gamePackages, selectedCategoryId, categoryOverrides)");
+    expect(source).toContain("searchValue ? gamePackages.filter");
+    expect(source).toContain("scrollIntoView");
+    expect(source).toContain("ស្វែងរកគ្រប់កញ្ចប់");
   });
 
   it("locks package browsing for invalid and unavailable username checks", () => {

@@ -11,6 +11,7 @@ import { useStorefrontHeader } from "@/contexts/StorefrontHeaderContext";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { SelectedPackageCheck } from "@/components/SelectedPackageCheck";
 import { countryFlagForRegion, providerPackageBadge } from "@/lib/providerPresentation";
+import { buildPackageCategories, categoryLabelForPackage, filterPackagesByCategory, type PackageCategory } from "@/lib/packageCategories";
 import { goldDiamondChestArtworkUrl, isMobileLegendsGlobalGame, mobileLegendsDiamondLabel, mobileLegendsPackageTone } from "@/lib/mobileLegendsAssets";
 import { isPubgTopupGame, pubgUcArtworkForAmount, pubgUcDisplayAmount, pubgUcFallbackArtwork } from "@/lib/pubgUcAssets";
 import { suppliedProductArtworkForPackage } from "@/lib/suppliedProductArtwork";
@@ -19,11 +20,21 @@ import { providerGameImageKey, resolvedGameArtworkFor } from "@/lib/originalGame
 import { trpc } from "@/lib/trpc";
 import { subscribeToPackageArtworkChanges } from "@/lib/packageArtworkBroadcast";
 import { subscribeToPublicAssetChanges } from "@/lib/publicAssetBroadcast";
-import { ArrowLeft, BadgePercent, Box, CalendarClock, CheckCircle2, ChevronDown, ChevronRight, CircleAlert, Crown, Eye, Gem, Gift, History, ShieldAlert, Sparkles, TrendingUp, UserRound, WalletCards } from "lucide-react";
+import { ArrowLeft, BadgePercent, Box, CalendarClock, CheckCircle2, ChevronDown, ChevronRight, CircleAlert, Crown, Eye, Gem, Gift, History, Search, ShieldAlert, Sparkles, TrendingUp, UserRound, WalletCards } from "lucide-react";
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 
 type SavedPlayerEntry = { id: string; fields: Record<string, string>; savedAt: number };
+
+const localCategoryPreviewGame = { id: "category-preview", name: "ZURS Package Preview", region: "Global", logoUrl: undefined as string | undefined, requiredFields: [] as GameField[] };
+const localCategoryPreviewPackages: ProviderPackage[] = [
+  { id: "preview-token-1", label: "86 Diamonds", amountLabel: "86 Diamonds", priceLabel: "$1.10" },
+  { id: "preview-token-2", label: "172 Diamonds", amountLabel: "172 Diamonds", priceLabel: "$2.10" },
+  { id: "preview-weekly", label: "Weekly Membership", amountLabel: "Weekly Membership", priceLabel: "$2.99" },
+  { id: "preview-super", label: "60 UC + 5 UC", amountLabel: "65 UC", priceLabel: "$0.80" },
+  { id: "preview-special", label: "Promo Crate", amountLabel: "1 Crate", priceLabel: "$1.10" },
+  { id: "preview-special-2", label: "Special Event Pack", amountLabel: "Event Pack", priceLabel: "$4.90" },
+];
 const PackageArtworkOverridesContext = createContext<Record<string, string>>({});
 type GameField = { key: string; label: string; placeholder?: string | null; required: boolean; kind: string };
 
@@ -70,6 +81,7 @@ export default function GameTopup() {
   const [location] = useLocation();
   const utils = trpc.useUtils();
   const gameId = gameIdFromTopupPath(location);
+  const localCategoryPreview = import.meta.env.DEV && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("categoryPreview") === "1";
   const gameInput = useMemo(() => ({ gameId }), [gameId]);
   const gameQuery = trpc.provider.gameDetails.useQuery(gameInput, { enabled: Boolean(gameId) });
   const gameImages = trpc.provider.gameImages.useQuery(undefined, { staleTime: 0, refetchInterval: 5_000 });
@@ -87,11 +99,12 @@ export default function GameTopup() {
   const [autofillVersion, setAutofillVersion] = useState(0);
   const [idAccuracyConfirmed, setIdAccuracyConfirmed] = useState(false);
   useEffect(() => subscribeToPublicAssetChanges((area) => { if (area === "game-images") void utils.provider.gameImages.invalidate(); }), [utils]);
+  useEffect(() => { if (localCategoryPreview) setShowPackages(true); }, [localCategoryPreview]);
   const [identityCollapsed, setIdentityCollapsed] = useState(false);
   const identityFormRef = useRef<HTMLFormElement>(null);
   const verifiedCardRef = useRef<HTMLElement>(null);
   const { setSelectedProduct, clearSelectedProduct, setSelectedPaymentMethodId } = useSelectedProduct();
-  const game = gameQuery.data?.status === "ready" ? gameQuery.data.game : null;
+  const game = gameQuery.data?.status === "ready" ? gameQuery.data.game : localCategoryPreview ? localCategoryPreviewGame : null;
   const gameImageOverride = (gameImages.data ?? []).find((item) => item.gameId === providerGameImageKey(game?.id ?? gameId, game?.name ?? ""));
   const gameArtwork = resolvedGameArtworkFor(game?.id ?? gameId, game?.name ?? "", gameImageOverride);
   const gameLogoUrl = gameImageOverride?.logoUrl ?? game?.logoUrl;
@@ -111,8 +124,8 @@ export default function GameTopup() {
   const publicPackagePreview = trpc.provider.packagePreview.useQuery({ gameId }, { enabled: Boolean(gameId) && showPackages && !canBrowsePackages && !adminPreviewActive, staleTime: 60_000 });
   const adminPreview = trpc.admin.previewGamePackages.useQuery({ gameId }, { enabled: Boolean(gameId) && adminPreviewActive, staleTime: 60_000 });
   const customerPackages = showPackages && canBrowsePackages ? providerPackages.data?.packages ?? [] : publicPackagePreview.data?.packages ?? [];
-  const packages = adminPreviewActive ? adminPreview.data?.packages ?? [] : customerPackages;
-  const packageStatus = adminPreviewActive ? adminPreview.data?.status : (showPackages && canBrowsePackages ? providerPackages.data?.status : publicPackagePreview.data?.status);
+  const packages = localCategoryPreview ? localCategoryPreviewPackages : adminPreviewActive ? adminPreview.data?.packages ?? [] : customerPackages;
+  const packageStatus = localCategoryPreview ? "ready" : adminPreviewActive ? adminPreview.data?.status : (showPackages && canBrowsePackages ? providerPackages.data?.status : publicPackagePreview.data?.status);
   const country = countryFlagForRegion(identity?.status === "verified" ? identity.region : null);
 
   const setSelectedPackageId = (id: string) => {
@@ -411,19 +424,42 @@ function PackageSection({ title, description, icon: Icon, items, selectedPackage
   return <section className="package-section"><div className="package-section-header flex items-center gap-2"><span className="diamond-title-icon"><Icon className="h-3.5 w-3.5" /></span><div className="min-w-0"><p className="text-xs font-extrabold text-slate-950">{title}</p>{description ? <p className="mt-0.5 text-[10px] leading-4 text-slate-500">{description}</p> : null}</div><span className="ml-auto shrink-0 rounded-full bg-white/75 px-2 py-0.5 text-[9px] font-bold text-slate-500">{items.length}</span></div><div className={visibleItems.length === 1 ? "mx-auto mt-3 grid w-full max-w-[11.5rem] grid-cols-1 gap-2" : "mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3"}>{visibleItems.map((item) => <PackageCard key={item.id} item={item} selected={selectedPackageId === item.id} onSelect={() => onSelect(item.id)} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} />)}</div>{progressive && items.length > initialDiamondPackageLimit ? <button type="button" aria-expanded={expanded} onClick={() => setExpanded((current) => !current)} className="package-see-more mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-indigo-100 bg-white/80 px-3 text-xs font-extrabold text-indigo-800 shadow-sm"><span>{expanded ? "បង្រួមកញ្ចប់" : `មើលបន្ថែម ${hiddenCount} កញ្ចប់`}</span><ChevronDown className={`package-see-more__icon h-4 w-4 ${expanded ? "package-see-more__icon--expanded" : ""}`} /></button> : null}</section>;
 }
 
+function CategoryPackageCard({ item, selected, onSelect, gameId, gameName, gameLogoUrl }: { item: ProviderPackage; selected: boolean; onSelect: () => void; gameId: string; gameName: string; gameLogoUrl?: string }) {
+  const artworkOverrides = useContext(PackageArtworkOverridesContext);
+  const suppliedArtwork = artworkOverrides[item.id] ?? suppliedProductArtworkForPackage(gameId, item.amountLabel);
+  const pubgArtwork = isPubgTopupGame(gameId, gameName) ? pubgUcArtworkForAmount(item.amountLabel) : null;
+  const generatedArtwork = generatedPackageArtworkForPackage(item.label, item.amountLabel);
+  const visualUrl = suppliedArtwork ?? pubgArtwork ?? (usesMobileLegendsDiamondChestArtwork(gameId, item.label, item.amountLabel) ? goldDiamondChestArtworkUrl : generatedArtwork.url);
+  return <article className="min-w-0"><button type="button" aria-pressed={selected} onClick={onSelect} className={`package-category-choice w-full ${selected ? "package-category-choice--selected" : ""}`}><span className="package-category-choice__icon">{visualUrl ? <img src={visualUrl} alt="" loading="lazy" decoding="async" draggable={false} /> : <ProviderGameArtwork name={gameName} logoUrl={gameLogoUrl} showCountryFlag={false} className="h-full w-full rounded-full" iconClassName="h-4 w-4" />}</span><span className="min-w-0 flex-1 text-left"><strong className="block text-sm font-extrabold leading-5 text-white">{item.priceLabel}</strong><OverflowMarquee text={item.label} className="mt-0.5 text-[10px] font-semibold leading-4 text-slate-300" /></span>{selected ? <SelectedPackageCheck size={20} className="package-category-choice__check" /> : <span className="package-category-choice__select" aria-hidden="true" />}</button></article>;
+}
+
 function DiamondPackages({ packages, status, selectedPackageId, onSelect, gameId, gameName, gameLogoUrl }: { packages: ProviderPackage[]; status?: "ready" | "unavailable" | "error" | "verification_required"; selectedPackageId: string; onSelect: (id: string) => void; gameId: string; gameName: string; gameLogoUrl?: string }) {
   const eventContent = trpc.content.active.useQuery();
   const { data: packageArtworkData, refetch: refetchPackageArtwork } = trpc.provider.packageArtwork.useQuery({ gameId }, { enabled: Boolean(gameId), refetchInterval: 1_000, staleTime: 0 });
+  const categoryAssignments = trpc.provider.packageCategories.useQuery({ gameId }, { enabled: Boolean(gameId), staleTime: 0 });
+  const [selectedCategoryId, setSelectedCategoryId] = useState("all");
+  const [packageSearch, setPackageSearch] = useState("");
+  const categoryTabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const artworkOverrides = useMemo(() => Object.fromEntries((packageArtworkData ?? []).map((item) => [item.offerId, item.mediaUrl])), [packageArtworkData]);
+  const categoryOverrides = useMemo(() => new Map((categoryAssignments.data ?? []).map((item) => [item.offerId, item.categoryLabel])), [categoryAssignments.data]);
   useEffect(() => subscribeToPackageArtworkChanges((changedGameId) => { if (changedGameId === gameId) void refetchPackageArtwork(); }), [gameId, refetchPackageArtwork]);
   const fullTicketEvent = (eventContent.data ?? []).find((item) => item.contentKey === "topup-event-full-ticket");
   const { eventPackages: fullTicketPackages, storefrontPackages } = partitionProviderPackagesForFullTicketEvent(packages, Boolean(fullTicketEvent));
-  const gamePackages = sortProviderPackagesByPrice([...storefrontPackages, ...fullTicketPackages]);
-  const groupedPackages = groupProviderPackagesByMeaning(gamePackages);
-  const mobileLegends = isMobileLegendsGlobalGame(gameId);
-  const standardTitle = mobileLegends ? "កញ្ចប់ពេជ្យ" : "កញ្ចប់ធម្មតា";
-  const standardDescription = mobileLegends ? "ជ្រើសរើសចំនួនពេជ្យដែលត្រូវការ។" : "ជ្រើសរើសកញ្ចប់ដែលត្រូវការសម្រាប់ហ្គេមនេះ។";
-  const recommendedPackage = recommendedProviderPackage(groupedPackages.standard);
+  const gamePackages = useMemo(() => sortProviderPackagesByPrice([...storefrontPackages, ...fullTicketPackages]), [fullTicketPackages, storefrontPackages]);
+  const categoryTabs = useMemo<PackageCategory[]>(() => buildPackageCategories(gamePackages, categoryOverrides), [categoryOverrides, gamePackages]);
+  const searchValue = packageSearch.trim().toLocaleLowerCase();
+  const visiblePackages = useMemo(() => searchValue ? gamePackages.filter((item) => (item.label + " " + item.amountLabel + " " + item.priceLabel).toLocaleLowerCase().includes(searchValue)) : filterPackagesByCategory(gamePackages, selectedCategoryId, categoryOverrides), [categoryOverrides, gamePackages, searchValue, selectedCategoryId]);
 
-  return <PackageArtworkOverridesContext.Provider value={artworkOverrides}><div className="mt-4 space-y-3 border-t border-slate-100 pt-4">{status === "ready" && packages.length ? <>{recommendedPackage ? <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/85 p-3 text-xs leading-5 text-amber-950"><Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" /><p><strong>កញ្ចប់ណែនាំ៖ {recommendedPackage.amountLabel}</strong><span className="block">ជម្រើសនេះត្រូវបានរៀបតាមកញ្ចប់ និងតម្លៃដែល provider បង្ហាញ។ សូមជ្រើសតាមតម្រូវការរបស់អ្នក និងពិនិត្យ ID គណនីមុនបន្ត។</span></p></div> : null}<PackageSection title={standardTitle} description={standardDescription} icon={Gem} items={groupedPackages.standard} selectedPackageId={selectedPackageId} onSelect={onSelect} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} progressive /><PackageSection title="កញ្ចប់ពេជ្យបន្ថែម" description="កញ្ចប់ដែលមាន bonus ឬចំនួនបន្ថែម។" icon={Gem} items={groupedPackages.bonus} selectedPackageId={selectedPackageId} onSelect={onSelect} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} progressive /><PackageSection title={mobileLegends ? "Elite Pass និង Pass" : "Pass និង Membership"} description="កញ្ចប់ Pass, Membership ឬ Subscription ដែលមានសម្រាប់ហ្គេមនេះ។" icon={WalletCards} items={groupedPackages.passes} selectedPackageId={selectedPackageId} onSelect={onSelect} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} /><PackageSection title="កញ្ចប់ពិសេស" description={fullTicketEvent?.bodyKh ? "កញ្ចប់ Promo, Special និង Event ដែលកំពុងមាន។" : "កញ្ចប់ Promo ឬ Special ដែលមានសម្រាប់ហ្គេមនេះ។"} icon={CheckCircle2} items={groupedPackages.special} selectedPackageId={selectedPackageId} onSelect={onSelect} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} /></> : <div className="mt-3 rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-xs leading-5 text-slate-600">មិនអាចបង្ហាញកញ្ចប់សេវាសម្រាប់ពេលនេះទេ។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។</div>}</div></PackageArtworkOverridesContext.Provider>;
+  useEffect(() => {
+    if (selectedCategoryId !== "all" && !categoryTabs.some((category) => category.id === selectedCategoryId)) setSelectedCategoryId("all");
+  }, [categoryTabs, selectedCategoryId]);
+
+  useEffect(() => {
+    const activeTab = categoryTabRefs.current[selectedCategoryId];
+    if (!activeTab) return;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    activeTab.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "nearest", inline: "center" });
+  }, [selectedCategoryId]);
+
+  return <PackageArtworkOverridesContext.Provider value={artworkOverrides}><section className="package-category-browser mt-4" aria-labelledby="package-category-heading"><header className="package-category-browser__header"><span className="package-category-browser__gem"><Gem className="h-4 w-4" /></span><div className="min-w-0"><p className="text-[10px] font-bold tracking-[0.18em] text-amber-300/80">GAME PACKAGES</p><h2 id="package-category-heading" className="package-category-browser__title">ជ្រើសរើសកញ្ចប់</h2></div><span className="package-category-browser__total">{gamePackages.length}</span></header>{status === "ready" && packages.length ? <><nav className="package-category-tabs mt-4" aria-label="ប្រភេទកញ្ចប់"><button ref={(element) => { categoryTabRefs.current.all = element; }} type="button" onClick={() => setSelectedCategoryId("all")} aria-pressed={selectedCategoryId === "all"} className={`package-category-tab ${selectedCategoryId === "all" ? "package-category-tab--active" : ""}`}><span>ទាំងអស់</span><b>{gamePackages.length}</b></button>{categoryTabs.map((category) => <button key={category.id} ref={(element) => { categoryTabRefs.current[category.id] = element; }} type="button" onClick={() => setSelectedCategoryId(category.id)} aria-pressed={selectedCategoryId === category.id} className={`package-category-tab ${selectedCategoryId === category.id ? "package-category-tab--active" : ""}`}><span>{category.label}</span><b>{category.count}</b></button>)}</nav><label className="package-category-search mt-3"><Search className="h-4 w-4" /><span className="sr-only">ស្វែងរកគ្រប់កញ្ចប់</span><input value={packageSearch} onChange={(event) => setPackageSearch(event.target.value)} placeholder="ស្វែងរកគ្រប់កញ្ចប់…" /></label><div className="mt-3 flex items-center justify-between gap-3 text-[10px] font-semibold text-slate-300"><span>{searchValue ? "លទ្ធផលស្វែងរកគ្រប់កញ្ចប់" : `ប្រភេទ៖ ${selectedCategoryId === "all" ? "ទាំងអស់" : categoryTabs.find((category) => category.id === selectedCategoryId)?.label ?? "ទាំងអស់"}`}</span><span>{visiblePackages.length} កញ្ចប់</span></div><div key={searchValue ? `search:${searchValue}` : selectedCategoryId} className="package-category-grid mt-3">{visiblePackages.map((item) => <CategoryPackageCard key={item.id} item={item} selected={selectedPackageId === item.id} onSelect={() => onSelect(item.id)} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} />)}</div>{!visiblePackages.length ? <div className="mt-3 rounded-xl border border-dashed border-slate-600 bg-slate-950/70 px-4 py-8 text-center text-xs leading-5 text-slate-300">មិនមានកញ្ចប់ត្រូវនឹងការស្វែងរកនេះទេ។ សូមសាកល្បងពាក្យផ្សេង ឬជ្រើស «ទាំងអស់»។</div> : null}</> : <div className="mt-4 rounded-xl border border-dashed border-slate-600 bg-slate-950/70 p-4 text-xs leading-5 text-slate-300">មិនអាចបង្ហាញកញ្ចប់សេវាសម្រាប់ពេលនេះទេ។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។</div>}</section></PackageArtworkOverridesContext.Provider>;
 }
