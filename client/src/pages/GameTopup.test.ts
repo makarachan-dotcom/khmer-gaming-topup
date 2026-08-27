@@ -91,7 +91,15 @@ describe("dedicated game top-up routes", () => {
     expect(source).not.toContain('window.addEventListener("scroll", updateCompactState');
   });
 
-  it("shows ten diamond packages first and reveals the provider-authorized remainder only after expansion", () => {
+  it("uses customer-friendly package copy without provider labels", () => {
+    const source = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
+    expect(source).toContain("ជ្រើសរើសកញ្ចប់ដែលត្រូវការសម្រាប់ហ្គេមនេះ។");
+    expect(source).toContain("កញ្ចប់ដែលមាន bonus ឬចំនួនបន្ថែម។");
+    expect(source).not.toContain("ពី provider ពេលនេះ");
+    expect(source).not.toContain("ដែល provider បាន");
+  });
+
+  it("shows ten diamond packages first and reveals the package remainder only after expansion", () => {
     const packages = Array.from({ length: 12 }, (_, index) => ({ id: `diamond-${index + 1}`, label: `${index + 1} Diamonds`, amountLabel: `${index + 1} Diamonds`, priceLabel: `$${index + 1}` }));
     expect(initialDiamondPackageLimit).toBe(10);
     expect(visibleDiamondPackageItems(packages, false).map((item) => item.id)).toEqual(packages.slice(0, 10).map((item) => item.id));
