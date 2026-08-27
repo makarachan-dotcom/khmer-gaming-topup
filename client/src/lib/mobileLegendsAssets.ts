@@ -1,5 +1,5 @@
 export const goldDiamondChestArtworkUrl = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663905831999/ynsfRvMWPhvlHFjn.png";
-export const khqrLogoUrl = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663905831999/mnJpaWeYfuTtadpv.svg";
+export const khqrLogoUrl = "/khqr-logo.svg";
 
 export function isMobileLegendsGlobalGame(gameId: string) {
   const normalized = gameId.trim().toLowerCase();

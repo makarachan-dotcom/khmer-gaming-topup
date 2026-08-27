@@ -48,14 +48,16 @@ describe("storefront media protection", () => {
     expect(styleSource).toContain("zurs-particle-field");
   });
 
-  it("moves a pill indicator between the two remaining mobile tabs", () => {
+  it("moves a pill indicator between the three mobile tabs including Live", () => {
     const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
     const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
     expect(componentSource).toContain("zurs-mobile-tab-indicator");
     expect(componentSource).toContain('"--mobile-tab-index": activeMobileTabIndex');
     expect(styleSource).toContain("--mobile-tab-index");
-    expect(styleSource).toContain("width: calc((100% - 0.75rem) / 2)");
-    expect(styleSource).not.toContain("width: calc((100% - 1.5rem) / 4)");
+    expect(styleSource).toContain("width: calc((100% - 1.25rem) / 3)");
+    expect(componentSource).toContain('href: "/live-spin"');
+    expect(componentSource).toContain("zurs-mobile-tab-label");
+    expect(styleSource).toContain("zurs-mobile-tabbar--live");
     expect(styleSource).toContain("zurs-mobile-tab-indicator-enter");
     expect(styleSource).toContain("tab-icon-active");
     expect(styleSource).toContain("100% + 0.125rem");
@@ -70,11 +72,11 @@ describe("storefront media protection", () => {
     expect(mobileTabHrefForPath("/wallet")).toBe("/account");
   });
 
-  it("uses a compact two-item rounded mobile tab bar without public AI entry", () => {
+  it("uses a compact three-item rounded mobile tab bar with a Live entry and no public AI entry", () => {
     const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
     const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
     expect(componentSource).toContain("hidden h-11 w-11");
-    expect(componentSource).toContain("grid h-[3.25rem] grid-cols-2");
+    expect(componentSource).toContain("grid h-14 w-[min(calc(100vw-1.5rem),21rem)] -translate-x-1/2 grid-cols-3");
     expect(componentSource).toContain("gap-0.5");
     expect(componentSource).not.toContain('href: "/ai"');
     expect(componentSource).toContain("rounded-full");
@@ -84,8 +86,11 @@ describe("storefront media protection", () => {
 
   it("uses a matching rounded top header without changing desktop controls", () => {
     const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
+    const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
     expect(componentSource).toContain("zurs-compact-header sticky top-2");
     expect(componentSource).toContain("rounded-[1.25rem]");
+    expect(styleSource).toContain("position: sticky !important");
+    expect(styleSource).toContain("z-index: 70 !important");
   });
 
   it("uses a banner-aligned particle field with staggered reduced-motion-safe twinkles", () => {
@@ -105,5 +110,39 @@ describe("storefront media protection", () => {
     expect(documentSource).toContain("family=Kantumruy+Pro");
     expect(styleSource).toContain('font-family: "Hanuman", "Kantumruy Pro"');
     expect(styleSource).toContain("prefers-reduced-motion: no-preference");
+  });
+
+  it("docks the Contact Admin control above storefront actions and locks the mobile viewport scale", () => {
+    const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
+    const contactSource = readFileSync(join(process.cwd(), "client/src/components/ContactAdminControl.tsx"), "utf8");
+    const documentSource = readFileSync(join(process.cwd(), "client/index.html"), "utf8");
+    const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
+    expect(componentSource).toContain("<ContactAdminControl paymentBarVisible={isTopupRoute} />");
+    expect(contactSource).toContain("ទំនាក់ទំនង Admin");
+    expect(contactSource).toContain("Asia/Phnom_Penh");
+    expect(contactSource).toContain("https://t.me/");
+    expect(documentSource).toContain("user-scalable=no");
+    expect(documentSource).toContain("maximum-scale=1.0");
+    expect(styleSource).toContain(".contact-admin-layer");
+    expect(styleSource).toContain(".contact-admin-fab--payment");
+    expect(styleSource).toContain("touch-action: pan-x pan-y");
+  });
+
+  it("routes selected packages directly to the payment preview page and keeps KHQR creation behind final confirmation", () => {
+    const layoutSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
+    const checkoutSource = readFileSync(join(process.cwd(), "client/src/pages/Checkout.tsx"), "utf8");
+    const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
+    expect(layoutSource).toContain('onContinue={() => setLocation("/checkout/preview")}');
+    expect(layoutSource).toContain("paymentMethodName={selectedPaymentMethod?.name ?? null}");
+    expect(layoutSource).toContain("សូមជ្រើសវិធីបង់ប្រាក់");
+    expect(layoutSource).toContain("title=\"សូមជ្រើសវិធីបង់ប្រាក់នៅខាងលើកញ្ចប់\"");
+    expect(checkoutSource).toContain('const preview = orderId === "preview"');
+    expect(checkoutSource).toContain("<PaymentPreview product={selectedProduct}");
+    expect(checkoutSource).toContain("បញ្ជាក់ និងបង្កើត KHQR");
+    expect(checkoutSource).toContain("trpc.orders.createTopup.useMutation()");
+    expect(checkoutSource).toContain("trpc.orders.beginPayment.useMutation()");
+    expect(checkoutSource).toContain("setLocation(`/checkout/${session.order.id}`)");
+    expect(styleSource).toContain(".checkout-preview-hero");
+    expect(styleSource).toContain(".checkout-preview-confirm");
   });
 });

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { balanceSocialProviderServices, cachedPublicProviderGames, fetchProviderGameDetails, fetchProviderGames, fetchProviderPackages, fetchProviderPreviewPackages, fetchSmmProviderServices, getProviderAvailabilityCatalog, getProviderCatalogStatus, isThailandProviderProduct, resetProviderCatalogCacheForTests, submitSmmProviderOrder, validateProviderPlayerIdentity } from "./providerCatalog";
+import { balanceSocialProviderServices, cachedPublicProviderGames, fetchProviderGameDetails, fetchProviderGames, fetchProviderPackages, fetchProviderPreviewPackages, fetchSmmProviderServices, getProviderAvailabilityCatalog, getProviderCatalogStatus, isThailandProviderProduct, providerPackageRecordId, resetProviderCatalogCacheForTests, submitSmmProviderOrder, validateProviderPlayerIdentity } from "./providerCatalog";
 
 const originalEndpoint = process.env.FZR_CARDS_API_BASE_URL;
 const originalApiKey = process.env.FZR_CARDS_API_KEY;
@@ -110,7 +110,7 @@ describe("provider catalog", () => {
     vi.stubGlobal("fetch", vi.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, kind: "topup", items: [{ category_id: "acecraft", name: "Acecraft" }], meta: { next_cursor: null, has_more: false } }) })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "acecraft", name: "Acecraft", imageurl: "https://cdn.example.test/acecraft.png", fields: [{ key: "user_id", label: "User ID", type: "text" }], offers: [{ offer_id: "80_diamonds", name: "80 Diamonds", price_usd: "0.9864" }] }) }));
-    await expect(fetchProviderGameDetails("acecraft", { includeInactive: true })).resolves.toEqual({ status: "ready", game: { id: "acecraft", name: "Acecraft", region: "Global", logoUrl: "https://cdn.example.test/acecraft.png", provider: "FZR Cards", requiredFields: [{ key: "user_id", label: "User ID", required: true, kind: "text" }] }, packages: [{ id: "acecraft:80_diamonds", label: "80 Diamonds", amountLabel: "80 Diamonds", priceLabel: "$0.99", provider: "FZR Cards", paymentMethods: ["khqr", "bank"] }] });
+    await expect(fetchProviderGameDetails("acecraft", { includeInactive: true })).resolves.toEqual({ status: "ready", game: { id: "acecraft", name: "Acecraft", region: "Global", logoUrl: "https://cdn.example.test/acecraft.png", provider: "FZR Cards", requiredFields: [{ key: "user_id", label: "User ID", required: true, kind: "text" }] }, packages: [{ id: providerPackageRecordId("acecraft", "80_diamonds"), label: "80 Diamonds", amountLabel: "80 Diamonds", priceLabel: "$0.99", provider: "FZR Cards", paymentMethods: ["khqr", "bank"] }] });
   });
 
   it("merges active Mobile Legends Global, Promo, and Special variants into one family page", async () => {
@@ -125,7 +125,7 @@ describe("provider catalog", () => {
 
     const result = await fetchProviderGameDetails("mobile_legends");
     expect(result).toMatchObject({ status: "ready", game: { id: "mobile_legends", name: "Mobile Legends" } });
-    if (result.status === "ready") expect(result.packages.map((item) => item.id)).toEqual(["mobile_legends_global:global", "mobile_legends_promo:promo", "mobile_legends_special:special"]);
+    if (result.status === "ready") expect(result.packages.map((item) => item.id)).toEqual([providerPackageRecordId("mobile_legends_global", "global"), providerPackageRecordId("mobile_legends_promo", "promo"), providerPackageRecordId("mobile_legends_special", "special")]);
   });
 
   it("merges active PUBG Mobile Auto and Fast variants into one family page", async () => {
@@ -139,7 +139,7 @@ describe("provider catalog", () => {
 
     const result = await fetchProviderGameDetails("pubg_mobile");
     expect(result).toMatchObject({ status: "ready", game: { id: "pubg_mobile", name: "PUBG Mobile" } });
-    if (result.status === "ready") expect(result.packages.map((item) => item.id)).toEqual(["pubg_mobile_auto:auto", "pubg_mobile_fast:fast"]);
+    if (result.status === "ready") expect(result.packages.map((item) => item.id)).toEqual([providerPackageRecordId("pubg_mobile_auto", "auto"), providerPackageRecordId("pubg_mobile_fast", "fast")]);
   });
 
   it("returns authorized package UI for an admin preview without submitting a player identity", async () => {
@@ -149,7 +149,7 @@ describe("provider catalog", () => {
       .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, kind: "topup", items: [{ category_id: "preview-only-game", name: "Preview Only Game" }], meta: { next_cursor: null, has_more: false } }) })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "preview-only-game", name: "Preview Only Game", fields: [{ key: "user_id", label: "User ID", type: "text" }], offers: [{ offer_id: "starter", name: "Starter Pack", price_usd: "1.25" }] }) }));
 
-    await expect(fetchProviderPreviewPackages("preview-only-game")).resolves.toEqual({ status: "ready", packages: [{ id: "preview-only-game:starter", label: "Starter Pack", amountLabel: "Starter Pack", priceLabel: "$1.25", provider: "FZR Cards", paymentMethods: ["khqr", "bank"] }] });
+    await expect(fetchProviderPreviewPackages("preview-only-game")).resolves.toEqual({ status: "ready", packages: [{ id: providerPackageRecordId("preview-only-game", "starter"), label: "Starter Pack", amountLabel: "Starter Pack", priceLabel: "$1.25", provider: "FZR Cards", paymentMethods: ["khqr", "bank"] }] });
     expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(2);
     expect((fetch as ReturnType<typeof vi.fn>).mock.calls[1]?.[0]).toContain("/offers?category_id=preview-only-game");
   });
@@ -177,6 +177,16 @@ describe("provider catalog", () => {
     process.env.FZR_CARDS_API_KEY = "server-only-key";
     vi.stubGlobal("fetch", vi.fn());
     await expect(validateProviderPlayerIdentity({ gameId: "acecraft", fields: { user_id: "123456" } })).resolves.toEqual({ status: "not_supported", playerName: null, playerId: null, region: null });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("keeps PUBG Mobile and Blood Strike IDs local when no owner-approved checker exists", async () => {
+    process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
+    process.env.FZR_CARDS_API_KEY = "server-only-key";
+    vi.stubGlobal("fetch", vi.fn());
+    for (const gameId of ["pubg_mobile_auto", "blood_strike"]) {
+      await expect(validateProviderPlayerIdentity({ gameId, fields: { user_id: "12345678" } })).resolves.toEqual({ status: "not_supported", playerName: null, playerId: null, region: null });
+    }
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -240,7 +250,7 @@ describe("provider catalog", () => {
       return { ok: true, json: async () => ({ ok: true, kind: "topup", items: [{ category_id: "blood_strike", name: "Blood Strike" }], meta: { next_cursor: null, has_more: false } }) };
     }));
 
-    await expect(fetchProviderPackages({ gameId: "blood_strike", fields: { user_id: "123456" }, idAccuracyConfirmed: true })).resolves.toEqual({ status: "ready", packages: [{ id: "blood_strike:starter", label: "Starter Pack", amountLabel: "Starter Pack", priceLabel: "$1.25", provider: "FZR Cards", paymentMethods: ["khqr", "bank"] }] });
+    await expect(fetchProviderPackages({ gameId: "blood_strike", fields: { user_id: "123456" }, idAccuracyConfirmed: true })).resolves.toEqual({ status: "ready", packages: [{ id: providerPackageRecordId("blood_strike", "starter"), label: "Starter Pack", amountLabel: "Starter Pack", priceLabel: "$1.25", provider: "FZR Cards", paymentMethods: ["khqr", "bank"] }] });
     expect((fetch as ReturnType<typeof vi.fn>).mock.calls.every(([url]) => !String(url).includes("validate-id"))).toBe(true);
   });
 
@@ -252,7 +262,7 @@ describe("provider catalog", () => {
       return { ok: true, json: async () => ({ ok: true, kind: "topup", items: [{ category_id: "8_ball_pool", name: "8 Ball Pool" }], meta: { next_cursor: null, has_more: false } }) };
     }));
 
-    await expect(fetchProviderPackages({ gameId: "8_ball_pool", fields: { email: "customer@example.test" } })).resolves.toMatchObject({ status: "ready", packages: [{ id: "8_ball_pool:starter" }] });
+    await expect(fetchProviderPackages({ gameId: "8_ball_pool", fields: { email: "customer@example.test" } })).resolves.toMatchObject({ status: "ready", packages: [{ id: providerPackageRecordId("8_ball_pool", "starter") }] });
     expect((fetch as ReturnType<typeof vi.fn>).mock.calls.every(([url]) => !String(url).includes("/validate-id"))).toBe(true);
   });
 
@@ -340,7 +350,7 @@ describe("provider catalog", () => {
     expect(calls[1]?.[1]).toMatchObject({ method: "POST", headers: { "X-Bridge-Key": "bridge-secret-for-test-only" } });
   });
 
-  it("uses the configured server-only bridge secret without returning it to the caller", async () => {
+  (originalHerokuBridgeApiKey ? it : it.skip)("uses the configured server-only bridge secret without returning it to the caller", async () => {
     expect(originalHerokuBridgeApiKey).toBeTruthy();
     process.env.HEROKU_BRIDGE_URL = "https://bridge.example.test";
     process.env.HEROKU_BRIDGE_API_KEY = originalHerokuBridgeApiKey;

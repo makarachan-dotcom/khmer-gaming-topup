@@ -24,11 +24,11 @@ describe("provider package artwork override contract", () => {
     expect(db).toContain("providerPackageArtworkAudits");
   });
 
-  it("keeps write and audit routes admin-only while letting public game pages resolve per-game overrides", () => {
+  it("keeps write and audit routes behind the Owner-approved Media scope while letting public game pages resolve per-game overrides", () => {
     expect(routers).toContain("packageArtwork: publicProcedure");
-    expect(routers).toContain("savePackageArtwork: adminProcedure");
-    expect(routers).toContain("resetPackageArtwork: adminProcedure");
-    expect(routers).toContain("packageArtworkAudits: adminProcedure");
+    expect(routers).toContain('savePackageArtwork: scopedAdminProcedure("media")');
+    expect(routers).toContain('resetPackageArtwork: scopedAdminProcedure("media")');
+    expect(routers).toContain('packageArtworkAudits: scopedAdminProcedure("media")');
     expect(gameTopup).toContain("trpc.provider.packageArtwork.useQuery");
     expect(gameTopup).toContain("refetchInterval: 1_000");
     expect(gameTopup).toContain("subscribeToPackageArtworkChanges");

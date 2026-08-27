@@ -41,7 +41,7 @@ describe("marketplace storage", () => {
     const uploaded = await storagePut("marketplace-listings-private/100/screenshot.png", new Uint8Array([1, 2, 3]), "image/png");
 
     expect(uploaded.key).toMatch(/^appwrite\/zurs_media\//);
-    expect(uploaded.url).toBe(`/manus-storage/${uploaded.key}`);
+    expect(uploaded.url).toBe(`/api/media/${uploaded.key}`);
     expect(isAppwriteMediaKey(uploaded.key)).toBe(true);
     await expect(storageGet(uploaded.key)).resolves.toEqual({ key: uploaded.key, url: uploaded.url });
     expect(fetchMock).toHaveBeenCalledTimes(3);

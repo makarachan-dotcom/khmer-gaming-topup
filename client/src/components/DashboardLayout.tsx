@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { trpc } from "@/lib/trpc";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Sidebar,
@@ -15,23 +16,28 @@ import {
 } from "@/components/ui/sidebar";
 import { startLogin } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { Boxes, CircleDollarSign, CreditCard, ImagePlus, LayoutDashboard, LogOut, PanelLeft, ReceiptText, ShieldCheck, Users } from "lucide-react";
-import { CSSProperties, useEffect, useRef, useState } from "react";
+import { Boxes, CircleDollarSign, ContactRound, CreditCard, ImagePlus, Images, LayoutDashboard, LogOut, PanelLeft, ReceiptText, ShieldCheck, Users } from "lucide-react";
+import { type ComponentType, CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 
-const menuItems = [
-  { icon: LayoutDashboard, label: "ផ្ទាំងគ្រប់គ្រង", path: "/admin" },
-  { icon: ReceiptText, label: "ការកម្មង់", path: "/admin?tab=orders" },
-  { icon: Boxes, label: "កាតាឡុក", path: "/admin?tab=catalog" },
-  { icon: ImagePlus, label: "Banner & Promo", path: "/admin/media" },
-  { icon: ImagePlus, label: "រូបភាពកញ្ចប់", path: "/admin/package-artwork" },
-  { icon: Users, label: "ប្រតិបត្តិការ", path: "/admin?tab=operations" },
-  { icon: ShieldCheck, label: "សិទ្ធិ Admin", path: "/admin/access" },
-  { icon: CreditCard, label: "Payment Control", path: "/admin/payment" },
-  { icon: ShieldCheck, label: "Provider Security", path: "/admin/provider-security" },
-  { icon: CircleDollarSign, label: "តម្លៃ និង Margin", path: "/admin/pricing" },
+type AdminPermissionKey = "dashboard" | "orders" | "catalog" | "media" | "support" | "marketplace" | "payments" | "operations";
+type AdminMenuItem = { icon: ComponentType<{ className?: string }>; label: string; path: string; permission?: AdminPermissionKey; ownerOnly?: boolean };
+
+const menuItems: AdminMenuItem[] = [
+  { icon: LayoutDashboard, label: "ផ្ទាំងគ្រប់គ្រង", path: "/admin", permission: "dashboard" },
+  { icon: ReceiptText, label: "ការកម្មង់", path: "/admin?tab=orders", permission: "orders" },
+  { icon: Boxes, label: "កាតាឡុក", path: "/admin?tab=catalog", permission: "catalog" },
+  { icon: ImagePlus, label: "Banner & Promo", path: "/admin/media", permission: "media" },
+  { icon: ImagePlus, label: "រូបភាពកញ្ចប់", path: "/admin/package-artwork", permission: "media" },
+  { icon: ContactRound, label: "Admin ទំនាក់ទំនង", path: "/admin/contact-admins", permission: "support" },
+  { icon: Images, label: "រូបភាពហ្គេម", path: "/admin/game-images", permission: "media" },
+  { icon: Users, label: "ប្រតិបត្តិការ", path: "/admin?tab=operations", permission: "operations" },
+  { icon: ShieldCheck, label: "សិទ្ធិ Admin", path: "/admin/access", ownerOnly: true },
+  { icon: CreditCard, label: "Payment Control", path: "/admin/payment", ownerOnly: true },
+  { icon: ShieldCheck, label: "Provider Security", path: "/admin/provider-security", ownerOnly: true },
+  { icon: CircleDollarSign, label: "តម្លៃ និង Margin", path: "/admin/pricing", permission: "catalog" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -117,12 +123,14 @@ function DashboardLayoutContent({
   setSidebarWidth,
 }: DashboardLayoutContentProps) {
   const { user, logout } = useAuth();
+  const access = trpc.admin.myPermissions.useQuery(undefined, { enabled: Boolean(user) });
   const [location, setLocation] = useLocation();
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const activeMenuItem = menuItems.find(item => item.path === location);
+  const visibleMenuItems = menuItems.filter((item) => access.data?.isOwner || (!item.ownerOnly && Boolean(item.permission && access.data?.permissions.includes(item.permission))));
+  const activeMenuItem = visibleMenuItems.find(item => item.path === location);
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -190,7 +198,7 @@ function DashboardLayoutContent({
 
           <SidebarContent className="gap-0">
             <SidebarMenu className="px-2 py-1">
-              {menuItems.map(item => {
+              {visibleMenuItems.map(item => {
                 const isActive = location === item.path;
                 return (
                   <SidebarMenuItem key={item.path}>

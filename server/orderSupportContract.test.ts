@@ -22,8 +22,8 @@ describe("order tracking and support contract", () => {
     expect(dbSource).toContain("reviewOrderSupportTicket");
     expect(routerSource).toContain("tracking: protectedProcedure");
     expect(routerSource).toContain("createTicket: protectedProcedure");
-    expect(routerSource).toContain("orderSupportTickets: adminProcedure");
-    expect(routerSource).toContain("reviewOrderSupportTicket: adminProcedure");
+    expect(routerSource).toContain('orderSupportTickets: scopedAdminProcedure("orders")');
+    expect(routerSource).toContain('reviewOrderSupportTicket: scopedAdminProcedure("orders")');
   });
 
   it("keeps Fast Check validation concise and local for malformed purchase IDs", () => {

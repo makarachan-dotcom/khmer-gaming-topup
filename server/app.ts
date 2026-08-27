@@ -21,7 +21,7 @@ import { getKhqrWorkerCredentials } from "./khqrWorkerSecrets";
  */
 export function createApp() {
   const app = express();
-  app.post("/api/webhooks/khqr-worker", express.raw({ type: "application/json", limit: "32kb" }), async (req, res) => {
+  const khqrWorkerWebhookHandler = async (req: express.Request, res: express.Response) => {
     try {
       if (!verifyKhqrWorkerSignature(req.body, req.header("x-khqr-signature") ?? undefined, getKhqrWorkerCredentials().callbackSecret ?? undefined)) return res.status(401).json({ success: false, error: "invalid signature" });
       const callback = parseKhqrWorkerCallback(req.body);
@@ -30,10 +30,17 @@ export function createApp() {
         const result = await import("./db").then(({ reconcileKhqrWorkerPayment }) => reconcileKhqrWorkerPayment(callback));
         return res.json({ success: true, idempotent: result.idempotent });
       }
+      if (callback.event === "payment.expired") {
+        const result = await import("./db").then(({ recordKhqrWorkerPaymentExpired }) => recordKhqrWorkerPaymentExpired(callback));
+        return res.json({ success: true, idempotent: result.idempotent });
+      }
       const result = await import("./db").then(({ recordKhqrWorkerVerificationDeferred }) => recordKhqrWorkerVerificationDeferred(callback));
       return res.json({ success: true, recorded: result.recorded });
     } catch { return res.status(409).json({ success: false, error: "payment reconciliation rejected" }); }
-  });
+  };
+  const khqrWorkerWebhookBody = express.raw({ type: "application/json", limit: "32kb" });
+  app.post("/api/webhooks/khqr-worker", khqrWorkerWebhookBody, khqrWorkerWebhookHandler);
+  app.post("/api/webhooks/bakong", khqrWorkerWebhookBody, khqrWorkerWebhookHandler);
   app.post("/api/webhooks/didit", express.raw({ type: "application/json" }), async (req, res) => {
     try {
       const secret = process.env.DIDIT_WEBHOOK_SECRET; const signature = req.header("x-signature"); const timestamp = req.header("x-timestamp");

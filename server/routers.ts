@@ -2,17 +2,20 @@ import { COOKIE_NAME } from "@shared/const";
 import { z } from "zod";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { adminProcedure, ownerProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
+import { adminProcedure, ownerProcedure, protectedProcedure, publicProcedure, router, scopedAdminProcedure } from "./_core/trpc";
 import * as db from "./db";
-import { fetchFzrProviderSyncSnapshot, fetchProviderGameDetails, fetchProviderGames, fetchProviderPackages, fetchProviderPreviewPackages, fetchSmmProviderServices, getProviderAvailabilityCatalog, getProviderCatalogStatus, setProviderAvailability, validateProviderPlayerIdentity } from "./providerCatalog";
+import { addOwnerLiveSpinTestEntry, announceLiveSpinEvent, createLiveSpinEvent, createOwnerLiveSpinTestEvent, endLiveSpinEvent, getLiveSpinAccountSummary, getLiveSpinAuditLog, getLiveSpinEvents, getLiveSpinOwnerEventDetail, getLiveSpinPrizeTiers, getPublicLiveSpinState, heartbeatLiveSpinConnection, lockLiveSpinParticipants, revealLiveSpinPrize, saveLiveSpinConsolationGift, saveLiveSpinPrizeTier, saveLiveSpinSettings, skipLiveSpinWeek, startLiveSpinConnection, startLiveSpinLobby } from "./liveSpinStore";
+import { createLiveSpinSubscriberToken } from "./liveSpinRealtime";
+import { advanceLiveSpinSequence, runLiveSpinSequence } from "./liveSpinSequence";
+import { fetchFzrProviderSyncSnapshot, fetchProviderGameDetails, fetchProviderGames, fetchProviderPackages, fetchProviderPreviewPackages, fetchPublicProviderPackagePreview, fetchSmmProviderServices, getProviderAvailabilityCatalog, getProviderCatalogStatus, setProviderAvailability, validateProviderPlayerIdentity } from "./providerCatalog";
 import { toPublicPlayerIdentityResponse } from "./playerIdentityPrivacy";
 import { getProviderCredentialStatus } from "./providerCredentialStatus";
 import { encryptCredential } from "./credentialEnvelope";
 import { activateEncryptedProviderCredential, getProviderCredentialHistory, recordProviderCredentialValidationRejected, rollbackProviderCredential } from "./providerCredentialStore";
 import { validateProviderCredentialCandidate } from "./providerCredentialValidation";
 import { resetBakongMerchantPreflightCache } from "./bakongKhqr";
-import { buildZursMemberDisplayName } from "./storefrontDomain";
-import { uploadAdminMediaImage, uploadMarketplaceScreenshot, uploadMarketplaceVerificationEvidence } from "./uploads";
+import { buildZursMemberDisplayName, isSingleAdminEmail } from "./storefrontDomain";
+import { uploadAdminLiveSpinMedia, uploadAdminMediaImage, uploadAdminPaymentMethodIcon, uploadMarketplaceScreenshot, uploadMarketplaceVerificationEvidence } from "./uploads";
 import { storageGet } from "./storage";
 import { createDiditHostedSession } from "./didit";
 import { disclosureRequestStatuses, fraudReportStatuses } from "./marketplaceSafety";
@@ -54,6 +57,8 @@ export const appRouter = router({
   }),
   payments: router({
     readiness: publicProcedure.query(() => db.getPublicPaymentAvailability()),
+    gate: publicProcedure.query(async () => ({ enabled: (await db.getPaymentControl()).enabled })),
+    methods: publicProcedure.query(() => db.getPaymentMethods()),
   }),
   wallet: router({
     summary: protectedProcedure.query(({ ctx }) => db.getCustomerWalletSummary(ctx.user.id)),
@@ -62,10 +67,19 @@ export const appRouter = router({
     topupSession: protectedProcedure.input(z.object({ topupId: z.string().min(4).max(64) })).query(({ ctx, input }) => db.getWalletTopupSession({ userId: ctx.user.id, ...input })),
     refreshTopup: protectedProcedure.input(z.object({ topupId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => db.refreshWalletTopup({ userId: ctx.user.id, ...input })),
   }),
+  liveSpin: router({
+    state: publicProcedure.query(() => getPublicLiveSpinState()),
+    realtimeAuth: publicProcedure.input(z.object({ eventId: z.string().min(4).max(64) })).query(({ input }) => createLiveSpinSubscriberToken(input.eventId)),
+    account: protectedProcedure.query(({ ctx }) => getLiveSpinAccountSummary(ctx.user.id)),
+    beginConnection: protectedProcedure.input(z.object({ eventId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => startLiveSpinConnection({ userId: ctx.user.id, ...input })),
+    heartbeatConnection: protectedProcedure.input(z.object({ eventId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => heartbeatLiveSpinConnection({ userId: ctx.user.id, ...input })),
+  }),
   provider: router({
     games: publicProcedure.query(() => fetchProviderGames()),
     gameDetails: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120) })).query(({ input }) => fetchProviderGameDetails(input.gameId)),
     packageArtwork: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120) })).query(({ input }) => db.getProviderPackageArtworkOverrides(input.gameId)),
+    gameImages: publicProcedure.query(() => db.getProviderGameImageOverrides()),
+    packagePreview: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120) })).query(({ input }) => fetchPublicProviderPackagePreview(input.gameId)),
     packages: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120), fields: z.record(z.string().trim().max(64), z.string().trim().min(1).max(256)).refine((fields) => Object.keys(fields).length <= 12, "Too many provider fields"), idAccuracyConfirmed: z.boolean().optional().default(false) })).mutation(({ input }) => fetchProviderPackages(input)),
     validatePlayerId: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120), fields: z.record(z.string().trim().max(64), z.string().trim().min(1).max(256)).refine((fields) => Object.keys(fields).length <= 12, "Too many provider fields") })).mutation(async ({ input }) => toPublicPlayerIdentityResponse(await validateProviderPlayerIdentity(input))),
     smmServices: publicProcedure.query(() => fetchSmmProviderServices()),
@@ -92,12 +106,18 @@ export const appRouter = router({
   }),
   uploads: router({
     marketplaceScreenshot: protectedProcedure.input(z.object({ fileName: z.string().trim().min(1).max(180), contentType: z.enum(["image/jpeg", "image/png", "image/webp"]), dataUrl: z.string().min(50).max(7_000_000) })).mutation(async ({ ctx, input }) => { const upload = await uploadMarketplaceScreenshot({ userId: ctx.user.id, ...input }); return { key: upload.key }; }),
-    adminMediaImage: adminProcedure.input(z.object({ fileName: z.string().trim().min(1).max(180), contentType: z.enum(["image/jpeg", "image/png", "image/webp"]), dataUrl: z.string().min(50).max(7_000_000) })).mutation(async ({ ctx, input }) => uploadAdminMediaImage({ adminUserId: ctx.user.id, ...input })),
+    adminMediaImage: scopedAdminProcedure("media").input(z.object({ fileName: z.string().trim().min(1).max(180), contentType: z.enum(["image/jpeg", "image/png", "image/webp"]), dataUrl: z.string().min(50).max(7_000_000) })).mutation(async ({ ctx, input }) => uploadAdminMediaImage({ adminUserId: ctx.user.id, ...input })),
+    adminLiveSpinMedia: ownerProcedure.input(z.object({ fileName: z.string().trim().min(1).max(180), contentType: z.enum(["image/jpeg", "image/png", "image/webp", "video/mp4", "video/webm"]), dataUrl: z.string().min(50).max(5_600_000) })).mutation(async ({ ctx, input }) => uploadAdminLiveSpinMedia({ adminUserId: ctx.user.id, ...input })),
+    adminPaymentMethodIcon: ownerProcedure.input(z.object({ fileName: z.string().trim().min(1).max(180), contentType: z.enum(["image/jpeg", "image/png", "image/webp", "image/svg+xml"]), dataUrl: z.string().min(50).max(3_000_000) })).mutation(async ({ ctx, input }) => uploadAdminPaymentMethodIcon({ adminUserId: ctx.user.id, ...input })),
   }),
   content: router({
     active: publicProcedure.query(() => db.getPublicSiteContent()),
   }),
+  support: router({
+    contactAdmins: publicProcedure.query(() => db.getContactAdmins()),
+  }),
   orders: router({
+    createAdminKhqrTest: ownerProcedure.mutation(({ ctx }) => db.createAdminKhqrTestOrder({ userId: ctx.user.id })),
     createTopup: protectedProcedure.input(z.object({ packageId: z.string().min(4).max(64), playerId: z.string().trim().min(2).max(128), zoneId: z.string().trim().min(1).max(128).optional(), quantity: z.number().int().min(1).max(9) })).mutation(({ ctx, input }) => db.createTopupOrder({ userId: ctx.user.id, ...input })),
     createSmm: protectedProcedure.input(z.object({ tierId: z.string().min(4).max(64), target: z.string().trim().min(3).max(500) })).mutation(({ ctx, input }) => db.createSmmOrder({ userId: ctx.user.id, ...input })),
     beginPayment: protectedProcedure.input(z.object({ orderId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => db.beginStagedPayment({ userId: ctx.user.id, ...input })),
@@ -113,40 +133,61 @@ export const appRouter = router({
     deleteSavedPlayer: protectedProcedure.input(z.object({ id: z.string().min(4).max(64) })).mutation(({ ctx, input }) => db.deleteSavedPlayerId({ userId: ctx.user.id, ...input })),
   }),
   admin: router({
-    overview: adminProcedure.query(() => db.getAdminOverview()),
-    orders: adminProcedure.query(() => db.getAdminOrders()),
-    updateOrderStatus: adminProcedure.input(z.object({ orderId: z.string().min(4).max(64), status: z.enum(["pending", "awaiting_payment", "paid", "delivered", "failed", "expired", "refunded"]) })).mutation(({ ctx, input }) => db.updateOrderStatus({ ...input, actorUserId: ctx.user.id })),
-    orderSupportTickets: adminProcedure.query(() => db.getAdminOrderSupportTickets()),
-    reviewOrderSupportTicket: adminProcedure.input(z.object({ ticketId: z.string().min(4).max(64), status: z.enum(["open", "reviewing", "resolved", "closed"]), adminReply: z.string().trim().max(5000).optional() })).mutation(({ ctx, input }) => db.reviewOrderSupportTicket({ reviewerUserId: ctx.user.id, ...input })),
-    listings: adminProcedure.input(z.object({ status: z.enum(["draft", "pending", "approved", "rejected", "closed", "sold"]).optional() }).optional()).query(({ input }) => db.getAdminMarketplaceListings(input?.status)),
-    reviewListing: adminProcedure.input(z.object({ listingId: z.string().min(4).max(64), status: z.enum(["approved", "rejected", "closed"]), reviewNote: z.string().trim().max(1000).optional() })).mutation(({ ctx, input }) => db.reviewMarketplaceListing({ reviewerUserId: ctx.user.id, ...input })),
-    deleteListing: adminProcedure.input(z.object({ listingId: z.string().min(4).max(64) })).mutation(({ input }) => db.deleteMarketplaceListingByAdmin(input)),
-    verifications: adminProcedure.input(z.object({ status: z.enum(["pending", "approved", "rejected"]).optional() }).optional()).query(({ input }) => db.getAdminMarketplaceVerifications(input?.status)),
-    verificationEvidence: adminProcedure.input(z.object({ verificationId: z.string().min(4).max(64) })).query(({ input }) => db.getAdminVerificationEvidence(input.verificationId)),
-    openVerificationEvidence: adminProcedure.input(z.object({ evidenceId: z.string().min(4).max(64), reason: z.string().trim().min(5).max(500) })).mutation(async ({ ctx, input }) => { const evidence = await db.logMarketplaceEvidenceAccess({ evidenceId: input.evidenceId, adminUserId: ctx.user.id, action: "view", reason: input.reason }); return storageGet(evidence.storageKey); }),
-    removeVerificationEvidence: adminProcedure.input(z.object({ evidenceId: z.string().min(4).max(64), reason: z.string().trim().min(10).max(500) })).mutation(({ ctx, input }) => db.removeMarketplaceEvidenceReference({ evidenceId: input.evidenceId, adminUserId: ctx.user.id, reason: input.reason })),
-    reviewVerification: adminProcedure.input(z.object({ verificationId: z.string().min(4).max(64), status: z.enum(["approved", "rejected"]), verificationNote: z.string().trim().max(1000).optional() })).mutation(({ ctx, input }) => db.reviewMarketplaceVerification({ reviewerUserId: ctx.user.id, ...input })),
-    fraudReports: adminProcedure.query(() => db.getAdminMarketplaceFraudReports()),
-    updateFraudReport: adminProcedure.input(z.object({ reportId: z.string().min(4).max(64), status: z.enum(fraudReportStatuses), adminNote: z.string().trim().max(5000).optional() })).mutation(({ ctx, input }) => db.updateMarketplaceFraudReport({ reviewerUserId: ctx.user.id, ...input })),
-    disclosureRequests: adminProcedure.query(() => db.getAdminMarketplaceDisclosureRequests()),
-    createDisclosureRequest: adminProcedure.input(z.object({ fraudReportId: z.string().min(4).max(64), requestBasis: z.string().trim().min(10).max(500) })).mutation(({ input }) => db.createMarketplaceDisclosureRequest(input)),
-    reviewDisclosureRequest: adminProcedure.input(z.object({ requestId: z.string().min(4).max(64), status: z.enum(disclosureRequestStatuses), reviewNote: z.string().trim().max(5000).optional() })).mutation(({ ctx, input }) => db.reviewMarketplaceDisclosureRequest({ reviewerUserId: ctx.user.id, ...input })),
-    evidenceAccessLogs: adminProcedure.query(() => db.getAdminMarketplaceEvidenceAccessLogs()),
-    catalog: adminProcedure.query(async () => ({ games: await db.getGameCatalog(), smm: await db.getSmmCatalog() })),
-    fullCatalog: adminProcedure.query(() => db.getAdminCatalog()),
-    providerCatalogStatus: adminProcedure.query(() => getProviderCatalogStatus()),
-    previewGamePackages: adminProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120) })).query(({ input }) => fetchProviderPreviewPackages(input.gameId)),
-    previewSmmServices: adminProcedure.query(() => fetchSmmProviderServices({ includeHidden: true })),
-    providerAvailability: adminProcedure.query(() => getProviderAvailabilityCatalog()),
-    setProviderAvailability: adminProcedure.input(z.object({ kind: z.enum(["game", "smm"]), providerId: z.string().trim().min(1).max(120), isActive: z.boolean() })).mutation(({ input }) => setProviderAvailability(input)),
-    syncTopupCatalog: adminProcedure.mutation(async () => { const snapshot = await fetchFzrProviderSyncSnapshot(); if (snapshot.status !== "ready") throw new Error("FZR Cards catalog is currently unavailable"); return db.syncFzrCatalog(snapshot); }),
-    syncSmmCatalog: adminProcedure.mutation(async () => { const snapshot = await fetchSmmProviderServices(); if (snapshot.status !== "ready") throw new Error("SMMGlob catalog is currently unavailable"); return db.syncSmmCatalog(snapshot); }),
-    updateGamePackage: adminProcedure.input(z.object({ packageId: z.string().min(4).max(64), priceUsd: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(), basePriceUsd: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(), profitMarginPercent: z.string().regex(/^\d+(\.\d{1,2})?$/).refine((value) => Number(value) <= 1000).optional(), isActive: z.boolean(), featured: z.boolean() }).refine((input) => Boolean(input.priceUsd ?? input.basePriceUsd), "A base price is required")).mutation(({ input }) => db.updateGamePackage({ ...input, basePriceUsd: input.basePriceUsd ?? input.priceUsd!, profitMarginPercent: input.profitMarginPercent ?? "0.00" })),
-    deleteGamePackage: adminProcedure.input(z.object({ packageId: z.string().min(4).max(64) })).mutation(({ input }) => db.deleteGamePackage(input.packageId)),
-    updateSmmTier: adminProcedure.input(z.object({ tierId: z.string().min(4).max(64), priceUsd: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(), basePriceUsd: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(), profitMarginPercent: z.string().regex(/^\d+(\.\d{1,2})?$/).refine((value) => Number(value) <= 1000).optional(), isActive: z.boolean() }).refine((input) => Boolean(input.priceUsd ?? input.basePriceUsd), "A base price is required")).mutation(({ input }) => db.updateSmmTier({ ...input, basePriceUsd: input.basePriceUsd ?? input.priceUsd!, profitMarginPercent: input.profitMarginPercent ?? "0.00" })),
-    deleteSmmTier: adminProcedure.input(z.object({ tierId: z.string().min(4).max(64) })).mutation(({ input }) => db.deleteSmmTier(input.tierId)),
-    payments: adminProcedure.query(() => db.getPaymentTransactions()),
+    overview: scopedAdminProcedure("dashboard").query(() => db.getAdminOverview()),
+    orders: scopedAdminProcedure("orders").query(() => db.getAdminOrders()),
+    updateOrderStatus: scopedAdminProcedure("orders").input(z.object({ orderId: z.string().min(4).max(64), status: z.enum(["pending", "awaiting_payment", "paid", "delivered", "failed", "expired", "refunded"]) })).mutation(({ ctx, input }) => db.updateOrderStatus({ ...input, actorUserId: ctx.user.id })),
+    orderSupportTickets: scopedAdminProcedure("orders").query(() => db.getAdminOrderSupportTickets()),
+    reviewOrderSupportTicket: scopedAdminProcedure("orders").input(z.object({ ticketId: z.string().min(4).max(64), status: z.enum(["open", "reviewing", "resolved", "closed"]), adminReply: z.string().trim().max(5000).optional() })).mutation(({ ctx, input }) => db.reviewOrderSupportTicket({ reviewerUserId: ctx.user.id, ...input })),
+    listings: scopedAdminProcedure("marketplace").input(z.object({ status: z.enum(["draft", "pending", "approved", "rejected", "closed", "sold"]).optional() }).optional()).query(({ input }) => db.getAdminMarketplaceListings(input?.status)),
+    reviewListing: scopedAdminProcedure("marketplace").input(z.object({ listingId: z.string().min(4).max(64), status: z.enum(["approved", "rejected", "closed"]), reviewNote: z.string().trim().max(1000).optional() })).mutation(({ ctx, input }) => db.reviewMarketplaceListing({ reviewerUserId: ctx.user.id, ...input })),
+    deleteListing: scopedAdminProcedure("marketplace").input(z.object({ listingId: z.string().min(4).max(64) })).mutation(({ input }) => db.deleteMarketplaceListingByAdmin(input)),
+    verifications: scopedAdminProcedure("marketplace").input(z.object({ status: z.enum(["pending", "approved", "rejected"]).optional() }).optional()).query(({ input }) => db.getAdminMarketplaceVerifications(input?.status)),
+    verificationEvidence: scopedAdminProcedure("marketplace").input(z.object({ verificationId: z.string().min(4).max(64) })).query(({ input }) => db.getAdminVerificationEvidence(input.verificationId)),
+    openVerificationEvidence: scopedAdminProcedure("marketplace").input(z.object({ evidenceId: z.string().min(4).max(64), reason: z.string().trim().min(5).max(500) })).mutation(async ({ ctx, input }) => { const evidence = await db.logMarketplaceEvidenceAccess({ evidenceId: input.evidenceId, adminUserId: ctx.user.id, action: "view", reason: input.reason }); return storageGet(evidence.storageKey); }),
+    removeVerificationEvidence: scopedAdminProcedure("marketplace").input(z.object({ evidenceId: z.string().min(4).max(64), reason: z.string().trim().min(10).max(500) })).mutation(({ ctx, input }) => db.removeMarketplaceEvidenceReference({ evidenceId: input.evidenceId, adminUserId: ctx.user.id, reason: input.reason })),
+    reviewVerification: scopedAdminProcedure("marketplace").input(z.object({ verificationId: z.string().min(4).max(64), status: z.enum(["approved", "rejected"]), verificationNote: z.string().trim().max(1000).optional() })).mutation(({ ctx, input }) => db.reviewMarketplaceVerification({ reviewerUserId: ctx.user.id, ...input })),
+    fraudReports: scopedAdminProcedure("marketplace").query(() => db.getAdminMarketplaceFraudReports()),
+    updateFraudReport: scopedAdminProcedure("marketplace").input(z.object({ reportId: z.string().min(4).max(64), status: z.enum(fraudReportStatuses), adminNote: z.string().trim().max(5000).optional() })).mutation(({ ctx, input }) => db.updateMarketplaceFraudReport({ reviewerUserId: ctx.user.id, ...input })),
+    disclosureRequests: scopedAdminProcedure("marketplace").query(() => db.getAdminMarketplaceDisclosureRequests()),
+    createDisclosureRequest: scopedAdminProcedure("marketplace").input(z.object({ fraudReportId: z.string().min(4).max(64), requestBasis: z.string().trim().min(10).max(500) })).mutation(({ input }) => db.createMarketplaceDisclosureRequest(input)),
+    reviewDisclosureRequest: scopedAdminProcedure("marketplace").input(z.object({ requestId: z.string().min(4).max(64), status: z.enum(disclosureRequestStatuses), reviewNote: z.string().trim().max(5000).optional() })).mutation(({ ctx, input }) => db.reviewMarketplaceDisclosureRequest({ reviewerUserId: ctx.user.id, ...input })),
+    evidenceAccessLogs: scopedAdminProcedure("marketplace").query(() => db.getAdminMarketplaceEvidenceAccessLogs()),
+    catalog: scopedAdminProcedure("catalog").query(async () => ({ games: await db.getGameCatalog(), smm: await db.getSmmCatalog() })),
+    fullCatalog: scopedAdminProcedure("catalog").query(() => db.getAdminCatalog()),
+    providerCatalogStatus: scopedAdminProcedure("catalog").query(() => getProviderCatalogStatus()),
+    previewGamePackages: scopedAdminProcedure("catalog").input(z.object({ gameId: z.string().trim().min(1).max(120) })).query(({ input }) => fetchProviderPreviewPackages(input.gameId)),
+    previewSmmServices: scopedAdminProcedure("catalog").query(() => fetchSmmProviderServices({ includeHidden: true })),
+    providerAvailability: scopedAdminProcedure("catalog").query(() => getProviderAvailabilityCatalog()),
+    setProviderAvailability: scopedAdminProcedure("catalog").input(z.object({ kind: z.enum(["game", "smm"]), providerId: z.string().trim().min(1).max(120), isActive: z.boolean() })).mutation(({ input }) => setProviderAvailability(input)),
+    syncTopupCatalog: scopedAdminProcedure("catalog").mutation(async () => { const snapshot = await fetchFzrProviderSyncSnapshot(); if (snapshot.status !== "ready") throw new Error("FZR Cards catalog is currently unavailable"); return db.syncFzrCatalog(snapshot); }),
+    syncSmmCatalog: scopedAdminProcedure("catalog").mutation(async () => { const snapshot = await fetchSmmProviderServices(); if (snapshot.status !== "ready") throw new Error("SMMGlob catalog is currently unavailable"); return db.syncSmmCatalog(snapshot); }),
+    updateGamePackage: scopedAdminProcedure("catalog").input(z.object({ packageId: z.string().min(4).max(64), priceUsd: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(), basePriceUsd: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(), profitMarginPercent: z.string().regex(/^\d+(\.\d{1,2})?$/).refine((value) => Number(value) <= 1000).optional(), isActive: z.boolean(), featured: z.boolean() }).refine((input) => Boolean(input.priceUsd ?? input.basePriceUsd), "A base price is required")).mutation(({ input }) => db.updateGamePackage({ ...input, basePriceUsd: input.basePriceUsd ?? input.priceUsd!, profitMarginPercent: input.profitMarginPercent ?? "0.00" })),
+    deleteGamePackage: scopedAdminProcedure("catalog").input(z.object({ packageId: z.string().min(4).max(64) })).mutation(({ input }) => db.deleteGamePackage(input.packageId)),
+    updateSmmTier: scopedAdminProcedure("catalog").input(z.object({ tierId: z.string().min(4).max(64), priceUsd: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(), basePriceUsd: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(), profitMarginPercent: z.string().regex(/^\d+(\.\d{1,2})?$/).refine((value) => Number(value) <= 1000).optional(), isActive: z.boolean() }).refine((input) => Boolean(input.priceUsd ?? input.basePriceUsd), "A base price is required")).mutation(({ input }) => db.updateSmmTier({ ...input, basePriceUsd: input.basePriceUsd ?? input.priceUsd!, profitMarginPercent: input.profitMarginPercent ?? "0.00" })),
+    deleteSmmTier: scopedAdminProcedure("catalog").input(z.object({ tierId: z.string().min(4).max(64) })).mutation(({ input }) => db.deleteSmmTier(input.tierId)),
+    payments: scopedAdminProcedure("operations").query(() => db.getPaymentTransactions()),
+    operationUsers: scopedAdminProcedure("operations").query(() => db.getAdminUsers()),
+    liveSpinEvents: ownerProcedure.query(() => getLiveSpinEvents()),
+    liveSpinEventDetail: ownerProcedure.input(z.object({ eventId: z.string().min(4).max(64) })).query(({ input }) => getLiveSpinOwnerEventDetail(input.eventId)),
+    liveSpinPrizeTiers: ownerProcedure.input(z.object({ eventId: z.string().min(4).max(64) })).query(({ input }) => getLiveSpinPrizeTiers(input.eventId)),
+    liveSpinAuditLog: ownerProcedure.input(z.object({ eventId: z.string().min(4).max(64).optional() }).optional()).query(({ input }) => getLiveSpinAuditLog(input?.eventId)),
+    createLiveSpinEvent: ownerProcedure.input(z.object({ scheduledAt: z.coerce.date(), announcementStartsAt: z.coerce.date(), entryCutoffAt: z.coerce.date(), lobbyStartsAt: z.coerce.date(), adMediaUrl: z.string().trim().max(2048).refine((value) => value.startsWith("/api/media/") || value.startsWith("/manus-storage/") || /^https:\/\//i.test(value), "Use a managed media URL or HTTPS video URL").nullable().optional(), adDurationSeconds: z.number().int().min(0).max(7_200).optional(), minParticipantCount: z.number().int().min(100).max(100_000).optional(), winnerCount: z.number().int().min(1).max(10).optional(), consolationGiftCount: z.number().int().min(0).max(10).optional(), spinEnabled: z.boolean().optional() })).mutation(({ ctx, input }) => createLiveSpinEvent({ actorUserId: ctx.user.id, ...input })),
+    createOwnerLiveSpinTestEvent: ownerProcedure.mutation(({ ctx }) => createOwnerLiveSpinTestEvent({ actorUserId: ctx.user.id })),
+    addOwnerLiveSpinTestEntry: ownerProcedure.input(z.object({ eventId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => addOwnerLiveSpinTestEntry({ actorUserId: ctx.user.id, ...input })),
+    saveLiveSpinSettings: ownerProcedure.input(z.object({ eventId: z.string().min(4).max(64), spinEnabled: z.boolean(), minParticipantCount: z.number().int().min(100).max(100_000), winnerCount: z.number().int().min(1).max(10), consolationGiftCount: z.number().int().min(0).max(10) })).mutation(({ ctx, input }) => saveLiveSpinSettings({ actorUserId: ctx.user.id, ...input })),
+    saveLiveSpinConsolationGift: ownerProcedure.input(z.object({ eventId: z.string().min(4).max(64), slotNumber: z.number().int().min(1).max(10), nameKh: z.string().trim().min(1).max(180), valueLabel: z.string().trim().min(1).max(180), descriptionKh: z.string().trim().max(500).nullable().optional(), mediaUrl: z.string().trim().max(2048).nullable().optional(), isActive: z.boolean() })).mutation(({ ctx, input }) => saveLiveSpinConsolationGift({ actorUserId: ctx.user.id, ...input })),
+    announceLiveSpinEvent: ownerProcedure.input(z.object({ eventId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => announceLiveSpinEvent({ actorUserId: ctx.user.id, ...input })),
+    lockLiveSpinParticipants: ownerProcedure.input(z.object({ eventId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => lockLiveSpinParticipants({ actorUserId: ctx.user.id, ...input })),
+    startLiveSpinLobby: ownerProcedure.input(z.object({ eventId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => startLiveSpinLobby({ actorUserId: ctx.user.id, ...input })),
+    startLiveSpin: ownerProcedure.input(z.object({ eventId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => runLiveSpinSequence({ actorUserId: ctx.user.id, ...input })),
+    advanceLiveSpinPhase: ownerProcedure.input(z.object({ eventId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => advanceLiveSpinSequence({ actorUserId: ctx.user.id, ...input })),
+    revealLiveSpinPrize: ownerProcedure.input(z.object({ eventId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => revealLiveSpinPrize({ actorUserId: ctx.user.id, ...input })),
+    endLiveSpinEvent: ownerProcedure.input(z.object({ eventId: z.string().min(4).max(64), reason: z.string().trim().min(10).max(500) })).mutation(({ ctx, input }) => endLiveSpinEvent({ actorUserId: ctx.user.id, ...input })),
+    skipLiveSpinWeek: ownerProcedure.input(z.object({ eventId: z.string().min(4).max(64), reason: z.string().trim().min(10).max(500) })).mutation(({ ctx, input }) => skipLiveSpinWeek({ actorUserId: ctx.user.id, ...input })),
+    saveLiveSpinPrizeTier: ownerProcedure.input(z.object({ eventId: z.string().min(4).max(64), tierNumber: z.number().int().min(1).max(10), nameKh: z.string().trim().min(2).max(180), valueLabel: z.string().trim().min(1).max(180), descriptionKh: z.string().trim().max(500).nullable().optional(), mediaUrl: z.string().trim().max(2048).refine((value) => value.startsWith("/api/media/") || value.startsWith("/manus-storage/") || /^https:\/\//i.test(value), "Use a managed media URL or HTTPS image URL").nullable().optional(), isGrandPrize: z.boolean(), isActive: z.boolean() })).mutation(({ ctx, input }) => saveLiveSpinPrizeTier({ actorUserId: ctx.user.id, ...input })),
     paymentControl: ownerProcedure.query(() => db.getPaymentControl()),
+    paymentMethods: ownerProcedure.query(() => db.getPaymentMethods(true)),
+    savePaymentMethod: ownerProcedure.input(z.object({ id: z.string().trim().min(2).max(48), name: z.string().trim().min(2).max(120), descriptionKh: z.string().trim().min(2).max(240), iconUrl: z.string().trim().max(2048).refine((value) => value.startsWith("/api/media/") || value.startsWith("/manus-storage/") || /^https:\/\//i.test(value), "Use managed storage or an HTTPS icon URL").nullable().optional(), providerKey: z.enum(["bakong_khqr", "manual"]), isActive: z.boolean(), sortOrder: z.number().int().min(0).max(10_000) })).mutation(({ ctx, input }) => db.savePaymentMethod({ ...input, updatedByUserId: ctx.user.id })),
     providerCredentialStatus: ownerProcedure.query(async () => getProviderCredentialStatus()),
     providerCredentialHistory: ownerProcedure.query(() => getProviderCredentialHistory()),
     rotateProviderCredential: ownerProcedure.input(z.object({ provider: z.enum(["fazercards", "bakong"]), credential: z.string().trim().min(8).max(4096), confirmation: z.string().trim().max(40), reason: z.string().trim().min(10).max(240) })).mutation(async ({ ctx, input }) => {
@@ -169,15 +210,24 @@ export const appRouter = router({
       return { provider: input.provider, rolledBack: true, activeVersionId: result.activeVersionId };
     }),
     setPaymentControl: ownerProcedure.input(z.object({ enabled: z.boolean() })).mutation(({ ctx, input }) => db.setPaymentControl({ ...input, updatedByUserId: ctx.user.id })),
-    users: adminProcedure.query(() => db.getAdminUsers()),
+    users: ownerProcedure.query(() => db.getAdminUsers()),
     roleAudits: ownerProcedure.query(() => db.getAdminRoleAudits()),
     setUserRole: ownerProcedure.input(z.object({ targetUserId: z.number().int().positive(), nextRole: z.enum(["user", "admin"]), confirmationEmail: z.string().trim().email().max(320), reason: z.string().trim().min(10).max(500) })).mutation(({ ctx, input }) => db.setAdminUserRole({ actorUserId: ctx.user.id, ...input })),
-    content: adminProcedure.query(() => db.getSiteContent()),
-    saveContent: adminProcedure.input(z.object({ contentKey: z.string().trim().min(2).max(100), titleKh: z.string().trim().max(240).optional(), bodyKh: z.string().trim().max(5000).optional(), mediaUrl: z.string().trim().max(2048).refine((value) => value.startsWith("/manus-storage/") || /^https?:\/\//i.test(value), "Use a secure media URL").optional(), isActive: z.boolean() })).mutation(({ ctx, input }) => db.saveSiteContent({ updatedByUserId: ctx.user.id, ...input })),
-    packageArtwork: adminProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120).optional() }).optional()).query(({ input }) => db.getProviderPackageArtworkOverrides(input?.gameId)),
-    savePackageArtwork: adminProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120), offerId: z.string().trim().min(1).max(180), mediaUrl: z.string().trim().min(1).max(2048).refine((value) => value.startsWith("/manus-storage/") || /^https:\/\//i.test(value), "Use managed storage or an HTTPS artwork URL") })).mutation(({ ctx, input }) => db.saveProviderPackageArtworkOverride({ ...input, updatedByUserId: ctx.user.id })),
-    resetPackageArtwork: adminProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120), offerId: z.string().trim().min(1).max(180) })).mutation(({ ctx, input }) => db.resetProviderPackageArtworkOverride({ ...input, updatedByUserId: ctx.user.id })),
-    packageArtworkAudits: adminProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120).optional() }).optional()).query(({ input }) => db.getProviderPackageArtworkAudits(input?.gameId)),
+    grantUserAdminAccess: ownerProcedure.input(z.object({ targetUserId: z.number().int().positive(), permissions: z.array(z.enum(["dashboard", "orders", "catalog", "media", "support", "marketplace", "payments", "operations"])).min(1).max(8), confirmationEmail: z.string().trim().email().max(320), reason: z.string().trim().min(10).max(500) })).mutation(({ ctx, input }) => db.grantDelegatedAdminAccess({ actorUserId: ctx.user.id, ...input })),
+    myPermissions: protectedProcedure.query(async ({ ctx }) => ({ isOwner: isSingleAdminEmail(ctx.user.email), permissions: isSingleAdminEmail(ctx.user.email) ? db.getOwnerAdminPermissions() : ctx.user.role === "admin" ? await db.getDelegatedAdminPermissions(ctx.user.id) : [] })),
+    userPermissions: ownerProcedure.input(z.object({ targetUserId: z.number().int().positive() })).query(({ input }) => db.getDelegatedAdminPermissions(input.targetUserId)),
+    setUserPermissions: ownerProcedure.input(z.object({ targetUserId: z.number().int().positive(), permissions: z.array(z.enum(["dashboard", "orders", "catalog", "media", "support", "marketplace", "payments", "operations"])).max(8) })).mutation(({ ctx, input }) => db.setDelegatedAdminPermissions({ actorUserId: ctx.user.id, ...input })),
+    content: scopedAdminProcedure("media").query(() => db.getSiteContent()),
+    saveContent: scopedAdminProcedure("media").input(z.object({ contentKey: z.string().trim().min(2).max(100), titleKh: z.string().trim().max(240).optional(), bodyKh: z.string().trim().max(5000).optional(), mediaUrl: z.string().trim().max(2048).refine((value) => value.startsWith("/api/media/") || value.startsWith("/manus-storage/") || /^https?:\/\//i.test(value), "Use a secure media URL").optional(), isActive: z.boolean() })).mutation(({ ctx, input }) => db.saveSiteContent({ updatedByUserId: ctx.user.id, ...input })),
+    contactAdmins: scopedAdminProcedure("support").query(() => db.getContactAdmins(true)),
+    saveContactAdmin: scopedAdminProcedure("support").input(z.object({ id: z.string().trim().min(4).max(64), displayName: z.string().trim().min(2).max(120), telegramUsername: z.string().trim().regex(/^@?[a-zA-Z0-9_]{5,32}$/, "Telegram username must use letters, numbers, or underscores"), workingHoursStart: z.string().regex(/^(?:[01]\\d|2[0-3]):[0-5]\\d$/), workingHoursEnd: z.string().regex(/^(?:[01]\\d|2[0-3]):[0-5]\\d$/), replyTimeText: z.string().trim().min(2).max(160), photoUrl: z.string().trim().max(2048).refine((value) => value.startsWith("/api/media/") || value.startsWith("/manus-storage/") || /^https:\/\//i.test(value), "Use managed storage or an HTTPS photo URL").nullable().optional(), isVisible: z.boolean(), sortOrder: z.number().int().min(0).max(10_000) })).mutation(({ ctx, input }) => db.saveContactAdmin({ ...input, updatedByUserId: ctx.user.id })),
+    gameImages: scopedAdminProcedure("media").query(() => db.getProviderGameImageOverrides()),
+    saveGameImages: scopedAdminProcedure("media").input(z.object({ gameId: z.string().trim().min(1).max(120), logoUrl: z.string().trim().max(2048).refine((value) => value.startsWith("/api/media/") || value.startsWith("/manus-storage/") || /^https:\/\//i.test(value), "Use managed storage or an HTTPS logo URL").nullable().optional(), cardArtworkUrl: z.string().trim().max(2048).refine((value) => value.startsWith("/api/media/") || value.startsWith("/manus-storage/") || /^https:\/\//i.test(value), "Use managed storage or an HTTPS artwork URL").nullable().optional() })).mutation(({ ctx, input }) => db.saveProviderGameImageOverride({ ...input, updatedByUserId: ctx.user.id })),
+    resetGameImage: scopedAdminProcedure("media").input(z.object({ gameId: z.string().trim().min(1).max(120), slot: z.enum(["logo", "cardArtwork"]) })).mutation(({ input }) => db.resetProviderGameImageSlot(input)),
+    packageArtwork: scopedAdminProcedure("media").input(z.object({ gameId: z.string().trim().min(1).max(120).optional() }).optional()).query(({ input }) => db.getProviderPackageArtworkOverrides(input?.gameId)),
+    savePackageArtwork: scopedAdminProcedure("media").input(z.object({ gameId: z.string().trim().min(1).max(120), offerId: z.string().trim().min(1).max(180), mediaUrl: z.string().trim().min(1).max(2048).refine((value) => value.startsWith("/api/media/") || value.startsWith("/manus-storage/") || /^https:\/\//i.test(value), "Use managed storage or an HTTPS artwork URL") })).mutation(({ ctx, input }) => db.saveProviderPackageArtworkOverride({ ...input, updatedByUserId: ctx.user.id })),
+    resetPackageArtwork: scopedAdminProcedure("media").input(z.object({ gameId: z.string().trim().min(1).max(120), offerId: z.string().trim().min(1).max(180) })).mutation(({ ctx, input }) => db.resetProviderPackageArtworkOverride({ ...input, updatedByUserId: ctx.user.id })),
+    packageArtworkAudits: scopedAdminProcedure("media").input(z.object({ gameId: z.string().trim().min(1).max(120).optional() }).optional()).query(({ input }) => db.getProviderPackageArtworkAudits(input?.gameId)),
   }),
 });
 

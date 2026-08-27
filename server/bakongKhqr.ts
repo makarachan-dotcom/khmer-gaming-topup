@@ -119,12 +119,12 @@ export async function checkBakongKhqrPayment(input: { md5: string; expectedAmoun
   return { status: "paid" as const, transactionHash: payload.data.hash };
 }
 
-export async function registerBakongKhqrWorkerWatch(input: { md5: string; orderId: string; amount: string; currency: Currency }) {
+export async function registerBakongKhqrWorkerWatch(input: { md5: string; orderId: string; amount: string; currency: Currency; expiresAt: Date }) {
   const baseUrl = process.env.KHQR_WORKER_URL?.replace(/\/$/, "");
   const { apiKey } = getKhqrWorkerCredentials();
-  const callbackUrl = process.env.KHQR_WORKER_CALLBACK_URL || "https://www.zurs.me/api/webhooks/khqr-worker";
+  const callbackUrl = process.env.KHQR_WORKER_CALLBACK_URL || "https://www.zurs.me/api/webhooks/bakong";
   if (!baseUrl?.startsWith("https://") || !apiKey || !callbackUrl.startsWith("https://")) throw new Error("KHQR automation worker is not configured.");
-  const response = await fetch(`${baseUrl}/api/payments/watch`, { method: "POST", headers: { "Content-Type": "application/json", "X-API-Key": apiKey }, body: JSON.stringify({ ...input, callbackUrl }), signal: AbortSignal.timeout(10_000) });
+  const response = await fetch(`${baseUrl}/api/track-payment`, { method: "POST", headers: { "Content-Type": "application/json", "X-API-Key": apiKey }, body: JSON.stringify({ md5: input.md5, orderId: input.orderId, amount: input.amount, currency: input.currency, expiresAt: input.expiresAt.toISOString(), callbackUrl }), signal: AbortSignal.timeout(10_000) });
   if (!response.ok) throw new Error("KHQR automation worker rejected the payment watch request.");
   const result = await response.json() as { ok?: boolean };
   if (!result.ok) throw new Error("KHQR automation worker did not accept the payment watch request.");

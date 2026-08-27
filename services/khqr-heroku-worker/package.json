@@ -1,0 +1,21 @@
+{
+  "name": "zurs-khqr-payment-worker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Authenticated Bakong KHQR polling worker for ZURS payment sessions.",
+  "main": "server.js",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "axios": "^1.12.2",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^4.21.2",
+    "pg": "^8.13.3"
+  }
+}

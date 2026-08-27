@@ -13,6 +13,10 @@
       "destination": "/api/[...path]"
     },
     {
+      "source": "/manus-storage/:path*",
+      "destination": "/api/manus-storage/:path*"
+    },
+    {
       "source": "/",
       "destination": "/index.html"
     },

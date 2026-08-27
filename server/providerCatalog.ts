@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { createHash } from "node:crypto";
 import { resolveProviderCredential } from "./providerCredentialResolver";
 import { getAppwriteProviderAvailability, getAppwriteProviderCatalog, isAppwriteStoreConfigured, type AppwriteProviderCatalog, updateAppwriteProviderAvailability } from "./appwriteStore";
 
@@ -178,8 +179,13 @@ function providerFields(fields: z.infer<typeof fzrOffersSchema>["fields"]) {
   return fields.map((field) => ({ key: field.key, label: field.label, placeholder: field.placeholder, required: field.required ?? true, kind: /number|numeric|digit/i.test(field.type ?? "") ? "number" as const : "text" as const }));
 }
 
+export function providerPackageRecordId(categoryId: string, offerId: string) {
+  const source = `fzr_cards:${categoryId}:${offerId}`;
+  return `fzr-offer-${createHash("sha256").update(source).digest("hex").slice(0, 40)}`;
+}
+
 function providerPackages(categoryId: string, offers: z.infer<typeof fzrOffersSchema>["offers"]) {
-  return offers.filter((offer) => Boolean(offer.offer_id)).map((offer) => ({ id: `${categoryId}:${offer.offer_id}`, label: offer.name, amountLabel: offer.name, priceLabel: `$${Number(offer.price_usd).toFixed(2)}`, provider: "FZR Cards", paymentMethods: ["khqr", "bank"] as ("khqr" | "bank")[] }));
+  return offers.filter((offer) => Boolean(offer.offer_id)).map((offer) => ({ id: providerPackageRecordId(categoryId, offer.offer_id!), label: offer.name, amountLabel: offer.name, priceLabel: `$${Number(offer.price_usd).toFixed(2)}`, provider: "FZR Cards", paymentMethods: ["khqr", "bank"] as ("khqr" | "bank")[] }));
 }
 
 function providerGameRegion(name: string, note?: string) {
@@ -363,7 +369,14 @@ export async function fetchProviderGameDetails(gameId: string, options: { includ
   } catch { return { status: "error", game: null, packages: [] }; }
 }
 
-/** Admin-only callers use this to inspect authorized package UI without supplying a customer identity. */
+/** Public browsing exposes only package labels and prices from active provider catalog entries; it never accepts a customer identity or initiates an order. */
+export async function fetchPublicProviderPackagePreview(gameId: string): Promise<ProviderPackageResponse> {
+  const details = await fetchProviderGameDetails(gameId);
+  if (details.status !== "ready") return { status: details.status, packages: [] };
+  return { status: "ready", packages: details.packages };
+}
+
+/** Admin-only callers can additionally inspect authorized inactive package UI without supplying a customer identity. */
 export async function fetchProviderPreviewPackages(gameId: string): Promise<ProviderPackageResponse> {
   const details = await fetchProviderGameDetails(gameId, { includeInactive: true });
   if (details.status !== "ready") return { status: details.status, packages: [] };

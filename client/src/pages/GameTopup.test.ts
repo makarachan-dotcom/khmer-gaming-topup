@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 vi.mock("streamdown", () => ({ Streamdown: () => null }));
-import { canBrowseTopupPackages, canBrowseVerifiedPackages, gameIdFromTopupPath, gameThemedArtworkForPackage, gameTopupPath, groupProviderPackagesByMeaning, initialDiamondPackageLimit, partitionProviderPackagesForFullTicketEvent, readVerifiedPlayerEntries, requiresPlayerIdentityCheck, saveVerifiedPlayerEntry, sortProviderPackagesByPrice, usesLegacyMobileLegendsArtwork, usesMobileLegendsDiamondChestArtwork, visibleDiamondPackageItems } from "./GameTopup";
+import { canBrowseTopupPackages, canBrowseVerifiedPackages, gameIdFromTopupPath, gameThemedArtworkForPackage, gameTopupPath, groupProviderPackagesByMeaning, initialDiamondPackageLimit, partitionProviderPackagesForFullTicketEvent, readVerifiedPlayerEntries, requiresPlayerIdentityCheck, requiresVerifiedUsername, saveVerifiedPlayerEntry, sortProviderPackagesByPrice, usesLegacyMobileLegendsArtwork, usesMobileLegendsDiamondChestArtwork, visibleDiamondPackageItems } from "./GameTopup";
 
 describe("dedicated game top-up routes", () => {
   it("creates and reads an encoded provider game route", () => {
@@ -80,17 +80,26 @@ describe("dedicated game top-up routes", () => {
     expect(source).toContain("package-choice--mlbb-${mobileLegendsTone}");
   });
 
-  it("changes to the verified username bar as the fields leave the mobile viewport and restores ID editing safely", () => {
+  it("collapses to a verified username card and restores ID editing with an observer-driven title handoff", () => {
     const source = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
-    expect(source).toContain('window.matchMedia("(max-width: 767px)").matches');
-    expect(source).toContain("anchor.getBoundingClientRect().top <= 92");
-    expect(source).toContain('window.addEventListener("scroll", updateCompactState');
+    expect(source).toContain("identityCollapsed");
+    expect(source).toContain("IntersectionObserver");
+    expect(source).toContain("setPlayerTitle(entry?.isIntersecting ? null : identity.playerName)");
     expect(source).toContain('querySelector<HTMLInputElement>("input[required], input")');
-    expect(source).toContain("setCompact(false);");
-    expect(source).toContain("fields={providerFields ?? {}}");
+    expect(source).toContain("identity-flow--collapsed");
+    expect(source).toContain("anchorRef={verifiedCardRef}");
+    expect(source).not.toContain('window.addEventListener("scroll", updateCompactState');
   });
 
-  it("shows ten diamond packages first and reveals the provider-authorized remainder only after expansion", () => {
+  it("uses customer-friendly package copy without provider labels", () => {
+    const source = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
+    expect(source).toContain("ជ្រើសរើសកញ្ចប់ដែលត្រូវការសម្រាប់ហ្គេមនេះ។");
+    expect(source).toContain("កញ្ចប់ដែលមាន bonus ឬចំនួនបន្ថែម។");
+    expect(source).not.toContain("ពី provider ពេលនេះ");
+    expect(source).not.toContain("ដែល provider បាន");
+  });
+
+  it("shows ten diamond packages first and reveals the package remainder only after expansion", () => {
     const packages = Array.from({ length: 12 }, (_, index) => ({ id: `diamond-${index + 1}`, label: `${index + 1} Diamonds`, amountLabel: `${index + 1} Diamonds`, priceLabel: `$${index + 1}` }));
     expect(initialDiamondPackageLimit).toBe(10);
     expect(visibleDiamondPackageItems(packages, false).map((item) => item.id)).toEqual(packages.slice(0, 10).map((item) => item.id));
@@ -143,5 +152,29 @@ describe("dedicated game top-up routes", () => {
     expect(entries[0]?.fields).toEqual({ player_id: "596323155", server_id: "10085" });
     expect(JSON.stringify(entries)).not.toContain("playerName");
     expect(readVerifiedPlayerEntries("mobile_legends_global")).toHaveLength(1);
+  });
+
+  it("requires a verified username for the supported game families before payment preview", () => {
+    ["mobile_legends", "mobile_legends_global", "free_fire_my_sg", "pubg_mobile", "pubg_mobile_auto", "blood_strike", "honor_of_kings", "magic_chess_gogo_global"].forEach((gameId) => {
+      expect(requiresVerifiedUsername(gameId)).toBe(true);
+    });
+    expect(requiresVerifiedUsername("call_of_duty_mobile")).toBe(false);
+  });
+
+  it("keeps the selected package during the route handoff to checkout preview", () => {
+    const source = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
+    expect(source).toContain("Keep the selected package while navigating to /checkout/preview");
+    expect(source).toContain("useEffect(() => () => { setPlayerTitle(null); }, [setPlayerTitle]);");
+    expect(source).not.toContain("useEffect(() => () => { clearSelectedProduct(); setPlayerTitle(null); }");
+  });
+
+  it("places payment-method preselection after an accepted identity and before the package list without blocking public preview", () => {
+    const source = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
+    const preselectPosition = source.indexOf("{canBrowsePackages && !adminPreviewActive ? <PaymentMethodPreselect /> : null}");
+    const packagePosition = source.indexOf("<DiamondPackages packages={packages}");
+    expect(source).toContain('import { PaymentMethodPreselect } from "@/components/PaymentMethodGate"');
+    expect(preselectPosition).toBeGreaterThan(-1);
+    expect(packagePosition).toBeGreaterThan(preselectPosition);
+    expect(source).toContain("setSelectedPaymentMethodId(null)");
   });
 });

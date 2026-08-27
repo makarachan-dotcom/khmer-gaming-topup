@@ -1,4 +1,6 @@
 import crypto from "node:crypto";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parseKhqrWorkerCallback, verifyKhqrWorkerSignature } from "./khqrWorkerWebhook";
 
@@ -15,6 +17,18 @@ describe("KHQR worker webhook", () => {
     const signature = crypto.createHmac("sha256", secret).update(deferredBody).digest("hex");
     expect(verifyKhqrWorkerSignature(deferredBody, signature, secret)).toBe(true);
     expect(parseKhqrWorkerCallback(deferredBody)).toMatchObject({ event: "payment.verification_deferred", reason: "bakong_daily_request_limit" });
+  });
+  it("accepts a current signed expiry status without treating it as payment confirmation", () => {
+    const expiredBody = Buffer.from(JSON.stringify({ event: "payment.expired", md5: "c".repeat(32), orderId: "order-verified-789", amount: "100", currency: "KHR", timestamp: new Date().toISOString() }));
+    const signature = crypto.createHmac("sha256", secret).update(expiredBody).digest("hex");
+    expect(verifyKhqrWorkerSignature(expiredBody, signature, secret)).toBe(true);
+    expect(parseKhqrWorkerCallback(expiredBody)).toMatchObject({ event: "payment.expired" });
+  });
+  it("registers the Bakong callback alias through the same signed worker handler", () => {
+    const appSource = readFileSync(join(process.cwd(), "server/app.ts"), "utf8");
+    expect(appSource).toContain('app.post("/api/webhooks/khqr-worker", khqrWorkerWebhookBody, khqrWorkerWebhookHandler)');
+    expect(appSource).toContain('app.post("/api/webhooks/bakong", khqrWorkerWebhookBody, khqrWorkerWebhookHandler)');
+    expect(appSource).toContain("recordKhqrWorkerPaymentExpired");
   });
   it("rejects an invalid signature and a stale callback", () => {
     expect(verifyKhqrWorkerSignature(body, "0".repeat(64), secret)).toBe(false);

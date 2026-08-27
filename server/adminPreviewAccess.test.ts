@@ -1,5 +1,14 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { TrpcContext } from "./_core/context";
+
+vi.mock("./db", async () => {
+  const actual = await vi.importActual<typeof import("./db")>("./db");
+  return {
+    ...actual,
+    getDelegatedAdminPermissions: vi.fn(async () => ["catalog"]),
+  };
+});
+
 import { appRouter } from "./routers";
 
 const originalFzrEndpoint = process.env.FZR_CARDS_API_BASE_URL;
@@ -44,7 +53,7 @@ describe("admin preview access", () => {
     await expect(caller.admin.previewSmmServices()).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
-  it("allows an administrator to access preview routes without touching customer identity validation", async () => {
+  it("allows a delegated Admin with the Catalog scope to access preview routes without touching customer identity validation", async () => {
     delete process.env.FZR_CARDS_API_BASE_URL;
     delete process.env.FZR_CARDS_API_KEY;
     delete process.env.SMMGLOB_API_URL;

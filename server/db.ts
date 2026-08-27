@@ -3,11 +3,13 @@ import { createHash, randomBytes } from "node:crypto";
 import { drizzle } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
 import {
-  adminRoleAudits, customerWallets, gamePackages, gameProducts, gmailSenderConnections, InsertUser, marketplaceContacts, marketplaceDisclosureRequests, marketplaceEvidenceAccessLogs, marketplaceFavorites, marketplaceFraudReports, marketplaceListings, marketplaceVerificationEvidence, marketplaceVerifications, orders, orderStatusEvents, orderSupportTickets, paymentTransactions, providerPackageArtworkAudits, providerPackageArtworkOverrides, savedPlayerIds, siteContent, smmServices, smmTiers, User, users, walletTopups, welcomeEmailDeliveries,
+    adminRoleAudits, customerWallets, gamePackages, gameProducts, gmailSenderConnections, InsertUser, marketplaceContacts, marketplaceDisclosureRequests, marketplaceEvidenceAccessLogs, marketplaceFavorites, marketplaceFraudReports, marketplaceListings, marketplaceVerificationEvidence, marketplaceVerifications, orders, orderStatusEvents, orderSupportTickets, paymentTransactions, providerPackageArtworkAudits, providerPackageArtworkOverrides, savedPlayerIds, siteContent, smmServices, smmTiers, User,
+users, walletTopups, welcomeEmailDeliveries,
 } from "../drizzle/schema";
-import { createAppwriteMarketplaceListing, createAppwriteWalletTopup, deleteAppwriteMarketplaceListing, getAppwriteAdminRoleAudits, getAppwriteCustomerOrders, getAppwriteCustomerPaymentHistory, getAppwritePaymentControl, getAppwriteProviderCatalog, getAppwriteUserByEmail, getAppwriteUserByOpenId, getAppwriteWalletSummary, getAppwriteWalletTopup, isAppwriteStoreConfigured, listAppwriteMarketplaceListings, listAppwriteUsers, setAppwritePaymentControl, setAppwriteUserRole, syncAppwriteFzrCatalog, syncAppwriteSmmCatalog, updateAppwriteMarketplaceListing, updateAppwriteProviderOffer, updateAppwriteUserDisplayName, updateAppwriteWalletTopup, upsertAppwriteUser } from "./appwriteStore";
+import { createAppwriteMarketplaceListing, createAppwriteWalletTopup, deleteAppwriteMarketplaceListing, getAppwriteAdminPermissions, getAppwriteAdminRoleAudits, getAppwriteCustomerOrders, getAppwriteCustomerPaymentHistory, getAppwritePaymentControl, getAppwriteProviderCatalog, getAppwriteUserByEmail, getAppwriteUserByOpenId, getAppwriteWalletSummary, getAppwriteWalletTopup, isAppwriteStoreConfigured, listAppwriteMarketplaceListings, listAppwriteUsers, setAppwriteAdminPermissions, setAppwritePaymentControl, setAppwriteUserRole, syncAppwriteFzrCatalog, syncAppwriteSmmCatalog, updateAppwriteMarketplaceListing, updateAppwriteProviderOffer, updateAppwriteUserDisplayName, updateAppwriteWalletTopup, upsertAppwriteUser } from "./appwriteStore";
 import { buildOrderNumber, isSingleAdminEmail } from "./storefrontDomain";
 import { validateAdminRoleChange } from "./adminRoles";
+import { delegatedAdminPermissionKeys, normalizeDelegatedAdminPermissions, type DelegatedAdminPermission } from "./adminPermissions";
 import { buildEvidenceRetentionAuditReason, canApproveMarketplaceVerification, hasOnlyOwnedMarketplaceScreenshotKeys, type DisclosureRequestStatus, type FraudReportStatus } from "./marketplaceSafety";
 import { getPublicPaymentReadiness } from "./paymentReadiness";
 import { checkBakongKhqrPayment, createBakongKhqrPayment, registerBakongKhqrWorkerWatch } from "./bakongKhqr";
@@ -41,9 +43,13 @@ export async function upsertUser(user: InsertUser): Promise<User | undefined> {
     const email = user.email?.trim().toLowerCase() ?? null;
     values.email = email;
     updateSet.email = email;
-    const role = isSingleAdminEmail(email) ? "admin" : "user";
-    values.role = role;
-    updateSet.role = role;
+    // A sign-in refresh must never demote an Owner-approved delegated Admin.
+    // Only the designated owner is force-promoted; all other stored roles are
+    // preserved and can be changed exclusively through the owner-only role route.
+    if (isSingleAdminEmail(email)) {
+      values.role = "admin";
+      updateSet.role = "admin";
+    }
   }
   await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
   return undefined;
@@ -55,6 +61,32 @@ export async function getUserByOpenId(openId: string) {
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
   return normalizeOwnerRole(result[0]);
 }
+
+const delegatedAdminPermissionsContentKey = (userId: number) => `admin-permissions:${userId}`;
+
+export async function getDelegatedAdminPermissions(userId: number): Promise<DelegatedAdminPermission[]> {
+  const db = await getDb();
+  if (!db) return isAppwriteStoreConfigured() ? getAppwriteAdminPermissions(userId) : [];
+  const rows = await db.select({ bodyKh: siteContent.bodyKh }).from(siteContent).where(eq(siteContent.contentKey, delegatedAdminPermissionsContentKey(userId))).limit(1);
+  if (!rows[0]?.bodyKh) return [];
+  try { return normalizeDelegatedAdminPermissions(JSON.parse(rows[0].bodyKh)); } catch { return []; }
+}
+
+export async function setDelegatedAdminPermissions(input: { actorUserId: number; targetUserId: number; permissions: DelegatedAdminPermission[] }) {
+  const permissions = normalizeDelegatedAdminPermissions(input.permissions);
+  const db = await getDb();
+  if (!db) {
+    if (!isAppwriteStoreConfigured()) throw new Error("Delegated Admin permission storage is unavailable.");
+    return setAppwriteAdminPermissions({ userId: input.targetUserId, permissions, updatedByUserId: input.actorUserId });
+  }
+  const target = await db.select({ role: users.role }).from(users).where(eq(users.id, input.targetUserId)).limit(1);
+  if (!target[0] || target[0].role !== "admin") throw new Error("Only an existing delegated Admin can receive Admin permissions.");
+  const key = delegatedAdminPermissionsContentKey(input.targetUserId);
+  await db.insert(siteContent).values({ id: nanoid(), contentKey: key, titleKh: "Delegated Admin permissions", bodyKh: JSON.stringify(permissions), isActive: false, updatedByUserId: input.actorUserId }).onDuplicateKeyUpdate({ set: { bodyKh: JSON.stringify(permissions), isActive: false, updatedByUserId: input.actorUserId } });
+  return { permissions };
+}
+
+export function getOwnerAdminPermissions() { return [...delegatedAdminPermissionKeys]; }
 
 export async function getUserByEmail(email: string) {
   const db = await getDb();
@@ -161,7 +193,7 @@ export async function beginWalletTopup(input: { userId: number; amountKhr: strin
   if (!db) return walletTopupPayload(await createAppwriteWalletTopup(record));
   await db.insert(walletTopups).values(record);
   try {
-    await registerBakongKhqrWorkerWatch({ md5: generated.md5, orderId: `wallet:${record.id}`, amount: String(amount), currency: "KHR" });
+    await registerBakongKhqrWorkerWatch({ md5: generated.md5, orderId: `wallet:${record.id}`, amount: String(amount), currency: "KHR", expiresAt: generated.expiresAt });
   } catch (error) {
     await db.update(walletTopups).set({ status: "failed" }).where(and(eq(walletTopups.id, record.id), eq(walletTopups.status, "pending")));
     throw error;
@@ -354,6 +386,41 @@ export async function createTopupOrder(input: { userId: number; packageId: strin
   return { id, orderNumber, trackingCode, amount: subtotal.toFixed(2), status: "pending" as const };
 }
 
+const adminKhqrTestProduct = {
+  code: "admin-khqr-test-002",
+  name: "Admin KHQR Test Product",
+  amountUsd: "0.02",
+} as const;
+
+/** Creates a ledger-only test purchase. It is callable exclusively through ownerProcedure and is never sent to a top-up provider. */
+export async function createAdminKhqrTestOrder(input: { userId: number }) {
+  await requirePublicPaymentEnabled();
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const id = nanoid();
+  const orderNumber = buildOrderNumber();
+  const trackingCode = buildTrackingCode();
+  await db.insert(orders).values({
+    id,
+    orderNumber,
+    trackingCode,
+    userId: input.userId,
+    orderType: "topup",
+    status: "pending",
+    currency: "USD",
+    subtotal: adminKhqrTestProduct.amountUsd,
+    productName: adminKhqrTestProduct.name,
+    details: {
+      testPurchase: true,
+      testProductCode: adminKhqrTestProduct.code,
+      providerFulfillment: "not_applicable",
+      noProviderFulfillment: true,
+    },
+  });
+  await appendOrderStatusEvent({ orderId: id, eventType: "admin_test_order_created", status: "pending", actorType: "admin", messageKh: "បានបង្កើត Admin KHQR Test Product សម្រាប់សាកល្បងការទូទាត់។" });
+  return { id, orderNumber, trackingCode, amount: adminKhqrTestProduct.amountUsd, status: "pending" as const, productName: adminKhqrTestProduct.name };
+}
+
 export async function createSmmOrder(input: { userId: number; tierId: string; target: string }) {
   await requirePublicPaymentEnabled();
   const db = await getDb();
@@ -397,7 +464,7 @@ export async function beginStagedPayment(input: { orderId: string; userId: numbe
   const transaction = existing[0] && canReuse ? existing[0] : { id: nanoid(), orderId: input.orderId, provider: "bakong_khqr", providerRequestId: generated!.md5, status: "pending" as const, amount: order[0].subtotal, currency, checkoutUrl: generated!.deeplink ?? `/checkout/${input.orderId}`, callbackPayload: { bakongMd5: generated!.md5, merchantAccountId: generated!.merchantAccountId, qrImageDataUrl: generated!.qrImageDataUrl, deeplink: generated!.deeplink }, expiresAt: generated!.expiresAt };
   if (!canReuse) {
     await db.insert(paymentTransactions).values(transaction);
-    await registerBakongKhqrWorkerWatch({ md5: generated!.md5, orderId: input.orderId, amount: String(order[0].subtotal), currency });
+    await registerBakongKhqrWorkerWatch({ md5: generated!.md5, orderId: input.orderId, amount: String(order[0].subtotal), currency, expiresAt: generated!.expiresAt });
   }
   if (order[0].status !== "awaiting_payment") await appendOrderStatusEvent({ orderId: input.orderId, eventType: "payment_session_created", status: "awaiting_payment", actorType: "system", messageKh: statusMessageKh("awaiting_payment") });
   await db.update(orders).set({ status: "awaiting_payment" }).where(eq(orders.id, input.orderId));
@@ -454,6 +521,38 @@ export async function recordKhqrWorkerVerificationDeferred(input: { md5: string;
   return { recorded: true };
 }
 
+export async function recordKhqrWorkerPaymentExpired(input: { md5: string; orderId: string; amount: string | number; currency: "KHR" | "USD" }) {
+  const db = await getDb();
+  if (!db) throw new Error("Payment expiry status requires the primary ledger database.");
+  if (input.orderId.startsWith("wallet:")) {
+    const walletId = input.orderId.slice("wallet:".length);
+    const rows = await db.select().from(walletTopups).where(eq(walletTopups.id, walletId)).limit(1);
+    const wallet = rows[0];
+    const payload = wallet?.paymentPayload && typeof wallet.paymentPayload === "object" ? wallet.paymentPayload as Record<string, unknown> : {};
+    const storedMd5 = typeof payload.bakongMd5 === "string" ? payload.bakongMd5 : "";
+    if (!wallet || wallet.provider !== "bakong_khqr" || storedMd5 !== input.md5 || String(wallet.amountKhr) !== String(input.amount) || input.currency !== "KHR") throw new Error("Expiry callback did not match an eligible wallet session.");
+    if (wallet.status === "expired") return { idempotent: true };
+    if (wallet.status !== "pending") throw new Error("Expiry callback did not match a pending wallet session.");
+    await db.update(walletTopups).set({ status: "expired" }).where(and(eq(walletTopups.id, wallet.id), eq(walletTopups.status, "pending")));
+    return { idempotent: false };
+  }
+  const match = await db.select({ payment: paymentTransactions, order: orders }).from(paymentTransactions).innerJoin(orders, eq(paymentTransactions.orderId, orders.id)).where(and(eq(paymentTransactions.provider, "bakong_khqr"), eq(paymentTransactions.providerRequestId, input.md5), eq(paymentTransactions.orderId, input.orderId))).limit(1);
+  const record = match[0];
+  if (!record || record.payment.provider !== "bakong_khqr" || record.payment.providerRequestId !== input.md5 || String(record.payment.amount) !== String(input.amount) || record.payment.currency !== input.currency) throw new Error("Expiry callback did not match an eligible checkout payment session.");
+  if (record.payment.status === "expired" && record.order.status === "expired") return { idempotent: true };
+  if (record.payment.status !== "pending" || record.order.status !== "awaiting_payment") throw new Error("Expiry callback did not match a pending checkout payment session.");
+  let transitioned = false;
+  await db.transaction(async (tx) => {
+    const transition = await tx.update(paymentTransactions).set({ status: "expired" }).where(and(eq(paymentTransactions.id, record.payment.id), eq(paymentTransactions.status, "pending")));
+    const affectedRows = Array.isArray(transition) ? Number((transition[0] as { affectedRows?: number } | undefined)?.affectedRows ?? 0) : 0;
+    if (affectedRows <= 0) return;
+    transitioned = true;
+    await tx.update(orders).set({ status: "expired" }).where(and(eq(orders.id, record.order.id), eq(orders.status, "awaiting_payment")));
+    await tx.insert(orderStatusEvents).values({ id: nanoid(), orderId: record.order.id, eventType: "payment_expired", status: "expired", actorType: "system", messageKh: statusMessageKh("expired"), providerReference: input.md5 });
+  });
+  return { idempotent: !transitioned };
+}
+
 export async function reconcileKhqrWorkerPayment(input: { md5: string; orderId: string; amount: string | number; currency: "KHR" | "USD" }) {
   const db = await getDb();
   if (!db) throw new Error("Payment reconciliation requires the primary ledger database.");
@@ -506,9 +605,12 @@ export async function reconcileKhqrWorkerPayment(input: { md5: string; orderId: 
     await db.update(paymentTransactions).set({ callbackPayload: { ...existingPayload, lastWorkerVerificationAt: new Date().toISOString(), lastWorkerVerificationMd5: input.md5, lastWorkerVerificationStatus: verification.status, lastWorkerVerificationError: verification.reason } }).where(and(eq(paymentTransactions.id, record.payment.id), eq(paymentTransactions.status, "pending")));
     throw new Error("Bakong did not confirm the stored checkout payment session.");
   }
+  const details = record.order.details && typeof record.order.details === "object" ? record.order.details as Record<string, unknown> : {};
+  const isAdminTestPurchase = details.testPurchase === true && details.testProductCode === adminKhqrTestProduct.code && details.noProviderFulfillment === true;
+  const completedStatus = isAdminTestPurchase ? "delivered" as const : "paid" as const;
   await db.update(paymentTransactions).set({ status: "paid", providerTransactionId: verification.transactionHash, paidAt: new Date(), callbackPayload: { ...existingPayload, workerVerifiedAt: new Date().toISOString(), workerMd5: input.md5, transactionHash: verification.transactionHash } }).where(eq(paymentTransactions.id, record.payment.id));
-  await db.update(orders).set({ status: "paid" }).where(eq(orders.id, record.order.id));
-  await appendOrderStatusEvent({ orderId: record.order.id, eventType: "payment_confirmed", status: "paid", actorType: "system", messageKh: statusMessageKh("paid"), providerReference: input.md5 });
+  await db.update(orders).set({ status: completedStatus }).where(eq(orders.id, record.order.id));
+  await appendOrderStatusEvent({ orderId: record.order.id, eventType: isAdminTestPurchase ? "admin_test_purchase_completed" : "payment_confirmed", status: completedStatus, actorType: "system", messageKh: isAdminTestPurchase ? "ការទូទាត់ Admin KHQR Test Product បានជោគជ័យ។ មិនមាន top-up ពិតត្រូវបានបញ្ជូនទៅ provider ទេ។" : statusMessageKh("paid"), providerReference: input.md5 });
   return { idempotent: false };
 }
 
@@ -956,6 +1058,27 @@ export async function setAdminUserRole(input: { actorUserId: number; targetUserI
   return { success: true };
 }
 
+export async function grantDelegatedAdminAccess(input: { actorUserId: number; targetUserId: number; permissions: DelegatedAdminPermission[]; confirmationEmail: string; reason: string }) {
+  const permissions = normalizeDelegatedAdminPermissions(input.permissions);
+  if (!permissions.length) throw new Error("Select at least one Admin section before granting access.");
+  const db = await getDb();
+  if (!db) {
+    if (!isAppwriteStoreConfigured()) throw new Error("Role management is unavailable until the administrator storage is connected.");
+    await setAppwriteUserRole({ ...input, nextRole: "admin" });
+    return setAppwriteAdminPermissions({ userId: input.targetUserId, permissions, updatedByUserId: input.actorUserId });
+  }
+  const target = await db.select().from(users).where(eq(users.id, input.targetUserId)).limit(1);
+  if (!target[0]) throw new Error("The target account was not found.");
+  validateAdminRoleChange({ targetEmail: target[0].email, previousRole: target[0].role, nextRole: "admin", confirmationEmail: input.confirmationEmail, reason: input.reason });
+  const key = delegatedAdminPermissionsContentKey(input.targetUserId);
+  await db.transaction(async (tx) => {
+    await tx.update(users).set({ role: "admin" }).where(eq(users.id, input.targetUserId));
+    await tx.insert(siteContent).values({ id: nanoid(), contentKey: key, titleKh: "Delegated Admin permissions", bodyKh: JSON.stringify(permissions), isActive: false, updatedByUserId: input.actorUserId }).onDuplicateKeyUpdate({ set: { bodyKh: JSON.stringify(permissions), isActive: false, updatedByUserId: input.actorUserId } });
+    await tx.insert(adminRoleAudits).values({ id: nanoid(), actorUserId: input.actorUserId, targetUserId: input.targetUserId, previousRole: target[0].role, nextRole: "admin", reason: input.reason.trim() });
+  });
+  return { permissions };
+}
+
 export async function getAdminRoleAudits() {
   const db = await getDb();
   if (!db) return isAppwriteStoreConfigured() ? getAppwriteAdminRoleAudits() : [];
@@ -970,6 +1093,77 @@ export async function getSiteContent() {
 }
 
 const paymentControlContentKey = "system-payment-control";
+const paymentMethodContentPrefix = "payment-method:";
+
+type PaymentMethodConfig = {
+  id: string;
+  name: string;
+  descriptionKh: string;
+  iconUrl: string | null;
+  providerKey: "bakong_khqr" | "manual";
+  isActive: boolean;
+  sortOrder: number;
+  updatedAt: Date;
+};
+
+const paymentMethodSeeds: Array<Omit<PaymentMethodConfig, "updatedAt">> = [
+  { id: "khqr", name: "KHQR", descriptionKh: "ទូទាត់ដោយស្កេនតាមកម្មវិធីធនាគារ ឬ Bakong ដែលគាំទ្រ", iconUrl: null, providerKey: "bakong_khqr", isActive: true, sortOrder: 10 },
+];
+
+function paymentMethodContentKey(id: string) { return `${paymentMethodContentPrefix}${id}`; }
+
+function paymentMethodFromContent(row: typeof siteContent.$inferSelect): PaymentMethodConfig | null {
+  if (!row.contentKey.startsWith(paymentMethodContentPrefix)) return null;
+  const id = row.contentKey.slice(paymentMethodContentPrefix.length);
+  const seed = paymentMethodSeeds.find((method) => method.id === id);
+  const data = parseJsonRecord(row.bodyKh);
+  const providerKey = data.providerKey === "bakong_khqr" ? "bakong_khqr" : "manual";
+  return {
+    id,
+    name: row.titleKh ?? seed?.name ?? id,
+    descriptionKh: typeof data.descriptionKh === "string" ? data.descriptionKh : seed?.descriptionKh ?? "",
+    iconUrl: row.mediaUrl ?? seed?.iconUrl ?? null,
+    providerKey,
+    isActive: row.isActive,
+    sortOrder: typeof data.sortOrder === "number" ? data.sortOrder : seed?.sortOrder ?? 999,
+    updatedAt: row.updatedAt,
+  };
+}
+
+async function ensurePaymentMethodSeeds() {
+  const db = await getDb();
+  if (!db) return;
+  const rows = await db.select({ contentKey: siteContent.contentKey }).from(siteContent);
+  const keys = new Set(rows.map((row) => row.contentKey));
+  for (const method of paymentMethodSeeds) {
+    const contentKey = paymentMethodContentKey(method.id);
+    if (keys.has(contentKey)) continue;
+    await db.insert(siteContent).values({ id: nanoid(), contentKey, titleKh: method.name, bodyKh: JSON.stringify({ descriptionKh: method.descriptionKh, providerKey: method.providerKey, sortOrder: method.sortOrder }), mediaUrl: method.iconUrl, isActive: method.isActive, updatedByUserId: null });
+  }
+}
+
+export async function getPaymentMethods(includeHidden = false) {
+  const db = await getDb();
+  if (!db) return includeHidden ? paymentMethodSeeds.map((method) => ({ ...method, updatedAt: new Date(0) })) : paymentMethodSeeds.filter((method) => method.isActive).map((method) => ({ ...method, updatedAt: new Date(0) }));
+  await ensurePaymentMethodSeeds();
+  const methods = (await db.select().from(siteContent)).map(paymentMethodFromContent).filter((method): method is PaymentMethodConfig => Boolean(method));
+  return methods.filter((method) => includeHidden || method.isActive).sort((left, right) => left.sortOrder - right.sortOrder || left.name.localeCompare(right.name));
+}
+
+export async function savePaymentMethod(input: { id: string; name: string; descriptionKh: string; iconUrl?: string | null; providerKey: "bakong_khqr" | "manual"; isActive: boolean; sortOrder: number; updatedByUserId: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Payment-method storage is unavailable.");
+  const id = input.id.trim().toLowerCase();
+  if (!/^[a-z][a-z0-9_-]{1,47}$/.test(id)) throw new Error("Payment method ID must use lowercase letters, numbers, dashes, or underscores.");
+  const iconUrl = input.iconUrl?.trim() || null;
+  if (iconUrl && !isSafeArtworkMediaUrl(iconUrl)) throw new Error("Payment method icon must use managed storage or HTTPS.");
+  const contentKey = paymentMethodContentKey(id);
+  const existing = await db.select({ id: siteContent.id }).from(siteContent).where(eq(siteContent.contentKey, contentKey)).limit(1);
+  const values = { titleKh: input.name.trim(), bodyKh: JSON.stringify({ descriptionKh: input.descriptionKh.trim(), providerKey: input.providerKey, sortOrder: input.sortOrder }), mediaUrl: iconUrl, isActive: input.isActive, updatedByUserId: input.updatedByUserId };
+  if (existing[0]) await db.update(siteContent).set(values).where(eq(siteContent.id, existing[0].id));
+  else await db.insert(siteContent).values({ id: nanoid(), contentKey, ...values });
+  return { success: true };
+}
 
 export async function getPaymentControl() {
   const db = await getDb();
@@ -1013,11 +1207,12 @@ export async function saveSiteContent(input: { contentKey: string; titleKh?: str
 }
 
 function isSafeArtworkMediaUrl(mediaUrl: string) {
-  if (mediaUrl.startsWith("/manus-storage/")) return true;
+  if (mediaUrl.startsWith("/api/media/") || mediaUrl.startsWith("/manus-storage/")) return true;
   try { return new URL(mediaUrl).protocol === "https:"; } catch { return false; }
 }
 
 function artworkStorageKey(mediaUrl: string) {
+  if (mediaUrl.startsWith("/api/media/")) return mediaUrl.slice("/api/media/".length);
   return mediaUrl.startsWith("/manus-storage/") ? mediaUrl.slice("/manus-storage/".length) : null;
 }
 
@@ -1063,4 +1258,133 @@ export async function getProviderPackageArtworkAudits(gameId?: string) {
   const query = db.select().from(providerPackageArtworkAudits).orderBy(desc(providerPackageArtworkAudits.createdAt)).limit(100);
   const rows = gameId ? await query.where(eq(providerPackageArtworkAudits.gameId, gameId.trim())) : await query;
   return rows.map((row) => ({ gameId: row.gameId, offerId: row.offerId, action: row.action, previousMediaUrl: row.previousMediaUrl, nextMediaUrl: row.nextMediaUrl, actorUserId: row.actorUserId, createdAt: row.createdAt }));
+}
+
+const contactAdminContentPrefix = "support-contact-admin:";
+const providerGameImageContentPrefix = "provider-game-image:";
+
+type ContactAdminProfile = {
+  id: string;
+  displayName: string;
+  telegramUsername: string;
+  workingHoursStart: string;
+  workingHoursEnd: string;
+  replyTimeText: string;
+  photoUrl: string | null;
+  isVisible: boolean;
+  sortOrder: number;
+  updatedAt: Date;
+};
+
+const contactAdminSeeds: Array<Omit<ContactAdminProfile, "updatedAt">> = [
+  { id: "admin-makara", displayName: "Admin Makara", telegramUsername: "zurs_makara", workingHoursStart: "08:00", workingHoursEnd: "22:00", replyTimeText: "~5 នាទី", photoUrl: null, isVisible: true, sortOrder: 10 },
+  { id: "admin-lymeng", displayName: "Admin Lymeng", telegramUsername: "zurs_lymeng", workingHoursStart: "08:00", workingHoursEnd: "22:00", replyTimeText: "~10 នាទី", photoUrl: null, isVisible: true, sortOrder: 20 },
+];
+
+function contactAdminContentKey(id: string) { return `${contactAdminContentPrefix}${id}`; }
+function providerGameImageContentKey(gameId: string) { return `${providerGameImageContentPrefix}${gameId}`; }
+
+function parseJsonRecord(value: string | null) {
+  if (!value) return {} as Record<string, unknown>;
+  try { const parsed = JSON.parse(value); return parsed && typeof parsed === "object" ? parsed as Record<string, unknown> : {}; } catch { return {}; }
+}
+
+function contactAdminFromContent(row: typeof siteContent.$inferSelect): ContactAdminProfile | null {
+  if (!row.contentKey.startsWith(contactAdminContentPrefix)) return null;
+  const id = row.contentKey.slice(contactAdminContentPrefix.length);
+  const seed = contactAdminSeeds.find((admin) => admin.id === id);
+  const data = parseJsonRecord(row.bodyKh);
+  return {
+    id,
+    displayName: typeof data.displayName === "string" ? data.displayName : row.titleKh ?? seed?.displayName ?? "Admin",
+    telegramUsername: typeof data.telegramUsername === "string" ? data.telegramUsername : seed?.telegramUsername ?? "",
+    workingHoursStart: typeof data.workingHoursStart === "string" ? data.workingHoursStart : seed?.workingHoursStart ?? "08:00",
+    workingHoursEnd: typeof data.workingHoursEnd === "string" ? data.workingHoursEnd : seed?.workingHoursEnd ?? "22:00",
+    replyTimeText: typeof data.replyTimeText === "string" ? data.replyTimeText : seed?.replyTimeText ?? "~5 នាទី",
+    photoUrl: row.mediaUrl ?? null,
+    isVisible: row.isActive,
+    sortOrder: typeof data.sortOrder === "number" ? data.sortOrder : seed?.sortOrder ?? 999,
+    updatedAt: row.updatedAt,
+  };
+}
+
+async function ensureContactAdminSeeds() {
+  const db = await getDb();
+  if (!db) return;
+  const rows = await db.select().from(siteContent);
+  const keys = new Set(rows.map((row) => row.contentKey));
+  for (const admin of contactAdminSeeds) {
+    const contentKey = contactAdminContentKey(admin.id);
+    if (keys.has(contentKey)) continue;
+    await db.insert(siteContent).values({ id: nanoid(), contentKey, titleKh: admin.displayName, bodyKh: JSON.stringify({ displayName: admin.displayName, telegramUsername: admin.telegramUsername, workingHoursStart: admin.workingHoursStart, workingHoursEnd: admin.workingHoursEnd, replyTimeText: admin.replyTimeText, sortOrder: admin.sortOrder }), mediaUrl: null, isActive: admin.isVisible, updatedByUserId: null });
+  }
+}
+
+export async function getContactAdmins(includeHidden = false) {
+  const db = await getDb();
+  if (!db) return contactAdminSeeds.map((admin) => ({ ...admin, updatedAt: new Date(0) }));
+  await ensureContactAdminSeeds();
+  const admins = (await db.select().from(siteContent)).map(contactAdminFromContent).filter((admin): admin is ContactAdminProfile => Boolean(admin));
+  return admins.filter((admin) => includeHidden || admin.isVisible).sort((a, b) => a.sortOrder - b.sortOrder || a.displayName.localeCompare(b.displayName));
+}
+
+export async function saveContactAdmin(input: { id: string; displayName: string; telegramUsername: string; workingHoursStart: string; workingHoursEnd: string; replyTimeText: string; photoUrl?: string | null; isVisible: boolean; sortOrder: number; updatedByUserId: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Contact-admin storage is unavailable");
+  await ensureContactAdminSeeds();
+  const id = input.id.trim();
+  if (!contactAdminSeeds.some((admin) => admin.id === id)) throw new Error("Contact admin not found");
+  const photoUrl = input.photoUrl?.trim() || null;
+  if (photoUrl && !isSafeArtworkMediaUrl(photoUrl)) throw new Error("Photo URL must use managed storage or HTTPS");
+  const contentKey = contactAdminContentKey(id);
+  const existing = await db.select({ id: siteContent.id }).from(siteContent).where(eq(siteContent.contentKey, contentKey)).limit(1);
+  const values = { titleKh: input.displayName.trim(), bodyKh: JSON.stringify({ displayName: input.displayName.trim(), telegramUsername: input.telegramUsername.replace(/^@+/, "").trim(), workingHoursStart: input.workingHoursStart.trim(), workingHoursEnd: input.workingHoursEnd.trim(), replyTimeText: input.replyTimeText.trim(), sortOrder: input.sortOrder }), mediaUrl: photoUrl, isActive: input.isVisible, updatedByUserId: input.updatedByUserId };
+  if (existing[0]) await db.update(siteContent).set(values).where(eq(siteContent.id, existing[0].id));
+  else await db.insert(siteContent).values({ id: nanoid(), contentKey, ...values });
+  return { success: true };
+}
+
+type ProviderGameImageOverride = { gameId: string; logoUrl: string | null; cardArtworkUrl: string | null; updatedAt: Date };
+
+function providerGameImageFromContent(row: typeof siteContent.$inferSelect): ProviderGameImageOverride | null {
+  if (!row.contentKey.startsWith(providerGameImageContentPrefix)) return null;
+  const data = parseJsonRecord(row.bodyKh);
+  return { gameId: row.contentKey.slice(providerGameImageContentPrefix.length), logoUrl: typeof data.logoUrl === "string" ? data.logoUrl : null, cardArtworkUrl: typeof data.cardArtworkUrl === "string" ? data.cardArtworkUrl : null, updatedAt: row.updatedAt };
+}
+
+export async function getProviderGameImageOverrides() {
+  const db = await getDb();
+  if (!db) return [];
+  return (await db.select().from(siteContent)).map(providerGameImageFromContent).filter((item): item is ProviderGameImageOverride => Boolean(item)).sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+}
+
+export async function saveProviderGameImageOverride(input: { gameId: string; logoUrl?: string | null; cardArtworkUrl?: string | null; updatedByUserId: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Game-image override storage is unavailable");
+  const gameId = input.gameId.trim();
+  const logoUrl = input.logoUrl?.trim() || null;
+  const cardArtworkUrl = input.cardArtworkUrl?.trim() || null;
+  if (logoUrl && !isSafeArtworkMediaUrl(logoUrl)) throw new Error("Logo URL must use managed storage or HTTPS");
+  if (cardArtworkUrl && !isSafeArtworkMediaUrl(cardArtworkUrl)) throw new Error("Artwork URL must use managed storage or HTTPS");
+  const contentKey = providerGameImageContentKey(gameId);
+  const existing = await db.select({ id: siteContent.id }).from(siteContent).where(eq(siteContent.contentKey, contentKey)).limit(1);
+  const values = { titleKh: `Game image override · ${gameId}`, bodyKh: JSON.stringify({ logoUrl, cardArtworkUrl }), mediaUrl: cardArtworkUrl, isActive: true, updatedByUserId: input.updatedByUserId };
+  if (existing[0]) await db.update(siteContent).set(values).where(eq(siteContent.id, existing[0].id));
+  else await db.insert(siteContent).values({ id: nanoid(), contentKey, ...values });
+  return { success: true };
+}
+
+export async function resetProviderGameImageSlot(input: { gameId: string; slot: "logo" | "cardArtwork" }) {
+  const db = await getDb();
+  if (!db) throw new Error("Game-image override storage is unavailable");
+  const gameId = input.gameId.trim();
+  const contentKey = providerGameImageContentKey(gameId);
+  const current = await db.select().from(siteContent).where(eq(siteContent.contentKey, contentKey)).limit(1);
+  if (!current[0]) return { success: true, reset: false };
+  const data = parseJsonRecord(current[0].bodyKh);
+  const logoUrl = input.slot === "logo" ? null : typeof data.logoUrl === "string" ? data.logoUrl : null;
+  const cardArtworkUrl = input.slot === "cardArtwork" ? null : typeof data.cardArtworkUrl === "string" ? data.cardArtworkUrl : null;
+  if (!logoUrl && !cardArtworkUrl) await db.delete(siteContent).where(eq(siteContent.id, current[0].id));
+  else await db.update(siteContent).set({ bodyKh: JSON.stringify({ logoUrl, cardArtworkUrl }), mediaUrl: cardArtworkUrl }).where(eq(siteContent.id, current[0].id));
+  return { success: true, reset: true };
 }

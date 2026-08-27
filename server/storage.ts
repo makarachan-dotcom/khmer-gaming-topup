@@ -30,6 +30,10 @@ function normalizeKey(relKey: string): string {
   return relKey.replace(/^\/+/, "");
 }
 
+function publicMediaUrl(relKey: string): string {
+  return `/api/media/${normalizeKey(relKey)}`;
+}
+
 function appendHashSuffix(relKey: string): string {
   const hash = crypto.randomUUID().replace(/-/g, "").slice(0, 8);
   const lastDot = relKey.lastIndexOf(".");
@@ -111,7 +115,7 @@ async function appwriteStoragePut(
   }
 
   const key = appwriteMediaKey(relKey, fileId);
-  return { key, url: `/manus-storage/${key}` };
+  return { key, url: publicMediaUrl(key) };
 }
 
 async function forgeStoragePut(
@@ -134,7 +138,7 @@ async function forgeStoragePut(
   const blob = typeof data === "string" ? new Blob([data], { type: contentType }) : new Blob([data as any], { type: contentType });
   const uploadResp = await fetch(s3Url, { method: "PUT", headers: { "Content-Type": contentType }, body: blob });
   if (!uploadResp.ok) throw new Error(`Storage upload to S3 failed (${uploadResp.status})`);
-  return { key, url: `/manus-storage/${key}` };
+  return { key, url: publicMediaUrl(key) };
 }
 
 export async function storagePut(
@@ -148,12 +152,12 @@ export async function storagePut(
 
 export async function storageGet(relKey: string): Promise<{ key: string; url: string }> {
   const key = normalizeKey(relKey);
-  return { key, url: `/manus-storage/${key}` };
+  return { key, url: publicMediaUrl(key) };
 }
 
 export async function storageGetSignedUrl(relKey: string): Promise<string> {
   const key = normalizeKey(relKey);
-  if (isAppwriteMediaKey(key)) return `/manus-storage/${key}`;
+  if (isAppwriteMediaKey(key)) return publicMediaUrl(key);
 
   const forge = getForgeConfig();
   if (!forge) throw new Error("Storage is unavailable: configure Forge storage or server-side Appwrite credentials");

@@ -6,7 +6,7 @@ describe("VerifiedAccountBar", () => {
   it("keeps identifiers masked and retains the immediate edit-ID action", () => {
     const source = readFileSync(join(process.cwd(), "client/src/components/VerifiedAccountBar.tsx"), "utf8");
     expect(source).toContain("•••${value.slice(-4)}");
-    expect(source).toContain("កែ ID");
-    expect(source).toContain("fixed left-1/2");
+    expect(source).toContain("ប្ដូរ ID");
+    expect(source).toContain("identity-flow-card");
   });
 });

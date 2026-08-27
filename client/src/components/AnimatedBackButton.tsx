@@ -62,7 +62,7 @@ export function AnimatedBackButton({ href, children, className = "" }: { href: s
     };
   }, [href, isLeaving, navigate, reduceMotion]);
 
-  return <button type="button" onClick={() => !isLeaving && setIsLeaving(true)} aria-busy={isLeaving} className={`animated-back-button inline-flex items-center gap-2 ${className}`}>
+  return <button type="button" onClick={() => !isLeaving && setIsLeaving(true)} aria-busy={isLeaving} className={`animated-back-button inline-flex items-center gap-2 ${isLeaving ? "animated-back-button--leaving" : ""} ${className}`}>
     <span aria-hidden="true" className="relative grid h-4 w-4 place-items-center">
       <ArrowLeft className={`h-4 w-4 transition-opacity duration-150 ${isLeaving && !reduceMotion ? "opacity-0" : "opacity-100"}`} />
       {!reduceMotion ? <span ref={hostRef} className={`absolute inset-0 ${isLeaving ? "opacity-100" : "pointer-events-none opacity-0"}`} /> : null}

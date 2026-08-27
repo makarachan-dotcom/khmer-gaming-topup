@@ -32,14 +32,14 @@ describe("provider package presentation", () => {
     expect(cambodiaSupportMarker("Arena of Valor", "Indonesia")).toEqual({ flag: "🇰🇭", label: "Cambodia · Indonesia" });
   });
 
-  it("orders Cambodia games before Global and other provider regions", () => {
+  it("places featured games before the remaining Cambodia/global fallback order", () => {
     expect(
       orderProviderGames([
         { id: "other", name: "Arena of Valor", region: "Indonesia" },
         { id: "global", name: "Mobile Legends", region: "Global" },
         { id: "kh", name: "EAFC Mobile", region: "Cambodia" },
       ]).map(game => game.id)
-    ).toEqual(["kh", "global", "other"]);
+    ).toEqual(["global", "kh", "other"]);
   });
 
   it("filters the customer catalog by query and supported region view", () => {
