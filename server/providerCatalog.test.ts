@@ -457,7 +457,7 @@ describe("provider catalog", () => {
     expect(calls).toHaveLength(2);
     expect(String(calls[0]?.[0])).toContain("/nickname/ml?");
     expect(String(calls[1]?.[0])).toBe("https://bridge.example.test/api/check-player");
-    expect(calls[1]?.[1]).toMatchObject({ method: "POST", headers: { "X-Bridge-Key": "bridge-secret-for-test-only" } });
+    expect(calls[1]?.[1]).toMatchObject({ method: "POST", headers: { "x-bridge-key": "bridge-secret-for-test-only" } });
   });
 
   (originalHerokuBridgeApiKey ? it : it.skip)("uses the configured server-only bridge secret without returning it to the caller", async () => {
@@ -472,7 +472,7 @@ describe("provider catalog", () => {
     const bridgeOptions = (fetch as ReturnType<typeof vi.fn>).mock.calls[1]?.[1] as RequestInit;
 
     expect(result).toMatchObject({ status: "verified", playerName: "Verified Bridge Player" });
-    expect(bridgeOptions.headers).toMatchObject({ "X-Bridge-Key": originalHerokuBridgeApiKey });
+    expect(bridgeOptions.headers).toMatchObject({ "x-bridge-key": originalHerokuBridgeApiKey });
     expect(JSON.stringify(result)).not.toContain(originalHerokuBridgeApiKey ?? "");
   });
 

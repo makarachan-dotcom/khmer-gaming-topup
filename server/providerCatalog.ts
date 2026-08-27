@@ -577,9 +577,9 @@ async function validateWithAuthorizedPlayerBridge(input: ProviderPackageRequest)
     const body = { userId: identityFields.playerId, game: game.bridgeGame, ...(identityFields.serverId ? { zoneId: identityFields.serverId } : {}) };
     const response = await fetch(bridge.url, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-Bridge-Key": bridge.bridgeKey },
+      headers: { "Content-Type": "application/json", "x-bridge-key": bridge.bridgeKey },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(8_000),
+      signal: AbortSignal.timeout(25_000),
     });
     const payload = await response.json().catch(() => null);
     const success = bridgePlayerNameSchema.safeParse(payload);
