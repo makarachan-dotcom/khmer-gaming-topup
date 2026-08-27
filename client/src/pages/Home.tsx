@@ -20,7 +20,6 @@ import {
   Image as ImageIcon,
   Info,
   Search,
-  Sparkles,
   Video,
   X,
 } from "lucide-react";
@@ -39,7 +38,6 @@ export default function Home() {
     <StorefrontLayout>
       <main>
         <HomeBanner />
-        <LiveSpinPromo />
         <HomepageMedia />
         <HomeTopupExperience />
       </main>
@@ -88,13 +86,6 @@ function HomeBanner() {
       </div>
     </section>
   );
-}
-
-function LiveSpinPromo() {
-  const liveSpin = trpc.liveSpin.state.useQuery(undefined, { refetchInterval: 60_000 });
-  const event = liveSpin.data?.event;
-  const active = event && !["ended", "skipped"].includes(event.status);
-  return <section className="container mt-5 sm:mt-7"><article className="relative overflow-hidden rounded-[1.5rem] border border-cyan-200/30 bg-gradient-to-br from-slate-950 via-indigo-950 to-cyan-950 p-5 text-white shadow-[0_18px_45px_rgba(2,10,29,0.22)] sm:p-6"><div className="pointer-events-none absolute -right-12 -top-14 h-44 w-44 rounded-full bg-cyan-300/20 blur-3xl" /><div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><div className="inline-flex items-center gap-1.5 rounded-full bg-cyan-200/10 px-2.5 py-1 text-[10px] font-bold tracking-[0.14em] text-cyan-100"><Sparkles className="h-3.5 w-3.5" />ZURS LIVE SPIN</div><h2 className="mt-3 font-display text-xl font-bold sm:text-2xl">Weekly Loyalty Giveaway</h2><p className="mt-1.5 max-w-xl text-xs leading-5 text-slate-300">7 orders ដែលមានសិទ្ធិ = 1 ticket។ ថ្ងៃអាទិត្យ ម៉ោង 3:00 រសៀល។ មិនទាន់ដល់ 100 អ្នកចូលរួម tickets នឹង roll over ដោយស្វ័យប្រវត្តិ។</p></div><Link href="/live-spin" className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-cyan-300 px-4 text-xs font-bold text-slate-950 shadow-lg shadow-cyan-950/25 transition hover:bg-cyan-200">{active ? "ចូលមើល Live Spin" : "មើលព័ត៌មាន Live Spin"}<span aria-hidden>→</span></Link></div></article></section>;
 }
 
 function HomepageMedia() {

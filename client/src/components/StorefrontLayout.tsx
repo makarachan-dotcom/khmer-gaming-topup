@@ -28,7 +28,7 @@ const mobileNavigation = [
 export function mobileTabHrefForPath(pathname: string) {
   const path = pathname.split("?")[0]?.split("#")[0] || "/";
   if (path === "/account" || path.startsWith("/account/") || path === "/wallet" || path === "/order-status") return "/account";
-  if (path === "/live-spin") return "/live-spin";
+  if (path === "/live-spin" || path.startsWith("/live-spin/")) return "/live-spin";
   return "/";
 }
 
@@ -146,7 +146,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
       </footer>
 
       <ContactAdminControl paymentBarVisible={isTopupRoute} />
-      {isTopupRoute ? <SelectedProductActionBar product={selectedProduct} paymentMethodName={selectedPaymentMethod?.name ?? null} isAuthenticated={Boolean(user)} isAuthenticationLoading={loading} signInHref={googleSignInHref} onContinue={() => setLocation("/checkout/preview")} /> : <nav className={cn("liquid-tabbar zurs-mobile-tabbar fixed bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-1/2 z-40 grid h-14 w-[min(calc(100vw-1.5rem),21rem)] -translate-x-1/2 grid-cols-3 gap-0.5 rounded-full p-1 shadow-[0_10px_24px_rgba(15,23,42,0.11)] sm:hidden", location === "/live-spin" && "zurs-mobile-tabbar--live")} style={{ "--mobile-tab-index": activeMobileTabIndex } as React.CSSProperties} aria-label="Mobile primary navigation">
+      {isTopupRoute ? <SelectedProductActionBar product={selectedProduct} paymentMethodName={selectedPaymentMethod?.name ?? null} isAuthenticated={Boolean(user)} isAuthenticationLoading={loading} signInHref={googleSignInHref} onContinue={() => setLocation("/checkout/preview")} /> : <nav className={cn("liquid-tabbar zurs-mobile-tabbar fixed bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-1/2 z-40 grid h-14 w-[min(calc(100vw-1.5rem),21rem)] -translate-x-1/2 grid-cols-3 gap-0.5 rounded-full p-1 shadow-[0_10px_24px_rgba(15,23,42,0.11)] sm:hidden", activeMobileTabHref === "/live-spin" && "zurs-mobile-tabbar--live")} style={{ "--mobile-tab-index": activeMobileTabIndex } as React.CSSProperties} aria-label="Mobile primary navigation">
         <span className="zurs-mobile-tab-indicator" aria-hidden="true" />
         {mobileNavigation.map(({ href, label, icon: Icon, animation, live }) => { const active = activeMobileTabHref === href; const classes = cn("zurs-mobile-tab relative z-10 flex min-w-0 items-center justify-center gap-1 rounded-full px-1.5 py-1 text-[10px] font-bold", active ? live ? "zurs-mobile-tab--active text-amber-950" : "zurs-mobile-tab--active text-slate-950" : "text-slate-500 hover:bg-white/75 hover:text-slate-800"); return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={classes}>{active && animation ? <AnimatedGlyph name={animation} size={17} color="#312e81" /> : <Icon className={cn("h-4 w-4 shrink-0", active && "tab-icon-active")} strokeWidth={active ? 2.3 : 1.9} />}<span className={cn("zurs-mobile-tab-label truncate", active ? "max-w-[3.75rem] opacity-100" : "max-w-0 opacity-0")}>{label}</span></Link>; })}
       </nav>}

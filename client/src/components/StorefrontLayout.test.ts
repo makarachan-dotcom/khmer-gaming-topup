@@ -62,12 +62,16 @@ describe("storefront media protection", () => {
     expect(styleSource).toContain("tab-icon-active");
     expect(styleSource).toContain("100% + 0.125rem");
     expect(styleSource).not.toContain("100% + 0.25rem");
+    expect(styleSource).not.toContain("width: calc((100% - 0.625rem) / 2)");
+    expect(componentSource).toContain('activeMobileTabHref === "/live-spin" && "zurs-mobile-tabbar--live"');
   });
 
   it("keeps Home active across Top-up paths and assigns account-owned routes to Account", () => {
     expect(mobileTabHrefForPath("/")).toBe("/");
     expect(mobileTabHrefForPath("/topup/mobile_legends")).toBe("/");
     expect(mobileTabHrefForPath("/topup/blood_strike?from_webdev=1")).toBe("/");
+    expect(mobileTabHrefForPath("/live-spin?from=tabbar")).toBe("/live-spin");
+    expect(mobileTabHrefForPath("/live-spin/archive")).toBe("/live-spin");
     expect(mobileTabHrefForPath("/account")).toBe("/account");
     expect(mobileTabHrefForPath("/wallet")).toBe("/account");
   });

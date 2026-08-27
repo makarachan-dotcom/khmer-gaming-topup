@@ -19,4 +19,10 @@ describe("storefront image loading performance", () => {
     expect(homeSource).toContain('sizes="(max-width: 639px) 50vw');
     expect(homeSource).toContain('aspect-[16/10]');
   });
+
+  it("keeps the Weekly Loyalty Giveaway card out of the public Home page", () => {
+    const homeSource = readFileSync(resolve(process.cwd(), "client/src/pages/Home.tsx"), "utf8");
+    expect(homeSource).not.toContain("LiveSpinPromo");
+    expect(homeSource).not.toContain("Weekly Loyalty Giveaway");
+  });
 });
