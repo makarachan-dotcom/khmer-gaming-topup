@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { LIVE_SPIN_DEFAULT_PRIZE_COUNTDOWN_SECONDS, LIVE_SPIN_DEFAULT_SPOILER_SECONDS, LIVE_SPIN_MINIMUM_PARTICIPANT_COUNT, LIVE_SPIN_QUALIFIED_ORDERS_PER_TICKET, createLiveSpinFairnessSeed, deriveFairIndex, isLiveSpinEligibleOrder, liveSpinFairnessCommitment, liveSpinSnapshotHash, liveSpinWeekKey, progressForQualifiedOrders, selectLiveSpinOutcome, ticketCountForQualifiedOrders, verifyLiveSpinOutcome } from "./liveSpinFairness";
+import { LIVE_SPIN_DEFAULT_PRIZE_COUNTDOWN_SECONDS, LIVE_SPIN_DEFAULT_SPOILER_SECONDS, LIVE_SPIN_MINIMUM_PARTICIPANT_COUNT, LIVE_SPIN_QUALIFIED_ORDERS_PER_TICKET, createLiveSpinFairnessSeed, deriveFairIndex, isLiveSpinEligibleOrder, liveSpinFairnessCommitment, liveSpinRulesSnapshotHash, liveSpinSnapshotHash, liveSpinWeekKey, progressForQualifiedOrders, selectLiveSpinOutcome, selectLiveSpinRankedOutcomes, ticketCountForQualifiedOrders, verifyLiveSpinOutcome } from "./liveSpinFairness";
 
 describe("Live Spin ticket eligibility", () => {
   const completedAt = new Date("2026-08-30T08:00:00.000Z");
@@ -53,6 +53,18 @@ describe("Live Spin provably fair selection", () => {
     expect(first.prizeIndex).toBeGreaterThanOrEqual(0);
     expect(first.prizeIndex).toBeLessThan(10);
     expect(deriveFairIndex(seed, "sample", 1)).toBe(0);
+  });
+
+  it("selects distinct ranked winners without replacement and binds the result to locked rules", () => {
+    const seed = "96d5a235407d4258e516629508b518f59618913a153a9dd0739b97e93e1a4d92";
+    const snapshotHash = liveSpinSnapshotHash(entries);
+    const settings = liveSpinRulesSnapshotHash({ minParticipantCount: 100, winnerCount: 3, consolationGiftCount: 10, prizeTierIds: ["p1", "p2", "p3", "p4", "p5", "p6", "p7", "p8", "p9", "p10"] });
+    const outcome = selectLiveSpinRankedOutcomes({ eventId: "event-1", seed, snapshotHash, settingsSnapshotHash: settings, entryCount: entries.length, winnerCount: 3, prizeCount: 10 });
+    expect(outcome.selections.map((selection) => selection.winnerIndex)).toHaveLength(3);
+    expect(new Set(outcome.selections.map((selection) => selection.winnerIndex)).size).toBe(3);
+    expect(outcome.selections.map((selection) => selection.prizeIndex)).toEqual([0, 1, 2]);
+    expect(selectLiveSpinRankedOutcomes({ eventId: "event-1", seed, snapshotHash, settingsSnapshotHash: settings, entryCount: entries.length, winnerCount: 3, prizeCount: 10 })).toEqual(outcome);
+    expect(selectLiveSpinRankedOutcomes({ eventId: "event-1", seed, snapshotHash, settingsSnapshotHash: liveSpinRulesSnapshotHash({ minParticipantCount: 100, winnerCount: 3, consolationGiftCount: 9, prizeTierIds: ["p1", "p2", "p3", "p4", "p5", "p6", "p7", "p8", "p9", "p10"] }), entryCount: entries.length, winnerCount: 3, prizeCount: 10 }).selectionProofHash).not.toBe(outcome.selectionProofHash);
   });
 
   it("verifies a revealed seed and rejects a modified winner, seed, or entry snapshot", () => {

@@ -361,6 +361,10 @@ export const liveSpinEvents = mysqlTable("live_spin_events", {
   weekKey: varchar("weekKey", { length: 16 }).notNull().unique(),
   status: mysqlEnum("status", ["draft", "announced", "locked", "waiting", "live", "winner_revealed", "prize_countdown", "prize_revealed", "ended", "skipped"]).default("draft").notNull(),
   isTest: boolean("isTest").default(false).notNull(),
+  spinEnabled: boolean("spinEnabled").default(true).notNull(),
+  winnerCount: int("winnerCount").default(3).notNull(),
+  consolationGiftCount: int("consolationGiftCount").default(10).notNull(),
+  settingsSnapshotHash: varchar("settingsSnapshotHash", { length: 128 }),
   scheduledAt: timestamp("scheduledAt").notNull(),
   announcementStartsAt: timestamp("announcementStartsAt"),
   entryCutoffAt: timestamp("entryCutoffAt").notNull(),
@@ -436,14 +440,50 @@ export const liveSpinPrizeTiers = mysqlTable("live_spin_prize_tiers", {
 
 export const liveSpinResults = mysqlTable("live_spin_results", {
   id: varchar("id", { length: 64 }).primaryKey(),
-  eventId: varchar("eventId", { length: 64 }).notNull().unique(),
+  eventId: varchar("eventId", { length: 64 }).notNull(),
+  winnerRank: int("winnerRank").default(1).notNull(),
   winnerEntryId: varchar("winnerEntryId", { length: 64 }).notNull().unique(),
   prizeTierId: varchar("prizeTierId", { length: 64 }).notNull(),
   winnerIndex: int("winnerIndex").notNull(),
   prizeIndex: int("prizeIndex").notNull(),
   selectionProofHash: varchar("selectionProofHash", { length: 128 }).notNull(),
   awardedAt: timestamp("awardedAt").defaultNow().notNull(),
-}, (table) => [index("live_spin_results_prize_idx").on(table.prizeTierId)]);
+}, (table) => [uniqueIndex("live_spin_results_event_rank_unique").on(table.eventId, table.winnerRank), index("live_spin_results_prize_idx").on(table.prizeTierId)]);
+
+export const liveSpinConnectionSessions = mysqlTable("live_spin_connection_sessions", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  eventId: varchar("eventId", { length: 64 }).notNull(),
+  userId: int("userId").notNull(),
+  consentedAt: timestamp("consentedAt").notNull(),
+  startedAt: timestamp("startedAt").notNull(),
+  lastSeenAt: timestamp("lastSeenAt").notNull(),
+  endedAt: timestamp("endedAt"),
+}, (table) => [uniqueIndex("live_spin_connection_sessions_event_user_unique").on(table.eventId, table.userId), index("live_spin_connection_sessions_event_last_seen_idx").on(table.eventId, table.lastSeenAt)]);
+
+export const liveSpinConsolationGifts = mysqlTable("live_spin_consolation_gifts", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  eventId: varchar("eventId", { length: 64 }).notNull(),
+  slotNumber: int("slotNumber").notNull(),
+  nameKh: varchar("nameKh", { length: 180 }).notNull(),
+  valueLabel: varchar("valueLabel", { length: 180 }).notNull(),
+  descriptionKh: varchar("descriptionKh", { length: 500 }),
+  mediaUrl: varchar("mediaUrl", { length: 2048 }),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [uniqueIndex("live_spin_consolation_gifts_event_slot_unique").on(table.eventId, table.slotNumber)]);
+
+export const liveSpinConsolationResults = mysqlTable("live_spin_consolation_results", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  eventId: varchar("eventId", { length: 64 }).notNull(),
+  userId: int("userId").notNull(),
+  giftId: varchar("giftId", { length: 64 }),
+  rank: int("rank").notNull(),
+  connectionDurationSeconds: int("connectionDurationSeconds").notNull(),
+  connectionSnapshotHash: varchar("connectionSnapshotHash", { length: 128 }).notNull(),
+  selectionProofHash: varchar("selectionProofHash", { length: 128 }).notNull(),
+  awardedAt: timestamp("awardedAt").defaultNow().notNull(),
+}, (table) => [uniqueIndex("live_spin_consolation_results_event_rank_unique").on(table.eventId, table.rank), uniqueIndex("live_spin_consolation_results_event_user_unique").on(table.eventId, table.userId)]);
 
 export const liveSpinAuditLogs = mysqlTable("live_spin_audit_logs", {
   id: varchar("id", { length: 64 }).primaryKey(),

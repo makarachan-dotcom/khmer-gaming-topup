@@ -141,6 +141,13 @@
       "when": 1787835500000,
       "tag": "0019_livespin_test_isolation",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "5",
+      "when": 1787838200000,
+      "tag": "0020_livespin_multiwinner_consolation",
+      "breakpoints": true
     }
   ]
 }

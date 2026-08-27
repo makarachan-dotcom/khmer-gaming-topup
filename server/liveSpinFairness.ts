@@ -31,6 +31,12 @@ export type LiveSpinSelection = {
   selectionProofHash: string;
 };
 
+export type LiveSpinRankedSelection = {
+  winnerRank: number;
+  winnerIndex: number;
+  prizeIndex: number;
+};
+
 function sha256(value: string) {
   return createHash("sha256").update(value, "utf8").digest("hex");
 }
@@ -102,6 +108,24 @@ export function deriveFairIndex(seed: string, context: string, itemCount: number
     if (candidate < acceptableRange) return Number(candidate % count);
   }
   throw new Error("Unable to derive an unbiased fair index");
+}
+
+export function liveSpinRulesSnapshotHash(input: { minParticipantCount: number; winnerCount: number; consolationGiftCount: number; prizeTierIds: string[] }) {
+  return sha256(JSON.stringify({ minParticipantCount: input.minParticipantCount, winnerCount: input.winnerCount, consolationGiftCount: input.consolationGiftCount, prizeTierIds: [...input.prizeTierIds] }));
+}
+
+/** Chooses distinct winning entries without replacement; prize tiers 1..N map to ranks 1..N. */
+export function selectLiveSpinRankedOutcomes(input: { eventId: string; seed: string; snapshotHash: string; settingsSnapshotHash: string; entryCount: number; winnerCount: number; prizeCount: number }) {
+  if (!Number.isInteger(input.winnerCount) || input.winnerCount < 1 || input.winnerCount > input.entryCount || input.winnerCount > input.prizeCount) throw new Error("Winner count must not exceed locked entries or active prize tiers.");
+  const available = Array.from({ length: input.entryCount }, (_, index) => index);
+  const results: LiveSpinRankedSelection[] = [];
+  for (let rank = 1; rank <= input.winnerCount; rank += 1) {
+    const position = deriveFairIndex(input.seed, `${input.eventId}:${input.snapshotHash}:${input.settingsSnapshotHash}:winner:${rank}`, available.length);
+    const winnerIndex = available.splice(position, 1)[0];
+    results.push({ winnerRank: rank, winnerIndex, prizeIndex: rank - 1 });
+  }
+  const selectionProofHash = sha256(`${input.eventId}:${input.snapshotHash}:${input.settingsSnapshotHash}:${input.seed}:${JSON.stringify(results)}`);
+  return { selections: results, selectionProofHash };
 }
 
 export function selectLiveSpinOutcome(input: { eventId: string; seed: string; snapshotHash: string; entryCount: number; prizeCount: number }): LiveSpinSelection {

@@ -1,10 +1,10 @@
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { createHash } from "crypto";
 import { nanoid } from "nanoid";
-import { liveSpinAuditLogs, liveSpinEntries, liveSpinEvents, liveSpinPrizeTiers, liveSpinQualifiedOrders, liveSpinResults, liveSpinTickets, orders, paymentTransactions, users } from "../drizzle/schema";
+import { liveSpinAuditLogs, liveSpinConnectionSessions, liveSpinConsolationGifts, liveSpinConsolationResults, liveSpinEntries, liveSpinEvents, liveSpinPrizeTiers, liveSpinQualifiedOrders, liveSpinResults, liveSpinTickets, orders, paymentTransactions, users } from "../drizzle/schema";
 import { decryptCredential, encryptCredential, type CredentialEnvelope } from "./credentialEnvelope";
 import { getDb } from "./db";
-import { LIVE_SPIN_DEFAULT_PRIZE_COUNTDOWN_SECONDS, LIVE_SPIN_DEFAULT_SPOILER_SECONDS, LIVE_SPIN_MINIMUM_PARTICIPANT_COUNT, LIVE_SPIN_NAME_STRIP_SECONDS, LIVE_SPIN_PRIZE_REVEAL_SECONDS, LIVE_SPIN_QUALIFIED_ORDERS_PER_TICKET, createLiveSpinFairnessSeed, isLiveSpinEligibleOrder, liveSpinFairnessCommitment, liveSpinSnapshotHash, liveSpinWeekKey, progressForQualifiedOrders, selectLiveSpinOutcome, ticketCountForQualifiedOrders } from "./liveSpinFairness";
+import { LIVE_SPIN_DEFAULT_PRIZE_COUNTDOWN_SECONDS, LIVE_SPIN_DEFAULT_SPOILER_SECONDS, LIVE_SPIN_MINIMUM_PARTICIPANT_COUNT, LIVE_SPIN_NAME_STRIP_SECONDS, LIVE_SPIN_PRIZE_REVEAL_SECONDS, LIVE_SPIN_QUALIFIED_ORDERS_PER_TICKET, createLiveSpinFairnessSeed, isLiveSpinEligibleOrder, liveSpinFairnessCommitment, liveSpinRulesSnapshotHash, liveSpinSnapshotHash, liveSpinWeekKey, progressForQualifiedOrders, selectLiveSpinRankedOutcomes, ticketCountForQualifiedOrders } from "./liveSpinFairness";
 
 export const liveSpinEventStatuses = ["draft", "announced", "locked", "waiting", "live", "winner_revealed", "prize_countdown", "prize_revealed", "ended", "skipped"] as const;
 export type LiveSpinEventStatus = (typeof liveSpinEventStatuses)[number];
@@ -128,7 +128,7 @@ export async function getLiveSpinAccountSummary(userId: number) {
   };
 }
 
-export async function createLiveSpinEvent(input: { actorUserId: number; scheduledAt: Date; announcementStartsAt: Date; entryCutoffAt: Date; lobbyStartsAt: Date; adMediaUrl?: string | null; adDurationSeconds?: number; minParticipantCount?: number }) {
+export async function createLiveSpinEvent(input: { actorUserId: number; scheduledAt: Date; announcementStartsAt: Date; entryCutoffAt: Date; lobbyStartsAt: Date; adMediaUrl?: string | null; adDurationSeconds?: number; minParticipantCount?: number; winnerCount?: number; consolationGiftCount?: number; spinEnabled?: boolean }) {
   const db = ensureDb(await getDb());
   assertWeeklySundayThreePm(input.scheduledAt);
   if (input.scheduledAt.getTime() <= Date.now()) throw new Error("Live Spin must be scheduled in the future.");
@@ -150,15 +150,21 @@ export async function createLiveSpinEvent(input: { actorUserId: number; schedule
     lobbyStartsAt: input.lobbyStartsAt,
     adMediaUrl: input.adMediaUrl?.trim() || null,
     adDurationSeconds: Math.max(0, Math.floor(input.adDurationSeconds ?? 0)),
-    minParticipantCount: Math.max(1, Math.floor(input.minParticipantCount ?? LIVE_SPIN_MINIMUM_PARTICIPANT_COUNT)),
+    minParticipantCount: Math.max(LIVE_SPIN_MINIMUM_PARTICIPANT_COUNT, Math.floor(input.minParticipantCount ?? LIVE_SPIN_MINIMUM_PARTICIPANT_COUNT)),
+    spinEnabled: input.spinEnabled ?? true,
+    winnerCount: Math.min(10, Math.max(1, Math.floor(input.winnerCount ?? 3))),
+    consolationGiftCount: Math.min(10, Math.max(0, Math.floor(input.consolationGiftCount ?? 10))),
     winnerSpoilerSeconds: LIVE_SPIN_DEFAULT_SPOILER_SECONDS,
     prizeCountdownSeconds: LIVE_SPIN_DEFAULT_PRIZE_COUNTDOWN_SECONDS,
     fairnessCommitmentHash: liveSpinFairnessCommitment(seed),
     encryptedFairnessSeed: encryptedSeed(seed),
     createdByUserId: input.actorUserId,
   };
-  await db.insert(liveSpinEvents).values(event);
-  await appendAudit({ eventId: event.id, actorUserId: input.actorUserId, actorType: "owner", action: "event_created", details: { weekKey, scheduledAt: input.scheduledAt.toISOString(), entryCutoffAt: input.entryCutoffAt.toISOString(), minParticipantCount: event.minParticipantCount, fairnessCommitmentHash: event.fairnessCommitmentHash } });
+  await db.transaction(async (tx) => {
+    await tx.insert(liveSpinEvents).values(event);
+    await tx.insert(liveSpinConsolationGifts).values({ id: nanoid(), eventId: event.id, slotNumber: 1, nameKh: "កាដូលើកទឹកចិត្ត", valueLabel: "អំណោយសម្រាប់អ្នកចូលរួម", descriptionKh: "ផ្តល់តាមរយៈពេលតភ្ជាប់ជាមួយ Live ដែលបានកត់ត្រាដោយ server។", mediaUrl: null, isActive: true });
+  });
+  await appendAudit({ eventId: event.id, actorUserId: input.actorUserId, actorType: "owner", action: "event_created", details: { weekKey, scheduledAt: input.scheduledAt.toISOString(), entryCutoffAt: input.entryCutoffAt.toISOString(), minParticipantCount: event.minParticipantCount, spinEnabled: event.spinEnabled, winnerCount: event.winnerCount, consolationGiftCount: event.consolationGiftCount, consolationFallback: true, fairnessCommitmentHash: event.fairnessCommitmentHash } });
   return { id: event.id, weekKey, fairnessCommitmentHash: event.fairnessCommitmentHash };
 }
 
@@ -178,6 +184,9 @@ export async function createOwnerLiveSpinTestEvent(input: { actorUserId: number 
     adMediaUrl: null,
     adDurationSeconds: 0,
     minParticipantCount: 1,
+    spinEnabled: true,
+    winnerCount: 1,
+    consolationGiftCount: 0,
     winnerSpoilerSeconds: LIVE_SPIN_DEFAULT_SPOILER_SECONDS,
     prizeCountdownSeconds: LIVE_SPIN_DEFAULT_PRIZE_COUNTDOWN_SECONDS,
     fairnessCommitmentHash: liveSpinFairnessCommitment(seed),
@@ -208,6 +217,59 @@ export async function addOwnerLiveSpinTestEntry(input: { eventId: string; actorU
   });
 }
 
+export async function saveLiveSpinSettings(input: { eventId: string; actorUserId: number; spinEnabled: boolean; minParticipantCount: number; winnerCount: number; consolationGiftCount: number }) {
+  const db = ensureDb(await getDb());
+  if (!Number.isInteger(input.minParticipantCount) || input.minParticipantCount < LIVE_SPIN_MINIMUM_PARTICIPANT_COUNT) throw new Error("The minimum ticket-holder threshold is 100.");
+  if (!Number.isInteger(input.winnerCount) || input.winnerCount < 1 || input.winnerCount > 10) throw new Error("Winner count must be between 1 and 10.");
+  if (!Number.isInteger(input.consolationGiftCount) || input.consolationGiftCount < 0 || input.consolationGiftCount > 10) throw new Error("Consolation gift count must be between 0 and 10.");
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT id FROM live_spin_events WHERE id = ${input.eventId} FOR UPDATE`);
+    const event = (await tx.select().from(liveSpinEvents).where(eq(liveSpinEvents.id, input.eventId)).limit(1))[0];
+    if (!event) throw new Error("Live Spin event not found.");
+    if (!['draft', 'announced'].includes(event.status)) throw new Error("Spin Settings are locked once participant entries are locked.");
+    const oldValue = { spinEnabled: event.spinEnabled, minParticipantCount: event.minParticipantCount, winnerCount: event.winnerCount, consolationGiftCount: event.consolationGiftCount };
+    const newValue = { spinEnabled: input.spinEnabled, minParticipantCount: input.minParticipantCount, winnerCount: input.winnerCount, consolationGiftCount: input.consolationGiftCount };
+    await tx.update(liveSpinEvents).set(newValue).where(eq(liveSpinEvents.id, event.id));
+    await tx.insert(liveSpinAuditLogs).values({ id: nanoid(), eventId: event.id, actorUserId: input.actorUserId, actorType: "owner", action: "spin_settings_updated", details: { oldValue, newValue } });
+    return { success: true, ...newValue };
+  });
+}
+
+export async function startLiveSpinConnection(input: { eventId: string; userId: number; now?: Date }) {
+  const db = ensureDb(await getDb());
+  const now = input.now ?? new Date();
+  const event = (await db.select({ id: liveSpinEvents.id, status: liveSpinEvents.status }).from(liveSpinEvents).where(eq(liveSpinEvents.id, input.eventId)).limit(1))[0];
+  if (!event || !["announced", "locked", "waiting", "live", "winner_revealed", "prize_countdown", "prize_revealed"].includes(event.status)) throw new Error("The Live Spin connection window is not open.");
+  const existing = (await db.select().from(liveSpinConnectionSessions).where(and(eq(liveSpinConnectionSessions.eventId, input.eventId), eq(liveSpinConnectionSessions.userId, input.userId))).limit(1))[0];
+  if (existing) {
+    if (now.getTime() - existing.lastSeenAt.getTime() >= 15_000) await db.update(liveSpinConnectionSessions).set({ lastSeenAt: now, endedAt: null }).where(eq(liveSpinConnectionSessions.id, existing.id));
+    return { startedAt: existing.startedAt, throttled: now.getTime() - existing.lastSeenAt.getTime() < 15_000 };
+  }
+  await db.insert(liveSpinConnectionSessions).values({ id: nanoid(), eventId: input.eventId, userId: input.userId, consentedAt: now, startedAt: now, lastSeenAt: now });
+  await appendAudit({ eventId: input.eventId, actorUserId: input.userId, actorType: "system", action: "connection_duration_consent_recorded", details: { collection: "connection_timestamps_only" } });
+  return { startedAt: now, throttled: false };
+}
+
+export async function heartbeatLiveSpinConnection(input: { eventId: string; userId: number; now?: Date }) {
+  return startLiveSpinConnection(input);
+}
+
+export async function saveLiveSpinConsolationGift(input: { eventId: string; actorUserId: number; slotNumber: number; nameKh: string; valueLabel: string; descriptionKh?: string | null; mediaUrl?: string | null; isActive: boolean }) {
+  const db = ensureDb(await getDb());
+  if (!Number.isInteger(input.slotNumber) || input.slotNumber < 1 || input.slotNumber > 10) throw new Error("Consolation gift slot must be between 1 and 10.");
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT id FROM live_spin_events WHERE id = ${input.eventId} FOR UPDATE`);
+    const event = (await tx.select({ status: liveSpinEvents.status }).from(liveSpinEvents).where(eq(liveSpinEvents.id, input.eventId)).limit(1))[0];
+    if (!event || !['draft', 'announced'].includes(event.status)) throw new Error("Consolation gifts are locked once participant entries are locked.");
+    const values = { nameKh: input.nameKh.trim(), valueLabel: input.valueLabel.trim(), descriptionKh: input.descriptionKh?.trim() || null, mediaUrl: input.mediaUrl?.trim() || null, isActive: input.isActive };
+    const existing = (await tx.select({ id: liveSpinConsolationGifts.id }).from(liveSpinConsolationGifts).where(and(eq(liveSpinConsolationGifts.eventId, input.eventId), eq(liveSpinConsolationGifts.slotNumber, input.slotNumber))).limit(1))[0];
+    if (existing) await tx.update(liveSpinConsolationGifts).set(values).where(eq(liveSpinConsolationGifts.id, existing.id));
+    else await tx.insert(liveSpinConsolationGifts).values({ id: nanoid(), eventId: input.eventId, slotNumber: input.slotNumber, ...values });
+    await tx.insert(liveSpinAuditLogs).values({ id: nanoid(), eventId: input.eventId, actorUserId: input.actorUserId, actorType: "owner", action: existing ? "consolation_gift_updated" : "consolation_gift_created", details: { slotNumber: input.slotNumber, oldValue: existing ? "record_replaced" : null, newValue: { nameKh: values.nameKh, valueLabel: values.valueLabel, isActive: values.isActive } } });
+    return { success: true };
+  });
+}
+
 export async function getLiveSpinEvents() {
   const db = ensureDb(await getDb());
   return db.select().from(liveSpinEvents).orderBy(desc(liveSpinEvents.scheduledAt));
@@ -227,6 +289,11 @@ export async function lockLiveSpinParticipants(input: { eventId: string; actorUs
     if (!event) throw new Error("Live Spin event not found.");
     if (!["draft", "announced"].includes(event.status)) throw new Error("Only a planned Live Spin event can lock participants.");
     if (!event.isTest && now.getTime() < event.entryCutoffAt.getTime()) throw new Error("Participant lock is not available before the entry cutoff.");
+    if (!event.spinEnabled) {
+      await tx.update(liveSpinEvents).set({ status: "skipped", endedAt: now, skippedReason: "Live Spin was paused by Owner settings; eligible tickets remain active and roll over." }).where(eq(liveSpinEvents.id, event.id));
+      await tx.insert(liveSpinAuditLogs).values({ id: nanoid(), eventId: event.id, actorUserId: input.actorUserId, actorType: "owner", action: "event_skipped_spin_disabled", details: { ticketPolicy: "tickets_remain_active_and_roll_over" } });
+      return { status: "skipped" as const, holderCount: 0, minParticipantCount: event.minParticipantCount };
+    }
 
     const tickets = await tx.select().from(liveSpinTickets).where(and(eq(liveSpinTickets.status, "active"), eq(liveSpinTickets.isTest, event.isTest))).orderBy(asc(liveSpinTickets.userId), asc(liveSpinTickets.issuedAt));
     const holderCount = new Set(tickets.map((ticket) => ticket.userId)).size;
@@ -236,12 +303,15 @@ export async function lockLiveSpinParticipants(input: { eventId: string; actorUs
       return { status: "skipped" as const, holderCount, minParticipantCount: event.minParticipantCount };
     }
 
+    const prizes = await tx.select({ id: liveSpinPrizeTiers.id }).from(liveSpinPrizeTiers).where(and(eq(liveSpinPrizeTiers.eventId, event.id), eq(liveSpinPrizeTiers.isActive, true))).orderBy(asc(liveSpinPrizeTiers.tierNumber));
+    if (prizes.length !== 10 || event.winnerCount > prizes.length || event.winnerCount > tickets.length) throw new Error("Exactly ten active prize tiers and enough distinct entries are required for the configured winner count.");
     const snapshot = tickets.map((ticket, entryIndex) => ({ entryIndex, ticketId: ticket.id, userId: ticket.userId, displayAlias: displayAlias(event.id, ticket.userId) }));
     const snapshotHash = liveSpinSnapshotHash(snapshot);
+    const settingsSnapshotHash = liveSpinRulesSnapshotHash({ minParticipantCount: event.minParticipantCount, winnerCount: event.winnerCount, consolationGiftCount: event.consolationGiftCount, prizeTierIds: prizes.map((prize) => prize.id) });
     await tx.insert(liveSpinEntries).values(snapshot.map((entry) => ({ id: nanoid(), eventId: event.id, ...entry, status: "locked" as const, lockedAt: now })));
     await tx.update(liveSpinTickets).set({ status: "locked", eventId: event.id }).where(inArray(liveSpinTickets.id, tickets.map((ticket) => ticket.id)));
-    await tx.update(liveSpinEvents).set({ status: "locked", lockedParticipantCount: holderCount, lockedEntryCount: snapshot.length, participantSnapshotHash: snapshotHash, participantSnapshotAt: now }).where(eq(liveSpinEvents.id, event.id));
-    await tx.insert(liveSpinAuditLogs).values({ id: nanoid(), eventId: event.id, actorUserId: input.actorUserId, actorType: "owner", action: "participants_locked", details: { holderCount, entryCount: snapshot.length, participantSnapshotHash: snapshotHash } });
+    await tx.update(liveSpinEvents).set({ status: "locked", lockedParticipantCount: holderCount, lockedEntryCount: snapshot.length, participantSnapshotHash: snapshotHash, participantSnapshotAt: now, settingsSnapshotHash }).where(eq(liveSpinEvents.id, event.id));
+    await tx.insert(liveSpinAuditLogs).values({ id: nanoid(), eventId: event.id, actorUserId: input.actorUserId, actorType: "owner", action: "participants_locked", details: { holderCount, entryCount: snapshot.length, participantSnapshotHash: snapshotHash, settingsSnapshotHash, winnerCount: event.winnerCount, consolationGiftCount: event.consolationGiftCount } });
     return { status: "locked" as const, holderCount, entryCount: snapshot.length, participantSnapshotHash: snapshotHash };
   });
 }
@@ -269,24 +339,22 @@ export async function selectLiveSpinWinner(input: { eventId: string; now?: Date 
     if (event.status !== "live") throw new Error("A winner can only be selected while the event is live.");
     const now = input.now ?? new Date();
     if (!event.liveStartedAt || now.getTime() < event.liveStartedAt.getTime() + LIVE_SPIN_NAME_STRIP_SECONDS * 1000) throw new Error("The server-side name strip is still in progress.");
-    const existing = await tx.select({ id: liveSpinResults.id }).from(liveSpinResults).where(eq(liveSpinResults.eventId, event.id)).limit(1);
-    if (existing[0]) throw new Error("This Live Spin already has a recorded result.");
+    const existing = await tx.select({ id: liveSpinResults.id }).from(liveSpinResults).where(eq(liveSpinResults.eventId, event.id));
+    if (existing.length) throw new Error("This Live Spin already has recorded results.");
     const entries = await tx.select().from(liveSpinEntries).where(and(eq(liveSpinEntries.eventId, event.id), eq(liveSpinEntries.status, "locked"))).orderBy(asc(liveSpinEntries.entryIndex));
     const prizes = await tx.select().from(liveSpinPrizeTiers).where(and(eq(liveSpinPrizeTiers.eventId, event.id), eq(liveSpinPrizeTiers.isActive, true))).orderBy(asc(liveSpinPrizeTiers.tierNumber));
-    if (!entries.length || !prizes.length || !event.participantSnapshotHash) throw new Error("The locked entries, active prizes, or fairness snapshot are incomplete.");
+    if (!entries.length || prizes.length !== 10 || !event.participantSnapshotHash || !event.settingsSnapshotHash) throw new Error("The locked entries, prize tiers, or committed rules are incomplete.");
     const seed = decryptedSeed(event.encryptedFairnessSeed);
-    const outcome = selectLiveSpinOutcome({ eventId: event.id, seed, snapshotHash: event.participantSnapshotHash, entryCount: entries.length, prizeCount: prizes.length });
-    const winner = entries[outcome.winnerIndex];
-    const prize = prizes[outcome.prizeIndex];
-    if (!winner || !prize) throw new Error("The deterministic result could not be resolved.");
-    const resultId = nanoid();
-    await tx.insert(liveSpinResults).values({ id: resultId, eventId: event.id, winnerEntryId: winner.id, prizeTierId: prize.id, winnerIndex: outcome.winnerIndex, prizeIndex: outcome.prizeIndex, selectionProofHash: outcome.selectionProofHash });
-    const selectedAt = now;
-    await tx.update(liveSpinEntries).set({ status: "winner" }).where(eq(liveSpinEntries.id, winner.id));
+    const outcome = selectLiveSpinRankedOutcomes({ eventId: event.id, seed, snapshotHash: event.participantSnapshotHash, settingsSnapshotHash: event.settingsSnapshotHash, entryCount: entries.length, winnerCount: event.winnerCount, prizeCount: prizes.length });
+    const winners = outcome.selections.map((selection) => ({ selection, winner: entries[selection.winnerIndex], prize: prizes[selection.prizeIndex] }));
+    if (winners.some(({ winner, prize }) => !winner || !prize)) throw new Error("The deterministic ranked results could not be resolved.");
+    const resultRows = winners.map(({ selection, winner, prize }) => ({ id: nanoid(), eventId: event.id, winnerRank: selection.winnerRank, winnerEntryId: winner!.id, prizeTierId: prize!.id, winnerIndex: selection.winnerIndex, prizeIndex: selection.prizeIndex, selectionProofHash: outcome.selectionProofHash }));
+    await tx.insert(liveSpinResults).values(resultRows);
+    await tx.update(liveSpinEntries).set({ status: "winner" }).where(inArray(liveSpinEntries.id, winners.map(({ winner }) => winner!.id)));
     await tx.update(liveSpinTickets).set({ status: "used" }).where(and(eq(liveSpinTickets.eventId, event.id), eq(liveSpinTickets.status, "locked")));
-    await tx.update(liveSpinEvents).set({ status: "winner_revealed", winnerRevealedAt: selectedAt, revealedFairnessSeed: seed }).where(eq(liveSpinEvents.id, event.id));
-    await tx.insert(liveSpinAuditLogs).values({ id: nanoid(), eventId: event.id, actorType: "system", action: "winner_selected_server_side", details: { resultId, winnerEntryId: winner.id, prizeTierId: prize.id, winnerIndex: outcome.winnerIndex, prizeIndex: outcome.prizeIndex, selectionProofHash: outcome.selectionProofHash, consumedEntryCount: entries.length, ticketPolicy: "all_locked_tickets_consumed_after_successful_draw" } });
-    return { resultId, winnerAlias: winner.displayAlias, prizeNameKh: prize.nameKh, prizeValueLabel: prize.valueLabel, winnerSpoilerSeconds: event.winnerSpoilerSeconds, prizeCountdownSeconds: event.prizeCountdownSeconds, fairnessCommitmentHash: event.fairnessCommitmentHash, participantSnapshotHash: event.participantSnapshotHash, revealedFairnessSeed: seed, selectionProofHash: outcome.selectionProofHash };
+    await tx.update(liveSpinEvents).set({ status: "winner_revealed", winnerRevealedAt: now, revealedFairnessSeed: seed }).where(eq(liveSpinEvents.id, event.id));
+    await tx.insert(liveSpinAuditLogs).values({ id: nanoid(), eventId: event.id, actorType: "system", action: "winners_selected_server_side", details: { resultIds: resultRows.map((row) => row.id), winnerCount: event.winnerCount, winnerRanks: winners.map(({ selection, winner, prize }) => ({ rank: selection.winnerRank, winnerEntryId: winner!.id, prizeTierId: prize!.id, winnerIndex: selection.winnerIndex, prizeIndex: selection.prizeIndex })), settingsSnapshotHash: event.settingsSnapshotHash, selectionProofHash: outcome.selectionProofHash, consumedEntryCount: entries.length, ticketPolicy: "all_locked_tickets_consumed_after_successful_draw" } });
+    return { results: winners.map(({ selection, winner, prize }) => ({ winnerRank: selection.winnerRank, winnerAlias: winner!.displayAlias, prizeNameKh: prize!.nameKh, prizeValueLabel: prize!.valueLabel })), winnerSpoilerSeconds: event.winnerSpoilerSeconds, prizeCountdownSeconds: event.prizeCountdownSeconds, fairnessCommitmentHash: event.fairnessCommitmentHash, participantSnapshotHash: event.participantSnapshotHash, settingsSnapshotHash: event.settingsSnapshotHash, revealedFairnessSeed: seed, selectionProofHash: outcome.selectionProofHash };
   });
 }
 
@@ -341,24 +409,39 @@ export async function startLiveSpinLobby(input: { eventId: string; actorUserId: 
 
 export async function endLiveSpinEvent(input: { eventId: string; actorUserId: number; reason: string }) {
   const db = ensureDb(await getDb());
-  const event = (await db.select().from(liveSpinEvents).where(eq(liveSpinEvents.id, input.eventId)).limit(1))[0];
-  if (!event) throw new Error("Live Spin event not found.");
-  if (event.status !== "prize_revealed") throw new Error("Live Spin can only end after the prize has been revealed.");
-  await db.update(liveSpinEvents).set({ status: "ended", endedAt: new Date() }).where(eq(liveSpinEvents.id, event.id));
-  await appendAudit({ eventId: event.id, actorUserId: input.actorUserId, actorType: "owner", action: "event_ended_by_owner", details: { reason: input.reason.trim() } });
-  return { success: true, status: "ended" as const };
+  const now = new Date();
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT id FROM live_spin_events WHERE id = ${input.eventId} FOR UPDATE`);
+    const event = (await tx.select().from(liveSpinEvents).where(eq(liveSpinEvents.id, input.eventId)).limit(1))[0];
+    if (!event) throw new Error("Live Spin event not found.");
+    if (event.status !== "prize_revealed") throw new Error("Live Spin can only end after the prize has been revealed.");
+    const winners = await tx.select({ userId: liveSpinEntries.userId }).from(liveSpinResults).innerJoin(liveSpinEntries, eq(liveSpinResults.winnerEntryId, liveSpinEntries.id)).where(eq(liveSpinResults.eventId, event.id));
+    const winnerUserIds = new Set(winners.map((winner) => winner.userId));
+    const sessions = await tx.select().from(liveSpinConnectionSessions).where(eq(liveSpinConnectionSessions.eventId, event.id));
+    const ranked = sessions.filter((session) => !winnerUserIds.has(session.userId)).map((session) => ({ userId: session.userId, duration: Math.max(0, Math.floor((Math.min(now.getTime(), session.lastSeenAt.getTime() + 30_000) - session.startedAt.getTime()) / 1_000)) })).filter((session) => session.duration > 0).sort((left, right) => right.duration - left.duration || left.userId - right.userId).slice(0, event.consolationGiftCount);
+    const gifts = await tx.select().from(liveSpinConsolationGifts).where(and(eq(liveSpinConsolationGifts.eventId, event.id), eq(liveSpinConsolationGifts.isActive, true))).orderBy(asc(liveSpinConsolationGifts.slotNumber));
+    const connectionSnapshotHash = createHash("sha256").update(JSON.stringify(ranked), "utf8").digest("hex");
+    const selectionProofHash = createHash("sha256").update(`${event.id}:${event.settingsSnapshotHash ?? "legacy"}:${connectionSnapshotHash}:${event.revealedFairnessSeed ?? "seed-unavailable"}`, "utf8").digest("hex");
+    if (ranked.length && !gifts.length && !event.isTest) throw new Error("At least one active consolation gift is required before ending this Live Spin.");
+    if (ranked.length) await tx.insert(liveSpinConsolationResults).values(ranked.map((session, index) => ({ id: nanoid(), eventId: event.id, userId: session.userId, giftId: gifts.length ? gifts[index % gifts.length].id : null, rank: index + 1, connectionDurationSeconds: session.duration, connectionSnapshotHash, selectionProofHash })));
+    await tx.update(liveSpinConnectionSessions).set({ endedAt: now }).where(eq(liveSpinConnectionSessions.eventId, event.id));
+    await tx.update(liveSpinEvents).set({ status: "ended", endedAt: now }).where(eq(liveSpinEvents.id, event.id));
+    await tx.insert(liveSpinAuditLogs).values({ id: nanoid(), eventId: event.id, actorUserId: input.actorUserId, actorType: "owner", action: "event_ended_with_connection_consolation", details: { reason: input.reason.trim(), winnerCount: winners.length, consolationCount: ranked.length, connectionSnapshotHash, selectionProofHash, collection: "consented_connection_timestamps_only" } });
+    return { success: true, status: "ended" as const, consolationCount: ranked.length };
+  });
 }
 
 export async function getLiveSpinOwnerEventDetail(eventId: string) {
   const db = ensureDb(await getDb());
-  const [event, prizes, entries, audit] = await Promise.all([
+  const [event, prizes, entries, audit, consolationGifts] = await Promise.all([
     db.select().from(liveSpinEvents).where(eq(liveSpinEvents.id, eventId)).limit(1),
     db.select().from(liveSpinPrizeTiers).where(eq(liveSpinPrizeTiers.eventId, eventId)).orderBy(asc(liveSpinPrizeTiers.tierNumber)),
     db.select({ entry: liveSpinEntries, user: users, ticket: liveSpinTickets }).from(liveSpinEntries).innerJoin(users, eq(liveSpinEntries.userId, users.id)).innerJoin(liveSpinTickets, eq(liveSpinEntries.ticketId, liveSpinTickets.id)).where(eq(liveSpinEntries.eventId, eventId)).orderBy(asc(liveSpinEntries.entryIndex)),
     db.select().from(liveSpinAuditLogs).where(eq(liveSpinAuditLogs.eventId, eventId)).orderBy(desc(liveSpinAuditLogs.createdAt)),
+    db.select().from(liveSpinConsolationGifts).where(eq(liveSpinConsolationGifts.eventId, eventId)).orderBy(asc(liveSpinConsolationGifts.slotNumber)),
   ]);
   if (!event[0]) throw new Error("Live Spin event not found.");
-  return { event: event[0], prizes, participants: entries.map(({ entry, user, ticket }) => ({ entryIndex: entry.entryIndex, displayAlias: entry.displayAlias, name: user.displayName ?? user.name ?? null, ticketId: ticket.id, ticketEarnedWeek: ticket.earnedWeekKey, status: entry.status })), audit };
+  return { event: event[0], prizes, consolationGifts, participants: entries.map(({ entry, user, ticket }) => ({ entryIndex: entry.entryIndex, displayAlias: entry.displayAlias, name: user.displayName ?? user.name ?? null, ticketId: ticket.id, ticketEarnedWeek: ticket.earnedWeekKey, status: entry.status })), audit };
 }
 
 export async function getPublicLiveSpinState() {
@@ -370,7 +453,8 @@ export async function getPublicLiveSpinState() {
   const activeTicketHolders = isLocked ? event.lockedParticipantCount : new Set((await db.select({ userId: liveSpinTickets.userId }).from(liveSpinTickets).where(and(eq(liveSpinTickets.status, "active"), eq(liveSpinTickets.isTest, event.isTest)))).map((ticket) => ticket.userId)).size;
   const isWinnerRevealed = ["winner_revealed", "prize_countdown", "prize_revealed", "ended"].includes(event.status);
   const isPrizeRevealed = ["prize_revealed", "ended"].includes(event.status);
-  const result = isWinnerRevealed ? (await db.select({ entry: liveSpinEntries, prize: liveSpinPrizeTiers }).from(liveSpinResults).innerJoin(liveSpinEntries, eq(liveSpinResults.winnerEntryId, liveSpinEntries.id)).innerJoin(liveSpinPrizeTiers, eq(liveSpinResults.prizeTierId, liveSpinPrizeTiers.id)).where(eq(liveSpinResults.eventId, event.id)).limit(1))[0] : null;
+  const results = isWinnerRevealed ? await db.select({ result: liveSpinResults, entry: liveSpinEntries, prize: liveSpinPrizeTiers }).from(liveSpinResults).innerJoin(liveSpinEntries, eq(liveSpinResults.winnerEntryId, liveSpinEntries.id)).innerJoin(liveSpinPrizeTiers, eq(liveSpinResults.prizeTierId, liveSpinPrizeTiers.id)).where(eq(liveSpinResults.eventId, event.id)).orderBy(asc(liveSpinResults.winnerRank)) : [];
+  const consolation = event.status === "ended" ? await db.select({ result: liveSpinConsolationResults, gift: liveSpinConsolationGifts }).from(liveSpinConsolationResults).leftJoin(liveSpinConsolationGifts, eq(liveSpinConsolationResults.giftId, liveSpinConsolationGifts.id)).where(eq(liveSpinConsolationResults.eventId, event.id)).orderBy(asc(liveSpinConsolationResults.rank)) : [];
   return {
     serverNow: new Date(),
     event: {
@@ -389,6 +473,10 @@ export async function getPublicLiveSpinState() {
       adMediaUrl: event.adMediaUrl,
       adDurationSeconds: event.adDurationSeconds,
       minParticipantCount: event.minParticipantCount,
+      spinEnabled: event.spinEnabled,
+      winnerCount: event.winnerCount,
+      consolationGiftCount: event.consolationGiftCount,
+      settingsSnapshotHash: event.settingsSnapshotHash,
       winnerSpoilerSeconds: event.winnerSpoilerSeconds,
       prizeCountdownSeconds: event.prizeCountdownSeconds,
       fairnessCommitmentHash: event.fairnessCommitmentHash,
@@ -398,8 +486,10 @@ export async function getPublicLiveSpinState() {
     participantCount: activeTicketHolders,
     entryCount: isLocked ? event.lockedEntryCount : 0,
     thresholdReached: activeTicketHolders >= event.minParticipantCount,
-    winner: result ? { alias: result.entry.displayAlias } : null,
-    prize: result && isPrizeRevealed ? { nameKh: result.prize.nameKh, valueLabel: result.prize.valueLabel, mediaUrl: result.prize.mediaUrl } : null,
+    winner: results[0] ? { alias: results[0].entry.displayAlias } : null,
+    prize: results[0] && isPrizeRevealed ? { nameKh: results[0].prize.nameKh, valueLabel: results[0].prize.valueLabel, mediaUrl: results[0].prize.mediaUrl } : null,
+    winners: results.map(({ result, entry, prize }) => ({ rank: result.winnerRank, alias: entry.displayAlias, prize: isPrizeRevealed ? { nameKh: prize.nameKh, valueLabel: prize.valueLabel, mediaUrl: prize.mediaUrl } : null })),
+    consolation: consolation.map(({ result, gift }) => ({ rank: result.rank, alias: displayAlias(event.id, result.userId), gift: gift ? { nameKh: gift.nameKh, valueLabel: gift.valueLabel, mediaUrl: gift.mediaUrl } : null })),
   };
 }
 
