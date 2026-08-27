@@ -245,12 +245,28 @@ describe("provider catalog", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("keeps PUBG Mobile and Blood Strike IDs local when no owner-approved checker exists", async () => {
+  it("reports supported PUBG Mobile and Blood Strike checks as unavailable when their authorized bridge is not configured", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "server-only-key";
     vi.stubGlobal("fetch", vi.fn());
     for (const gameId of ["pubg_mobile_auto", "blood_strike"]) {
-      await expect(validateProviderPlayerIdentity({ gameId, fields: { user_id: "12345678" } })).resolves.toEqual({ status: "not_supported", playerName: null, playerId: null, region: null });
+      await expect(validateProviderPlayerIdentity({ gameId, fields: { user_id: "12345678" } })).resolves.toEqual({ status: "unavailable", playerName: null, playerId: null, region: null });
+    }
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("reports malformed supported-game IDs as invalid instead of rendering the unsupported confirmation state", async () => {
+    process.env.HEROKU_BRIDGE_URL = "https://bridge.example.test";
+    process.env.HEROKU_BRIDGE_API_KEY = "bridge-secret-for-test-only";
+    vi.stubGlobal("fetch", vi.fn());
+
+    for (const [gameId, fields] of [
+      ["pubg_mobile_auto", { player_id: "626" }],
+      ["blood_strike", { user_id: "abc" }],
+      ["honor_of_kings", { player_id: "12" }],
+      ["magic_chess_gogo_global", { user_id: "12345678" }],
+    ] as const) {
+      await expect(validateProviderPlayerIdentity({ gameId, fields })).resolves.toEqual({ status: "invalid", playerName: null, playerId: null, region: null });
     }
     expect(fetch).not.toHaveBeenCalled();
   });
@@ -307,15 +323,15 @@ describe("provider catalog", () => {
     expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(0);
   });
 
-  it("reveals an unsupported package list only after explicit ID confirmation", async () => {
+  it("reveals a genuinely unsupported approved category package list only after explicit ID confirmation", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "server-only-key";
     vi.stubGlobal("fetch", vi.fn(async (url: string) => {
-      if (url.includes("/offers?")) return { ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "blood_strike", name: "Blood Strike", fields: [{ key: "user_id", label: "User ID", type: "text" }], offers: [{ offer_id: "starter", name: "Starter Pack", price_usd: "1.25" }] }) };
-      return { ok: true, json: async () => ({ ok: true, kind: "topup", items: [{ category_id: "blood_strike", name: "Blood Strike" }], meta: { next_cursor: null, has_more: false } }) };
+      if (url.includes("/offers?")) return { ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "eafc_mobile_kh", name: "EAFC Mobile", fields: [{ key: "user_id", label: "User ID", type: "text" }], offers: [{ offer_id: "starter", name: "Starter Pack", price_usd: "1.25" }] }) };
+      return { ok: true, json: async () => ({ ok: true, kind: "topup", items: [{ category_id: "eafc_mobile_kh", name: "EAFC Mobile" }], meta: { next_cursor: null, has_more: false } }) };
     }));
 
-    await expect(fetchProviderPackages({ gameId: "blood_strike", fields: { user_id: "123456" }, idAccuracyConfirmed: true })).resolves.toEqual({ status: "ready", packages: [{ id: providerPackageRecordId("blood_strike", "starter"), label: "Starter Pack", amountLabel: "Starter Pack", priceLabel: "$1.25", provider: "FZR Cards", paymentMethods: ["khqr", "bank"] }] });
+    await expect(fetchProviderPackages({ gameId: "eafc_mobile_kh", fields: { user_id: "123456" }, idAccuracyConfirmed: true })).resolves.toEqual({ status: "ready", packages: [{ id: providerPackageRecordId("eafc_mobile_kh", "starter"), label: "Starter Pack", amountLabel: "Starter Pack", priceLabel: "$1.25", provider: "FZR Cards", paymentMethods: ["khqr", "bank"] }] });
     expect((fetch as ReturnType<typeof vi.fn>).mock.calls.every(([url]) => !String(url).includes("validate-id"))).toBe(true);
   });
 

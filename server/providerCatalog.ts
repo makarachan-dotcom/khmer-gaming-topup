@@ -571,7 +571,8 @@ async function validateWithAuthorizedPlayerBridge(input: ProviderPackageRequest)
   if (!game) return null;
   const identityFields = bridgeIdentityFields(input.fields, game.requiresServer);
   const bridge = authorizedPlayerBridgeEndpoint();
-  if (!identityFields || !bridge) return null;
+  if (!identityFields) return emptyIdentity("invalid");
+  if (!bridge) return null;
   try {
     const body = { userId: identityFields.playerId, game: game.bridgeGame, ...(identityFields.serverId ? { zoneId: identityFields.serverId } : {}) };
     const response = await fetch(bridge.url, {
@@ -596,7 +597,9 @@ export async function validateProviderPlayerIdentity(input: ProviderPackageReque
   const freeApiResult = await validateWithOwnerApprovedFreeApi(input);
   if (freeApiResult && freeApiResult.status !== "unavailable") return freeApiResult;
   const bridgeResult = await validateWithAuthorizedPlayerBridge(input);
-  return bridgeResult ?? freeApiResult ?? emptyIdentity("not_supported");
+  if (bridgeResult) return bridgeResult;
+  if (freeApiResult) return freeApiResult;
+  return authorizedBridgeGame(input) ? emptyIdentity("unavailable") : emptyIdentity("not_supported");
 }
 
 export async function fetchSmmProviderServices(options: { includeHidden?: boolean } = {}): Promise<SmmProviderCatalogResponse> {
