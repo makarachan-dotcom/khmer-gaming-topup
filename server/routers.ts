@@ -4,7 +4,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, ownerProcedure, protectedProcedure, publicProcedure, router, scopedAdminProcedure } from "./_core/trpc";
 import * as db from "./db";
-import { announceLiveSpinEvent, createLiveSpinEvent, endLiveSpinEvent, getLiveSpinAccountSummary, getLiveSpinAuditLog, getLiveSpinEvents, getLiveSpinOwnerEventDetail, getLiveSpinPrizeTiers, getPublicLiveSpinState, lockLiveSpinParticipants, revealLiveSpinPrize, saveLiveSpinPrizeTier, skipLiveSpinWeek, startLiveSpinLobby } from "./liveSpinStore";
+import { addOwnerLiveSpinTestEntry, announceLiveSpinEvent, createLiveSpinEvent, createOwnerLiveSpinTestEvent, endLiveSpinEvent, getLiveSpinAccountSummary, getLiveSpinAuditLog, getLiveSpinEvents, getLiveSpinOwnerEventDetail, getLiveSpinPrizeTiers, getPublicLiveSpinState, lockLiveSpinParticipants, revealLiveSpinPrize, saveLiveSpinPrizeTier, skipLiveSpinWeek, startLiveSpinLobby } from "./liveSpinStore";
 import { createLiveSpinSubscriberToken } from "./liveSpinRealtime";
 import { advanceLiveSpinSequence, runLiveSpinSequence } from "./liveSpinSequence";
 import { fetchFzrProviderSyncSnapshot, fetchProviderGameDetails, fetchProviderGames, fetchProviderPackages, fetchProviderPreviewPackages, fetchPublicProviderPackagePreview, fetchSmmProviderServices, getProviderAvailabilityCatalog, getProviderCatalogStatus, setProviderAvailability, validateProviderPlayerIdentity } from "./providerCatalog";
@@ -170,6 +170,8 @@ export const appRouter = router({
     liveSpinPrizeTiers: ownerProcedure.input(z.object({ eventId: z.string().min(4).max(64) })).query(({ input }) => getLiveSpinPrizeTiers(input.eventId)),
     liveSpinAuditLog: ownerProcedure.input(z.object({ eventId: z.string().min(4).max(64).optional() }).optional()).query(({ input }) => getLiveSpinAuditLog(input?.eventId)),
     createLiveSpinEvent: ownerProcedure.input(z.object({ scheduledAt: z.coerce.date(), announcementStartsAt: z.coerce.date(), entryCutoffAt: z.coerce.date(), lobbyStartsAt: z.coerce.date(), adMediaUrl: z.string().trim().max(2048).refine((value) => value.startsWith("/api/media/") || value.startsWith("/manus-storage/") || /^https:\/\//i.test(value), "Use a managed media URL or HTTPS video URL").nullable().optional(), adDurationSeconds: z.number().int().min(0).max(7_200).optional(), minParticipantCount: z.number().int().min(100).max(100_000).optional() })).mutation(({ ctx, input }) => createLiveSpinEvent({ actorUserId: ctx.user.id, ...input })),
+    createOwnerLiveSpinTestEvent: ownerProcedure.mutation(({ ctx }) => createOwnerLiveSpinTestEvent({ actorUserId: ctx.user.id })),
+    addOwnerLiveSpinTestEntry: ownerProcedure.input(z.object({ eventId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => addOwnerLiveSpinTestEntry({ actorUserId: ctx.user.id, ...input })),
     announceLiveSpinEvent: ownerProcedure.input(z.object({ eventId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => announceLiveSpinEvent({ actorUserId: ctx.user.id, ...input })),
     lockLiveSpinParticipants: ownerProcedure.input(z.object({ eventId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => lockLiveSpinParticipants({ actorUserId: ctx.user.id, ...input })),
     startLiveSpinLobby: ownerProcedure.input(z.object({ eventId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => startLiveSpinLobby({ actorUserId: ctx.user.id, ...input })),

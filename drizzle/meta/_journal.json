@@ -134,6 +134,13 @@
       "when": 1787833500000,
       "tag": "0018_livespin_phase_recovery",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "5",
+      "when": 1787835500000,
+      "tag": "0019_livespin_test_isolation",
+      "breakpoints": true
     }
   ]
 }

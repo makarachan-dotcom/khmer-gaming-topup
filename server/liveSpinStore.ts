@@ -115,8 +115,8 @@ export async function getLiveSpinAccountSummary(userId: number) {
   await syncLiveSpinTicketsForWeek(weekKey);
   const [qualifiedOrders, tickets, results] = await Promise.all([
     db.select({ id: liveSpinQualifiedOrders.id }).from(liveSpinQualifiedOrders).where(and(eq(liveSpinQualifiedOrders.userId, userId), eq(liveSpinQualifiedOrders.weekKey, weekKey))),
-    db.select().from(liveSpinTickets).where(eq(liveSpinTickets.userId, userId)).orderBy(desc(liveSpinTickets.issuedAt)),
-    db.select({ result: liveSpinResults, prize: liveSpinPrizeTiers, event: liveSpinEvents }).from(liveSpinResults).innerJoin(liveSpinEntries, eq(liveSpinResults.winnerEntryId, liveSpinEntries.id)).innerJoin(liveSpinPrizeTiers, eq(liveSpinResults.prizeTierId, liveSpinPrizeTiers.id)).innerJoin(liveSpinEvents, eq(liveSpinResults.eventId, liveSpinEvents.id)).where(eq(liveSpinEntries.userId, userId)).orderBy(desc(liveSpinResults.awardedAt)),
+    db.select().from(liveSpinTickets).where(and(eq(liveSpinTickets.userId, userId), eq(liveSpinTickets.isTest, false))).orderBy(desc(liveSpinTickets.issuedAt)),
+    db.select({ result: liveSpinResults, prize: liveSpinPrizeTiers, event: liveSpinEvents }).from(liveSpinResults).innerJoin(liveSpinEntries, eq(liveSpinResults.winnerEntryId, liveSpinEntries.id)).innerJoin(liveSpinPrizeTiers, eq(liveSpinResults.prizeTierId, liveSpinPrizeTiers.id)).innerJoin(liveSpinEvents, eq(liveSpinResults.eventId, liveSpinEvents.id)).where(and(eq(liveSpinEntries.userId, userId), eq(liveSpinEvents.isTest, false))).orderBy(desc(liveSpinResults.awardedAt)),
   ]);
   const progress = progressForQualifiedOrders(qualifiedOrders.length);
   return {
@@ -162,6 +162,52 @@ export async function createLiveSpinEvent(input: { actorUserId: number; schedule
   return { id: event.id, weekKey, fairnessCommitmentHash: event.fairnessCommitmentHash };
 }
 
+export async function createOwnerLiveSpinTestEvent(input: { actorUserId: number }) {
+  const db = ensureDb(await getDb());
+  const now = new Date();
+  const seed = createLiveSpinFairnessSeed();
+  const event = {
+    id: nanoid(),
+    weekKey: `test-${nanoid(10)}`,
+    status: "announced" as const,
+    isTest: true,
+    scheduledAt: now,
+    announcementStartsAt: now,
+    entryCutoffAt: now,
+    lobbyStartsAt: now,
+    adMediaUrl: null,
+    adDurationSeconds: 0,
+    minParticipantCount: 1,
+    winnerSpoilerSeconds: LIVE_SPIN_DEFAULT_SPOILER_SECONDS,
+    prizeCountdownSeconds: LIVE_SPIN_DEFAULT_PRIZE_COUNTDOWN_SECONDS,
+    fairnessCommitmentHash: liveSpinFairnessCommitment(seed),
+    encryptedFairnessSeed: encryptedSeed(seed),
+    createdByUserId: input.actorUserId,
+  };
+  await db.transaction(async (tx) => {
+    await tx.insert(liveSpinEvents).values(event);
+    await tx.insert(liveSpinPrizeTiers).values(Array.from({ length: 10 }, (_, index) => ({ id: nanoid(), eventId: event.id, tierNumber: index + 1, nameKh: `TEST ONLY · រង្វាន់ទី ${index + 1}`, valueLabel: "No monetary value", descriptionKh: "Owner validation event only. Not a customer reward.", mediaUrl: null, isGrandPrize: index === 0, isActive: true })));
+    await tx.insert(liveSpinAuditLogs).values({ id: nanoid(), eventId: event.id, actorUserId: input.actorUserId, actorType: "owner", action: "owner_test_event_created", details: { isTest: true, publicViewOnly: true, paymentOrOrderCreated: false, prizeCount: 10 } });
+  });
+  return { id: event.id, weekKey: event.weekKey, fairnessCommitmentHash: event.fairnessCommitmentHash, isTest: true as const };
+}
+
+export async function addOwnerLiveSpinTestEntry(input: { eventId: string; actorUserId: number }) {
+  const db = ensureDb(await getDb());
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT id FROM live_spin_events WHERE id = ${input.eventId} FOR UPDATE`);
+    const event = (await tx.select().from(liveSpinEvents).where(eq(liveSpinEvents.id, input.eventId)).limit(1))[0];
+    if (!event?.isTest) throw new Error("Only an owner test event can receive a test entry.");
+    if (!['draft', 'announced'].includes(event.status)) throw new Error("Test entry is closed after participants are locked.");
+    const existing = await tx.select({ id: liveSpinTickets.id }).from(liveSpinTickets).where(and(eq(liveSpinTickets.eventId, event.id), eq(liveSpinTickets.userId, input.actorUserId), eq(liveSpinTickets.isTest, true))).limit(1);
+    if (existing[0]) return { ticketId: existing[0].id, created: false as const };
+    const ticketId = nanoid();
+    await tx.insert(liveSpinTickets).values({ id: ticketId, userId: input.actorUserId, earnedWeekKey: event.weekKey, sequenceInWeek: 1, status: "active", isTest: true, eventId: event.id });
+    await tx.insert(liveSpinAuditLogs).values({ id: nanoid(), eventId: event.id, actorUserId: input.actorUserId, actorType: "owner", action: "owner_test_entry_added", details: { ticketId, isTest: true, paymentOrOrderCreated: false } });
+    return { ticketId, created: true as const };
+  });
+}
+
 export async function getLiveSpinEvents() {
   const db = ensureDb(await getDb());
   return db.select().from(liveSpinEvents).orderBy(desc(liveSpinEvents.scheduledAt));
@@ -180,9 +226,9 @@ export async function lockLiveSpinParticipants(input: { eventId: string; actorUs
     const event = (await tx.select().from(liveSpinEvents).where(eq(liveSpinEvents.id, input.eventId)).limit(1))[0];
     if (!event) throw new Error("Live Spin event not found.");
     if (!["draft", "announced"].includes(event.status)) throw new Error("Only a planned Live Spin event can lock participants.");
-    if (now.getTime() < event.entryCutoffAt.getTime()) throw new Error("Participant lock is not available before the entry cutoff.");
+    if (!event.isTest && now.getTime() < event.entryCutoffAt.getTime()) throw new Error("Participant lock is not available before the entry cutoff.");
 
-    const tickets = await tx.select().from(liveSpinTickets).where(eq(liveSpinTickets.status, "active")).orderBy(asc(liveSpinTickets.userId), asc(liveSpinTickets.issuedAt));
+    const tickets = await tx.select().from(liveSpinTickets).where(and(eq(liveSpinTickets.status, "active"), eq(liveSpinTickets.isTest, event.isTest))).orderBy(asc(liveSpinTickets.userId), asc(liveSpinTickets.issuedAt));
     const holderCount = new Set(tickets.map((ticket) => ticket.userId)).size;
     if (holderCount < event.minParticipantCount) {
       await tx.update(liveSpinEvents).set({ status: "skipped", endedAt: now, skippedReason: "The weekly event did not reach the minimum eligible participant threshold." }).where(eq(liveSpinEvents.id, event.id));
@@ -321,7 +367,7 @@ export async function getPublicLiveSpinState() {
   const event = (await db.select().from(liveSpinEvents).where(inArray(liveSpinEvents.status, ["announced", "locked", "waiting", "live", "winner_revealed", "prize_countdown", "prize_revealed", "ended"])).orderBy(desc(liveSpinEvents.scheduledAt)).limit(1))[0];
   if (!event) return { serverNow: new Date(), event: null, participantCount: 0, entryCount: 0, thresholdReached: false, winner: null, prize: null };
   const isLocked = ["locked", "waiting", "live", "winner_revealed", "prize_countdown", "prize_revealed", "ended"].includes(event.status);
-  const activeTicketHolders = isLocked ? event.lockedParticipantCount : new Set((await db.select({ userId: liveSpinTickets.userId }).from(liveSpinTickets).where(eq(liveSpinTickets.status, "active"))).map((ticket) => ticket.userId)).size;
+  const activeTicketHolders = isLocked ? event.lockedParticipantCount : new Set((await db.select({ userId: liveSpinTickets.userId }).from(liveSpinTickets).where(and(eq(liveSpinTickets.status, "active"), eq(liveSpinTickets.isTest, event.isTest)))).map((ticket) => ticket.userId)).size;
   const isWinnerRevealed = ["winner_revealed", "prize_countdown", "prize_revealed", "ended"].includes(event.status);
   const isPrizeRevealed = ["prize_revealed", "ended"].includes(event.status);
   const result = isWinnerRevealed ? (await db.select({ entry: liveSpinEntries, prize: liveSpinPrizeTiers }).from(liveSpinResults).innerJoin(liveSpinEntries, eq(liveSpinResults.winnerEntryId, liveSpinEntries.id)).innerJoin(liveSpinPrizeTiers, eq(liveSpinResults.prizeTierId, liveSpinPrizeTiers.id)).where(eq(liveSpinResults.eventId, event.id)).limit(1))[0] : null;
@@ -330,6 +376,7 @@ export async function getPublicLiveSpinState() {
     event: {
       id: event.id,
       status: event.status,
+      isTest: event.isTest,
       scheduledAt: event.scheduledAt,
       announcementStartsAt: event.announcementStartsAt,
       entryCutoffAt: event.entryCutoffAt,

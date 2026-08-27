@@ -9,10 +9,11 @@ describe("Live Spin router access boundaries", () => {
     expect(source).toContain("liveSpin: router({");
     expect(source).toContain("state: publicProcedure.query(() => getPublicLiveSpinState())");
     expect(source).toContain("account: protectedProcedure.query(({ ctx }) => getLiveSpinAccountSummary(ctx.user.id))");
+    expect(source).not.toContain("addOwnerLiveSpinTestEntry: publicProcedure");
   });
 
   it("keeps event creation, participant locks, schedule transitions, prize editing and skip controls owner-only", () => {
-    ["createLiveSpinEvent", "announceLiveSpinEvent", "lockLiveSpinParticipants", "startLiveSpinLobby", "startLiveSpin", "advanceLiveSpinPhase", "revealLiveSpinPrize", "endLiveSpinEvent", "skipLiveSpinWeek", "saveLiveSpinPrizeTier"].forEach((procedure) => {
+    ["createLiveSpinEvent", "createOwnerLiveSpinTestEvent", "addOwnerLiveSpinTestEntry", "announceLiveSpinEvent", "lockLiveSpinParticipants", "startLiveSpinLobby", "startLiveSpin", "advanceLiveSpinPhase", "revealLiveSpinPrize", "endLiveSpinEvent", "skipLiveSpinWeek", "saveLiveSpinPrizeTier"].forEach((procedure) => {
       expect(source).toContain(`${procedure}: ownerProcedure`);
     });
   });
