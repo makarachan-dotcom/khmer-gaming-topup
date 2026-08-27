@@ -16,6 +16,8 @@ describe("Admin Contact save contract", () => {
     expect(editor).toContain('notifyPublicAssetChanged("contact-admins")');
     expect(editor).toContain("toWebsiteMediaUrl(draft.photoUrl)");
     expect(editor).toContain("មិនអាចរក្សាទុកព័ត៌មាន Admin បានទេ");
+    expect(editor).toContain("await save.mutateAsync({ ...nextDraft");
+    expect(editor).toContain("រូបភាព Admin ថ្មីត្រូវបានរក្សាទុក");
     expect(editor).not.toContain("save.error?.message");
     expect(sheet).toContain("toWebsiteMediaUrl(admin.photoUrl)");
     expect(sheet).toContain('area === "contact-admins"');
