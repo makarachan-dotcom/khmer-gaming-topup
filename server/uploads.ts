@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { storagePut } from "./storage";
+import { getAppwriteMediaFile, isAppwriteMediaKey, storagePut } from "./storage";
 
 const allowedImageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 const allowedPaymentIconTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/svg+xml"]);
@@ -36,7 +36,13 @@ export async function uploadAdminMediaImage(input: { adminUserId: number; fileNa
   if (bytes.length === 0 || bytes.length > maxBytes) throw new Error("Each image must be smaller than 5 MB");
   const extension = input.contentType === "image/jpeg" ? "jpg" : input.contentType.split("/")[1];
   const safeName = input.fileName.replace(/[^a-zA-Z0-9_-]/g, "-").slice(0, 48) || "media";
-  return storagePut(`admin-media/${input.adminUserId}/${safeName}-${nanoid(8)}.${extension}`, bytes, input.contentType);
+  const stored = await storagePut(`admin-media/${input.adminUserId}/${safeName}-${nanoid(8)}.${extension}`, bytes, input.contentType);
+  // Do not hand the editor a URL that the server cannot immediately read back.
+  // This catches Appwrite bucket/key misconfiguration before it becomes a broken preview.
+  if (isAppwriteMediaKey(stored.key) && !(await getAppwriteMediaFile(stored.key))) {
+    throw new Error("រូបភាពត្រូវបាន upload ប៉ុន្តែ storage មិនអាចអានបានទេ។ សូមព្យាយាមម្ដងទៀត។");
+  }
+  return stored;
 }
 
 export async function uploadAdminPaymentMethodIcon(input: { adminUserId: number; fileName: string; contentType: string; dataUrl: string }) {
