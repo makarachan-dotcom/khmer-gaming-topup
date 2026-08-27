@@ -55,12 +55,15 @@ describe("dedicated game top-up routes", () => {
     expect(gameThemedArtworkForPackage("mobile_legends", "Weekly Pass", "Weekly Pass")).toBeNull();
   });
 
-  it("keeps category cards compact while using a package-specific artwork fallback", () => {
+  it("keeps the original package cards and grid while the category browser only filters them", () => {
     const source = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
-    expect(source).toContain("const visualUrl = suppliedArtwork ?? pubgArtwork");
-    expect(source).toContain('<img src={visualUrl} alt=""');
-    expect(source).toContain('className="package-category-choice__icon"');
-    expect(source).not.toContain('className="generated-package-art__game-cover"');
+    expect(source).toContain("package-choice package-choice--clean package-choice--gold");
+    expect(source).toContain('className="package-choice-surface block rounded-[0.7rem] p-2.5"');
+    expect(source).toContain('className="package-category-grid grid grid-cols-2 gap-2 sm:grid-cols-3"');
+    expect(source).toContain('<PackageCard key={item.id} item={item}');
+    expect(source).toContain('OverflowMarquee text={item.label}');
+    expect(source).not.toContain("function CategoryPackageCard(");
+    expect(source).not.toContain("package-category-choice__icon");
   });
 
   it("restores the previous generated artwork renderer for MLBB only when no provider package image exists", () => {

@@ -424,15 +424,6 @@ function PackageSection({ title, description, icon: Icon, items, selectedPackage
   return <section className="package-section"><div className="package-section-header flex items-center gap-2"><span className="diamond-title-icon"><Icon className="h-3.5 w-3.5" /></span><div className="min-w-0"><p className="text-xs font-extrabold text-slate-950">{title}</p>{description ? <p className="mt-0.5 text-[10px] leading-4 text-slate-500">{description}</p> : null}</div><span className="ml-auto shrink-0 rounded-full bg-white/75 px-2 py-0.5 text-[9px] font-bold text-slate-500">{items.length}</span></div><div className={visibleItems.length === 1 ? "mx-auto mt-3 grid w-full max-w-[11.5rem] grid-cols-1 gap-2" : "mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3"}>{visibleItems.map((item) => <PackageCard key={item.id} item={item} selected={selectedPackageId === item.id} onSelect={() => onSelect(item.id)} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} />)}</div>{progressive && items.length > initialDiamondPackageLimit ? <button type="button" aria-expanded={expanded} onClick={() => setExpanded((current) => !current)} className="package-see-more mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-indigo-100 bg-white/80 px-3 text-xs font-extrabold text-indigo-800 shadow-sm"><span>{expanded ? "បង្រួមកញ្ចប់" : `មើលបន្ថែម ${hiddenCount} កញ្ចប់`}</span><ChevronDown className={`package-see-more__icon h-4 w-4 ${expanded ? "package-see-more__icon--expanded" : ""}`} /></button> : null}</section>;
 }
 
-function CategoryPackageCard({ item, selected, onSelect, gameId, gameName, gameLogoUrl }: { item: ProviderPackage; selected: boolean; onSelect: () => void; gameId: string; gameName: string; gameLogoUrl?: string }) {
-  const artworkOverrides = useContext(PackageArtworkOverridesContext);
-  const suppliedArtwork = artworkOverrides[item.id] ?? suppliedProductArtworkForPackage(gameId, item.amountLabel);
-  const pubgArtwork = isPubgTopupGame(gameId, gameName) ? pubgUcArtworkForAmount(item.amountLabel) : null;
-  const generatedArtwork = generatedPackageArtworkForPackage(item.label, item.amountLabel);
-  const visualUrl = suppliedArtwork ?? pubgArtwork ?? (usesMobileLegendsDiamondChestArtwork(gameId, item.label, item.amountLabel) ? goldDiamondChestArtworkUrl : generatedArtwork.url);
-  return <article className="min-w-0"><button type="button" aria-pressed={selected} onClick={onSelect} className={`package-category-choice w-full ${selected ? "package-category-choice--selected" : ""}`}><span className="package-category-choice__icon">{visualUrl ? <img src={visualUrl} alt="" loading="lazy" decoding="async" draggable={false} /> : <ProviderGameArtwork name={gameName} logoUrl={gameLogoUrl} showCountryFlag={false} className="h-full w-full rounded-full" iconClassName="h-4 w-4" />}</span><span className="min-w-0 flex-1 text-left"><strong className="block text-sm font-extrabold leading-5 text-white">{item.priceLabel}</strong><OverflowMarquee text={item.label} className="mt-0.5 text-[10px] font-semibold leading-4 text-slate-300" /></span>{selected ? <SelectedPackageCheck size={20} className="package-category-choice__check" /> : <span className="package-category-choice__select" aria-hidden="true" />}</button></article>;
-}
-
 function DiamondPackages({ packages, status, selectedPackageId, onSelect, gameId, gameName, gameLogoUrl }: { packages: ProviderPackage[]; status?: "ready" | "unavailable" | "error" | "verification_required"; selectedPackageId: string; onSelect: (id: string) => void; gameId: string; gameName: string; gameLogoUrl?: string }) {
   const eventContent = trpc.content.active.useQuery();
   const { data: packageArtworkData, refetch: refetchPackageArtwork } = trpc.provider.packageArtwork.useQuery({ gameId }, { enabled: Boolean(gameId), refetchInterval: 1_000, staleTime: 0 });
@@ -461,5 +452,39 @@ function DiamondPackages({ packages, status, selectedPackageId, onSelect, gameId
     activeTab.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "nearest", inline: "center" });
   }, [selectedCategoryId]);
 
-  return <PackageArtworkOverridesContext.Provider value={artworkOverrides}><section className="package-category-browser mt-4" aria-labelledby="package-category-heading"><header className="package-category-browser__header"><span className="package-category-browser__gem"><Gem className="h-4 w-4" /></span><div className="min-w-0"><p className="text-[10px] font-bold tracking-[0.18em] text-amber-300/80">GAME PACKAGES</p><h2 id="package-category-heading" className="package-category-browser__title">ជ្រើសរើសកញ្ចប់</h2></div><span className="package-category-browser__total">{gamePackages.length}</span></header>{status === "ready" && packages.length ? <><nav className="package-category-tabs mt-4" aria-label="ប្រភេទកញ្ចប់"><button ref={(element) => { categoryTabRefs.current.all = element; }} type="button" onClick={() => setSelectedCategoryId("all")} aria-pressed={selectedCategoryId === "all"} className={`package-category-tab ${selectedCategoryId === "all" ? "package-category-tab--active" : ""}`}><span>ទាំងអស់</span><b>{gamePackages.length}</b></button>{categoryTabs.map((category) => <button key={category.id} ref={(element) => { categoryTabRefs.current[category.id] = element; }} type="button" onClick={() => setSelectedCategoryId(category.id)} aria-pressed={selectedCategoryId === category.id} className={`package-category-tab ${selectedCategoryId === category.id ? "package-category-tab--active" : ""}`}><span>{category.label}</span><b>{category.count}</b></button>)}</nav><label className="package-category-search mt-3"><Search className="h-4 w-4" /><span className="sr-only">ស្វែងរកគ្រប់កញ្ចប់</span><input value={packageSearch} onChange={(event) => setPackageSearch(event.target.value)} placeholder="ស្វែងរកគ្រប់កញ្ចប់…" /></label><div className="mt-3 flex items-center justify-between gap-3 text-[10px] font-semibold text-slate-300"><span>{searchValue ? "លទ្ធផលស្វែងរកគ្រប់កញ្ចប់" : `ប្រភេទ៖ ${selectedCategoryId === "all" ? "ទាំងអស់" : categoryTabs.find((category) => category.id === selectedCategoryId)?.label ?? "ទាំងអស់"}`}</span><span>{visiblePackages.length} កញ្ចប់</span></div><div key={searchValue ? `search:${searchValue}` : selectedCategoryId} className="package-category-grid mt-3">{visiblePackages.map((item) => <CategoryPackageCard key={item.id} item={item} selected={selectedPackageId === item.id} onSelect={() => onSelect(item.id)} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} />)}</div>{!visiblePackages.length ? <div className="mt-3 rounded-xl border border-dashed border-slate-600 bg-slate-950/70 px-4 py-8 text-center text-xs leading-5 text-slate-300">មិនមានកញ្ចប់ត្រូវនឹងការស្វែងរកនេះទេ។ សូមសាកល្បងពាក្យផ្សេង ឬជ្រើស «ទាំងអស់»។</div> : null}</> : <div className="mt-4 rounded-xl border border-dashed border-slate-600 bg-slate-950/70 p-4 text-xs leading-5 text-slate-300">មិនអាចបង្ហាញកញ្ចប់សេវាសម្រាប់ពេលនេះទេ។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។</div>}</section></PackageArtworkOverridesContext.Provider>;
+  return (
+    <PackageArtworkOverridesContext.Provider value={artworkOverrides}>
+      <div className="mt-4 space-y-3 border-t border-slate-100 pt-4">
+        {status === "ready" && packages.length ? <>
+          <section className="package-category-browser" aria-labelledby="package-category-heading">
+            <header className="package-category-browser__header">
+              <span className="package-category-browser__gem"><Gem className="h-4 w-4" /></span>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold tracking-[0.18em] text-amber-300/80">GAME PACKAGES</p>
+                <h2 id="package-category-heading" className="package-category-browser__title">ជ្រើសរើសកញ្ចប់</h2>
+              </div>
+              <span className="package-category-browser__total">{gamePackages.length}</span>
+            </header>
+            <nav className="package-category-tabs mt-4" aria-label="ប្រភេទកញ្ចប់">
+              <button ref={(element) => { categoryTabRefs.current.all = element; }} type="button" onClick={() => setSelectedCategoryId("all")} aria-pressed={selectedCategoryId === "all"} className={`package-category-tab ${selectedCategoryId === "all" ? "package-category-tab--active" : ""}`}><span>ទាំងអស់</span><b>{gamePackages.length}</b></button>
+              {categoryTabs.map((category) => <button key={category.id} ref={(element) => { categoryTabRefs.current[category.id] = element; }} type="button" onClick={() => setSelectedCategoryId(category.id)} aria-pressed={selectedCategoryId === category.id} className={`package-category-tab ${selectedCategoryId === category.id ? "package-category-tab--active" : ""}`}><span>{category.label}</span><b>{category.count}</b></button>)}
+            </nav>
+            <label className="package-category-search mt-3">
+              <Search className="h-4 w-4" />
+              <span className="sr-only">ស្វែងរកគ្រប់កញ្ចប់</span>
+              <input value={packageSearch} onChange={(event) => setPackageSearch(event.target.value)} placeholder="ស្វែងរកគ្រប់កញ្ចប់…" />
+            </label>
+            <div className="mt-3 flex items-center justify-between gap-3 text-[10px] font-semibold text-slate-300">
+              <span>{searchValue ? "លទ្ធផលស្វែងរកគ្រប់កញ្ចប់" : `ប្រភេទ៖ ${selectedCategoryId === "all" ? "ទាំងអស់" : categoryTabs.find((category) => category.id === selectedCategoryId)?.label ?? "ទាំងអស់"}`}</span>
+              <span>{visiblePackages.length} កញ្ចប់</span>
+            </div>
+          </section>
+          <div key={searchValue ? `search:${searchValue}` : selectedCategoryId} className="package-category-grid grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {visiblePackages.map((item) => <PackageCard key={item.id} item={item} selected={selectedPackageId === item.id} onSelect={() => onSelect(item.id)} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} />)}
+          </div>
+          {!visiblePackages.length ? <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-xs leading-5 text-slate-600">មិនមានកញ្ចប់ត្រូវនឹងការស្វែងរកនេះទេ។ សូមសាកល្បងពាក្យផ្សេង ឬជ្រើស «ទាំងអស់»។</div> : null}
+        </> : <div className="mt-3 rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-xs leading-5 text-slate-600">មិនអាចបង្ហាញកញ្ចប់សេវាសម្រាប់ពេលនេះទេ។ សូមព្យាយាមម្តងទៀតនៅពេលក្រោយ។</div>}
+      </div>
+    </PackageArtworkOverridesContext.Provider>
+  );
 }
