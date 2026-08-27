@@ -5,7 +5,7 @@ import { getAppwriteMediaFile, isAppwriteMediaKey } from "../storage";
 export function registerStorageProxy(app: Express) {
   // Vercel rewrites public managed-media paths through the catch-all API function,
   // while local development reaches the public path directly.
-  app.get(["/manus-storage/*", "/api/manus-storage/*"], async (req, res) => {
+  app.get(["/api/media/*", "/media/*", "/manus-storage/*", "/api/manus-storage/*"], async (req, res) => {
     const key = (req.params as Record<string, string>)[0];
     if (!key) {
       res.status(400).send("Missing storage key");

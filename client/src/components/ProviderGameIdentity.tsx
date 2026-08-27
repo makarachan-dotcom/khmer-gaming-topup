@@ -1,3 +1,4 @@
+import { isWebsiteManagedMediaUrl, toWebsiteMediaUrl } from "@/lib/mediaUrl";
 import { cn } from "@/lib/utils";
 import { cambodiaSupportMarker, countryFlagForRegion, gameRegionMarker } from "@/lib/providerPresentation";
 import { Gamepad2, Globe2 } from "lucide-react";
@@ -24,13 +25,13 @@ export function hasProviderApprovedGameLogo(logoUrl?: string) {
 export function resolveProviderGameLogo(name: string, logoUrl?: string) {
   // An Admin-uploaded managed-storage logo is an explicit override. Use the
   // generated fallback only when no safe override is available.
-  const override = logoUrl?.trim();
+  const override = toWebsiteMediaUrl(logoUrl);
   if (canRenderProviderArtwork(override)) return override;
   return managedProviderArtwork.find((item) => item.matches.test(name))?.url;
 }
 
 export function canRenderProviderArtwork(url?: string) {
-  return hasProviderApprovedGameLogo(url) || url?.startsWith("/manus-storage/") || url?.startsWith("/api/provider-artwork/");
+  return hasProviderApprovedGameLogo(url) || isWebsiteManagedMediaUrl(url) || url?.startsWith("/api/provider-artwork/");
 }
 
 export function ProviderGameArtwork({ name, logoUrl, className, iconClassName, priority = false, region, showCountryFlag = true }: ArtworkProps) {

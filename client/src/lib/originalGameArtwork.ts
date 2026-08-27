@@ -1,3 +1,5 @@
+import { toWebsiteMediaUrl } from "@/lib/mediaUrl";
+
 export type OriginalGameArtwork = {
   src: string;
   accent: string;
@@ -96,7 +98,7 @@ export type ProviderGameImageOverride = { gameId: string; logoUrl: string | null
 
 export function resolvedGameArtworkFor(gameId: string, gameName = "", override?: ProviderGameImageOverride | null): OriginalGameArtwork | null {
   const defaultArtwork = originalGameArtworkFor(gameId, gameName);
-  return override?.cardArtworkUrl ? { ...(defaultArtwork ?? { accent: "#46d8ff" }), src: override.cardArtworkUrl } : defaultArtwork;
+  return override?.cardArtworkUrl ? { ...(defaultArtwork ?? { accent: "#46d8ff" }), src: toWebsiteMediaUrl(override.cardArtworkUrl) } : defaultArtwork;
 }
 
 export function isPopularStorefrontGame(gameId: string, gameName = "") {

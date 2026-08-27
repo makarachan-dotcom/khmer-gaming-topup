@@ -38,8 +38,9 @@ function AccessWorkspace() {
   const selected = users.data?.find((member) => member.id === targetUserId);
   const savedPermissions = trpc.admin.userPermissions.useQuery({ targetUserId: targetUserId ?? 1 }, { enabled: Boolean(targetUserId && selected?.role === "admin") });
   const changeRole = trpc.admin.setUserRole.useMutation();
+  const grantAdminAccess = trpc.admin.grantUserAdminAccess.useMutation();
   const savePermissions = trpc.admin.setUserPermissions.useMutation();
-  const busy = changeRole.isPending || savePermissions.isPending;
+  const busy = changeRole.isPending || grantAdminAccess.isPending || savePermissions.isPending;
 
   useEffect(() => {
     if (selected?.role === "admin" && savedPermissions.data) setPermissions(savedPermissions.data as PermissionKey[]);
@@ -64,9 +65,13 @@ function AccessWorkspace() {
     if (!selected) return;
     try {
       setError(null);
-      if (selected.role === "admin" && nextRole === "user") await savePermissions.mutateAsync({ targetUserId: selected.id, permissions: [] });
-      if (selected.role !== nextRole) await changeRole.mutateAsync({ targetUserId: selected.id, nextRole, confirmationEmail, reason });
-      if (nextRole === "admin") await savePermissions.mutateAsync({ targetUserId: selected.id, permissions });
+      if (selected.role !== nextRole && nextRole === "admin") {
+        await grantAdminAccess.mutateAsync({ targetUserId: selected.id, permissions, confirmationEmail, reason });
+      } else {
+        if (selected.role === "admin" && nextRole === "user") await savePermissions.mutateAsync({ targetUserId: selected.id, permissions: [] });
+        if (selected.role !== nextRole) await changeRole.mutateAsync({ targetUserId: selected.id, nextRole, confirmationEmail, reason });
+        if (selected.role === "admin" && nextRole === "admin") await savePermissions.mutateAsync({ targetUserId: selected.id, permissions });
+      }
       setTargetUserId(null);
       setConfirmationEmail("");
       setReason("");

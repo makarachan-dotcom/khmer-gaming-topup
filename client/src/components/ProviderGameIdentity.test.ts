@@ -11,10 +11,11 @@ describe("provider game identity", () => {
 
   it("uses an Admin-uploaded managed logo before the Mobile Legends fallback artwork", () => {
     const uploadedLogo = "/manus-storage/appwrite/zurs_media/admin-media/example/logo.webp";
-    expect(resolveProviderGameLogo("Mobile Legends (Global)", uploadedLogo)).toBe(uploadedLogo);
+    expect(resolveProviderGameLogo("Mobile Legends (Global)", uploadedLogo)).toBe("/api/media/appwrite/zurs_media/admin-media/example/logo.webp");
     expect(resolveProviderGameLogo("Mobile Legends (Global)", "https://reseller.fazercards.com/blocked.webp")).toBe("https://reseller.fazercards.com/blocked.webp");
     expect(resolveProviderGameLogo("Mobile Legends (Global)")).toBe("/api/provider-artwork/mobile-legends");
     expect(canRenderProviderArtwork("/api/provider-artwork/mobile-legends")).toBe(true);
+    expect(canRenderProviderArtwork("/api/media/appwrite/zurs_media/admin-media/example/logo.webp")).toBe(true);
     expect(resolveProviderGameLogo("Acecraft", "https://provider.example/acecraft.png")).toBe("https://provider.example/acecraft.png");
   });
 

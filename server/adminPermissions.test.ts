@@ -21,6 +21,7 @@ describe("delegated Admin permissions", () => {
 
   it("enforces scopes in server procedures and keeps owner-only controls unavailable to delegated Admins", () => {
     const router = source("server/routers.ts");
+    const db = source("server/db.ts");
     const guard = source("server/_core/trpc.ts");
     expect(guard).toContain("getDelegatedAdminPermissions(ctx.user.id)");
     expect(guard).toContain("The owner has not granted access to this Admin section.");
@@ -32,6 +33,9 @@ describe("delegated Admin permissions", () => {
     expect(router).toContain("paymentControl: ownerProcedure");
     expect(router).toContain("setUserRole: ownerProcedure");
     expect(router).toContain("setUserPermissions: ownerProcedure");
+    expect(router).toContain("grantUserAdminAccess: ownerProcedure");
+    expect(db).toContain("grantDelegatedAdminAccess");
+    expect(db).toContain("await db.transaction(async (tx) => {");
   });
 
   it("filters the client navigation using the same self-permission contract", () => {
@@ -42,5 +46,6 @@ describe("delegated Admin permissions", () => {
     expect(dashboard).toContain('path: "/admin?tab=operations", permission: "operations"');
     expect(dashboard).toContain("ownerOnly: true");
     expect(adminAccess).toContain('setNextRole("admin")');
+    expect(adminAccess).toContain("trpc.admin.grantUserAdminAccess.useMutation");
   });
 });

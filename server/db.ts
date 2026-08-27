@@ -1058,6 +1058,27 @@ export async function setAdminUserRole(input: { actorUserId: number; targetUserI
   return { success: true };
 }
 
+export async function grantDelegatedAdminAccess(input: { actorUserId: number; targetUserId: number; permissions: DelegatedAdminPermission[]; confirmationEmail: string; reason: string }) {
+  const permissions = normalizeDelegatedAdminPermissions(input.permissions);
+  if (!permissions.length) throw new Error("Select at least one Admin section before granting access.");
+  const db = await getDb();
+  if (!db) {
+    if (!isAppwriteStoreConfigured()) throw new Error("Role management is unavailable until the administrator storage is connected.");
+    await setAppwriteUserRole({ ...input, nextRole: "admin" });
+    return setAppwriteAdminPermissions({ userId: input.targetUserId, permissions, updatedByUserId: input.actorUserId });
+  }
+  const target = await db.select().from(users).where(eq(users.id, input.targetUserId)).limit(1);
+  if (!target[0]) throw new Error("The target account was not found.");
+  validateAdminRoleChange({ targetEmail: target[0].email, previousRole: target[0].role, nextRole: "admin", confirmationEmail: input.confirmationEmail, reason: input.reason });
+  const key = delegatedAdminPermissionsContentKey(input.targetUserId);
+  await db.transaction(async (tx) => {
+    await tx.update(users).set({ role: "admin" }).where(eq(users.id, input.targetUserId));
+    await tx.insert(siteContent).values({ id: nanoid(), contentKey: key, titleKh: "Delegated Admin permissions", bodyKh: JSON.stringify(permissions), isActive: false, updatedByUserId: input.actorUserId }).onDuplicateKeyUpdate({ set: { bodyKh: JSON.stringify(permissions), isActive: false, updatedByUserId: input.actorUserId } });
+    await tx.insert(adminRoleAudits).values({ id: nanoid(), actorUserId: input.actorUserId, targetUserId: input.targetUserId, previousRole: target[0].role, nextRole: "admin", reason: input.reason.trim() });
+  });
+  return { permissions };
+}
+
 export async function getAdminRoleAudits() {
   const db = await getDb();
   if (!db) return isAppwriteStoreConfigured() ? getAppwriteAdminRoleAudits() : [];
@@ -1186,11 +1207,12 @@ export async function saveSiteContent(input: { contentKey: string; titleKh?: str
 }
 
 function isSafeArtworkMediaUrl(mediaUrl: string) {
-  if (mediaUrl.startsWith("/manus-storage/")) return true;
+  if (mediaUrl.startsWith("/api/media/") || mediaUrl.startsWith("/manus-storage/")) return true;
   try { return new URL(mediaUrl).protocol === "https:"; } catch { return false; }
 }
 
 function artworkStorageKey(mediaUrl: string) {
+  if (mediaUrl.startsWith("/api/media/")) return mediaUrl.slice("/api/media/".length);
   return mediaUrl.startsWith("/manus-storage/") ? mediaUrl.slice("/manus-storage/".length) : null;
 }
 
