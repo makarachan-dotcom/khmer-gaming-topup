@@ -58,8 +58,10 @@ async function bootstrapExistingDatabase(connection) {
     "SELECT `created_at` FROM `__drizzle_migrations` ORDER BY `created_at` DESC LIMIT 1",
   );
 
-  if (migrationRows.length > 0) return { bootstrapped: false };
   if (!coreSchemaExists) return { bootstrapped: false };
+
+  const latestMigrationAt = migrationRows.length > 0 ? Number(migrationRows[0].created_at ?? 0) : 0;
+  if (latestMigrationAt >= liveSpinMigration.when) return { bootstrapped: false };
 
   if (existingLiveSpinTables.length > 0) {
     throw new Error(
@@ -67,7 +69,7 @@ async function bootstrapExistingDatabase(connection) {
     );
   }
 
-  console.log("Existing application schema detected without Drizzle history; applying Live Spin migration only.");
+  console.log("Existing application schema detected with incomplete legacy migration history; applying Live Spin migration only.");
   for (const statement of statements) {
     await connection.query(statement);
   }
