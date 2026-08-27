@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 const liveSpin = readFileSync(new URL("./LiveSpin.tsx", import.meta.url), "utf8");
 const account = readFileSync(new URL("./Account.tsx", import.meta.url), "utf8");
+const experience = readFileSync(new URL("../components/LiveSpinExperience.tsx", import.meta.url), "utf8");
 const store = readFileSync(new URL("../../../server/liveSpinStore.ts", import.meta.url), "utf8");
 
 describe("Live Spin production presentation", () => {
@@ -16,8 +17,8 @@ describe("Live Spin production presentation", () => {
   it("labels countdowns and preserves a Top 10 consolation display", () => {
     expect(liveSpin).toContain('const timerLabel = ["announced", "locked", "waiting"].includes(event.status) ? "ចាប់ផ្តើមក្នុង" : "ពេលនៅសល់"');
     expect(liveSpin).toContain("{timerLabel}");
-    expect(liveSpin).toContain("const consolationLabelCount = Math.max(10, consolation.length)");
-    expect(liveSpin).toContain("Top {consolationLabelCount} អ្នកតភ្ជាប់យូរជាងគេ");
+    expect(experience).toContain("const consolationLabelCount = Math.max(10, consolation.length)");
+    expect(experience).toContain("Top {consolationLabelCount} អ្នកតភ្ជាប់យូរជាងគេ");
   });
 
   it("keeps production defaults at threshold 100, three winners, and ten consolation slots", () => {

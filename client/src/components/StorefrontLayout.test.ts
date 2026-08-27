@@ -127,7 +127,7 @@ describe("storefront media protection", () => {
     const contactSource = readFileSync(join(process.cwd(), "client/src/components/ContactAdminControl.tsx"), "utf8");
     const documentSource = readFileSync(join(process.cwd(), "client/index.html"), "utf8");
     const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
-    expect(componentSource).toContain('hideOnMobile={location === "/live-spin"}');
+    expect(componentSource).toContain('hideOnMobile={activeMobileTabHref === "/live-spin"}');
     expect(contactSource).toContain("contact-admin-fab--hide-mobile");
     expect(contactSource).toContain("ទំនាក់ទំនង Admin");
     expect(contactSource).toContain("Asia/Phnom_Penh");
