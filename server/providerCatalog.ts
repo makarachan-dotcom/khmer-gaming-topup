@@ -273,11 +273,16 @@ export const initialApprovedPublicGameIds = [
 
 export const mobileLegendsFamilyGameId = "mobile_legends";
 const mobileLegendsFamilyVariantIds = ["mobile_legends_global", "mobile_legends_promo", "mobile_legends_special"] as const;
+export const freeFireFamilyGameId = "free_fire";
 export const pubgMobileFamilyGameId = "pubg_mobile";
 const pubgMobileFamilyVariantIds = ["pubg_mobile_auto", "pubg_mobile_fast"] as const;
 
 function isMobileLegendsFamilyGame(gameId: string) {
   return gameId.trim().toLowerCase() === mobileLegendsFamilyGameId;
+}
+
+function isFreeFireFamilyGame(gameId: string) {
+  return gameId.trim().toLowerCase() === freeFireFamilyGameId;
 }
 
 function isPubgMobileFamilyGame(gameId: string) {
@@ -342,6 +347,22 @@ export async function fetchProviderGameDetails(gameId: string, options: { includ
       return {
         status: "ready",
         game: { ...primary.game, id: mobileLegendsFamilyGameId, name: "Mobile Legends" },
+        packages: readyVariants.flatMap((details) => details.packages),
+      };
+    }
+    if (isFreeFireFamilyGame(gameId)) {
+      // FazerCards publishes Free Fire by regional fulfillment route. Present all
+      // owner-enabled routes as a single Free Fire game while leaving each offer's
+      // original provider category and package ID untouched.
+      const activeVariants = availableGames.games.filter((game) => /^free_fire(?:_|$)/i.test(game.id)).map((game) => game.id);
+      if (!activeVariants.length) return { status: "unavailable", game: null, packages: [] };
+      const variantDetails = await Promise.all(activeVariants.map((variantId) => fetchProviderGameDetails(variantId, options)));
+      const readyVariants = variantDetails.filter((details): details is Extract<ProviderGameDetailsResponse, { status: "ready" }> => details.status === "ready");
+      if (!readyVariants.length) return { status: variantDetails.some((details) => details.status === "error") ? "error" : "unavailable", game: null, packages: [] };
+      const primary = readyVariants.find((details) => details.game.id === "free_fire_my_sg") ?? readyVariants[0]!;
+      return {
+        status: "ready",
+        game: { ...primary.game, id: freeFireFamilyGameId, name: "Free Fire" },
         packages: readyVariants.flatMap((details) => details.packages),
       };
     }
@@ -554,13 +575,24 @@ export async function getProviderAvailabilityCatalog(): Promise<ProviderAvailabi
 
 export async function setProviderAvailability(input: { kind: "game" | "smm"; providerId: string; isActive: boolean }) {
   if (!isAppwriteStoreConfigured()) throw new Error("Provider availability control is not configured");
-  if (input.kind !== "game") return updateAppwriteProviderAvailability(input);
+  if (input.kind !== "game") {
+    const next = await updateAppwriteProviderAvailability(input);
+    providerAvailabilitySnapshot = next;
+    providerAvailabilityRetryAt = Date.now() + 60_000;
+    return next;
+  }
   const [catalog, availability] = await Promise.all([fetchFzrTopupCatalog(), providerAvailability()]);
   if (catalog.status !== "ready") throw new Error("FZR Cards catalog is currently unavailable");
   const validGameIds = new Set(asProviderGames(catalog.items).map((game) => game.id));
   if (!validGameIds.has(input.providerId)) throw new Error("Selected game is not available from FZR Cards");
   const legacyActiveGameIds = availability.activeGameIds ?? initialApprovedPublicGameIds.filter((id) => !availability.hiddenGameIds.includes(id));
-  return updateAppwriteProviderAvailability({ ...input, legacyActiveGameIds });
+  const next = await updateAppwriteProviderAvailability({ ...input, legacyActiveGameIds });
+  // Availability is read by both the admin inventory and the public storefront.
+  // Update the bounded cache immediately after a confirmed write so neither view
+  // rolls back to the pre-save state while waiting for the 60-second read cache.
+  providerAvailabilitySnapshot = next;
+  providerAvailabilityRetryAt = Date.now() + 60_000;
+  return next;
 }
 
 const smmGlobOrderSchema = z.object({ order: z.union([z.string(), z.number()]).transform(String).pipe(z.string().trim().min(1).max(120)) });

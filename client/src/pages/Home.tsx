@@ -254,6 +254,9 @@ function ProviderGameCatalogGroup({ baseName, games, imageOverrides }: { baseNam
   if (normalizedBaseName === "mobile legends") {
     return <HomeGameCard game={{ ...primary, id: "mobile_legends", name: "Mobile Legends" }} displayName="Mobile Legends" imageOverrides={imageOverrides} />;
   }
+  if (normalizedBaseName === "free fire" || games.some(game => /^free_fire(?:_|$)/i.test(game.id))) {
+    return <HomeGameCard game={{ ...primary, id: "free_fire", name: "Free Fire" }} displayName="Free Fire" imageOverrides={imageOverrides} />;
+  }
   if (normalizedBaseName === "pubg mobile" || games.some(game => game.id === "pubg_mobile_auto" || game.id === "pubg_mobile_fast")) {
     return <HomeGameCard game={{ ...primary, id: "pubg_mobile", name: "PUBG Mobile" }} displayName="PUBG Mobile" imageOverrides={imageOverrides} />;
   }

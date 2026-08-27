@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { balanceSocialProviderServices, cachedPublicProviderGames, fetchProviderGameDetails, fetchProviderGames, fetchProviderPackages, fetchProviderPreviewPackages, fetchSmmProviderServices, getProviderAvailabilityCatalog, getProviderCatalogStatus, isThailandProviderProduct, providerPackageRecordId, resetProviderCatalogCacheForTests, submitSmmProviderOrder, validateProviderPlayerIdentity } from "./providerCatalog";
+import { balanceSocialProviderServices, cachedPublicProviderGames, fetchProviderGameDetails, fetchProviderGames, fetchProviderPackages, fetchProviderPreviewPackages, fetchSmmProviderServices, getProviderAvailabilityCatalog, getProviderCatalogStatus, isThailandProviderProduct, providerPackageRecordId, resetProviderCatalogCacheForTests, setProviderAvailability, submitSmmProviderOrder, validateProviderPlayerIdentity } from "./providerCatalog";
 
 const originalEndpoint = process.env.FZR_CARDS_API_BASE_URL;
 const originalApiKey = process.env.FZR_CARDS_API_KEY;
@@ -11,6 +11,9 @@ const originalWorkerUrl = process.env.VPS_WORKER_URL;
 const originalWorkerSecret = process.env.WORKER_SECRET;
 const originalHerokuBridgeUrl = process.env.HEROKU_BRIDGE_URL;
 const originalHerokuBridgeApiKey = process.env.HEROKU_BRIDGE_API_KEY;
+const originalAppwriteEndpoint = process.env.APPWRITE_ENDPOINT;
+const originalAppwriteProjectId = process.env.APPWRITE_PROJECT_ID;
+const originalAppwriteApiKey = process.env.APPWRITE_API_KEY;
 
 beforeEach(() => {
   resetProviderCatalogCacheForTests();
@@ -44,6 +47,12 @@ afterEach(() => {
   else process.env.HEROKU_BRIDGE_URL = originalHerokuBridgeUrl;
   if (originalHerokuBridgeApiKey === undefined) delete process.env.HEROKU_BRIDGE_API_KEY;
   else process.env.HEROKU_BRIDGE_API_KEY = originalHerokuBridgeApiKey;
+  if (originalAppwriteEndpoint === undefined) delete process.env.APPWRITE_ENDPOINT;
+  else process.env.APPWRITE_ENDPOINT = originalAppwriteEndpoint;
+  if (originalAppwriteProjectId === undefined) delete process.env.APPWRITE_PROJECT_ID;
+  else process.env.APPWRITE_PROJECT_ID = originalAppwriteProjectId;
+  if (originalAppwriteApiKey === undefined) delete process.env.APPWRITE_API_KEY;
+  else process.env.APPWRITE_API_KEY = originalAppwriteApiKey;
 });
 
 describe("provider catalog", () => {
@@ -94,6 +103,31 @@ describe("provider catalog", () => {
     await expect(getProviderAvailabilityCatalog()).resolves.toMatchObject({ games: [{ id: "8_ball_pool", isActive: true }, { id: "new-pubg", isActive: false }] });
   });
 
+  it("keeps a confirmed admin visibility update in the shared catalog cache immediately", async () => {
+    process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
+    process.env.FZR_CARDS_API_KEY = "server-only-key";
+    process.env.APPWRITE_ENDPOINT = "https://appwrite.example.test/v1";
+    process.env.APPWRITE_PROJECT_ID = "zurs-project";
+    process.env.APPWRITE_API_KEY = "appwrite-server-only-key";
+    let savedAvailability: Record<string, unknown> | null = null;
+    vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.startsWith("https://provider.example.test")) {
+        return { ok: true, json: async () => ({ ok: true, kind: "topup", items: [{ category_id: "free_fire_my_sg", name: "Free Fire (MY/SG)" }, { category_id: "free_fire_bd", name: "Free Fire (BD)" }], meta: { next_cursor: null, has_more: false } }) };
+      }
+      if (init?.method === "GET") {
+        return savedAvailability
+          ? { ok: true, json: async () => ({ $id: "availability", sourceTable: "provider_availability", sourceId: "global", payload: JSON.stringify(savedAvailability) }) }
+          : { ok: false, status: 404, json: async () => ({}) };
+      }
+      savedAvailability = JSON.parse(String(init?.body ?? "{}"))?.data?.payload ? JSON.parse(JSON.parse(String(init?.body)).data.payload) : null;
+      return { ok: true, json: async () => ({ $id: "availability" }) };
+    }));
+
+    await expect(setProviderAvailability({ kind: "game", providerId: "free_fire_bd", isActive: true })).resolves.toMatchObject({ activeGameIds: expect.arrayContaining(["free_fire_bd"]) });
+    const inventory = await getProviderAvailabilityCatalog();
+    expect(inventory.games.find((game) => game.id === "free_fire_bd")).toMatchObject({ isActive: true });
+  });
+
   it("reuses a brief ready catalog cache for consecutive storefront reads", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "server-only-key";
@@ -126,6 +160,20 @@ describe("provider catalog", () => {
     const result = await fetchProviderGameDetails("mobile_legends");
     expect(result).toMatchObject({ status: "ready", game: { id: "mobile_legends", name: "Mobile Legends" } });
     if (result.status === "ready") expect(result.packages.map((item) => item.id)).toEqual([providerPackageRecordId("mobile_legends_global", "global"), providerPackageRecordId("mobile_legends_promo", "promo"), providerPackageRecordId("mobile_legends_special", "special")]);
+  });
+
+  it("merges owner-enabled Free Fire regional variants into one public Free Fire family page", async () => {
+    process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
+    process.env.FZR_CARDS_API_KEY = "server-only-key";
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (url.includes("/offers?category_id=free_fire_my_sg")) return { ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "free_fire_my_sg", name: "Free Fire (MY/SG)", fields: [{ key: "player_id", label: "Player ID", type: "text" }], offers: [{ offer_id: "my-sg", name: "100 Diamonds", price_usd: "1.00" }] }) };
+      if (url.includes("/offers?category_id=free_fire_bd")) return { ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "free_fire_bd", name: "Free Fire (BD)", fields: [{ key: "player_id", label: "Player ID", type: "text" }], offers: [{ offer_id: "bd", name: "310 Diamonds", price_usd: "2.00" }] }) };
+      return { ok: true, json: async () => ({ ok: true, kind: "topup", items: [{ category_id: "free_fire_my_sg", name: "Free Fire (MY/SG)" }, { category_id: "free_fire_bd", name: "Free Fire (BD)" }], meta: { next_cursor: null, has_more: false } }) };
+    }));
+
+    const result = await fetchProviderGameDetails("free_fire", { includeInactive: true });
+    expect(result).toMatchObject({ status: "ready", game: { id: "free_fire", name: "Free Fire" } });
+    if (result.status === "ready") expect(result.packages.map((item) => item.id)).toEqual([providerPackageRecordId("free_fire_my_sg", "my-sg"), providerPackageRecordId("free_fire_bd", "bd")]);
   });
 
   it("merges active PUBG Mobile Auto and Fast variants into one family page", async () => {
