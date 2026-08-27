@@ -105,5 +105,13 @@ async function main() {
 }
 
 main().catch((error) => {
-  fail(error instanceof Error ? error.message : "unknown migration failure");
+  const issue = error && typeof error === "object" ? error : null;
+  const cause = issue && "cause" in issue && issue.cause && typeof issue.cause === "object" ? issue.cause : null;
+  const diagnostic = [
+    error instanceof Error ? error.message : "unknown migration failure",
+    cause && "code" in cause ? `code=${String(cause.code)}` : null,
+    cause && "errno" in cause ? `errno=${String(cause.errno)}` : null,
+    cause && "sqlMessage" in cause ? String(cause.sqlMessage) : null,
+  ].filter(Boolean).join(" | ");
+  fail(diagnostic);
 });
