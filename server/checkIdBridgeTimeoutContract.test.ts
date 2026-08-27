@@ -8,7 +8,9 @@ describe("authorized Check-ID bridge timeout contract", () => {
   it("allows delayed bridge responses up to 25 seconds while keeping the credential server-only", () => {
     expect(source).toContain("signal: AbortSignal.timeout(25_000)");
     expect(source).toContain('"x-bridge-key": bridge.bridgeKey');
+    expect(source).toContain("process.env.HEROKU_BRIDGE_KEY?.trim()");
     expect(source).not.toContain("VITE_HEROKU_BRIDGE_API_KEY");
+    expect(source).not.toContain("VITE_HEROKU_BRIDGE_KEY");
   });
 
   it("normalizes bridge game slugs and preserves the documented Free Fire free-check mapping", () => {
