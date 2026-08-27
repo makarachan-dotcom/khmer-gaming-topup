@@ -26,4 +26,12 @@ describe("Live Spin production presentation", () => {
     expect(store).toContain("winnerCount ?? 3");
     expect(store).toContain("consolationGiftCount ?? 10");
   });
+
+  it("uses one-time yellow flower petals for the ending view instead of a looping rain effect", () => {
+    expect(experience).toContain('<FlowerPetals active={phase === "ending"} />');
+    expect(experience).toContain("function FlowerPetals");
+    expect(experience).toContain(">✿</motion.i>");
+    expect(experience).toContain('transition={{ duration: 2.9 + (petal.id % 3) * 0.26, delay: petal.delay, ease: [0.18, 0.78, 0.36, 1] }}');
+    expect(experience).not.toContain("function Particles");
+  });
 });
