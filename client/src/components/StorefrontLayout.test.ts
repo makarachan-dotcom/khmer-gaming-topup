@@ -82,6 +82,11 @@ describe("storefront media protection", () => {
     expect(componentSource).toContain("rounded-full");
     expect(styleSource).toContain("border-radius: 999px");
     expect(styleSource).toContain("safe-area-inset-bottom");
+    expect(styleSource).toContain("right: auto");
+    expect(styleSource).toContain("left: 50%");
+    expect(styleSource).toContain("bottom: max(0.5rem, env(safe-area-inset-bottom))");
+    expect(styleSource).toContain("@media (min-width: 640px) { .zurs-mobile-tabbar { display: none !important; } }");
+    expect(styleSource).toContain("transform 300ms cubic-bezier(0.23, 1, 0.32, 1)");
   });
 
   it("uses a matching rounded top header without changing desktop controls", () => {
