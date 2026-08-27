@@ -66,6 +66,19 @@ describe("dedicated game top-up routes", () => {
     expect(source).not.toContain("package-category-choice__icon");
   });
 
+  it("applies only responsive package-grid geometry while preserving package-card presentation", () => {
+    const pageSource = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
+    const css = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
+    expect(pageSource).toContain('className="container game-topup-container py-5 sm:py-9"');
+    expect(css).toContain("Game top-up package layout: sizing and grid geometry only; existing package-card presentation is preserved.");
+    expect(css).toContain(".package-category-grid { gap: 1rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }");
+    expect(css).toContain("@media (min-width: 992px) {\n  .package-category-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }");
+    expect(css).toContain("@media (min-width: 1200px) {\n  .game-topup-container { max-width: 1180px; }\n  .package-category-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }");
+    expect(css).toContain(".package-category-grid > article { height: 10.55rem; }");
+    expect(css).toContain(".package-category-grid > article > .package-choice,");
+    expect(css).toContain(".package-choice-surface { min-height: 0; }");
+  });
+
   it("restores the previous generated artwork renderer for MLBB only when no provider package image exists", () => {
     expect(usesLegacyMobileLegendsArtwork("mobile_legends_global", false)).toBe(true);
     expect(usesLegacyMobileLegendsArtwork("mobile_legends_global", true)).toBe(false);

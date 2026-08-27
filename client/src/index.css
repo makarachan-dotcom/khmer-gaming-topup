@@ -1337,3 +1337,20 @@ img.checkout-method-card__icon { object-fit: contain; }
 @keyframes package-category-grid-enter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 @media (min-width: 640px) { .package-category-browser { padding: 1rem; } }
 @media (prefers-reduced-motion: reduce) { .package-category-tabs { scroll-behavior: auto; } .package-category-tab { transition: none; } }
+
+/* Game top-up package layout: sizing and grid geometry only; existing package-card presentation is preserved. */
+@media (min-width: 768px) {
+  .game-topup-container { max-width: 1180px; }
+  .package-category-grid { gap: 1rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .package-category-grid > article { height: 10.55rem; }
+  .package-category-grid > article > .package-choice,
+  .package-category-grid .package-choice-surface { height: 100%; }
+  .package-category-grid .package-choice-surface { min-height: 0; }
+}
+@media (min-width: 992px) {
+  .package-category-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (min-width: 1200px) {
+  .game-topup-container { max-width: 1180px; }
+  .package-category-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
