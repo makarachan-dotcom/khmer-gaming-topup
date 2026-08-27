@@ -1354,3 +1354,36 @@ img.checkout-method-card__icon { object-fit: contain; }
   .game-topup-container { max-width: 1180px; }
   .package-category-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 }
+
+/* Storefront utility controls: explicit right-side anchors keep them clear of the footer and mobile action bar. */
+.storefront-scroll-top {
+  position: fixed !important;
+  z-index: 270 !important;
+  top: auto !important;
+  right: max(0.55rem, env(safe-area-inset-right)) !important;
+  bottom: calc(max(0.7rem, env(safe-area-inset-bottom)) + 11.7rem) !important;
+  left: auto !important;
+}
+@media (min-width: 640px) {
+  .contact-admin-fab {
+    position: fixed !important;
+    z-index: 260 !important;
+    top: auto !important;
+    right: max(1.5rem, env(safe-area-inset-right)) !important;
+    bottom: max(1.5rem, env(safe-area-inset-bottom)) !important;
+    left: auto !important;
+    display: inline-flex;
+    height: 2.9rem;
+    width: auto;
+    min-width: 6.2rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding-inline: 0.85rem;
+  }
+  .contact-admin-fab__label { display: inline; }
+  .storefront-scroll-top {
+    right: max(1.5rem, env(safe-area-inset-right)) !important;
+    bottom: calc(max(1.5rem, env(safe-area-inset-bottom)) + 4.1rem) !important;
+  }
+}

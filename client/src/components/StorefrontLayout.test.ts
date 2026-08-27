@@ -79,7 +79,7 @@ describe("storefront media protection", () => {
   it("uses a compact three-item rounded mobile tab bar with a Live entry and no public AI entry", () => {
     const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
     const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
-    expect(componentSource).toContain("hidden h-11 w-11");
+    expect(componentSource).toContain("storefront-scroll-top fixed z-[270] grid h-11 w-11");
     expect(componentSource).toContain("grid h-14 w-full -translate-x-1/2 grid-cols-3");
     expect(styleSource).toContain("width: min(calc(100vw - 1.5rem), 21rem)");
     expect(componentSource).toContain("gap-0.5");
@@ -163,6 +163,12 @@ describe("storefront media protection", () => {
     expect(styleSource).toContain(".contact-admin-fab--payment");
     expect(styleSource).toContain(".contact-admin-fab--hide-mobile");
     expect(styleSource).toContain("touch-action: pan-x pan-y");
+    expect(componentSource).toContain("storefront-scroll-top fixed z-[270] grid");
+    expect(componentSource).not.toContain("fixed right-4 z-[45] hidden");
+    expect(styleSource).toContain("Storefront utility controls: explicit right-side anchors keep them clear of the footer and mobile action bar.");
+    expect(styleSource).toContain(".storefront-scroll-top {");
+    expect(styleSource).toContain(".contact-admin-fab__label { display: inline; }");
+    expect(styleSource).toContain("bottom: calc(max(1.5rem, env(safe-area-inset-bottom)) + 4.1rem) !important;");
   });
 
   it("routes selected packages directly to the payment preview page and keeps KHQR creation behind final confirmation", () => {

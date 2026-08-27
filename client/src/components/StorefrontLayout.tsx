@@ -165,7 +165,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
           return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={classes}>{active && animation ? <AnimatedGlyph name={animation} size={17} color="#312e81" /> : <Icon className={cn("h-4 w-4 shrink-0", active && "tab-icon-active")} strokeWidth={active ? 2.3 : 1.9} />}<span className={cn("zurs-mobile-tab-label truncate", active ? "max-w-[3.75rem] opacity-100" : "max-w-0 opacity-0")}>{label}</span></Link>;
         })}
       </nav>}
-      <button type="button" onClick={navigateToTop} aria-label="ត្រឡប់ទៅខាងលើ" className={cn("fixed right-4 z-[45] hidden h-11 w-11 place-items-center rounded-2xl border border-white/80 bg-slate-950 text-white shadow-lg shadow-slate-950/20 transition-[opacity,transform,background-color] duration-200 hover:-translate-y-1 hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 sm:grid sm:bottom-6", showScrollTop ? "opacity-100" : "pointer-events-none translate-y-3 opacity-0")}><ArrowUp className="h-5 w-5" strokeWidth={2.25} /></button>
+      <button type="button" onClick={navigateToTop} aria-label="ត្រឡប់ទៅខាងលើ" className={cn("storefront-scroll-top fixed z-[270] grid h-11 w-11 place-items-center rounded-2xl border border-white/80 bg-slate-950 text-white shadow-lg shadow-slate-950/20 transition-[opacity,transform,background-color] duration-200 hover:-translate-y-1 hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2", showScrollTop ? "opacity-100" : "pointer-events-none translate-y-3 opacity-0")}><ArrowUp className="h-5 w-5" strokeWidth={2.25} /></button>
     </div>
   );
 }
