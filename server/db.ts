@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, inArray, lt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, like, lt, or, sql } from "drizzle-orm";
 import { createHash, randomBytes } from "node:crypto";
 import { drizzle } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
@@ -1330,11 +1330,26 @@ function artworkStorageKey(mediaUrl: string) {
   return mediaUrl.startsWith("/manus-storage/") ? mediaUrl.slice("/manus-storage/".length) : null;
 }
 
+/**
+ * The storefront combines regional provider catalogs into a single game page
+ * (for example `/topup/mobile_legends`). Overrides are saved against the
+ * real provider route (`mobile_legends_global`, `mobile_legends_promo`, …),
+ * so the public lookup must include its regional children. Without this, an
+ * upload can appear saved in Admin while customers on the combined page only
+ * receive the default artwork.
+ */
+export function providerFamilyMetadataPrefix(gameId?: string) {
+  const normalized = gameId?.trim().toLowerCase() ?? "";
+  return ["mobile_legends", "free_fire", "pubg_mobile"].includes(normalized) ? `${normalized}_%` : null;
+}
+
 export async function getProviderPackageArtworkOverrides(gameId?: string) {
   const db = await getDb();
   if (!db) return [];
+  const normalizedGameId = gameId?.trim() ?? "";
+  const familyPrefix = providerFamilyMetadataPrefix(normalizedGameId);
   const rows = gameId
-    ? await db.select().from(providerPackageArtworkOverrides).where(eq(providerPackageArtworkOverrides.gameId, gameId.trim())).orderBy(desc(providerPackageArtworkOverrides.updatedAt))
+    ? await db.select().from(providerPackageArtworkOverrides).where(familyPrefix ? or(eq(providerPackageArtworkOverrides.gameId, normalizedGameId), like(providerPackageArtworkOverrides.gameId, familyPrefix)) : eq(providerPackageArtworkOverrides.gameId, normalizedGameId)).orderBy(desc(providerPackageArtworkOverrides.updatedAt))
     : await db.select().from(providerPackageArtworkOverrides).orderBy(desc(providerPackageArtworkOverrides.updatedAt));
   return rows.map((row) => ({ gameId: row.gameId, offerId: row.offerId, mediaUrl: row.mediaUrl, updatedAt: row.updatedAt, updatedByUserId: row.updatedByUserId }));
 }
@@ -1378,8 +1393,10 @@ export async function getProviderPackageArtworkAudits(gameId?: string) {
 export async function getProviderPackageCategoryOverrides(gameId?: string) {
   const db = await getDb();
   if (!db) return [];
+  const normalizedGameId = gameId?.trim() ?? "";
+  const familyPrefix = providerFamilyMetadataPrefix(normalizedGameId);
   const rows = gameId
-    ? await db.select().from(providerPackageCategoryOverrides).where(eq(providerPackageCategoryOverrides.gameId, gameId.trim())).orderBy(asc(providerPackageCategoryOverrides.categoryLabel))
+    ? await db.select().from(providerPackageCategoryOverrides).where(familyPrefix ? or(eq(providerPackageCategoryOverrides.gameId, normalizedGameId), like(providerPackageCategoryOverrides.gameId, familyPrefix)) : eq(providerPackageCategoryOverrides.gameId, normalizedGameId)).orderBy(asc(providerPackageCategoryOverrides.categoryLabel))
     : await db.select().from(providerPackageCategoryOverrides).orderBy(desc(providerPackageCategoryOverrides.updatedAt));
   return rows.map((row) => ({ gameId: row.gameId, offerId: row.offerId, categoryLabel: row.categoryLabel, updatedAt: row.updatedAt }));
 }
