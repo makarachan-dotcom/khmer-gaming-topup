@@ -1,4 +1,5 @@
 import { startLogin } from "@/const";
+import { logoutFromAppwrite } from "@/lib/appwriteAuth";
 import { trpc } from "@/lib/trpc";
 import { TRPCClientError } from "@trpc/client";
 import { useCallback, useEffect, useMemo } from "react";
@@ -39,12 +40,7 @@ export function useAuth(options?: UseAuthOptions) {
       }
       throw error;
     } finally {
-      // Clear the Preview auto-login token mirrored into sessionStorage, so
-      // header-based sessions (Safari ITP / WebView) are logged out too. The
-      // backend cookie is cleared by the logout mutation.
-      try {
-        sessionStorage.removeItem("manus-cookie");
-      } catch {}
+      await logoutFromAppwrite();
       utils.auth.me.setData(undefined, null);
       await utils.auth.me.invalidate();
     }
@@ -52,7 +48,7 @@ export function useAuth(options?: UseAuthOptions) {
 
   const state = useMemo(() => {
     localStorage.setItem(
-      "manus-runtime-user-info",
+      "zurs-runtime-user-info",
       JSON.stringify(meQuery.data)
     );
     return {

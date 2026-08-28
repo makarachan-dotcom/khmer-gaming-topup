@@ -24,6 +24,7 @@ import AdminPackageArtwork from "./pages/AdminPackageArtwork";
 import AdminProviderSecurity from "@/pages/AdminProviderSecurity";
 import AdminContactAdmins from "@/pages/AdminContactAdmins";
 import AdminGameImages from "@/pages/AdminGameImages";
+import AppwriteLogin from "@/pages/AppwriteLogin";
 import Legal from "./pages/Legal";
 import GameTopup from "./pages/GameTopup";
 const LiveSpin = lazy(() => import("./pages/LiveSpin"));
@@ -33,6 +34,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/ai"><Redirect to="/" /></Route>
+      <Route path="/login" component={AppwriteLogin} />
       <Route path={"/"} component={Home} />
       <Route path="/topup/:gameId" component={GameTopup} />
       <Route path="/live-spin" component={() => <Suspense fallback={<div className="min-h-screen bg-slate-50" />}><LiveSpin /></Suspense>} />

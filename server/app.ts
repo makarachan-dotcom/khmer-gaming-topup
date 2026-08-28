@@ -3,6 +3,7 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { appRouter } from "./routers";
 import { createContext } from "./_core/context";
 import { registerGoogleAuthRoutes } from "./googleAuth";
+import { registerAppwriteAuthRoutes } from "./appwriteAuth";
 import { registerOAuthRoutes } from "./_core/oauth";
 import { registerStorageProxy } from "./_core/storageProxy";
 import { sdk } from "./_core/sdk";
@@ -60,6 +61,7 @@ export function createApp() {
   // production because it can serve Appwrite-backed marketplace media.
   registerStorageProxy(app);
   registerProviderArtworkRoutes(app);
+  registerAppwriteAuthRoutes(app);
   if (!process.env.VERCEL) {
     registerOAuthRoutes(app);
   }

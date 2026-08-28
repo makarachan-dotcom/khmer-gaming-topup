@@ -491,6 +491,14 @@
 
 - [ ] Reproduce and repair the newly reported Catalog Control Add/Remove regression on the current production UI, verify state persistence and public catalog reflection repeatedly, and preserve provider records, credentials, payments, and Payment Control OFF.
 
+- [ ] Diagnose and repair the production Admin storage write failure that persists after the FazerCards inventory restores, causing a tested Add action to roll back with concise Khmer storage feedback; preserve authorization, existing provider records, and Payment Control OFF.
+
+- [ ] Restore server-only OAuth runtime configuration in Vercel Production and Preview, as production diagnostics show the missing OAuth server setting prevents the authenticated admin session cookie from being resolved for Catalog Control Add/Remove mutations.
+
+- [ ] Migrate the administrator session and authorization flow to owner-controlled Appwrite Auth, removing the `manus.im` OAuth runtime dependency before resuming Catalog Control Add/Remove and package-artwork update verification.
+
+- [ ] Restore the authorized server-only `FZR_CARDS_API_BASE_URL` in Vercel Production and Preview so Catalog Control can load the provider inventory and perform Add/Remove verification; never expose the provider credential or enable payments.
+
 - [ ] Reproduce and repair the reported admin package-artwork upload issue where an accepted save does not appear promptly on customer pages; preserve the existing package/product records and use the approved media-storage path only.
 
 - [ ] Ensure each successful admin package-artwork save broadcasts an immediate same-origin refresh to active customer pages, so users see the new image without a manual page reload or delayed polling.
@@ -518,3 +526,6 @@
 - [x] Add privacy-safe server outcome classification for the owner-authorized PUBG Check-ID failure and use it to complete an evidence-based correction; never log player IDs, player names, bridge URLs, headers, or credentials, and keep Payment Control OFF. Diagnostics identified missing Vercel production configuration; after the authorized server-only Production/Preview secret deployment and READY redeploy, the owner-authorized PUBG Check-ID test returned verified on the official page without selecting a package or creating a payment.
 
 - [x] Remove the temporary legacy `HEROKU_BRIDGE_KEY` source fallback now that Vercel Production and Preview use only approved server-side `HEROKU_BRIDGE_API_KEY`, then repeat focused Check-ID validation and an official authorized PUBG verification with Payment Control OFF. The resolver now accepts only the approved API-key name; server-only bridge health, focused Check-ID tests, TypeScript, production build, and the full 102-file/315-test suite pass. After the `6654a294` production deployment reached READY, the owner-authorized PUBG Check-ID re-verification displayed a verified account state without selecting a package or creating a payment.
+- [x] Implement owner-controlled Appwrite Email OTP authentication: client OTP request/verification, short-lived Appwrite JWT identity proof, server-side Appwrite `/account` validation, HttpOnly first-party ZURS session exchange, local `/login` route, and Appwrite/ZURS logout cleanup. Validity, account normalization, no-client-key boundary, context priority, focused regression tests, full test suite, TypeScript, and production build passed; the migration does not require `OAUTH_SERVER_URL` or use `manus.im` for normal requests.
+- [ ] Complete owner-led first Appwrite Email OTP login on zurs.me, then verify a safe inactive Catalog Control item can be added and removed with durable public-catalog reflection; restore its original availability afterward.
+- [ ] After owner Appwrite login, complete an explicit safe package-artwork save/reset proof with a simultaneous public GameTopup view; confirm BroadcastChannel/one-second refetch and revisioned image URL update without altering user assets.

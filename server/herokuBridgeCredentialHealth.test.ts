@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 
 const bridgeUrl = process.env.HEROKU_BRIDGE_URL?.trim();
 const bridgeKey = process.env.HEROKU_BRIDGE_API_KEY?.trim();
-const bridgeCredentialHealthTest = /^https:\/\//.test(bridgeUrl ?? "") && Boolean(bridgeKey) ? it : it.skip;
+// Network health is intentionally opt-in so an intermittent third-party
+// service cannot make the deterministic product regression suite fail.
+const bridgeCredentialHealthTest = process.env.RUN_LIVE_BRIDGE_HEALTH === "true" && /^https:\/\//.test(bridgeUrl ?? "") && Boolean(bridgeKey) ? it : it.skip;
 
 describe("authorized Heroku bridge credential health", () => {
   bridgeCredentialHealthTest("accepts the server-only bridge credential on a no-player-data health request", async () => {

@@ -1,6 +1,6 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import type { User } from "../../drizzle/schema";
-import { sdk } from "./sdk";
+import { ENV } from "./env";
 import { getUserByOpenId } from "../db";
 import { readZursSession, readZursSessionFallbackProfile } from "../zursSession";
 
@@ -26,21 +26,24 @@ export async function createContext(
   }
 
   try {
-    user = await sdk.authenticateRequest(opts.req);
-  } catch {
-    try {
-      const fallbackProfile = await readZursSessionFallbackProfile(opts.req);
-      if (fallbackProfile) user = fallbackProfile;
-      else {
-        const openId = await readZursSession(opts.req);
-        user = openId ? await getUserByOpenId(openId) ?? null : null;
-      }
-    } catch (error) {
-      // A temporary fallback-account-store failure must not make public provider
-      // catalog routes fail for an otherwise anonymous request.
-      console.warn("[Auth] Optional fallback session lookup unavailable", error instanceof Error ? error.message : error);
-      user = null;
+    // Owner-controlled ZURS sessions (including Appwrite Auth) take priority.
+    // This prevents a missing external OAuth configuration from interrupting
+    // authenticated Admin mutations on the official domain.
+    const fallbackProfile = await readZursSessionFallbackProfile(opts.req);
+    if (fallbackProfile) user = fallbackProfile;
+    else {
+      const openId = await readZursSession(opts.req);
+      user = openId ? await getUserByOpenId(openId) ?? null : null;
     }
+    if (!user && ENV.oAuthServerUrl) {
+      const { sdk } = await import("./sdk");
+      user = await sdk.authenticateRequest(opts.req);
+    }
+  } catch (error) {
+    // A temporary account-store failure must not make public provider catalog
+    // routes fail for an otherwise anonymous request.
+    console.warn("[Auth] Optional session lookup unavailable", error instanceof Error ? error.message : error);
+    user = null;
   }
 
   return {

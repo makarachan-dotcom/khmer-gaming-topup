@@ -3,7 +3,6 @@ import { parse as parseCookieHeader } from "cookie";
 import type { Express, Request, Response } from "express";
 import * as db from "../db";
 import { getSessionCookieOptions } from "./cookies";
-import { sdk } from "./sdk";
 
 function getQueryParam(req: Request, key: string): string | undefined {
   const value = req.query[key];
@@ -32,6 +31,10 @@ export function registerOAuthRoutes(app: Express) {
     res.clearCookie(OAUTH_STATE_COOKIE, { path: "/", secure: true, sameSite: "none" });
 
     try {
+      // This legacy path is intentionally lazy-loaded. Appwrite Email OTP is
+      // the default ZURS sign-in flow and must not initialize an external OAuth
+      // SDK for normal storefront or Admin requests.
+      const { sdk } = await import("./sdk");
       const tokenResponse = await sdk.exchangeCodeForToken(code, state);
       const userInfo = await sdk.getUserInfo(tokenResponse.accessToken);
 
