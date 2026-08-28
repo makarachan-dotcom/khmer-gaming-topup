@@ -1,6 +1,5 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import type { User } from "../../drizzle/schema";
-import { ENV } from "./env";
 import { getUserByOpenId } from "../db";
 import { readZursSession, readZursSessionFallbackProfile } from "../zursSession";
 
@@ -34,10 +33,6 @@ export async function createContext(
     else {
       const openId = await readZursSession(opts.req);
       user = openId ? await getUserByOpenId(openId) ?? null : null;
-    }
-    if (!user && ENV.oAuthServerUrl) {
-      const { sdk } = await import("./sdk");
-      user = await sdk.authenticateRequest(opts.req);
     }
   } catch (error) {
     // A temporary account-store failure must not make public provider catalog

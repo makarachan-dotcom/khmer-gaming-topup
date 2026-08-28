@@ -4,7 +4,6 @@ import { appRouter } from "./routers";
 import { createContext } from "./_core/context";
 import { registerGoogleAuthRoutes } from "./googleAuth";
 import { registerAppwriteAuthRoutes } from "./appwriteAuth";
-import { registerOAuthRoutes } from "./_core/oauth";
 import { registerStorageProxy } from "./_core/storageProxy";
 import { cleanupExpiredSoldMarketplaceListings } from "./db";
 import { fetchProviderGames, fetchSmmProviderServices } from "./providerCatalog";
@@ -61,9 +60,6 @@ export function createApp() {
   registerStorageProxy(app);
   registerProviderArtworkRoutes(app);
   registerAppwriteAuthRoutes(app);
-  if (!process.env.VERCEL) {
-    registerOAuthRoutes(app);
-  }
   registerGoogleAuthRoutes(app);
   app.post("/api/scheduled/cleanup-sold-listings", async (req, res) => {
     try {
