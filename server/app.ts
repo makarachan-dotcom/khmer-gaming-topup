@@ -13,7 +13,6 @@ import crypto from "node:crypto";
 import { parseKhqrWorkerCallback, verifyKhqrWorkerSignature } from "./khqrWorkerWebhook";
 import { getKhqrWorkerCredentials } from "./khqrWorkerSecrets";
 import { registerSecurePaymentLinkRoutes } from "./paymentLinkRoutes";
-import { rateLimitConstants, rateLimitMiddleware } from "./rateLimiting";
 
 /**
  * Builds the shared Express application for the local long-running server and
@@ -22,10 +21,6 @@ import { rateLimitConstants, rateLimitMiddleware } from "./rateLimiting";
  */
 export function createApp() {
   const app = express();
-  app.disable("x-powered-by");
-  app.use("/api", rateLimitMiddleware("api-global", rateLimitConstants.globalApi.requests, "1 m"));
-  app.use("/api/auth", rateLimitMiddleware("auth", rateLimitConstants.auth.requests, "1 m"));
-  app.use("/api/webhooks", rateLimitMiddleware("webhook", rateLimitConstants.webhook.requests, "1 m"));
   const khqrWorkerWebhookHandler = async (req: express.Request, res: express.Response) => {
     try {
       if (!verifyKhqrWorkerSignature(req.body, req.header("x-khqr-signature") ?? undefined, getKhqrWorkerCredentials().callbackSecret ?? undefined)) return res.status(401).json({ success: false, error: "invalid signature" });

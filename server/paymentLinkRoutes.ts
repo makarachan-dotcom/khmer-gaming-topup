@@ -4,12 +4,17 @@ import { parse as parseCookieHeader } from "cookie";
 import { sdk } from "./_core/sdk";
 import { getUserByOpenId, bindSecurePaymentLink, cancelSecurePaymentLink, createPaymentLinkProof, issueSecurePaymentLink, markSecurePaymentLinkQrIssued } from "./db";
 import { readZursSession, readZursSessionFallbackProfile, ZURS_SESSION_COOKIE } from "./zursSession";
-import { checkRateLimit, rateLimitConstants, retryAfterSeconds } from "./rateLimiting";
+
+const issueLimiter = new Map<string, number[]>();
+const invalidLimiter = new Map<string, number[]>();
+const minute = 60_000;
+const hour = 60 * minute;
 
 function clientIp(req: Request) { return String(req.headers["x-forwarded-for"] ?? req.socket.remoteAddress ?? "unknown").split(",")[0].trim(); }
 function proof(value: string) { return createPaymentLinkProof(value); }
 function deviceProof(req: Request) { return proof(`${req.header("user-agent") ?? ""}|${req.header("sec-ch-ua") ?? ""}|${req.header("accept-language") ?? ""}`); }
 function sessionProof(req: Request) { const cookie = parseCookieHeader(req.headers.cookie ?? "")[ZURS_SESSION_COOKIE] ?? ""; return proof(cookie); }
+function limited(bucket: Map<string, number[]>, key: string, windowMs: number, maximum: number) { const now = Date.now(); const hits = (bucket.get(key) ?? []).filter((stamp) => now - stamp < windowMs); hits.push(now); bucket.set(key, hits); return hits.length > maximum; }
 function secureHeaders(res: Response) { res.setHeader("Cache-Control", "no-store, private, max-age=0"); res.setHeader("X-Robots-Tag", "noindex, nofollow, noarchive"); }
 
 async function resolveUser(req: Request) {
@@ -27,8 +32,8 @@ function auditIp(req: Request) { return proof(clientIp(req)); }
 export function registerSecurePaymentLinkRoutes(app: Express) {
   app.post("/api/pay/security/check/key", async (req, res) => {
     secureHeaders(res);
-    const issueLimit = await checkRateLimit(req, "payment-link-issue", rateLimitConstants.paymentLinkIssue.requests, "1 m");
-    if (!issueLimit.success) { res.setHeader("Retry-After", String(retryAfterSeconds(issueLimit.reset))); return res.status(429).json({ code: "RATE_LIMITED" }); }
+    const ip = clientIp(req);
+    if (limited(issueLimiter, ip, minute, 5)) return res.status(429).json({ code: "RATE_LIMITED" });
     const user = await resolveUser(req);
     const orderId = typeof req.body?.orderId === "string" ? req.body.orderId.trim() : "";
     if (!user || !orderId || orderId.length > 64) return res.status(401).json({ code: "UNAUTHORIZED" });
@@ -47,7 +52,7 @@ export function registerSecurePaymentLinkRoutes(app: Express) {
     const token = tokenFrom(req); const user = await resolveUser(req);
     if (!token || !user) return res.status(401).json({ state: "used" });
     const result = await bindSecurePaymentLink({ token, userId: user.id, sessionHash: sessionProof(req), deviceHash: deviceProof(req), ipHash: auditIp(req) });
-    if (result.state !== "ready") { const invalidLimit = await checkRateLimit(req, "payment-link-invalid", rateLimitConstants.paymentLinkInvalid.requests, "1 h"); if (!invalidLimit.success) { res.setHeader("Retry-After", String(retryAfterSeconds(invalidLimit.reset))); return res.status(429).json({ state: "rate_limited" }); } return res.status(410).json({ state: result.state }); }
+    if (result.state !== "ready") { const ip = clientIp(req); if (limited(invalidLimiter, ip, hour, 10)) return res.status(429).json({ state: "rate_limited" }); return res.status(410).json({ state: result.state }); }
     return res.json({ state: "ready", expiresAt: result.link!.expiresAt, tokenPrefix: result.link!.tokenPrefix });
   });
 
