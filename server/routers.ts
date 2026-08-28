@@ -2,7 +2,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { z } from "zod";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { adminProcedure, ownerProcedure, protectedProcedure, publicProcedure, publicRateLimitedProcedure, router, scopedAdminProcedure } from "./_core/trpc";
+import { adminProcedure, ownerProcedure, protectedProcedure, publicProcedure, router, scopedAdminProcedure } from "./_core/trpc";
 import * as db from "./db";
 import { addOwnerLiveSpinTestEntry, announceLiveSpinEvent, createLiveSpinEvent, createOwnerLiveSpinTestEvent, endLiveSpinEvent, getLiveSpinAccountSummary, getLiveSpinAuditLog, getLiveSpinEvents, getLiveSpinOwnerEventDetail, getLiveSpinPrizeTiers, getPublicLiveSpinState, heartbeatLiveSpinConnection, lockLiveSpinParticipants, revealLiveSpinPrize, saveLiveSpinConsolationGift, saveLiveSpinPrizeTier, saveLiveSpinSettings, skipLiveSpinWeek, startLiveSpinConnection, startLiveSpinLobby } from "./liveSpinStore";
 import { createLiveSpinSubscriberToken } from "./liveSpinRealtime";
@@ -52,12 +52,12 @@ export const appRouter = router({
     logout: publicProcedure.mutation(({ ctx }) => { const cookieOptions = getSessionCookieOptions(ctx.req); ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 }); ctx.res.clearCookie(ZURS_SESSION_COOKIE, { ...getZursSessionCookieOptions(ctx.req), maxAge: -1 }); return { success: true } as const; }),
   }),
   catalog: router({
-    games: publicRateLimitedProcedure.query(() => db.getGameCatalog()),
-    smm: publicRateLimitedProcedure.query(() => db.getSmmCatalog()),
+    games: publicProcedure.query(() => db.getGameCatalog()),
+    smm: publicProcedure.query(() => db.getSmmCatalog()),
   }),
   payments: router({
-    readiness: publicRateLimitedProcedure.query(() => db.getPublicPaymentAvailability()),
-    gate: publicRateLimitedProcedure.query(async () => ({ enabled: (await db.getPaymentControl()).enabled })),
+    readiness: publicProcedure.query(() => db.getPublicPaymentAvailability()),
+    gate: publicProcedure.query(async () => ({ enabled: (await db.getPaymentControl()).enabled })),
     methods: publicProcedure.query(() => db.getPaymentMethods()),
   }),
   wallet: router({
@@ -75,15 +75,15 @@ export const appRouter = router({
     heartbeatConnection: protectedProcedure.input(z.object({ eventId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => heartbeatLiveSpinConnection({ userId: ctx.user.id, ...input })),
   }),
   provider: router({
-    games: publicRateLimitedProcedure.query(() => fetchProviderGames()),
-    gameDetails: publicRateLimitedProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120) })).query(({ input }) => fetchProviderGameDetails(input.gameId)),
-    packageArtwork: publicRateLimitedProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120) })).query(({ input }) => db.getProviderPackageArtworkOverrides(input.gameId)),
-    packageCategories: publicRateLimitedProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120) })).query(({ input }) => db.getProviderPackageCategoryOverrides(input.gameId)),
-    gameImages: publicRateLimitedProcedure.query(() => db.getProviderGameImageOverrides()),
-    packagePreview: publicRateLimitedProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120) })).query(({ input }) => fetchPublicProviderPackagePreview(input.gameId)),
-    packages: publicRateLimitedProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120), fields: z.record(z.string().trim().max(64), z.string().trim().min(1).max(256)).refine((fields) => Object.keys(fields).length <= 12, "Too many provider fields"), idAccuracyConfirmed: z.boolean().optional().default(false) })).mutation(({ input }) => fetchProviderPackages(input)),
-    validatePlayerId: publicRateLimitedProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120), fields: z.record(z.string().trim().max(64), z.string().trim().min(1).max(256)).refine((fields) => Object.keys(fields).length <= 12, "Too many provider fields") })).mutation(async ({ input }) => toPublicPlayerIdentityResponse(await validateProviderPlayerIdentity(input))),
-    smmServices: publicRateLimitedProcedure.query(() => fetchSmmProviderServices()),
+    games: publicProcedure.query(() => fetchProviderGames()),
+    gameDetails: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120) })).query(({ input }) => fetchProviderGameDetails(input.gameId)),
+    packageArtwork: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120) })).query(({ input }) => db.getProviderPackageArtworkOverrides(input.gameId)),
+    packageCategories: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120) })).query(({ input }) => db.getProviderPackageCategoryOverrides(input.gameId)),
+    gameImages: publicProcedure.query(() => db.getProviderGameImageOverrides()),
+    packagePreview: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120) })).query(({ input }) => fetchPublicProviderPackagePreview(input.gameId)),
+    packages: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120), fields: z.record(z.string().trim().max(64), z.string().trim().min(1).max(256)).refine((fields) => Object.keys(fields).length <= 12, "Too many provider fields"), idAccuracyConfirmed: z.boolean().optional().default(false) })).mutation(({ input }) => fetchProviderPackages(input)),
+    validatePlayerId: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120), fields: z.record(z.string().trim().max(64), z.string().trim().min(1).max(256)).refine((fields) => Object.keys(fields).length <= 12, "Too many provider fields") })).mutation(async ({ input }) => toPublicPlayerIdentityResponse(await validateProviderPlayerIdentity(input))),
+    smmServices: publicProcedure.query(() => fetchSmmProviderServices()),
   }),
   marketplace: router({
     list: publicProcedure.input(z.object({ listingType: marketplaceType.optional(), game: z.string().max(120).optional(), search: z.string().max(120).optional() }).optional()).query(async ({ input }) => Promise.all((await db.listMarketplace(input ?? {})).map(async (listing) => {
