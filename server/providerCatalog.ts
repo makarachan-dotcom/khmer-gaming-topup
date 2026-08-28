@@ -147,11 +147,13 @@ async function fzrRequest(path: string, init: RequestInit = {}) {
 }
 
 async function providerAvailability() {
-  if (!isAppwriteStoreConfigured()) return { hiddenGameIds: [] as string[], hiddenSmmServiceIds: [] as string[], activeGameIds: undefined as string[] | undefined };
   const now = Date.now();
   if (providerAvailabilitySnapshot && now < providerAvailabilityRetryAt) return providerAvailabilitySnapshot;
   try {
-    const availability = await getAppwriteProviderAvailability();
+    // Use the primary ZURS ledger when it exists. Appwrite remains a backward-
+    // compatible fallback for deployments where the primary database is absent.
+    const { getPrimaryProviderAvailability } = await import("./db");
+    const availability = await getPrimaryProviderAvailability() ?? (isAppwriteStoreConfigured() ? await getAppwriteProviderAvailability() : { hiddenGameIds: [], hiddenSmmServiceIds: [], activeGameIds: undefined });
     providerAvailabilitySnapshot = availability;
     providerAvailabilityRetryAt = now + 60_000;
     return availability;
@@ -639,10 +641,16 @@ export async function getProviderAvailabilityCatalog(): Promise<ProviderAvailabi
   };
 }
 
-export async function setProviderAvailability(input: { kind: "game" | "smm"; providerId: string; isActive: boolean }) {
-  if (!isAppwriteStoreConfigured()) throw new Error("Provider availability control is not configured");
+export async function setProviderAvailability(input: { kind: "game" | "smm"; providerId: string; isActive: boolean; updatedByUserId?: number }) {
+  const persist = async (payload: { kind: "game" | "smm"; providerId: string; isActive: boolean; legacyActiveGameIds?: string[] }) => {
+    const { setPrimaryProviderAvailability } = await import("./db");
+    const primary = await setPrimaryProviderAvailability({ ...payload, updatedByUserId: input.updatedByUserId });
+    if (primary) return primary;
+    if (!isAppwriteStoreConfigured()) throw new Error("Provider availability control is not configured");
+    return updateAppwriteProviderAvailability(payload);
+  };
   if (input.kind !== "game") {
-    const next = await updateAppwriteProviderAvailability(input);
+    const next = await persist(input);
     providerAvailabilitySnapshot = next;
     providerAvailabilityRetryAt = Date.now() + 60_000;
     return next;
@@ -658,7 +666,7 @@ export async function setProviderAvailability(input: { kind: "game" | "smm"; pro
   if (!validGameIds.size) throw new Error("No synchronized FZR Cards catalog is available for this change");
   if (!validGameIds.has(input.providerId)) throw new Error("Selected game is not available from the synchronized FZR Cards catalog");
   const legacyActiveGameIds = availability.activeGameIds ?? initialApprovedPublicGameIds.filter((id) => !availability.hiddenGameIds.includes(id));
-  const next = await updateAppwriteProviderAvailability({ ...input, legacyActiveGameIds });
+  const next = await persist({ ...input, legacyActiveGameIds });
   // Availability is read by both the admin inventory and the public storefront.
   // Update the bounded cache immediately after a confirmed write so neither view
   // rolls back to the pre-save state while waiting for the 60-second read cache.

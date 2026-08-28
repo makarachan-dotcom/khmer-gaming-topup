@@ -31,6 +31,41 @@ export async function getDb() {
   return _db;
 }
 
+export type PrimaryProviderAvailability = { hiddenGameIds: string[]; hiddenSmmServiceIds: string[]; activeGameIds?: string[]; updatedAt: Date };
+const providerAvailabilityContentKey = "provider-availability:global";
+
+function normalizePrimaryProviderAvailability(value: unknown, updatedAt: Date): PrimaryProviderAvailability | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const data = value as Partial<PrimaryProviderAvailability>;
+  const ids = (input: unknown) => Array.isArray(input) ? Array.from(new Set(input.filter((id): id is string => typeof id === "string" && id.length > 0 && id.length <= 120))) : [];
+  return { hiddenGameIds: ids(data.hiddenGameIds), hiddenSmmServiceIds: ids(data.hiddenSmmServiceIds), activeGameIds: Array.isArray(data.activeGameIds) ? ids(data.activeGameIds) : undefined, updatedAt };
+}
+
+export async function getPrimaryProviderAvailability(): Promise<PrimaryProviderAvailability | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const record = await db.select({ bodyKh: siteContent.bodyKh, updatedAt: siteContent.updatedAt }).from(siteContent).where(eq(siteContent.contentKey, providerAvailabilityContentKey)).limit(1);
+  if (!record[0]?.bodyKh) return null;
+  try { return normalizePrimaryProviderAvailability(JSON.parse(record[0].bodyKh), record[0].updatedAt); } catch { return null; }
+}
+
+export async function setPrimaryProviderAvailability(input: { kind: "game" | "smm"; providerId: string; isActive: boolean; legacyActiveGameIds?: string[]; updatedByUserId?: number }): Promise<PrimaryProviderAvailability | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const current = await getPrimaryProviderAvailability() ?? { hiddenGameIds: [], hiddenSmmServiceIds: [], activeGameIds: undefined, updatedAt: new Date(0) };
+  const source = input.kind === "game" ? current.hiddenGameIds : current.hiddenSmmServiceIds;
+  const nextSource = input.isActive ? source.filter((id) => id !== input.providerId) : Array.from(new Set([...source, input.providerId]));
+  const currentActiveGames = current.activeGameIds ?? input.legacyActiveGameIds ?? [];
+  const next: PrimaryProviderAvailability = input.kind === "game"
+    ? { hiddenGameIds: nextSource, hiddenSmmServiceIds: current.hiddenSmmServiceIds, activeGameIds: input.isActive ? Array.from(new Set([...currentActiveGames, input.providerId])) : currentActiveGames.filter((id) => id !== input.providerId), updatedAt: new Date() }
+    : { hiddenGameIds: current.hiddenGameIds, hiddenSmmServiceIds: nextSource, activeGameIds: current.activeGameIds, updatedAt: new Date() };
+  const existing = await db.select({ id: siteContent.id }).from(siteContent).where(eq(siteContent.contentKey, providerAvailabilityContentKey)).limit(1);
+  const values = { titleKh: "Provider availability policy", bodyKh: JSON.stringify(next), mediaUrl: null, isActive: false, updatedByUserId: input.updatedByUserId ?? null };
+  if (existing[0]) await db.update(siteContent).set(values).where(eq(siteContent.id, existing[0].id));
+  else await db.insert(siteContent).values({ id: nanoid(), contentKey: providerAvailabilityContentKey, ...values });
+  return next;
+}
+
 export async function upsertUser(user: InsertUser): Promise<User | undefined> {
   if (!user.openId) throw new Error("User openId is required for upsert");
   const db = await getDb();

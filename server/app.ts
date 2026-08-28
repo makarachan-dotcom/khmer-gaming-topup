@@ -6,7 +6,6 @@ import { registerGoogleAuthRoutes } from "./googleAuth";
 import { registerAppwriteAuthRoutes } from "./appwriteAuth";
 import { registerOAuthRoutes } from "./_core/oauth";
 import { registerStorageProxy } from "./_core/storageProxy";
-import { sdk } from "./_core/sdk";
 import { cleanupExpiredSoldMarketplaceListings } from "./db";
 import { fetchProviderGames, fetchSmmProviderServices } from "./providerCatalog";
 import { deriveProviderNetworkRisk } from "./providerNetworkRisk";
@@ -68,6 +67,7 @@ export function createApp() {
   registerGoogleAuthRoutes(app);
   app.post("/api/scheduled/cleanup-sold-listings", async (req, res) => {
     try {
+      const { sdk } = await import("./_core/sdk");
       const user = await sdk.authenticateRequest(req);
       if (!user.isCron) return res.status(403).json({ error: "cron-only" });
       await cleanupExpiredSoldMarketplaceListings();
@@ -78,6 +78,7 @@ export function createApp() {
   });
   app.post("/api/scheduled/bank-review-readiness", async (req, res) => {
     try {
+      const { sdk } = await import("./_core/sdk");
       const user = await sdk.authenticateRequest(req);
       if (!user.isCron || !user.taskUid) return res.status(403).json({ error: "cron-only" });
       const [games, smm] = await Promise.all([fetchProviderGames(), fetchSmmProviderServices()]);
