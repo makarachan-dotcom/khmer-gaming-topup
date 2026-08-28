@@ -133,12 +133,12 @@ describe("storefront media protection", () => {
     expect(styleSource).toContain("prefers-reduced-motion: no-preference");
   });
 
-  it("uses Kantumruy Pro for the storefront and Hanuman for long Khmer copy", () => {
+  it("uses the legacy Noto Sans Khmer and DM Sans storefront typography", () => {
     const documentSource = readFileSync(join(process.cwd(), "client/index.html"), "utf8");
     const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
-    expect(documentSource).toContain("family=Hanuman");
-    expect(documentSource).toContain("family=Kantumruy+Pro");
-    expect(styleSource).toContain('font-family: "Hanuman", "Kantumruy Pro"');
+    expect(documentSource).toContain("family=DM+Sans");
+    expect(documentSource).toContain("family=Noto+Sans+Khmer");
+    expect(styleSource).toContain('--font-sans: "Noto Sans Khmer", "DM Sans", sans-serif');
     expect(styleSource).toContain("prefers-reduced-motion: no-preference");
   });
 

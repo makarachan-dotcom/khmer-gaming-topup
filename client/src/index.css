@@ -4,8 +4,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: "Kantumruy Pro", "Noto Sans Khmer", "DM Sans", sans-serif;
-  --font-display: "Kantumruy Pro", "Noto Sans Khmer", "DM Sans", sans-serif;
+  --font-sans: "Noto Sans Khmer", "DM Sans", sans-serif;
+  --font-display: "DM Sans", "Noto Sans Khmer", sans-serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -69,8 +69,7 @@ body {
 
 button, input, textarea, select { font: inherit; }
 
-.font-display { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.012em; }
-.khmer-tight, .khmer-body { font-family: "Hanuman", "Kantumruy Pro", "Noto Sans Khmer", serif; }
+.font-display { font-family: var(--font-display); }
 .khmer-tight { line-height: 1.55; letter-spacing: 0; }
 .khmer-body { line-height: 1.88; letter-spacing: 0.005em; }
 
@@ -109,7 +108,7 @@ button, input, textarea, select { font: inherit; }
 .zurs-compact-header { border-color: oklch(1 0 0 / 0.64) !important; background: linear-gradient(135deg, oklch(0.99 0.014 270 / 0.78), oklch(0.87 0.052 254 / 0.60)) !important; box-shadow: 0 12px 30px oklch(0.08 0.05 263 / 0.20), inset 0 1px 0 oklch(1 0 0 / 0.82), inset 0 -1px 0 oklch(0.54 0.12 255 / 0.10); backdrop-filter: blur(24px) saturate(1.18); }
 .zurs-mobile-glass { border-color: oklch(1 0 0 / 0.58) !important; background: linear-gradient(145deg, oklch(0.99 0.012 272 / 0.72), oklch(0.87 0.052 254 / 0.52)) !important; box-shadow: 0 12px 26px oklch(0.08 0.05 263 / 0.16), inset 0 1px 0 oklch(1 0 0 / 0.76), inset 0 -1px 0 oklch(0.54 0.12 255 / 0.08); backdrop-filter: blur(18px) saturate(1.14); }
 .zurs-footer-glass { border-color: oklch(1 0 0 / 0.52) !important; background: linear-gradient(160deg, oklch(0.98 0.016 270 / 0.66), oklch(0.84 0.055 255 / 0.46)) !important; box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.70), 0 -10px 30px oklch(0.08 0.05 263 / 0.12); backdrop-filter: blur(20px) saturate(1.12); }
-.fx-zurs-me { --zurs-ink: oklch(0.24 0.06 270); --zurs-accent: oklch(0.50 0.16 279); display: inline-flex; align-items: baseline; font: 800 0.97rem/1 "DM Sans", "Kantumruy Pro", sans-serif; letter-spacing: -0.065em; color: var(--zurs-ink); text-shadow: 0 1px 0 oklch(1 0 0 / 0.85); }
+.fx-zurs-me { --zurs-ink: oklch(0.24 0.06 270); --zurs-accent: oklch(0.50 0.16 279); display: inline-flex; align-items: baseline; font: 800 0.97rem/1 "DM Sans", sans-serif; letter-spacing: -0.065em; color: var(--zurs-ink); text-shadow: 0 1px 0 oklch(1 0 0 / 0.85); }
 .fx-zurs-me span { display: inline-block; transform-origin: center bottom; }
 .fx-zurs-me i { margin-inline: 0.015em 0.04em; color: var(--zurs-accent); font-style: normal; font-weight: 900; }
 .zurs-mobile-tabbar { right: auto; bottom: max(0.5rem, env(safe-area-inset-bottom)); left: 50%; isolation: isolate; width: min(calc(100vw - 1.5rem), 21rem); max-width: calc(100vw - 1.5rem); box-shadow: 0 14px 32px oklch(0.26 0.07 267 / 0.16), inset 0 1px 0 oklch(1 0 0 / 0.92); transition: transform 300ms cubic-bezier(0.23, 1, 0.32, 1), opacity 300ms cubic-bezier(0.23, 1, 0.32, 1); }
@@ -564,7 +563,7 @@ html, body { overflow-x: clip; }
   background: oklch(0.14 0.045 255 / 0.48);
   padding: 0.2rem 0.56rem;
   color: oklch(0.94 0.06 224);
-  font-family: "DM Sans", "Kantumruy Pro", sans-serif;
+  font-family: "DM Sans", sans-serif;
   font-size: 0.57rem;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -582,7 +581,7 @@ html, body { overflow-x: clip; }
 
 .zurs-eyebrow {
   color: oklch(0.46 0.13 239);
-  font-family: "DM Sans", "Kantumruy Pro", sans-serif;
+  font-family: "DM Sans", sans-serif;
   font-size: 0.62rem;
   font-weight: 800;
   letter-spacing: 0.16em;
@@ -833,7 +832,7 @@ html, body { overflow-x: clip; }
   transition: opacity 250ms cubic-bezier(0.23, 1, 0.32, 1), transform 250ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 .storefront-header-title__default { opacity: 1; transform: translateY(0); }
-.storefront-header-title__player { overflow: hidden; color: oklch(0.25 0.07 267); font-family: "DM Sans", "Kantumruy Pro", sans-serif; font-size: 0.78rem; font-weight: 800; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; opacity: 0; transform: translateY(5px); }
+.storefront-header-title__player { overflow: hidden; color: oklch(0.25 0.07 267); font-family: "DM Sans", sans-serif; font-size: 0.78rem; font-weight: 800; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; opacity: 0; transform: translateY(5px); }
 .storefront-header-title--player .storefront-header-title__default { opacity: 0; transform: translateY(-5px); }
 .storefront-header-title--player .storefront-header-title__player { opacity: 1; transform: translateY(0); }
 
@@ -928,12 +927,12 @@ html, body { overflow-x: clip; }
 
 /* ZURS original game artwork and hero refresh */
 @theme inline {
-  --font-sans: "Kantumruy Pro", "Noto Sans Khmer", "DM Sans", sans-serif;
-  --font-display: "Chakra Petch", "Kantumruy Pro", "Noto Sans Khmer", sans-serif;
+  --font-sans: "Noto Sans Khmer", "DM Sans", sans-serif;
+  --font-display: "DM Sans", "Noto Sans Khmer", sans-serif;
 }
 
-body { font-family: "Kantumruy Pro", "Noto Sans Khmer", "DM Sans", sans-serif; line-height: 1.75; }
-.font-display, h1, h2, h3, .package-choice, .zurs-game-card, .zurs-eyebrow, .zurs-banner-kicker { font-family: "Chakra Petch", "Kantumruy Pro", "Noto Sans Khmer", sans-serif; }
+body { font-family: var(--font-sans); line-height: 1.75; }
+.font-display, h1, h2, h3, .package-choice, .zurs-game-card, .zurs-eyebrow, .zurs-banner-kicker { font-family: var(--font-display); }
 .font-display { letter-spacing: -0.01em; line-height: 1.42; }
 
 .zurs-game-card { position: relative; overflow: hidden; padding: 0.35rem; transition: transform 200ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 200ms cubic-bezier(0.23, 1, 0.32, 1); }
@@ -943,7 +942,7 @@ body { font-family: "Kantumruy Pro", "Noto Sans Khmer", "DM Sans", sans-serif; l
 .zurs-game-card-art { position: absolute; inset: 0; z-index: 0; display: block; height: 100%; width: 100%; object-fit: cover; transform: scale(1.01); transition: transform 350ms cubic-bezier(0.23, 1, 0.32, 1), filter 350ms cubic-bezier(0.23, 1, 0.32, 1); }
 .zurs-game-card:hover .zurs-game-card-art { transform: scale(1.055); filter: saturate(1.08) contrast(1.03); }
 .zurs-game-card-overlay { position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(125deg, oklch(0.08 0.04 263 / 0.12), transparent 56%), linear-gradient(0deg, oklch(0.04 0.02 262 / 0.35), transparent 58%); }
-.zurs-game-card-popular { position: absolute; left: 0.55rem; top: 0.55rem; z-index: 2; display: inline-flex; align-items: center; min-height: 1.3rem; border: 1px solid oklch(1 0 0 / 0.34); border-radius: 999px; background: linear-gradient(120deg, oklch(0.66 0.16 76 / 0.95), oklch(0.73 0.15 210 / 0.92)); box-shadow: 0 4px 12px oklch(0.14 0.06 260 / 0.25), inset 0 1px 0 oklch(1 0 0 / 0.35); color: white; padding: 0.08rem 0.45rem; font-family: "Kantumruy Pro", sans-serif; font-size: 0.57rem; font-weight: 800; line-height: 1.2; }
+.zurs-game-card-popular { position: absolute; left: 0.55rem; top: 0.55rem; z-index: 2; display: inline-flex; align-items: center; min-height: 1.3rem; border: 1px solid oklch(1 0 0 / 0.34); border-radius: 999px; background: linear-gradient(120deg, oklch(0.66 0.16 76 / 0.95), oklch(0.73 0.15 210 / 0.92)); box-shadow: 0 4px 12px oklch(0.14 0.06 260 / 0.25), inset 0 1px 0 oklch(1 0 0 / 0.35); color: white; padding: 0.08rem 0.45rem; font-family: "Noto Sans Khmer", sans-serif; font-size: 0.57rem; font-weight: 800; line-height: 1.2; }
 .zurs-game-card-cambodia { position: absolute; right: 0.5rem; bottom: 0.5rem; z-index: 2; display: grid; height: 1.45rem; width: 1.45rem; place-items: center; border: 1px solid oklch(1 0 0 / 0.56); border-radius: 999px; background: oklch(0.10 0.04 262 / 0.60); box-shadow: 0 4px 10px oklch(0.05 0.02 262 / 0.28); font-size: 0.78rem; }
 .zurs-game-card-arrow { display: none; }
 
@@ -952,7 +951,7 @@ body { font-family: "Kantumruy Pro", "Noto Sans Khmer", "DM Sans", sans-serif; l
 .game-detail-hero__scrim { position: absolute; inset: 0; z-index: 1; background: linear-gradient(90deg, oklch(0.06 0.035 260 / 0.97) 0%, oklch(0.06 0.035 260 / 0.87) 39%, oklch(0.06 0.035 260 / 0.28) 78%, oklch(0.06 0.035 260 / 0.14) 100%), linear-gradient(0deg, oklch(0.04 0.02 260 / 0.50), transparent 54%); }
 .game-detail-hero > :not(.game-detail-hero__art):not(.game-detail-hero__scrim) { position: relative; z-index: 2; }
 .game-detail-hero__eyebrow { color: color-mix(in oklab, var(--hero-accent, #46d8ff) 62%, white 38%); font-size: 0.64rem; font-weight: 700; letter-spacing: 0.13em; line-height: 1.4; }
-.game-detail-hero__title { font-family: "Chakra Petch", "Kantumruy Pro", "Noto Sans Khmer", sans-serif; font-size: clamp(1.75rem, 5vw, 2.75rem); font-weight: 700; line-height: 1.3; text-shadow: 0 2px 20px oklch(0.04 0.02 260 / 0.56); }
+.game-detail-hero__title { font-family: var(--font-display); font-size: clamp(1.75rem, 5vw, 2.75rem); font-weight: 700; line-height: 1.3; text-shadow: 0 2px 20px oklch(0.04 0.02 260 / 0.56); }
 .game-detail-hero__account-chip { display: inline-flex; align-items: center; gap: 0.45rem; border: 1px solid color-mix(in oklab, var(--hero-accent, #46d8ff) 46%, white 22%); border-radius: 999px; background: oklch(0.08 0.04 263 / 0.55); box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.14); color: white; padding: 0.38rem 0.7rem; font-size: 0.68rem; font-weight: 700; line-height: 1.4; backdrop-filter: blur(10px); }
 .game-detail-hero .game-logo-frame { border-color: color-mix(in oklab, var(--hero-accent, #46d8ff) 44%, white 36%); background: oklch(0.98 0.01 260 / 0.93); box-shadow: 0 0 0 5px color-mix(in oklab, var(--hero-accent, #46d8ff) 16%, transparent), 0 12px 28px oklch(0.02 0.02 260 / 0.38); }
 
@@ -991,10 +990,10 @@ body { font-family: "Kantumruy Pro", "Noto Sans Khmer", "DM Sans", sans-serif; l
 .contact-admin-card { border: 1px solid oklch(1 0 0 / 0.86); border-radius: 1.2rem; background: linear-gradient(145deg, oklch(1 0 0 / 0.90), oklch(0.94 0.03 255 / 0.80)); box-shadow: 0 9px 21px oklch(0.22 0.05 260 / 0.10), inset 0 1px 0 oklch(1 0 0 / 0.95); padding: 0.9rem; }
 .contact-admin-avatar { position: relative; height: 3.75rem; width: 3.75rem; flex: 0 0 auto; overflow: visible; border: 3px solid white; border-radius: 999px; background: linear-gradient(145deg, oklch(0.52 0.15 255), oklch(0.76 0.12 230)); box-shadow: 0 0 0 2px oklch(0.52 0.13 255 / 0.32), 0 7px 15px oklch(0.24 0.07 260 / 0.20); color: white; }
 .contact-admin-avatar > img { border-radius: inherit; }
-.contact-admin-avatar > span:first-child { display: grid; height: 100%; width: 100%; place-items: center; border-radius: inherit; font-family: "Chakra Petch", "Kantumruy Pro", sans-serif; font-size: 1rem; font-weight: 700; }
+.contact-admin-avatar > span:first-child { display: grid; height: 100%; width: 100%; place-items: center; border-radius: inherit; font-family: var(--font-display); font-size: 1rem; font-weight: 700; }
 .contact-admin-status-dot { position: absolute; right: -0.1rem; bottom: 0.08rem; height: 0.95rem; width: 0.95rem; border: 2px solid white; border-radius: 999px; background: oklch(0.61 0.02 255); }
 .contact-admin-status-dot--online { background: oklch(0.67 0.16 154); box-shadow: 0 0 0 3px oklch(0.67 0.16 154 / 0.14); }
-.contact-admin-telegram { display: flex; min-height: 2.8rem; width: 100%; align-items: center; justify-content: center; gap: 0.5rem; border-radius: 0.9rem; background: linear-gradient(135deg, oklch(0.59 0.15 236), oklch(0.52 0.16 252)); box-shadow: 0 8px 18px oklch(0.45 0.14 245 / 0.24); color: white; font-family: "Chakra Petch", "Kantumruy Pro", sans-serif; font-size: 0.78rem; font-weight: 700; margin-top: 0.9rem; padding: 0.55rem 0.75rem; transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), filter 160ms cubic-bezier(0.23, 1, 0.32, 1); }
+.contact-admin-telegram { display: flex; min-height: 2.8rem; width: 100%; align-items: center; justify-content: center; gap: 0.5rem; border-radius: 0.9rem; background: linear-gradient(135deg, oklch(0.59 0.15 236), oklch(0.52 0.16 252)); box-shadow: 0 8px 18px oklch(0.45 0.14 245 / 0.24); color: white; font-family: var(--font-display); font-size: 0.78rem; font-weight: 700; margin-top: 0.9rem; padding: 0.55rem 0.75rem; transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), filter 160ms cubic-bezier(0.23, 1, 0.32, 1); }
 .contact-admin-telegram:hover { transform: translateY(-2px); filter: brightness(1.06); }
 @media (min-width: 640px) { .contact-admin-layer { align-items: center; padding: 1.5rem; } .contact-admin-sheet { border-radius: 1.65rem; padding: 1.5rem; transform: translateY(1rem) scale(0.98); } .contact-admin-layer--open .contact-admin-sheet { transform: translateY(0) scale(1); } .contact-admin-sheet__handle { display: none; } }
 @media (prefers-reduced-motion: reduce) { .contact-admin-fab, .contact-admin-layer, .contact-admin-sheet, .contact-admin-sheet__close, .contact-admin-telegram { animation: none; transition: none; } }
@@ -1056,7 +1055,7 @@ img.payment-method-option__icon { padding: 0.34rem; }
   z-index: 260;
 }
 .contact-admin-fab__label {
-  font-family: "Chakra Petch", "Kantumruy Pro", sans-serif;
+  font-family: var(--font-display);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.01em;
@@ -1338,7 +1337,7 @@ img.checkout-method-card__icon { object-fit: contain; }
 }
 .package-category-browser__header { display: flex; min-width: 0; align-items: center; gap: 0.65rem; }
 .package-category-browser__gem { display: grid; height: 2rem; width: 2rem; flex: 0 0 auto; place-items: center; border-radius: 0.7rem; background: linear-gradient(135deg, #ffdb4d, #e99b00); color: #19233b; box-shadow: 0 5px 14px rgba(245, 197, 24, 0.25); }
-.package-category-browser__title { margin-top: 0.05rem; background: linear-gradient(90deg, #ffb800, #f5c518, #ffe082); -webkit-background-clip: text; background-clip: text; color: transparent; font-family: "Chakra Petch", "Kantumruy Pro", "Noto Sans Khmer", sans-serif; font-size: 1.08rem; font-weight: 800; line-height: 1.35; }
+.package-category-browser__title { margin-top: 0.05rem; background: linear-gradient(90deg, #ffb800, #f5c518, #ffe082); -webkit-background-clip: text; background-clip: text; color: transparent; font-family: var(--font-display); font-size: 1.08rem; font-weight: 800; line-height: 1.35; }
 .package-category-browser__total { margin-left: auto; display: grid; height: 1.8rem; min-width: 1.8rem; flex: 0 0 auto; place-items: center; border: 1px solid rgba(255, 217, 74, 0.42); border-radius: 999px; background: rgba(7, 14, 29, 0.62); color: #ffe082; font-size: 0.7rem; font-weight: 800; }
 .package-category-tabs { display: flex; gap: 0.5rem; overflow-x: auto; overscroll-behavior-x: contain; padding: 0.15rem 0.15rem 0.42rem; scroll-behavior: smooth; scroll-snap-type: x proximity; scrollbar-width: none; -webkit-overflow-scrolling: touch; touch-action: pan-x; }
 .package-category-tabs::-webkit-scrollbar { display: none; }
