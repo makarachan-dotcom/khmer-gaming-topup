@@ -89,6 +89,7 @@ describe("dedicated game top-up routes", () => {
     expect(usesMobileLegendsDiamondChestArtwork("mobile_legends_global", "86 Diamonds", "86 Diamonds")).toBe(true);
     expect(usesMobileLegendsDiamondChestArtwork("mobile_legends_global", "Weekly Pass", "Weekly Pass")).toBe(false);
     expect(usesMobileLegendsDiamondChestArtwork("blood_strike", "86 Diamonds", "86 Diamonds")).toBe(false);
+    expect(usesMobileLegendsDiamondChestArtwork("mobile_legends_global", "86 Diamonds", "86 Diamonds", true)).toBe(false);
   });
 
   it("keeps the official game-logo overlay on any newly supplied MLBB pass artwork", () => {
