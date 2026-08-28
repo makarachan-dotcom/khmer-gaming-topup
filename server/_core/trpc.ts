@@ -5,6 +5,7 @@ import { hasDelegatedAdminPermission, type DelegatedAdminPermission } from "../a
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import type { TrpcContext } from "./context";
+import { checkRateLimit, rateLimitConstants, retryAfterSeconds } from "../rateLimiting";
 
 const t = initTRPC.context<TrpcContext>().create({
   transformer: superjson,
@@ -12,6 +13,16 @@ const t = initTRPC.context<TrpcContext>().create({
 
 export const router = t.router;
 export const publicProcedure = t.procedure;
+export const publicRateLimitedProcedure = publicProcedure.use(
+  t.middleware(async ({ ctx, next }) => {
+    const result = await checkRateLimit(ctx.req, "trpc-public", rateLimitConstants.publicTrpc.requests, "1 m");
+    if (!result.success) {
+      ctx.res.setHeader("Retry-After", String(retryAfterSeconds(result.reset)));
+      throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Too many requests" });
+    }
+    return next();
+  }),
+);
 
 const requireUser = t.middleware(async opts => {
   const { ctx, next } = opts;

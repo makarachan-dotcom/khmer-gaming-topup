@@ -25,7 +25,7 @@ describe("provider package artwork override contract", () => {
   });
 
   it("keeps write and audit routes behind the Owner-approved Media scope while letting public game pages resolve per-game overrides", () => {
-    expect(routers).toContain("packageArtwork: publicProcedure");
+    expect(routers).toContain("packageArtwork: publicRateLimitedProcedure");
     expect(routers).toContain('savePackageArtwork: scopedAdminProcedure("media")');
     expect(routers).toContain('resetPackageArtwork: scopedAdminProcedure("media")');
     expect(routers).toContain('packageArtworkAudits: scopedAdminProcedure("media")');
