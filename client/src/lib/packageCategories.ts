@@ -10,7 +10,7 @@ export type PackageCategory = {
   count: number;
 };
 
-const automaticCategoryOrder = ["Token", "Weekly Card", "Super Offer", "កញ្ចប់ពិសេស"];
+const automaticCategoryOrder = ["Token", "Weekly Card", "Monthly Pack", "Elite Pack", "Super Offer", "កញ្ចប់ពិសេស"];
 
 function packageWords(item: Pick<CategoryPackage, "label" | "amountLabel">) {
   return `${item.label} ${item.amountLabel}`.toLowerCase();
@@ -23,8 +23,10 @@ export function normalizePackageCategoryLabel(value: string) {
 /** A readable fallback until an Admin assigns a category to the individual offer. */
 export function automaticPackageCategoryLabel(item: Pick<CategoryPackage, "label" | "amountLabel">) {
   const copy = packageWords(item);
-  if (/\b(?:weekly|daily|monthly)\b/.test(copy)) return "Weekly Card";
-  if (/\b(?:membership|subscription|pass)\b/.test(copy)) return "Weekly Card";
+  if (/\bmonthly\b/.test(copy)) return "Monthly Pack";
+  if (/\bweekly\b/.test(copy)) return "Weekly Card";
+  if (/\b(?:elite|premium)\b/.test(copy)) return "Elite Pack";
+  if (/\b(?:daily|membership|subscription|pass)\b/.test(copy)) return "Weekly Card";
   if (/\b(?:bonus|first\s*top[\s-]*up|extra)\b|\+\s*\d[\d,]*(?:\s*[a-z]+)?\b/.test(copy)) return "Super Offer";
   if (/\b(?:promo|special|discount|sale|event|exclusive|full\s*ticket)\b/.test(copy)) return "កញ្ចប់ពិសេស";
   return "Token";

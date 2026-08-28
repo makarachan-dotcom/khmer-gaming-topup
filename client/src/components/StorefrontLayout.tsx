@@ -113,7 +113,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
       <header className="zurs-compact-header sticky top-2 z-50 mx-2 rounded-[1.25rem] border border-white/80 bg-white/72 backdrop-blur-2xl sm:top-3 sm:mx-4 sm:rounded-2xl">
         <div className="container flex h-12 items-center justify-between gap-2 sm:h-14 sm:gap-3">
 	          <Link href="/" className="flex min-w-0 shrink items-center gap-2" aria-label="ZURS.me home">
-	            <img src={logoUrl} alt="ZURS logo" className="h-8 w-8 shrink-0 rounded-xl object-cover ring-1 ring-white/90 shadow-sm sm:h-9 sm:w-9" />
+	            <img src={logoUrl} alt="ZURS logo" className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-white/90 shadow-sm sm:h-9 sm:w-9" />
 	            <div className={`storefront-header-title ${playerTitle ? "storefront-header-title--player" : ""}`} aria-label={playerTitle || "ZURS.me"}><span className="storefront-header-title__default" aria-label="ZURS.me"><span className="fx-zurs-me"><span style={{ "--i": 0 } as React.CSSProperties}>Z</span><span style={{ "--i": 1 } as React.CSSProperties}>U</span><span style={{ "--i": 2 } as React.CSSProperties}>R</span><span style={{ "--i": 3 } as React.CSSProperties}>S</span><i aria-hidden="true">.</i><span style={{ "--i": 4 } as React.CSSProperties}>m</span><span style={{ "--i": 5 } as React.CSSProperties}>e</span></span></span><span className="storefront-header-title__player" title={playerTitle || undefined}>{playerTitle || "ZURS.me"}</span></div>
 	          </Link>
 
@@ -134,7 +134,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
         <div className="container">
           <div className="zurs-footer-inner rounded-[1.15rem] p-5 sm:p-6">
             <div className="flex min-w-0 items-start gap-3.5">
-              <img src={logoUrl} alt="ZURS STORE logo" className="h-10 w-10 shrink-0 rounded-xl object-cover ring-1 ring-white/15" />
+              <img src={logoUrl} alt="ZURS STORE logo" className="h-10 w-10 shrink-0 rounded-full object-cover ring-1 ring-white/15" />
               <div className="min-w-0">
                 <p className="font-display text-sm font-extrabold tracking-wide text-white">ZURS STORE</p>
                 <p className="mt-1 max-w-md text-xs leading-5 text-slate-300 khmer-body">សេវាកម្មហ្គេម និងឌីជីថល សម្រាប់អ្នកលេងកម្ពុជា។</p>

@@ -94,6 +94,14 @@ describe("storefront media protection", () => {
     expect(styleSource).toContain("transform 300ms cubic-bezier(0.23, 1, 0.32, 1)");
   });
 
+  it("renders the owner brand mark as a circle in the header and footer", () => {
+    const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
+    const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
+    expect(componentSource).toContain('alt="ZURS logo" className="h-8 w-8 shrink-0 rounded-full');
+    expect(componentSource).toContain('alt="ZURS STORE logo" className="h-10 w-10 shrink-0 rounded-full');
+    expect(styleSource).toContain('.zurs-compact-header img[alt="ZURS logo"], .zurs-footer img[alt="ZURS STORE logo"] { border-radius: 999px; }');
+  });
+
   it("uses a matching rounded top header without changing desktop controls", () => {
     const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
     const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");

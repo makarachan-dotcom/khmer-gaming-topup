@@ -92,6 +92,23 @@ describe("dedicated game top-up routes", () => {
     expect(usesMobileLegendsDiamondChestArtwork("mobile_legends_global", "86 Diamonds", "86 Diamonds", true)).toBe(false);
   });
 
+  it("keeps a circular Mobile Legends logo on every MLBB artwork variant", () => {
+    const source = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
+    const css = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
+    expect(source).toContain("mobile-legends-diamond-art__logo h-8 w-8 rounded-full");
+    expect(source).toContain("supplied-package-art__logo h-8 w-8 rounded-full");
+    expect(source).toContain("generated-package-art__logo h-8 w-8 rounded-full");
+    expect(css).toContain(".mobile-legends-diamond-art__logo, .supplied-package-art__logo, .generated-package-art__logo { border-radius: 999px !important; }");
+  });
+
+  it("adds a reduced-motion-safe rotating color light around every package card", () => {
+    const css = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
+    expect(css).toContain(".package-choice::before");
+    expect(css).toContain("@keyframes package-light-orbit");
+    expect(css).toContain("@media (prefers-reduced-motion: reduce) { .package-choice::before");
+    expect(css).toContain("@property --package-light-angle");
+  });
+
   it("keeps the official game-logo overlay on any newly supplied MLBB pass artwork", () => {
     const source = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
     expect(source).toContain("supplied-package-art__logo");

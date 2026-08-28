@@ -13,6 +13,12 @@ describe("package category presentation", () => {
     expect(packages.map(automaticPackageCategoryLabel)).toEqual(["Token", "Weekly Card", "Super Offer", "កញ្ចប់ពិសេស"]);
   });
 
+  it("automatically separates monthly and elite packages into useful filters", () => {
+    expect(automaticPackageCategoryLabel({ label: "Monthly Elite Pack", amountLabel: "Monthly Elite Pack" })).toBe("Monthly Pack");
+    expect(automaticPackageCategoryLabel({ label: "Weekly Elite Pack", amountLabel: "Weekly Elite Pack" })).toBe("Weekly Card");
+    expect(automaticPackageCategoryLabel({ label: "Elite Pack", amountLabel: "Elite Pack" })).toBe("Elite Pack");
+  });
+
   it("uses a saved Admin category override only for the matching offer", () => {
     const overrides = new Map([["token", "ពេញនិយម"]]);
     expect(categoryLabelForPackage(packages[0]!, overrides)).toBe("ពេញនិយម");
