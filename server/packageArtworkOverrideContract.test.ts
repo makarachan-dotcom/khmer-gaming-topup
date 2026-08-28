@@ -33,7 +33,7 @@ describe("provider package artwork override contract", () => {
     expect(gameTopup).toContain("refetchInterval: 1_000");
     expect(gameTopup).toContain("refetchIntervalInBackground: true");
     expect(gameTopup).toContain("subscribeToPackageArtworkChanges");
-    expect(gameTopup).toContain("artworkUrlWithRevision(item.mediaUrl, item.updatedAt)");
+    expect(gameTopup).toContain("artworkUrlWithRevision(toWebsiteMediaUrl(item.mediaUrl), item.updatedAt)");
     expect(gameTopup).toContain("artworkOverrides[item.id]");
     expect((gameTopup.match(/trpc\.provider\.packageArtwork\.useQuery/g) ?? []).length).toBe(1);
     expect(gameTopup).toContain("PackageArtworkOverridesContext.Provider");

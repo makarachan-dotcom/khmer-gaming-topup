@@ -97,6 +97,12 @@ describe("dedicated game top-up routes", () => {
     expect(source).toContain("package-choice--mlbb-${mobileLegendsTone}");
   });
 
+  it("normalizes managed package artwork URLs before exposing them to public cards", () => {
+    const source = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
+    expect(source).toContain('import { toWebsiteMediaUrl } from "@/lib/mediaUrl"');
+    expect(source).toContain("artworkUrlWithRevision(toWebsiteMediaUrl(item.mediaUrl), item.updatedAt)");
+  });
+
   it("collapses to a verified username card and restores ID editing with an observer-driven title handoff", () => {
     const source = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
     expect(source).toContain("identityCollapsed");

@@ -17,6 +17,7 @@ import { isPubgTopupGame, pubgUcArtworkForAmount, pubgUcDisplayAmount, pubgUcFal
 import { suppliedProductArtworkForPackage } from "@/lib/suppliedProductArtwork";
 import { generatedPackageArtworkForPackage, type GeneratedPackageArtworkKind } from "@/lib/generatedPackageArtwork";
 import { providerGameImageKey, resolvedGameArtworkFor } from "@/lib/originalGameArtwork";
+import { toWebsiteMediaUrl } from "@/lib/mediaUrl";
 import { trpc } from "@/lib/trpc";
 import { subscribeToPackageArtworkChanges } from "@/lib/packageArtworkBroadcast";
 import { subscribeToPublicAssetChanges } from "@/lib/publicAssetBroadcast";
@@ -437,7 +438,7 @@ function DiamondPackages({ packages, status, selectedPackageId, onSelect, gameId
   const [selectedCategoryId, setSelectedCategoryId] = useState("all");
   const [packageSearch, setPackageSearch] = useState("");
   const categoryTabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
-  const artworkOverrides = useMemo(() => Object.fromEntries((packageArtworkData ?? []).map((item) => [item.offerId, artworkUrlWithRevision(item.mediaUrl, item.updatedAt)])), [packageArtworkData]);
+  const artworkOverrides = useMemo(() => Object.fromEntries((packageArtworkData ?? []).map((item) => [item.offerId, artworkUrlWithRevision(toWebsiteMediaUrl(item.mediaUrl), item.updatedAt)])), [packageArtworkData]);
   const categoryOverrides = useMemo(() => new Map((categoryAssignments.data ?? []).map((item) => [item.offerId, item.categoryLabel])), [categoryAssignments.data]);
   useEffect(() => subscribeToPackageArtworkChanges((changedGameId) => { if (changedGameId === gameId) void refetchPackageArtwork(); }), [gameId, refetchPackageArtwork]);
   const fullTicketEvent = (eventContent.data ?? []).find((item) => item.contentKey === "topup-event-full-ticket");
