@@ -3,7 +3,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { drizzle } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
 import {
-    adminRoleAudits, customerWallets, gamePackages, gameProducts, gmailSenderConnections, InsertUser, marketplaceContacts, marketplaceDisclosureRequests, marketplaceEvidenceAccessLogs, marketplaceFavorites, marketplaceFraudReports, marketplaceListings, marketplaceVerificationEvidence, marketplaceVerifications, orders, orderStatusEvents, orderSupportTickets, paymentTransactions, providerPackageArtworkAudits, providerPackageArtworkOverrides, providerPackageCategoryAudits, providerPackageCategoryOverrides, savedPlayerIds, siteContent, smmServices, smmTiers, User,
+    adminRoleAudits, customerWallets, gamePackages, gameProducts, gmailSenderConnections, InsertUser, marketplaceContacts, marketplaceDisclosureRequests, marketplaceEvidenceAccessLogs, marketplaceFavorites, marketplaceFraudReports, marketplaceListings, marketplaceVerificationEvidence, marketplaceVerifications, orders, orderStatusEvents, orderSupportTickets, paymentTransactions, paymentLinkAudits, paymentLinkTokens, providerPackageArtworkAudits, providerPackageArtworkOverrides, providerPackageCategoryAudits, providerPackageCategoryOverrides, savedPlayerIds, siteContent, smmServices, smmTiers, User,
 users, walletTopups, welcomeEmailDeliveries,
 } from "../drizzle/schema";
 import { createAppwriteMarketplaceListing, createAppwriteWalletTopup, deleteAppwriteMarketplaceListing, getAppwriteAdminPermissions, getAppwriteAdminRoleAudits, getAppwriteCustomerOrders, getAppwriteCustomerPaymentHistory, getAppwritePaymentControl, getAppwriteProviderCatalog, getAppwriteUserByEmail, getAppwriteUserByOpenId, getAppwriteWalletSummary, getAppwriteWalletTopup, isAppwriteStoreConfigured, listAppwriteMarketplaceListings, listAppwriteUsers, setAppwriteAdminPermissions, setAppwritePaymentControl, setAppwriteUserRole, syncAppwriteFzrCatalog, syncAppwriteSmmCatalog, updateAppwriteMarketplaceListing, updateAppwriteProviderOffer, updateAppwriteUserDisplayName, updateAppwriteWalletTopup, upsertAppwriteUser } from "./appwriteStore";
@@ -482,6 +482,85 @@ export async function getCustomerPaymentHistory(userId: number) {
   const db = await getDb();
   if (!db) return isAppwriteStoreConfigured() ? getAppwriteCustomerPaymentHistory(userId) : [];
   return db.select({ id: paymentTransactions.id, orderId: paymentTransactions.orderId, provider: paymentTransactions.provider, status: paymentTransactions.status, amount: paymentTransactions.amount, currency: paymentTransactions.currency, createdAt: paymentTransactions.createdAt, updatedAt: paymentTransactions.updatedAt, paidAt: paymentTransactions.paidAt, orderNumber: orders.orderNumber, productName: orders.productName, orderStatus: orders.status }).from(paymentTransactions).innerJoin(orders, eq(paymentTransactions.orderId, orders.id)).where(eq(orders.userId, userId)).orderBy(desc(paymentTransactions.createdAt));
+}
+
+export const securePaymentLinkTtlMs = 15 * 60 * 1000;
+const paymentLinkHash = (value: string) => createHash("sha256").update(value).digest("hex");
+
+async function appendPaymentLinkAudit(input: { paymentLinkId: string; orderId: string; tokenPrefix: string; event: "issued" | "bound" | "qr_issued" | "paid" | "cancelled" | "expired" | "blocked" | "gate_closed"; ipHash?: string | null; detail?: string | null }) {
+  const database = await getDb();
+  if (!database) return;
+  await database.insert(paymentLinkAudits).values({ id: nanoid(), paymentLinkId: input.paymentLinkId, orderId: input.orderId, tokenPrefix: input.tokenPrefix, event: input.event, ipHash: input.ipHash ?? null, detail: input.detail ?? null });
+}
+
+export function createPaymentLinkProof(value: string) { return paymentLinkHash(value); }
+
+export async function issueSecurePaymentLink(input: { orderId: string; userId: number; ipHash?: string | null }) {
+  const readiness = await getPublicPaymentAvailability();
+  if (!readiness.ready) {
+    const gate = await getPaymentControl();
+    if (!gate.enabled) throw Object.assign(new Error("PAYMENTS_CLOSED"), { code: "PAYMENTS_CLOSED" });
+    throw Object.assign(new Error("PAYMENT_UNAVAILABLE"), { code: "PAYMENT_UNAVAILABLE" });
+  }
+  const database = await getDb();
+  if (!database) throw new Error("Payment-link storage is unavailable.");
+  const order = await database.select().from(orders).where(and(eq(orders.id, input.orderId), eq(orders.userId, input.userId))).limit(1);
+  if (!order[0] || !["pending", "awaiting_payment"].includes(order[0].status)) throw new Error("Order is not eligible for payment.");
+  const active = await database.select().from(paymentLinkTokens).where(and(eq(paymentLinkTokens.orderId, input.orderId), inArray(paymentLinkTokens.status, ["issued", "bound", "qr_issued"]), gt(paymentLinkTokens.expiresAt, new Date()))).orderBy(desc(paymentLinkTokens.createdAt)).limit(1);
+  if (active[0]) return { token: null, tokenPrefix: active[0].tokenPrefix, expiresAt: active[0].expiresAt, reuseExisting: true };
+  const token = randomBytes(24).toString("base64url");
+  const record = { id: nanoid(), orderId: input.orderId, userId: input.userId, tokenHash: paymentLinkHash(token), tokenPrefix: token.slice(0, 8), status: "issued" as const, expiresAt: new Date(Date.now() + securePaymentLinkTtlMs) };
+  await database.insert(paymentLinkTokens).values(record);
+  await appendPaymentLinkAudit({ paymentLinkId: record.id, orderId: record.orderId, tokenPrefix: record.tokenPrefix, event: "issued", ipHash: input.ipHash });
+  return { token, tokenPrefix: record.tokenPrefix, expiresAt: record.expiresAt, reuseExisting: false };
+}
+
+export async function bindSecurePaymentLink(input: { token: string; userId: number; sessionHash: string; deviceHash: string; ipHash?: string | null }) {
+  const database = await getDb();
+  if (!database) throw new Error("Payment-link storage is unavailable.");
+  const row = await database.select().from(paymentLinkTokens).where(eq(paymentLinkTokens.tokenHash, paymentLinkHash(input.token))).limit(1);
+  const link = row[0];
+  if (!link || link.userId !== input.userId) return { state: "used" as const };
+  if (link.expiresAt.getTime() <= Date.now()) { if (link.status !== "expired") { await database.update(paymentLinkTokens).set({ status: "expired", consumedAt: new Date() }).where(eq(paymentLinkTokens.id, link.id)); await appendPaymentLinkAudit({ paymentLinkId: link.id, orderId: link.orderId, tokenPrefix: link.tokenPrefix, event: "expired", ipHash: input.ipHash }); } return { state: "expired" as const }; }
+  if (["paid", "cancelled", "expired"].includes(link.status)) return { state: "used" as const };
+  if (link.boundSessionHash && (link.boundSessionHash !== input.sessionHash || link.boundDeviceHash !== input.deviceHash)) { await appendPaymentLinkAudit({ paymentLinkId: link.id, orderId: link.orderId, tokenPrefix: link.tokenPrefix, event: "blocked", ipHash: input.ipHash, detail: "binding_mismatch" }); return { state: "used" as const }; }
+  if (!link.boundSessionHash) { await database.update(paymentLinkTokens).set({ status: "bound", boundSessionHash: input.sessionHash, boundDeviceHash: input.deviceHash }).where(eq(paymentLinkTokens.id, link.id)); await appendPaymentLinkAudit({ paymentLinkId: link.id, orderId: link.orderId, tokenPrefix: link.tokenPrefix, event: "bound", ipHash: input.ipHash }); }
+  return { state: "ready" as const, link: { id: link.id, orderId: link.orderId, tokenPrefix: link.tokenPrefix, expiresAt: link.expiresAt, status: link.status } };
+}
+
+export async function markSecurePaymentLinkQrIssued(input: { token: string; userId: number; sessionHash: string; deviceHash: string; ipHash?: string | null }) {
+  const binding = await bindSecurePaymentLink(input);
+  if (binding.state !== "ready") return binding;
+  const database = await getDb();
+  if (!database || !binding.link) throw new Error("Payment-link storage is unavailable.");
+  await database.update(paymentLinkTokens).set({ status: "qr_issued" }).where(eq(paymentLinkTokens.id, binding.link.id));
+  await appendPaymentLinkAudit({ paymentLinkId: binding.link.id, orderId: binding.link.orderId, tokenPrefix: binding.link.tokenPrefix, event: "qr_issued", ipHash: input.ipHash });
+  return binding;
+}
+
+export async function cancelSecurePaymentLink(input: { token: string; userId: number; sessionHash: string; deviceHash: string; ipHash?: string | null }) {
+  const binding = await bindSecurePaymentLink(input);
+  if (binding.state !== "ready" || !binding.link) return binding;
+  const database = await getDb();
+  if (!database) throw new Error("Payment-link storage is unavailable.");
+  await database.transaction(async (tx) => {
+    await tx.update(paymentLinkTokens).set({ status: "cancelled", consumedAt: new Date() }).where(eq(paymentLinkTokens.id, binding.link!.id));
+    await tx.update(paymentTransactions).set({ status: "expired" }).where(and(eq(paymentTransactions.orderId, binding.link!.orderId), eq(paymentTransactions.provider, "bakong_khqr"), eq(paymentTransactions.status, "pending")));
+    await tx.update(orders).set({ status: "pending" }).where(and(eq(orders.id, binding.link!.orderId), eq(orders.status, "awaiting_payment")));
+  });
+  await appendPaymentLinkAudit({ paymentLinkId: binding.link.id, orderId: binding.link.orderId, tokenPrefix: binding.link.tokenPrefix, event: "cancelled", ipHash: input.ipHash });
+  return { state: "cancelled" as const };
+}
+
+export async function settleSecurePaymentLinks(orderId: string, event: "paid" | "expired") {
+  const database = await getDb();
+  if (!database) return;
+  const links = await database.select().from(paymentLinkTokens).where(and(eq(paymentLinkTokens.orderId, orderId), inArray(paymentLinkTokens.status, ["issued", "bound", "qr_issued"])));
+  const status = event === "paid" ? "paid" as const : "expired" as const;
+  for (const link of links) {
+    await database.update(paymentLinkTokens).set({ status, consumedAt: new Date() }).where(eq(paymentLinkTokens.id, link.id));
+    await appendPaymentLinkAudit({ paymentLinkId: link.id, orderId, tokenPrefix: link.tokenPrefix, event });
+  }
 }
 
 export async function beginStagedPayment(input: { orderId: string; userId: number }) {

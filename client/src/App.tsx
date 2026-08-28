@@ -19,6 +19,7 @@ import AdminAccess from "./pages/AdminAccess";
 import AdminPricing from "./pages/AdminPricing";
 import AdminPayment from "./pages/AdminPayment";
 import Checkout from "./pages/Checkout";
+import PaymentLink from "./pages/PaymentLink";
 import AdminMedia from "./pages/AdminMedia";
 import AdminPackageArtwork from "./pages/AdminPackageArtwork";
 import AdminProviderSecurity from "@/pages/AdminProviderSecurity";
@@ -54,6 +55,7 @@ function Router() {
       <Route path="/admin/pricing" component={AdminPricing} />
       <Route path="/admin/payment" component={AdminPayment} />
       <Route path="/admin/marketplace-safety" component={AdminMarketplaceSafety} />
+      <Route path="/pay/:token" component={PaymentLink} />
       <Route path={"/checkout/:orderId"} component={Checkout} />
       <Route path={"/admin/media"} component={AdminMedia} />
       <Route path={"/admin/package-artwork"} component={AdminPackageArtwork} />

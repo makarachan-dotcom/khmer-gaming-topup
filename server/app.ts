@@ -12,6 +12,7 @@ import { registerProviderArtworkRoutes } from "./providerArtwork";
 import crypto from "node:crypto";
 import { parseKhqrWorkerCallback, verifyKhqrWorkerSignature } from "./khqrWorkerWebhook";
 import { getKhqrWorkerCredentials } from "./khqrWorkerSecrets";
+import { registerSecurePaymentLinkRoutes } from "./paymentLinkRoutes";
 
 /**
  * Builds the shared Express application for the local long-running server and
@@ -26,11 +27,11 @@ export function createApp() {
       const callback = parseKhqrWorkerCallback(req.body);
       if (!callback) return res.status(400).json({ success: false, error: "invalid callback" });
       if (callback.event === "payment.paid") {
-        const result = await import("./db").then(({ reconcileKhqrWorkerPayment }) => reconcileKhqrWorkerPayment(callback));
+        const result = await import("./db").then(async ({ reconcileKhqrWorkerPayment, settleSecurePaymentLinks }) => { const reconciliation = await reconcileKhqrWorkerPayment(callback); await settleSecurePaymentLinks(callback.orderId, "paid"); return reconciliation; });
         return res.json({ success: true, idempotent: result.idempotent });
       }
       if (callback.event === "payment.expired") {
-        const result = await import("./db").then(({ recordKhqrWorkerPaymentExpired }) => recordKhqrWorkerPaymentExpired(callback));
+        const result = await import("./db").then(async ({ recordKhqrWorkerPaymentExpired, settleSecurePaymentLinks }) => { const expiry = await recordKhqrWorkerPaymentExpired(callback); await settleSecurePaymentLinks(callback.orderId, "expired"); return expiry; });
         return res.json({ success: true, idempotent: result.idempotent });
       }
       const result = await import("./db").then(({ recordKhqrWorkerVerificationDeferred }) => recordKhqrWorkerVerificationDeferred(callback));
@@ -53,6 +54,7 @@ export function createApp() {
   });
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  registerSecurePaymentLinkRoutes(app);
   // The managed hosting integration relies on Manus-only credentials. Vercel
   // receives a portable API surface instead of routes that would redirect to
   // an unavailable identity provider. The storage proxy remains enabled in

@@ -186,8 +186,8 @@ describe("storefront media protection", () => {
     expect(checkoutSource).toContain("<PaymentPreview product={selectedProduct}");
     expect(checkoutSource).toContain("បញ្ជាក់ និងបង្កើត KHQR");
     expect(checkoutSource).toContain("trpc.orders.createTopup.useMutation()");
-    expect(checkoutSource).toContain("trpc.orders.beginPayment.useMutation()");
-    expect(checkoutSource).toContain("setLocation(`/checkout/${session.order.id}`)");
+    expect(checkoutSource).toContain('fetch("/api/pay/security/check/key"');
+    expect(checkoutSource).toContain("setLocation(`/pay/${encodeURIComponent(link.token)}`)");
     expect(styleSource).toContain(".checkout-preview-hero");
     expect(styleSource).toContain(".checkout-preview-confirm");
   });

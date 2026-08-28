@@ -7,6 +7,15 @@
       "maxDuration": 30
     }
   },
+  "headers": [
+    {
+      "source": "/pay/:path*",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store, private, max-age=0" },
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive" }
+      ]
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/:path*",

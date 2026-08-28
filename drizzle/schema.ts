@@ -296,6 +296,34 @@ export const paymentTransactions = mysqlTable("payment_transactions", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => [index("payment_transactions_order_idx").on(table.orderId), uniqueIndex("payment_provider_transaction_unique").on(table.provider, table.providerTransactionId)]);
 
+/** A token is stored only as a SHA-256 hash; the browser never receives a reusable ledger or provider secret. */
+export const paymentLinkTokens = mysqlTable("payment_link_tokens", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  orderId: varchar("orderId", { length: 64 }).notNull(),
+  userId: int("userId").notNull(),
+  tokenHash: varchar("tokenHash", { length: 64 }).notNull().unique(),
+  tokenPrefix: varchar("tokenPrefix", { length: 8 }).notNull(),
+  status: mysqlEnum("status", ["issued", "bound", "qr_issued", "paid", "cancelled", "expired"]).default("issued").notNull(),
+  boundSessionHash: varchar("boundSessionHash", { length: 64 }),
+  boundDeviceHash: varchar("boundDeviceHash", { length: 64 }),
+  expiresAt: timestamp("expiresAt").notNull(),
+  consumedAt: timestamp("consumedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [index("payment_link_tokens_order_idx").on(table.orderId), index("payment_link_tokens_user_idx").on(table.userId), index("payment_link_tokens_expiry_idx").on(table.expiresAt)]);
+
+/** Immutable security events: prefix and hashed request metadata only, never a full payment link. */
+export const paymentLinkAudits = mysqlTable("payment_link_audits", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  paymentLinkId: varchar("paymentLinkId", { length: 64 }).notNull(),
+  orderId: varchar("orderId", { length: 64 }).notNull(),
+  tokenPrefix: varchar("tokenPrefix", { length: 8 }).notNull(),
+  event: mysqlEnum("event", ["issued", "bound", "qr_issued", "paid", "cancelled", "expired", "blocked", "gate_closed"]).notNull(),
+  ipHash: varchar("ipHash", { length: 64 }),
+  detail: varchar("detail", { length: 160 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [index("payment_link_audits_link_idx").on(table.paymentLinkId), index("payment_link_audits_order_idx").on(table.orderId), index("payment_link_audits_created_idx").on(table.createdAt)]);
+
 export const siteContent = mysqlTable("site_content", {
   id: varchar("id", { length: 64 }).primaryKey(),
   contentKey: varchar("contentKey", { length: 100 }).notNull().unique(),

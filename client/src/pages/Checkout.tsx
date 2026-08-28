@@ -79,10 +79,9 @@ function PaymentPreview({ product, selectedPaymentMethodId, methods, methodsLoad
   const { user, loading } = useAuth();
   const paymentGate = trpc.payments.gate.useQuery(undefined, { staleTime: 15_000 });
   const createTopup = trpc.orders.createTopup.useMutation();
-  const beginPayment = trpc.orders.beginPayment.useMutation();
   const [error, setError] = useState<string | null>(null);
   const method = methods.find((item) => item.id === selectedPaymentMethodId && item.providerKey === "bakong_khqr") ?? methods.find((item) => item.providerKey === "bakong_khqr") ?? null;
-  const busy = createTopup.isPending || beginPayment.isPending;
+  const busy = createTopup.isPending;
   const ready = paymentGate.data?.enabled === true;
   const confirm = async () => {
     if (!product?.playerId || !method) { setError("សូមត្រឡប់ទៅបញ្ជាក់ ID និងជ្រើស KHQR មុនបន្ត។"); return; }
@@ -91,8 +90,10 @@ function PaymentPreview({ product, selectedPaymentMethodId, methods, methodsLoad
     try {
       setError(null);
       const order = await createTopup.mutateAsync({ packageId: product.id, playerId: product.playerId, zoneId: product.zoneId || undefined, quantity: 1 });
-      const session = await beginPayment.mutateAsync({ orderId: order.id });
-      setLocation(`/checkout/${session.order.id}`);
+      const linkResponse = await fetch("/api/pay/security/check/key", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ orderId: order.id }) });
+      const link = await linkResponse.json().catch(() => ({})) as { token?: string; code?: string };
+      if (!linkResponse.ok || !link.token) throw new Error(link.code === "PAYMENTS_CLOSED" ? "ការទូទាត់ KHQR ត្រូវបានបិទជាបណ្តោះអាសន្ន។" : "មិនអាចបង្កើត link ទូទាត់សុវត្ថិភាពបានទេ។");
+      setLocation(`/pay/${encodeURIComponent(link.token)}`);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "មិនអាចបង្កើត KHQR payment session បានទេ។ សូមព្យាយាមម្ដងទៀត។"); }
   };
   if (!product) return <StorefrontLayout><main className="checkout-page container max-w-xl py-7 sm:py-12"><CheckoutUnavailable /></main></StorefrontLayout>;
