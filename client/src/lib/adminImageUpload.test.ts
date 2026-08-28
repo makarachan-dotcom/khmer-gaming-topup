@@ -19,6 +19,12 @@ describe("admin image upload resilience", () => {
     expect(gameImages).toContain('prepareAdminImage(file, slot === "logo" ? "square" : "card")');
     expect(packageArtwork).toContain('prepareAdminImage(file, "card")');
     expect(packageArtwork).toContain("await upload.mutateAsync");
+    expect(packageArtwork).toContain("await save.mutateAsync");
+    expect(packageArtwork).toContain("let uploadedMediaUrl: string | null = null");
+    expect(packageArtwork).toContain("setMediaUrl(uploadedMediaUrl ?? previousMediaUrl)");
+    expect(packageArtwork).toContain("Upload និងរក្សាទុក");
+    expect(packageArtwork).toContain("អ្នកប្រើប្រាស់អាចឃើញរូបថ្មីភ្លាមៗ");
+    expect(packageArtwork).toContain("សូមជ្រើសហ្គេម និងកញ្ចប់សិន");
     expect(packageArtwork).toContain("setWarning(prepared.warning)");
     expect(packageArtwork).toContain("មិនអាច upload រូបភាពកញ្ចប់បានទេ");
   });
