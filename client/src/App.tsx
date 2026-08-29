@@ -8,23 +8,23 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { SelectedProductProvider } from "./contexts/SelectedProductContext";
 import { StorefrontHeaderProvider } from "./contexts/StorefrontHeaderContext";
 import Home from "./pages/Home";
-import AdminMarketplaceSafety from "@/pages/AdminMarketplaceSafety";
+const AdminMarketplaceSafety = lazy(() => import("@/pages/AdminMarketplaceSafety"));
 import Account from "./pages/Account";
 import Favorites from "./pages/Favorites";
 import Wallet from "./pages/Wallet";
 import OrderStatus from "./pages/OrderStatus";
-import Admin from "./pages/Admin";
-import AdminTickets from "./pages/AdminTickets";
-import AdminAccess from "./pages/AdminAccess";
-import AdminPricing from "./pages/AdminPricing";
-import AdminPayment from "./pages/AdminPayment";
+const Admin = lazy(() => import("./pages/Admin"));
+const AdminTickets = lazy(() => import("./pages/AdminTickets"));
+const AdminAccess = lazy(() => import("./pages/AdminAccess"));
+const AdminPricing = lazy(() => import("./pages/AdminPricing"));
+const AdminPayment = lazy(() => import("./pages/AdminPayment"));
 import Checkout from "./pages/Checkout";
 import PaymentLink from "./pages/PaymentLink";
-import AdminMedia from "./pages/AdminMedia";
-import AdminPackageArtwork from "./pages/AdminPackageArtwork";
-import AdminProviderSecurity from "@/pages/AdminProviderSecurity";
-import AdminContactAdmins from "@/pages/AdminContactAdmins";
-import AdminGameImages from "@/pages/AdminGameImages";
+const AdminMedia = lazy(() => import("./pages/AdminMedia"));
+const AdminPackageArtwork = lazy(() => import("./pages/AdminPackageArtwork"));
+const AdminProviderSecurity = lazy(() => import("@/pages/AdminProviderSecurity"));
+const AdminContactAdmins = lazy(() => import("@/pages/AdminContactAdmins"));
+const AdminGameImages = lazy(() => import("@/pages/AdminGameImages"));
 import AppwriteLogin from "@/pages/AppwriteLogin";
 import Legal from "./pages/Legal";
 import GameTopup from "./pages/GameTopup";
@@ -85,7 +85,9 @@ function App() {
       >
         <TooltipProvider>
           <Toaster />
-          <StorefrontHeaderProvider><SelectedProductProvider><Router /></SelectedProductProvider></StorefrontHeaderProvider>
+          <StorefrontHeaderProvider><SelectedProductProvider><Suspense fallback={<div className="min-h-screen bg-slate-50" />}>
+									<Router />
+								</Suspense></SelectedProductProvider></StorefrontHeaderProvider>
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
