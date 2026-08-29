@@ -167,9 +167,6 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
-    // Source maps would ship the admin tRPC procedure names back to the public
-    // bundle that manualChunks + React.lazy just removed.
-    sourcemap: false,
     chunkSizeWarningLimit: 400,
     rollupOptions: {
     	output: {
