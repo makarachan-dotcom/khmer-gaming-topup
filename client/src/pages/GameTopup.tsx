@@ -24,6 +24,7 @@ import { subscribeToPublicAssetChanges } from "@/lib/publicAssetBroadcast";
 import { ArrowLeft, BadgePercent, Box, CalendarClock, CheckCircle2, ChevronDown, ChevronRight, CircleAlert, Crown, Eye, Gem, Gift, History, Search, ShieldAlert, Sparkles, TrendingUp, UserRound, WalletCards } from "lucide-react";
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
+import { useSeo } from "@/lib/seo";
 
 type SavedPlayerEntry = { id: string; fields: Record<string, string>; savedAt: number };
 
@@ -106,6 +107,15 @@ export default function GameTopup() {
   const verifiedCardRef = useRef<HTMLElement>(null);
   const { setSelectedProduct, clearSelectedProduct, setSelectedPaymentMethodId } = useSelectedProduct();
   const game = gameQuery.data?.status === "ready" ? gameQuery.data.game : localCategoryPreview ? localCategoryPreviewGame : null;
+  // Each game route needs its own title/description, otherwise every top-up
+  // page competes for the same snippet and Google keeps only one of them.
+  useSeo({
+    title: game?.name ? `Top Up ${game.name} ភ្លាមៗ | Zurs Store` : "Top Up Game | Zurs Store",
+    description: game?.name
+      ? `បញ្ចូល ${game.name} នៅកម្ពុជាជាមួយ Zurs Store — តម្លៃច្បាស់លាស់ ដំណើរការភ្លាមៗ ២៤ម៉ោង បង់តាម Bakong KHQR។`
+      : "ជ្រើសរើសហ្គេម រួចបញ្ចូលទឹកប្រាក់ភ្លាមៗជាមួយ Zurs Store បង់តាម Bakong KHQR។",
+    path: `/topup/${gameId}`,
+  });
   const gameImageOverride = (gameImages.data ?? []).find((item) => item.gameId === providerGameImageKey(game?.id ?? gameId, game?.name ?? ""));
   const gameArtwork = resolvedGameArtworkFor(game?.id ?? gameId, game?.name ?? "", gameImageOverride);
   const gameLogoUrl = gameImageOverride?.logoUrl ?? game?.logoUrl;

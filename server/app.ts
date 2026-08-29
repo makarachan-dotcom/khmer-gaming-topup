@@ -13,6 +13,7 @@ import crypto from "node:crypto";
 import { parseKhqrWorkerCallback, verifyKhqrWorkerSignature } from "./khqrWorkerWebhook";
 import { getKhqrWorkerCredentials } from "./khqrWorkerSecrets";
 import { registerSecurePaymentLinkRoutes } from "./paymentLinkRoutes";
+import { rateLimitBuckets, rateLimitMiddleware } from "./rateLimit";
 
 /**
  * Builds the shared Express application for the local long-running server and
@@ -21,6 +22,9 @@ import { registerSecurePaymentLinkRoutes } from "./paymentLinkRoutes";
  */
 export function createApp() {
   const app = express();
+  // Vercel terminates TLS in front of the function, so the real client address
+  // arrives in a forwarded header. Rate limiting depends on reading it.
+  app.set("trust proxy", 1);
   const khqrWorkerWebhookHandler = async (req: express.Request, res: express.Response) => {
     try {
       if (!verifyKhqrWorkerSignature(req.body, req.header("x-khqr-signature") ?? undefined, getKhqrWorkerCredentials().callbackSecret ?? undefined)) return res.status(401).json({ success: false, error: "invalid signature" });
@@ -54,6 +58,11 @@ export function createApp() {
   });
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  // Rate limiting is mounted before the route registrations below so a
+  // throttled caller is rejected ahead of any authentication, provider or
+  // database work. Session endpoints fail closed, public traffic fails open.
+  app.use("/api/auth", rateLimitMiddleware({ bucket: rateLimitBuckets.auth, mode: "strict" }));
+  app.use("/api/trpc", rateLimitMiddleware({ bucket: rateLimitBuckets.trpcPublic, mode: "lenient" }));
   registerSecurePaymentLinkRoutes(app);
   // The managed hosting integration relies on Manus-only credentials. Vercel
   // receives a portable API surface instead of routes that would redirect to

@@ -2,6 +2,7 @@ import StorefrontLayout from "@/components/StorefrontLayout";
 import { CheckCircle2, Clock3, LockKeyhole, RefreshCw, ShieldCheck, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useRoute } from "wouter";
+import { useSeo } from "@/lib/seo";
 
 type LinkState = "loading" | "ready" | "closed" | "expired" | "used" | "error";
 type PaymentData = { order: { productName: string; subtotal: string | number; currency: "KHR" | "USD"; orderNumber: string }; payment: { qrImageDataUrl: string | null; expiresAt: string; status: string } };
@@ -13,6 +14,8 @@ async function paymentRequest(path: string, init?: RequestInit) {
 }
 
 export default function PaymentLink() {
+  // Single-use payment links must never reach an index or an archive.
+  useSeo({ title: "ការទូទាត់សុវត្ថិភាព | Zurs Store", description: "ទំព័រទូទាត់ឯកជនសម្រាប់ការបញ្ជាទិញរបស់អ្នក។", path: "/pay", noindex: true });
   const [, params] = useRoute("/pay/:token");
   const token = params?.token ?? "";
   const [state, setState] = useState<LinkState>("loading");

@@ -1,6 +1,7 @@
 import StorefrontLayout from "@/components/StorefrontLayout";
 import { FileText, ShieldCheck } from "lucide-react";
 import { Link } from "wouter";
+import { useSeo } from "@/lib/seo";
 
 type LegalKind = "privacy" | "terms";
 
@@ -29,5 +30,12 @@ export default function Legal({ kind }: { kind: LegalKind }) {
   const title = isPrivacy ? "គោលការណ៍ឯកជនភាព" : "លក្ខខណ្ឌប្រើប្រាស់";
   const intro = isPrivacy ? "របៀបដែល ZURS STORE គោរព ការពារ និងប្រើព័ត៌មានរបស់អ្នកដោយតិចបំផុតតាមដែលចាំបាច់។" : "សូមអានលក្ខខណ្ឌសំខាន់ៗ មុនប្រើប្រាស់សេវា Top-up និងគណនី ZURS STORE។";
   const sections = isPrivacy ? privacySections : termsSections;
+  useSeo({
+    title: isPrivacy ? "គោលការណ៍ឯកជនភាព | Zurs Store" : "លក្ខខណ្ឌប្រើប្រាស់ | Zurs Store",
+    description: isPrivacy
+      ? "របៀបដែល Zurs Store ការពារ និងប្រើប្រាស់ព័ត៌មានរបស់អតិថិជន នៅពេលបញ្ចូល Diamond និងប្រើសេវាឌីជីថល។"
+      : "លក្ខខណ្ឌប្រើប្រាស់សេវា Top-up និងគណនីរបស់ Zurs Store រួមមានការបញ្ជាទិញ ការទូទាត់ KHQR និងការសងប្រាក់វិញ។",
+    path: isPrivacy ? "/privacy" : "/terms",
+  });
   return <StorefrontLayout><main className="container max-w-3xl py-8 sm:py-12"><Link href="/" className="text-xs font-bold text-indigo-700">← ត្រឡប់ទៅទំព័រដើម</Link><header className="mt-4 rounded-2xl bg-slate-950 p-5 text-white sm:p-7"><div className="flex items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-xl bg-white/10">{isPrivacy ? <ShieldCheck className="h-5 w-5 text-emerald-200" /> : <FileText className="h-5 w-5 text-indigo-200" />}</div><div><p className="text-[10px] font-bold tracking-[0.16em] text-indigo-200">ZURS STORE</p><h1 className="mt-1 font-display text-2xl font-bold">{title}</h1></div></div><p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300">{intro}</p></header><section className="mt-5 space-y-3">{sections.map(([heading, copy], index) => <article key={heading} className="surface rounded-2xl p-4 sm:p-5"><div className="flex gap-3"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-indigo-50 text-[11px] font-bold text-indigo-700">{index + 1}</span><div><h2 className="text-sm font-bold text-slate-900">{heading}</h2><p className="mt-2 text-xs leading-6 text-slate-600">{copy}</p></div></div></article>)}</section><p className="mt-6 text-center text-[11px] text-slate-500">អាប់ដេតចុងក្រោយ៖ 27 សីហា 2026 · Live Spin Terms/Privacy នេះជាសេចក្តីព្រាងប្រតិបត្តិការ និងគួរត្រូវបានពិនិត្យដោយអ្នកជំនាញផ្លូវច្បាប់មុនបើកជាសាធារណៈ។</p></main></StorefrontLayout>;
 }

@@ -21,6 +21,7 @@ import { createDiditHostedSession } from "./didit";
 import { disclosureRequestStatuses, fraudReportStatuses } from "./marketplaceSafety";
 import { deriveLocationRisk, resolveLocationCountry } from "./marketplaceLocation";
 import { createZursSession, getZursSessionCookieOptions, ZURS_SESSION_COOKIE } from "./zursSession";
+import { enforceRateLimitOrThrow, rateLimitBuckets } from "./rateLimit";
 
 const marketplaceType = z.enum(["sale", "swap", "wanted"]);
 
@@ -119,7 +120,12 @@ export const appRouter = router({
   }),
   orders: router({
     createAdminKhqrTest: ownerProcedure.mutation(({ ctx }) => db.createAdminKhqrTestOrder({ userId: ctx.user.id })),
-    createTopup: protectedProcedure.input(z.object({ packageId: z.string().min(4).max(64), playerId: z.string().trim().min(2).max(128), zoneId: z.string().trim().min(1).max(128).optional(), quantity: z.number().int().min(1).max(9) })).mutation(({ ctx, input }) => db.createTopupOrder({ userId: ctx.user.id, ...input })),
+    createTopup: protectedProcedure.input(z.object({ packageId: z.string().min(4).max(64), playerId: z.string().trim().min(2).max(128), zoneId: z.string().trim().min(1).max(128).optional(), quantity: z.number().int().min(1).max(9) })).mutation(async ({ ctx, input }) => {
+      // Ten orders per hour per account. Checked before the order is written so
+      // an abusive account cannot flood the provider queue.
+      await enforceRateLimitOrThrow({ bucket: rateLimitBuckets.createTopup, identifier: `user:${ctx.user.id}`, mode: "strict" });
+      return db.createTopupOrder({ userId: ctx.user.id, ...input });
+    }),
     createSmm: protectedProcedure.input(z.object({ tierId: z.string().min(4).max(64), target: z.string().trim().min(3).max(500) })).mutation(({ ctx, input }) => db.createSmmOrder({ userId: ctx.user.id, ...input })),
     beginPayment: protectedProcedure.input(z.object({ orderId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => db.beginStagedPayment({ userId: ctx.user.id, ...input })),
     paymentSession: protectedProcedure.input(z.object({ orderId: z.string().min(4).max(64) })).query(({ ctx, input }) => db.getCustomerPaymentSession({ userId: ctx.user.id, ...input })),

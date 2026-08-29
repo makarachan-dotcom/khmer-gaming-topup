@@ -3,11 +3,13 @@ import StorefrontLayout from "@/components/StorefrontLayout";
 import { trpc } from "@/lib/trpc";
 import { CheckCircle2, CircleDot, ClipboardCheck, FileWarning, LifeBuoy, ListChecks, Search, Ticket } from "lucide-react";
 import { useState } from "react";
+import { useSeo } from "@/lib/seo";
 
 const labels: Record<string, string> = { pending: "កំពុងរង់ចាំ", awaiting_payment: "រង់ចាំទូទាត់", paid: "បានទូទាត់", delivered: "បានបញ្ចប់", failed: "បរាជ័យ", expired: "ផុតកំណត់", refunded: "សងប្រាក់វិញ" };
 const ticketLabels: Record<string, string> = { open: "Ticket ថ្មី", reviewing: "កំពុងពិនិត្យ", resolved: "បានដោះស្រាយ", closed: "បានបិទ" };
 
 export default function OrderStatus() {
+  useSeo({ title: "ស្ថានភាពការបញ្ជាទិញ | Zurs Store", description: "ពិនិត្យស្ថានភាពការបញ្ជាទិញ Top-up របស់អ្នកតាមលេខ Order។", path: "/order-status", noindex: true });
   const { user, loading } = useAuth();
   const [trackingCode, setTrackingCode] = useState("");
   const [searchedCode, setSearchedCode] = useState("");
