@@ -167,6 +167,26 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    chunkSizeWarningLimit: 400,
+    rollupOptions: {
+    	output: {
+    		// Keep the admin area and heavy vendors out of the entry chunk.
+    		manualChunks(id) {
+    			if (id.includes("/client/src/pages/Admin")) return "admin";
+    			if (!id.includes("node_modules")) return undefined;
+    			if (id.includes("react-dom") || id.includes("/react/") || id.includes("scheduler"))
+    				return "react-vendor";
+    			if (id.includes("@radix-ui")) return "ui-vendor";
+    			if (id.includes("recharts") || id.includes("d3-")) return "charts";
+    			if (id.includes("framer-motion") || id.includes("animejs") || id.includes("lottie-web"))
+    				return "motion-vendor";
+    			if (id.includes("@trpc") || id.includes("@tanstack") || id.includes("superjson"))
+    				return "data-vendor";
+    			if (id.includes("appwrite")) return "auth-vendor";
+    			return "vendor";
+    		},
+    	},
+    },
   },
   server: {
     host: true,
