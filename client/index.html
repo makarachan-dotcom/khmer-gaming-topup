@@ -158,6 +158,48 @@
         ]
       }
     </script>
+
+    <!--
+      Critical inline styles for the pre-React state.
+      index.css sets `body { background: dark-navy; color: var(--foreground) }`
+      where --foreground is near-black. Any unstyled markup inside #root is
+      therefore black-on-navy and effectively invisible. The app never hits
+      this because its own components paint light surfaces, but the SEO
+      fallback below sits directly on the body and did. These rules are inline
+      so they apply before the external stylesheet finishes loading.
+    -->
+    <style>
+      html { background: #0f172a; }
+      #seo-fallback {
+        max-width: 42rem;
+        margin: 0 auto;
+        padding: 4.5rem 1.5rem 3rem;
+        color: #cbd5e1;
+        font-family: "Kantumruy Pro", "Noto Sans Khmer", system-ui, sans-serif;
+        line-height: 1.9;
+        font-size: 0.9rem;
+      }
+      #seo-fallback h1 { color: #f8fafc; font-size: 1.6rem; margin: 0 0 0.25rem; }
+      #seo-fallback h2 { color: #7dd3fc; font-size: 1rem; font-weight: 600; margin: 0 0 1.5rem; }
+      #seo-fallback h3 { color: #f1f5f9; font-size: 0.95rem; margin: 1.75rem 0 0.35rem; }
+      #seo-fallback p { margin: 0 0 0.75rem; }
+      #seo-fallback nav { margin-top: 2rem; display: flex; flex-wrap: wrap; gap: 1rem; }
+      #seo-fallback nav a { color: #7dd3fc; font-weight: 600; text-decoration: none; }
+      #seo-fallback .seo-fallback__loading {
+        display: flex; align-items: center; gap: 0.6rem;
+        margin-bottom: 2rem; color: #94a3b8; font-size: 0.8rem;
+      }
+      #seo-fallback .seo-fallback__spinner {
+        width: 1rem; height: 1rem; border-radius: 9999px;
+        border: 2px solid rgba(148, 163, 184, 0.3);
+        border-top-color: #38bdf8;
+        animation: seo-fallback-spin 0.7s linear infinite;
+      }
+      @keyframes seo-fallback-spin { to { transform: rotate(360deg); } }
+      @media (prefers-reduced-motion: reduce) {
+        #seo-fallback .seo-fallback__spinner { animation: none; }
+      }
+    </style>
   </head>
 
   <body>
@@ -170,6 +212,10 @@
            បើថ្ងៃក្រោយប្តូរទៅប្រើ prerender ឬ SSR → លុបចោលទាំងស្រុង។
       -->
       <div id="seo-fallback">
+        <div class="seo-fallback__loading">
+          <span class="seo-fallback__spinner"></span>
+          <span>កំពុងផ្ទុក Zurs Store…</span>
+        </div>
         <h1>Zurs Store</h1>
         <h2>បញ្ចូល Diamond MLBB ភ្លាមៗនៅកម្ពុជា</h2>
         <p>
