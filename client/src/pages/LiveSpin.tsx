@@ -85,42 +85,153 @@ function plusSeconds(value: Date | string | null | undefined, seconds: number) {
 }
 
 const liveSpinSounds = {
-  intro: "/live-spin-audio/sound1-intro.mp3",
-  countdown: "/live-spin-audio/sound2-countdown.aac",
-  heartbeat: "/live-spin-audio/sound3-heartbeat.aac",
-  result: "/live-spin-audio/sound4-result.aac",
-  outro: "/live-spin-audio/sound5-outro.mp3",
+  intro: "/live-spin-audio/sound1-intro.m4a",
+  countdown: "/live-spin-audio/sound2-countdown.m4a",
+  heartbeat: "/live-spin-audio/sound3-heartbeat.m4a",
+  result: "/live-spin-audio/sound4-result.m4a",
+  outro: "/live-spin-audio/sound5-outro.m4a",
 } as const;
 
 type LiveSpinSound = keyof typeof liveSpinSounds;
+type SyncLiveSpinSound = Extract<LiveSpinSound, "countdown" | "heartbeat" | "result">;
 
 function useLiveSpinAudio({ event, muted, phase, phaseElapsed, stripRemaining }: { event: LiveSpinEvent; muted: boolean; phase: "intro" | "countdown" | "spin" | "spoiler" | "winner" | "prize" | "ending"; phaseElapsed: number; stripRemaining: number }) {
   const players = useRef<Partial<Record<LiveSpinSound, HTMLAudioElement>>>({});
+  const mediaNodes = useRef<Partial<Record<LiveSpinSound, MediaElementAudioSourceNode>>>({});
+  const buffers = useRef<Partial<Record<SyncLiveSpinSound, AudioBuffer>>>({});
+  const sources = useRef<Partial<Record<SyncLiveSpinSound, AudioBufferSourceNode>>>({});
+  const audioContext = useRef<AudioContext | null>(null);
+  const gainNode = useRef<GainNode | null>(null);
   const lastCue = useRef<string | null>(null);
+  const [ready, setReady] = useState(false);
+
   useEffect(() => {
-    (Object.entries(liveSpinSounds) as [LiveSpinSound, string][]).forEach(([name, source]) => {
-      const player = new Audio(source);
-      player.preload = "auto";
-      player.load();
-      players.current[name] = player;
-    });
-    return () => Object.values(players.current).forEach((player) => { player?.pause(); player && (player.src = ""); });
+    const AudioContextCtor = window.AudioContext;
+    if (!AudioContextCtor) return;
+    const context = new AudioContextCtor();
+    const gain = context.createGain();
+    gain.gain.value = muted ? 0 : 1;
+    gain.connect(context.destination);
+    audioContext.current = context;
+    gainNode.current = gain;
+    buffers.current = {};
+    sources.current = {};
+    setReady(false);
+
+    const resume = () => { void context.resume(); };
+    window.addEventListener("pointerdown", resume);
+    window.addEventListener("touchstart", resume);
+    window.addEventListener("keydown", resume);
+
+    const loadSyncBuffers = async () => {
+      try {
+        const names: SyncLiveSpinSound[] = ["countdown", "heartbeat", "result"];
+        await Promise.all(names.map(async (name) => {
+          const response = await fetch(liveSpinSounds[name]);
+          if (!response.ok) throw new Error(`Unable to load ${name} audio (${response.status})`);
+          buffers.current[name] = await context.decodeAudioData(await response.arrayBuffer());
+        }));
+        setReady(true);
+      } catch (error) {
+        console.error("[LiveSpinAudio] sync audio decode failed", error);
+      }
+    };
+    void loadSyncBuffers();
+
+    (Object.entries(liveSpinSounds) as [LiveSpinSound, string][])
+      .filter(([name]) => name === "intro" || name === "outro")
+      .forEach(([name, source]) => {
+        const player = new Audio(source);
+        player.preload = "auto";
+        player.load();
+        const mediaNode = context.createMediaElementSource(player);
+        mediaNode.connect(gain);
+        players.current[name] = player;
+        mediaNodes.current[name] = mediaNode;
+      });
+
+    return () => {
+      window.removeEventListener("pointerdown", resume);
+      window.removeEventListener("touchstart", resume);
+      window.removeEventListener("keydown", resume);
+      Object.values(sources.current).forEach((source) => { try { source?.stop(); } catch {} source?.disconnect(); });
+      Object.values(players.current).forEach((player) => { player?.pause(); if (player) player.src = ""; });
+      Object.values(mediaNodes.current).forEach((node) => node?.disconnect());
+      gain.disconnect();
+      void context.close();
+      audioContext.current = null;
+      gainNode.current = null;
+      players.current = {};
+      mediaNodes.current = {};
+      buffers.current = {};
+      sources.current = {};
+    };
   }, [event.id]);
+
   useEffect(() => {
-    const all = Object.values(players.current);
-    if (muted) { all.forEach((player) => player?.pause()); return; }
-    const cue: LiveSpinSound | null = phase === "intro" ? "intro" : phase === "countdown" ? "countdown" : phase === "spin" ? "heartbeat" : phase === "winner" ? "result" : phase === "ending" ? "outro" : ["announced", "locked", "waiting"].includes(event.status) ? "intro" : null;
-    if (!cue) { all.forEach((player) => player?.pause()); return; }
-    all.forEach((player) => { if (player && player !== players.current[cue]) player.pause(); });
-    const player = players.current[cue];
-    if (!player) return;
-    player.loop = cue === "intro" || cue === "heartbeat";
-    player.volume = cue === "heartbeat" ? 0.42 : cue === "outro" ? 0.5 : 0.72;
-    const playbackRate = cue === "countdown" ? 0.74 : cue === "heartbeat" ? stripRemaining <= 2 ? 1.5 : stripRemaining <= 4 ? 1.25 : 1 : 1;
-    player.playbackRate = playbackRate;
+    const context = audioContext.current;
+    const gain = gainNode.current;
+    if (!context || !gain) return;
+    gain.gain.setTargetAtTime(muted ? 0 : 1, context.currentTime, 0.01);
+  }, [muted]);
+
+  useEffect(() => {
+    const context = audioContext.current;
+    const gain = gainNode.current;
+    if (!context || !gain) return;
+    const requestedCue: LiveSpinSound | null = phase === "intro" ? "intro" : phase === "countdown" ? "countdown" : phase === "spin" ? "heartbeat" : phase === "winner" ? "result" : phase === "ending" ? "outro" : ["announced", "locked", "waiting"].includes(event.status) ? "intro" : null;
+    const cue: LiveSpinSound | null = !ready && requestedCue === "countdown" ? "intro" : requestedCue;
+    const syncNames: SyncLiveSpinSound[] = ["countdown", "heartbeat", "result"];
+    const stopSync = (except?: SyncLiveSpinSound) => syncNames.forEach((name) => {
+      if (name === except) return;
+      const source = sources.current[name];
+      if (source) { try { source.stop(); } catch {} source.disconnect(); delete sources.current[name]; }
+    });
+    const stopPlayers = () => Object.values(players.current).forEach((player) => player?.pause());
+    if (!cue) { stopSync(); stopPlayers(); return; }
+
+    if (cue === "intro" || cue === "outro") {
+      stopSync();
+      Object.entries(players.current).forEach(([name, player]) => { if (name !== cue) player?.pause(); });
+      const player = players.current[cue];
+      if (!player) return;
+      player.loop = cue === "intro";
+      player.currentTime = lastCue.current === `${event.id}:${event.status}:${cue}` ? player.currentTime : 0;
+      lastCue.current = `${event.id}:${event.status}:${cue}`;
+      void player.play().catch(() => undefined);
+      return;
+    }
+
+    stopPlayers();
+    if (!ready) return;
+    const buffer = buffers.current[cue];
+    if (!buffer) return;
     const key = `${event.id}:${event.status}:${cue}`;
-    if (lastCue.current !== key || player.paused) { lastCue.current = key; const offset = Math.max(0, phaseElapsed * playbackRate); player.currentTime = Number.isFinite(player.duration) ? Math.min(offset, Math.max(0, player.duration - 0.1)) : 0; void player.play().catch(() => undefined); }
-  }, [event.id, event.status, muted, phase, phaseElapsed, stripRemaining]);
+    let source = sources.current[cue];
+    if (!source || lastCue.current !== key) {
+      stopSync(cue);
+      source = context.createBufferSource();
+      source.buffer = buffer;
+      source.loop = cue === "heartbeat";
+      source.loopStart = 0;
+      source.loopEnd = buffer.duration;
+      source.connect(gain);
+      const createdSource = source;
+      createdSource.onended = () => { if (sources.current[cue] === createdSource && !createdSource.loop) delete sources.current[cue]; };
+      sources.current[cue] = createdSource;
+      const initialRate = cue === "countdown" ? 0.74 : cue === "heartbeat" ? stripRemaining <= 2 ? 1.5 : stripRemaining <= 4 ? 1.25 : 1 : 1;
+      source.playbackRate.setValueAtTime(initialRate, context.currentTime);
+      const offset = cue === "heartbeat" ? (phaseElapsed * initialRate) % buffer.duration : Math.min(phaseElapsed * initialRate, Math.max(0, buffer.duration - 0.01));
+      source.start(0, Math.max(0, offset));
+      lastCue.current = key;
+    }
+    if (cue === "heartbeat") {
+      const targetRate = stripRemaining <= 2 ? 1.5 : stripRemaining <= 4 ? 1.25 : 1;
+      source.playbackRate.setTargetAtTime(targetRate, context.currentTime, 0.08);
+    }
+  }, [event.id, event.status, muted, phase, phaseElapsed, ready, stripRemaining]);
+
+  return ready;
 }
 
 function LiveSpinRealtime({ eventId, enabled, onState }: { eventId: string; enabled: boolean; onState: () => void }) {
@@ -179,21 +290,22 @@ function LiveSpinStage({ state }: { state: LiveSpinState }) {
   const motionEvent = { id: event.id, status: event.status as "waiting" | "live" | "winner_revealed" | "prize_countdown" | "prize_revealed" | "ended", liveStartedAt: event.liveStartedAt, winnerRevealedAt: event.winnerRevealedAt, prizeCountdownStartedAt: event.prizeCountdownStartedAt, prizeRevealedAt: event.prizeRevealedAt, nameStripSeconds: event.nameStripSeconds, winnerSpoilerSeconds: event.winnerSpoilerSeconds, winnerCelebrationSeconds: event.winnerCelebrationSeconds, prizeCountdownSeconds: event.prizeCountdownSeconds };
   const motionPhase = liveSpinAudioPhase(motionEvent, serverNow);
   const motionPhaseStartedAt = motionPhase === "intro" ? toTime(event.liveStartedAt) : motionPhase === "countdown" ? toTime(event.liveStartedAt) + 58_000 : motionPhase === "spin" ? toTime(event.liveStartedAt) + 68_000 : motionPhase === "winner" ? toTime(event.winnerRevealedAt) + event.winnerSpoilerSeconds * 1_000 : motionPhase === "prize" ? toTime(event.prizeCountdownStartedAt) : motionPhase === "ending" ? toTime(event.prizeRevealedAt) : serverNow;
-  useLiveSpinAudio({ event, muted, phase: motionPhase, phaseElapsed: Math.max(0, (serverNow - motionPhaseStartedAt) / 1_000), stripRemaining: nameStrip.remaining });
+  const audioReady = useLiveSpinAudio({ event, muted, phase: motionPhase, phaseElapsed: Math.max(0, (serverNow - motionPhaseStartedAt) / 1_000), stripRemaining: nameStrip.remaining });
   const statusTitle: Record<string, string> = { announced: "កំពុងរៀបចំ Live Spin", locked: "បញ្ជីអ្នកចូលរួមត្រូវបាន lock", waiting: "Waiting Lobby", live: "Live Spin កំពុងដំណើរការ", winner_revealed: "អ្នកឈ្នះត្រូវបានជ្រើស", prize_countdown: "រង្វាន់ជិតបង្ហាញ", prize_revealed: "រង្វាន់ត្រូវបានបង្ហាញ", ended: "Live Spin បានបញ្ចប់" };
   const inLiveWindow = ["waiting", "live", "winner_revealed", "prize_countdown", "prize_revealed"].includes(event.status);
   const timerLabel = ["announced", "locked", "waiting"].includes(event.status) ? "ចាប់ផ្តើមក្នុង" : "ពេលនៅសល់";
   const statusCaption = event.status === "ended" ? "EVENT STATUS" : inLiveWindow ? "LIVE STATUS" : "UPCOMING";
-  return <div className="mt-7">{event.isTest ? <div className="sticky top-[calc(env(safe-area-inset-top)+4.9rem)] z-30 mx-auto mb-4 w-full rounded-xl border border-amber-200/60 bg-amber-300 px-3 py-2 text-center text-[10px] font-extrabold tracking-[0.1em] text-slate-950 shadow-lg shadow-amber-950/30">LIVE SPIN TEST · TEST ONLY · VIEW-ONLY</div> : null}<div className="grid grid-cols-2 gap-2 sm:gap-3"><div className="col-span-2 rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3"><p className="text-[10px] font-bold tracking-[0.14em] text-cyan-200">{statusCaption}</p><h2 className="mt-1 break-words font-display text-xl font-bold leading-snug sm:text-2xl">{statusTitle[event.status] ?? "Live Spin"}</h2></div><div className="rounded-2xl border border-white/10 bg-white/[0.08] p-3"><p className="text-[10px] font-bold tracking-[0.12em] text-slate-300">PARTICIPANTS</p><p className="mt-1 font-display text-lg font-bold text-amber-200">{state.participantCount} <span className="text-xs text-slate-300">/ {event.minParticipantCount}</span></p></div><div className="rounded-2xl border border-white/10 bg-white/[0.08] p-3"><p className="text-[10px] font-bold tracking-[0.12em] text-slate-300">ចំនួនអ្នកឈ្នះ</p><p className="mt-1 font-display text-lg font-bold text-amber-200">{event.winnerCount}</p></div><button type="button" onClick={() => setMuted((value) => !value)} className="min-h-12 rounded-2xl border border-white/10 bg-white/[0.08] p-3 text-left transition hover:bg-white/[0.14]" aria-label={muted ? "បើកសំឡេង Live Spin" : "បិទសំឡេង Live Spin"}><span className="text-[10px] font-bold tracking-[0.12em] text-slate-300">SOUND</span><span className="mt-1 flex items-center gap-2 text-xs font-bold text-white">{muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4 text-amber-200" />}{muted ? "បិទ" : "បើក"}</span></button><div className="rounded-2xl border border-white/10 bg-white/[0.08] p-3"><p className="text-[10px] font-bold tracking-[0.12em] text-slate-300">{timerLabel}</p><p className="mt-1 font-display text-lg font-bold tabular-nums text-white">{waiting.minutes}:{waiting.seconds}</p></div></div>{event.status === "waiting" ? <AdGate url={event.adMediaUrl} duration={event.adDurationSeconds} muted={muted} onToggleMute={() => setMuted((value) => !value)} countdown={waiting} serverNow={serverNow} /> : null}{["live", "winner_revealed", "prize_countdown", "prize_revealed", "ended"].includes(event.status) ? <LiveSpinExperience event={{ id: event.id, status: event.status as "live" | "winner_revealed" | "prize_countdown" | "prize_revealed" | "ended", liveStartedAt: event.liveStartedAt, winnerRevealedAt: event.winnerRevealedAt, prizeCountdownStartedAt: event.prizeCountdownStartedAt, prizeRevealedAt: event.prizeRevealedAt, nameStripSeconds: event.nameStripSeconds, winnerSpoilerSeconds: event.winnerSpoilerSeconds, winnerCelebrationSeconds: event.winnerCelebrationSeconds, prizeCountdownSeconds: event.prizeCountdownSeconds }} serverNow={serverNow} aliases={state.participantAliases} winners={state.winners} consolation={state.consolation} muted={muted} onToggleMute={() => setMuted((value) => !value)} /> : null}{["announced", "locked"].includes(event.status) ? <WaitingLobby countdown={waiting} state={state} /> : null}<LiveSpinConnectionConsent event={event} /><div className="mt-5 rounded-2xl border border-cyan-200/20 bg-cyan-200/10 p-3 text-xs leading-5 text-cyan-50">{event.spinEnabled ? <>សប្តាហ៍នេះ៖ <strong>អ្នកឈ្នះ {event.winnerCount} នាក់ + កាដូលើកទឹកចិត្ត {event.consolationGiftCount} នាក់</strong> • ត្រូវការ <strong>{event.minParticipantCount}</strong> អ្នកកាន់ ticket។</> : <strong>Live Spin ត្រូវបានផ្អាក ជាបណ្តោះអាសន្ន។ Tickets ដែលមានសិទ្ធិនឹង roll over ទៅ event បន្ទាប់។</strong>}</div><div className="mt-5 grid gap-3 md:grid-cols-2"><div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4"><div className="flex items-center gap-2 text-cyan-100"><LockKeyhole className="h-4 w-4" /><p className="text-xs font-bold">Fairness commitment</p></div><p className="mt-2 break-all font-mono text-[10px] leading-5 text-slate-400">{event.fairnessCommitmentHash ?? "Commitment will be published before Live Spin."}</p><p className="mt-2 text-[11px] leading-5 text-slate-300">Server បង្កើត seed ដោយសុវត្ថិភាព, lock participant snapshot មុន spin ហើយបង្ហាញ seed បន្ទាប់ពី prize reveal។</p></div><div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4"><div className="flex items-center gap-2 text-amber-200"><Trophy className="h-4 w-4" /><p className="text-xs font-bold">Sunday · 3:00 PM</p></div><p className="mt-2 text-[11px] leading-5 text-slate-300">ម៉ោងកម្ពុជា (Asia/Phnom_Penh)។ ការរាប់ថយក្រោយប្រើ server time ដែលបាន sync ជាមួយ device របស់អ្នក។</p></div></div></div>;
+  return <div className="mt-7">{event.isTest ? <div className="sticky top-[calc(env(safe-area-inset-top)+4.9rem)] z-30 mx-auto mb-4 w-full rounded-xl border border-amber-200/60 bg-amber-300 px-3 py-2 text-center text-[10px] font-extrabold tracking-[0.1em] text-slate-950 shadow-lg shadow-amber-950/30">LIVE SPIN TEST · TEST ONLY · VIEW-ONLY</div> : null}<div className="grid grid-cols-2 gap-2 sm:gap-3"><div className="col-span-2 rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3"><p className="text-[10px] font-bold tracking-[0.14em] text-cyan-200">{statusCaption}</p><h2 className="mt-1 break-words font-display text-xl font-bold leading-snug sm:text-2xl">{statusTitle[event.status] ?? "Live Spin"}</h2></div><div className="rounded-2xl border border-white/10 bg-white/[0.08] p-3"><p className="text-[10px] font-bold tracking-[0.12em] text-slate-300">PARTICIPANTS</p><p className="mt-1 font-display text-lg font-bold text-amber-200">{state.participantCount} <span className="text-xs text-slate-300">/ {event.minParticipantCount}</span></p></div><div className="rounded-2xl border border-white/10 bg-white/[0.08] p-3"><p className="text-[10px] font-bold tracking-[0.12em] text-slate-300">ចំនួនអ្នកឈ្នះ</p><p className="mt-1 font-display text-lg font-bold text-amber-200">{event.winnerCount}</p></div><button type="button" onClick={() => setMuted((value) => !value)} className="min-h-12 rounded-2xl border border-white/10 bg-white/[0.08] p-3 text-left transition hover:bg-white/[0.14]" aria-label={muted ? "បើកសំឡេង Live Spin" : "បិទសំឡេង Live Spin"}><span className="text-[10px] font-bold tracking-[0.12em] text-slate-300">SOUND</span><span className="mt-1 flex items-center gap-2 text-xs font-bold text-white">{muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4 text-amber-200" />}{muted ? "បិទ" : "បើក"}</span></button><div className="rounded-2xl border border-white/10 bg-white/[0.08] p-3"><p className="text-[10px] font-bold tracking-[0.12em] text-slate-300">{timerLabel}</p><p className="mt-1 font-display text-lg font-bold tabular-nums text-white">{waiting.minutes}:{waiting.seconds}</p></div></div>{event.status === "waiting" ? <AdGate url={event.adMediaUrl} duration={event.adDurationSeconds} muted={muted} onToggleMute={() => setMuted((value) => !value)} countdown={waiting} serverNow={serverNow} audioReady={audioReady} /> : null}{["live", "winner_revealed", "prize_countdown", "prize_revealed", "ended"].includes(event.status) ? <LiveSpinExperience event={{ id: event.id, status: event.status as "live" | "winner_revealed" | "prize_countdown" | "prize_revealed" | "ended", liveStartedAt: event.liveStartedAt, winnerRevealedAt: event.winnerRevealedAt, prizeCountdownStartedAt: event.prizeCountdownStartedAt, prizeRevealedAt: event.prizeRevealedAt, nameStripSeconds: event.nameStripSeconds, winnerSpoilerSeconds: event.winnerSpoilerSeconds, winnerCelebrationSeconds: event.winnerCelebrationSeconds, prizeCountdownSeconds: event.prizeCountdownSeconds }} serverNow={serverNow} aliases={state.participantAliases} winners={state.winners} consolation={state.consolation} muted={muted} onToggleMute={() => setMuted((value) => !value)} /> : null}{["announced", "locked"].includes(event.status) ? <WaitingLobby countdown={waiting} state={state} /> : null}<LiveSpinConnectionConsent event={event} /><div className="mt-5 rounded-2xl border border-cyan-200/20 bg-cyan-200/10 p-3 text-xs leading-5 text-cyan-50">{event.spinEnabled ? <>សប្តាហ៍នេះ៖ <strong>អ្នកឈ្នះ {event.winnerCount} នាក់ + កាដូលើកទឹកចិត្ត {event.consolationGiftCount} នាក់</strong> • ត្រូវការ <strong>{event.minParticipantCount}</strong> អ្នកកាន់ ticket។</> : <strong>Live Spin ត្រូវបានផ្អាក ជាបណ្តោះអាសន្ន។ Tickets ដែលមានសិទ្ធិនឹង roll over ទៅ event បន្ទាប់។</strong>}</div><div className="mt-5 grid gap-3 md:grid-cols-2"><div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4"><div className="flex items-center gap-2 text-cyan-100"><LockKeyhole className="h-4 w-4" /><p className="text-xs font-bold">Fairness commitment</p></div><p className="mt-2 break-all font-mono text-[10px] leading-5 text-slate-400">{event.fairnessCommitmentHash ?? "Commitment will be published before Live Spin."}</p><p className="mt-2 text-[11px] leading-5 text-slate-300">Server បង្កើត seed ដោយសុវត្ថិភាព, lock participant snapshot មុន spin ហើយបង្ហាញ seed បន្ទាប់ពី prize reveal។</p></div><div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4"><div className="flex items-center gap-2 text-amber-200"><Trophy className="h-4 w-4" /><p className="text-xs font-bold">Sunday · 3:00 PM</p></div><p className="mt-2 text-[11px] leading-5 text-slate-300">ម៉ោងកម្ពុជា (Asia/Phnom_Penh)។ ការរាប់ថយក្រោយប្រើ server time ដែលបាន sync ជាមួយ device របស់អ្នក។</p></div></div></div>;
 }
 
-function AdGate({ url, duration, muted, onToggleMute, countdown, serverNow }: { url: string | null; duration: number; muted: boolean; onToggleMute: () => void; countdown: ReturnType<typeof useCountdown>; serverNow: number }) {
+function AdGate({ url, duration, muted, onToggleMute, countdown, serverNow, audioReady }: { url: string | null; duration: number; muted: boolean; onToggleMute: () => void; countdown: ReturnType<typeof useCountdown>; serverNow: number; audioReady: boolean }) {
   const [adStartedAt, setAdStartedAt] = useState<number | null>(null);
   useEffect(() => { setAdStartedAt(null); }, [url]);
   const requiredEndsAt = adStartedAt ? adStartedAt + Math.max(0, duration) * 1_000 : null;
   const adRemaining = requiredEndsAt ? Math.max(0, Math.ceil((requiredEndsAt - serverNow) / 1_000)) : Math.max(0, duration);
-  const finalTenSeconds = countdown.remaining > 0 && countdown.remaining <= 10;
-  return <div className="mt-6 overflow-hidden rounded-3xl border border-white/10 bg-black shadow-2xl"><div className="relative aspect-[9/12] max-h-[520px] w-full overflow-hidden bg-gradient-to-br from-cyan-900 via-slate-950 to-amber-950 sm:aspect-[16/9]"><div className="absolute inset-0 grid place-items-center p-6 text-center"><div><Gift className="mx-auto h-10 w-10 text-amber-200" /><h3 className="mt-4 font-display text-2xl font-bold">Giveaway is about to begin</h3><p className="mt-2 text-sm text-slate-300">សូមរង់ចាំ countdown និងស្តាប់ការណែនាំ។</p></div></div>{url ? <video src={url} muted={muted} autoPlay playsInline controls={false} onPlay={() => setAdStartedAt((value) => value ?? serverNow)} className="absolute inset-0 h-full w-full object-cover" /> : null}<div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 bg-gradient-to-t from-black/85 to-transparent p-4 sm:p-6"><div><p className="text-[10px] font-bold tracking-[0.16em] text-cyan-100">{finalTenSeconds ? "LIVE STARTS NOW" : "LIVE STARTS IN"}</p><p className="mt-1 font-display text-3xl font-bold tabular-nums">{countdown.minutes}:{countdown.seconds}</p>{url && duration > 0 ? <p className="mt-1 text-[10px] text-slate-300">Advertisement: {String(adRemaining).padStart(2, "0")}s</p> : null}</div><button type="button" onClick={onToggleMute} className="grid h-10 w-10 place-items-center rounded-full bg-white/15 backdrop-blur transition hover:bg-white/25" aria-label={muted ? "បើកសំឡេង" : "បិទសំឡេង"}>{muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}</button></div></div></div>;
+  const finalTenSeconds = audioReady && countdown.remaining > 0 && countdown.remaining <= 10;
+  const visibleCountdown = audioReady ? countdown : { ...countdown, minutes: "--", seconds: "--" };
+  return <div className="mt-6 overflow-hidden rounded-3xl border border-white/10 bg-black shadow-2xl"><div className="relative aspect-[9/12] max-h-[520px] w-full overflow-hidden bg-gradient-to-br from-cyan-900 via-slate-950 to-amber-950 sm:aspect-[16/9]"><div className="absolute inset-0 grid place-items-center p-6 text-center"><div><Gift className="mx-auto h-10 w-10 text-amber-200" /><h3 className="mt-4 font-display text-2xl font-bold">Giveaway is about to begin</h3><p className="mt-2 text-sm text-slate-300">{audioReady ? "សូមរង់ចាំ countdown និងស្តាប់ការណែនាំ។" : "Preparing synchronized audio…"}</p></div></div>{url ? <video src={url} muted={muted} autoPlay playsInline controls={false} onPlay={() => setAdStartedAt((value) => value ?? serverNow)} className="absolute inset-0 h-full w-full object-cover" /> : null}<div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 bg-gradient-to-t from-black/85 to-transparent p-4 sm:p-6"><div><p className="text-[10px] font-bold tracking-[0.16em] text-cyan-100">{finalTenSeconds ? "LIVE STARTS NOW" : "LIVE STARTS IN"}</p><p className="mt-1 font-display text-3xl font-bold tabular-nums">{visibleCountdown.minutes}:{visibleCountdown.seconds}</p>{url && duration > 0 ? <p className="mt-1 text-[10px] text-slate-300">Advertisement: {String(adRemaining).padStart(2, "0")}s</p> : null}</div><button type="button" onClick={onToggleMute} className="grid h-10 w-10 place-items-center rounded-full bg-white/15 backdrop-blur transition hover:bg-white/25" aria-label={muted ? "បើកសំឡេង" : "បិទសំឡេង"}>{muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}</button></div></div></div>;
 }
 
 function WaitingLobby({ countdown, state }: { countdown: ReturnType<typeof useCountdown>; state: LiveSpinState }) { return <div className="mt-6 rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.09] to-white/[0.03] p-5 sm:p-8"><div className="grid gap-6 md:grid-cols-[1.1fr_0.9fr] md:items-center"><div><div className="inline-flex items-center gap-2 rounded-full bg-cyan-300/10 px-3 py-1.5 text-xs font-bold text-cyan-100"><span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_14px_#67e8f9]" />LOBBY OPEN</div><h3 className="mt-4 font-display text-3xl font-bold">រង់ចាំ Live Spin</h3><p className="mt-2 max-w-md text-sm leading-6 text-slate-300">អ្នកចូលរួម និង tickets ត្រូវបានបញ្ជាក់ដោយ server។ នៅពេលបញ្ជី lock មិនអាចបន្ថែម ឬកែ entry បានទេ។</p><div className="mt-5 flex items-center gap-3"><div className="rounded-2xl bg-white/10 px-4 py-3"><p className="text-[10px] font-bold tracking-wider text-slate-400">TIME LEFT</p><p className="mt-1 font-display text-3xl font-bold tabular-nums text-amber-200">{countdown.minutes}:{countdown.seconds}</p></div><div className="rounded-2xl bg-white/10 px-4 py-3"><p className="text-[10px] font-bold tracking-wider text-slate-400">ELIGIBLE</p><p className="mt-1 text-xl font-bold">{state.participantCount}</p></div></div></div><div className="relative mx-auto grid aspect-square w-full max-w-64 place-items-center rounded-full border-[12px] border-cyan-200/20 bg-slate-900 shadow-[0_0_90px_rgba(34,211,238,0.18)]"><div className="absolute inset-3 rounded-full border border-dashed border-amber-200/40" /><div className="text-center"><Eye className="mx-auto h-7 w-7 text-cyan-200" /><p className="mt-2 text-sm font-bold">Fair lobby</p><p className="mt-1 text-[11px] text-slate-400">Snapshot before spin</p></div></div></div></div>; }
