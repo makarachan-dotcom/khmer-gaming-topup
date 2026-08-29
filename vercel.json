@@ -2,12 +2,32 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "pnpm build",
   "outputDirectory": "dist/public",
-  "functions": {
-    "api/[...path].ts": {
-      "maxDuration": 30
-    }
-  },
+  "functions": { "api/[...path].ts": { "maxDuration": 30 } },
   "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Strict-Transport-Security", "value": "max-age=31536000; includeSubDomains" },
+        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(), interest-cohort=()" },
+        { "key": "Cross-Origin-Opener-Policy", "value": "same-origin-allow-popups" }
+      ]
+    },
+    {
+      "source": "/api/:path*",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store, private, max-age=0" }
+      ]
+    },
+    {
+      "source": "/checkout/:path*",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store, private, max-age=0" },
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive" }
+      ]
+    },
     {
       "source": "/pay/:path*",
       "headers": [
@@ -17,21 +37,9 @@
     }
   ],
   "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "/api/[...path]"
-    },
-    {
-      "source": "/manus-storage/:path*",
-      "destination": "/api/manus-storage/:path*"
-    },
-    {
-      "source": "/",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/:path((?!api/).*)",
-      "destination": "/index.html"
-    }
+    { "source": "/api/:path*", "destination": "/api/[...path]" },
+    { "source": "/manus-storage/:path*", "destination": "/api/manus-storage/:path*" },
+    { "source": "/", "destination": "/index.html" },
+    { "source": "/:path((?!api/).*)", "destination": "/index.html" }
   ]
 }

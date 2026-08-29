@@ -49,10 +49,14 @@ export type RateLimitDecision = {
 
 /** Buckets required by the security review. Keep them in one place. */
 export const rateLimitBuckets = {
-  payKeyIssue: { name: "paykey", limit: 5, windowSeconds: 300 },
-  payLinkInvalid: { name: "paylink", limit: 10, windowSeconds: 3600 },
-  auth: { name: "auth", limit: 10, windowSeconds: 60 },
-  trpcPublic: { name: "trpc", limit: 60, windowSeconds: 60 },
+  // Limits are keyed by IP. Cambodian mobile carriers use CGNAT, so one
+  // address represents many genuine customers. Live Spin alone costs about
+  // 9 requests per minute per viewer, so trpcPublic must stay generous.
+  payKeyIssue: { name: "paykey", limit: 20, windowSeconds: 300 },
+  payLinkInvalid: { name: "paylink", limit: 30, windowSeconds: 3600 },
+  auth: { name: "auth", limit: 60, windowSeconds: 60 },
+  trpcPublic: { name: "trpc", limit: 600, windowSeconds: 60 },
+  // Keyed by authenticated user, not IP, so CGNAT does not apply.
   createTopup: { name: "topup", limit: 10, windowSeconds: 3600 },
 } as const satisfies Record<string, RateLimitBucket>;
 
