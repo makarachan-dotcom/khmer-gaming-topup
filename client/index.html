@@ -13,17 +13,12 @@
     <meta
       name="keywords"
       content="zurs, zurs store, zurs mlbb, zurs kh, topup kh, top up game cambodia, mlbb top up khmer, បញ្ចូលដាយម៉ុន, KHQR, Bakong" />
-    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
-    <meta name="googlebot" content="index, follow, max-image-preview:large, max-snippet:-1" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
     <meta name="theme-color" content="#0f172a" />
     <link rel="canonical" href="https://www.zurs.me/" />
-    <!-- Only km is declared: there is no separate English URL, and pointing
-         hreflang="en" at this Khmer page makes Google distrust the cluster. -->
     <link rel="alternate" hreflang="km" href="https://www.zurs.me/" />
+    <link rel="alternate" hreflang="en" href="https://www.zurs.me/" />
     <link rel="alternate" hreflang="x-default" href="https://www.zurs.me/" />
-
-    <link rel="icon" type="image/png" sizes="512x512" href="/logo-512.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
 
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Zurs Store" />
@@ -33,10 +28,8 @@
       property="og:description"
       content="បញ្ចូល Diamond MLBB និងសេវាឌីជីថល ភ្លាមៗ ២៤ម៉ោង បង់ប្រាក់តាម Bakong KHQR។" />
     <meta property="og:image" content="https://www.zurs.me/og-cover.png" />
-    <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Zurs Store — Top Up MLBB Diamond Cambodia" />
     <meta property="og:locale" content="km_KH" />
     <meta property="og:locale:alternate" content="en_US" />
 
@@ -46,7 +39,6 @@
       name="twitter:description"
       content="បញ្ចូល Diamond MLBB និងសេវាឌីជីថល ភ្លាមៗ ២៤ម៉ោង បង់ប្រាក់តាម Bakong KHQR។" />
     <meta name="twitter:image" content="https://www.zurs.me/og-cover.png" />
-    <meta name="twitter:image:alt" content="Zurs Store — Top Up MLBB Diamond Cambodia" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -67,27 +59,11 @@
         "@type": "Organization",
         "@id": "https://www.zurs.me/#organization",
         "name": "Zurs Store",
-        "alternateName": ["Zurs", "Zurs KH", "Zurs MLBB", "Zurs Top Up", "TopUp KH"],
+        "alternateName": ["Zurs", "Zurs KH", "Zurs MLBB", "TopUp KH"],
         "url": "https://www.zurs.me/",
-        "logo": {
-          "@type": "ImageObject",
-          "url": "https://www.zurs.me/logo-512.png",
-          "width": 512,
-          "height": 512
-        },
-        "image": "https://www.zurs.me/og-cover.png",
+        "logo": "https://www.zurs.me/og-cover.png",
         "email": "support@zurs.me",
-        "areaServed": "KH",
-        "sameAs": ["https://www.facebook.com/share/19QooXtndH/"],
-        "contactPoint": [
-          {
-            "@type": "ContactPoint",
-            "contactType": "customer support",
-            "email": "support@zurs.me",
-            "areaServed": "KH",
-            "availableLanguage": ["km", "en"]
-          }
-        ]
+        "areaServed": "KH"
       }
     </script>
     <script type="application/ld+json">
@@ -107,14 +83,6 @@
         "@type": "FAQPage",
         "@id": "https://www.zurs.me/#faq",
         "mainEntity": [
-          {
-            "@type": "Question",
-            "name": "តើ Zurs សរសេរដូចម្តេច? (Zeus / Zues មិនមែនជាឈ្មោះរបស់យើងទេ)",
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "ឈ្មោះត្រឹមត្រូវគឺ Zurs Store ហើយគេហទំព័រផ្លូវការតែមួយគត់គឺ zurs.me។ អតិថិជនខ្លះវាយ Zeus Store ឬ Zues Store ដោយច្រឡំ ព្រោះការបញ្ចេញសំឡេងស្រដៀងគ្នា។ ហាងទាំងនោះមិនមែនជារបស់យើងទេ។ សូមពិនិត្យ URL ជានិច្ចមុនបង់ប្រាក់។"
-            }
-          },
           {
             "@type": "Question",
             "name": "Zurs Store គឺជាអ្វី?",
@@ -158,90 +126,10 @@
         ]
       }
     </script>
-
-    <!--
-      Critical inline styles for the pre-React state.
-      index.css sets `body { background: dark-navy; color: var(--foreground) }`
-      where --foreground is near-black. Any unstyled markup inside #root is
-      therefore black-on-navy and effectively invisible. The app never hits
-      this because its own components paint light surfaces, but the SEO
-      fallback below sits directly on the body and did. These rules are inline
-      so they apply before the external stylesheet finishes loading.
-    -->
-    <style>
-      html { background: #0f172a; }
-      #seo-fallback {
-        max-width: 42rem;
-        margin: 0 auto;
-        padding: 4.5rem 1.5rem 3rem;
-        color: #cbd5e1;
-        font-family: "Kantumruy Pro", "Noto Sans Khmer", system-ui, sans-serif;
-        line-height: 1.9;
-        font-size: 0.9rem;
-      }
-      #seo-fallback h1 { color: #f8fafc; font-size: 1.6rem; margin: 0 0 0.25rem; }
-      #seo-fallback h2 { color: #7dd3fc; font-size: 1rem; font-weight: 600; margin: 0 0 1.5rem; }
-      #seo-fallback h3 { color: #f1f5f9; font-size: 0.95rem; margin: 1.75rem 0 0.35rem; }
-      #seo-fallback p { margin: 0 0 0.75rem; }
-      #seo-fallback nav { margin-top: 2rem; display: flex; flex-wrap: wrap; gap: 1rem; }
-      #seo-fallback nav a { color: #7dd3fc; font-weight: 600; text-decoration: none; }
-      #seo-fallback .seo-fallback__loading {
-        display: flex; align-items: center; gap: 0.6rem;
-        margin-bottom: 2rem; color: #94a3b8; font-size: 0.8rem;
-      }
-      #seo-fallback .seo-fallback__spinner {
-        width: 1rem; height: 1rem; border-radius: 9999px;
-        border: 2px solid rgba(148, 163, 184, 0.3);
-        border-top-color: #38bdf8;
-        animation: seo-fallback-spin 0.7s linear infinite;
-      }
-      @keyframes seo-fallback-spin { to { transform: rotate(360deg); } }
-      @media (prefers-reduced-motion: reduce) {
-        #seo-fallback .seo-fallback__spinner { animation: none; }
-      }
-    </style>
   </head>
 
   <body>
-    <div id="root">
-      <!-- ============================================================
-           SEO FALLBACK — លុប block នេះបើប្តូរទៅ prerender ពេលក្រោយ
-           ============================================================
-           React នឹងជំនួសមាតិកានេះនៅពេល hydrate រួច។
-           វាមានតែសម្រាប់ Googlebot ដែលអានមុន JavaScriptដំណើរការ។
-           បើថ្ងៃក្រោយប្តូរទៅប្រើ prerender ឬ SSR → លុបចោលទាំងស្រុង។
-      -->
-      <div id="seo-fallback">
-        <div class="seo-fallback__loading">
-          <span class="seo-fallback__spinner"></span>
-          <span>កំពុងផ្ទុក Zurs Store…</span>
-        </div>
-        <h1>Zurs Store</h1>
-        <h2>បញ្ចូល Diamond MLBB ភ្លាមៗនៅកម្ពុជា</h2>
-        <p>
-          Zurs Store (TopUp KH) ជាហាងបញ្ចូលទឹកប្រាក់ហ្គេម និងសេវាឌីជីថលនៅកម្ពុជា។
-          យើងផ្តល់សេវាបញ្ចូល Diamond សម្រាប់ Mobile Legends: Bang Bang ភ្លាមៗ ២៤ម៉ោង
-          ក្នុងមួយថ្ងៃ ជាមួយតម្លៃសមរម្យ និងការបញ្ជាក់ការបញ្ជាទិញដោយស្វ័យប្រវត្តិ។
-        </p>
-        <h3>របៀបបញ្ចូល</h3>
-        <p>
-          បញ្ចូល Player ID និង Zone ID របស់អ្នក ជ្រើសរើសកញ្ចប់ Diamond
-          រួចបង់ប្រាក់តាម Bakong KHQR ដោយស្កេនជាមួយកម្មវិធីធនាគាររបស់អ្នក។
-          បន្ទាប់ពីការបង់ប្រាក់ត្រូវបានបញ្ជាក់ Diamond នឹងចូលទៅគណនីហ្គេមរបស់អ្នកភ្លាមៗ។
-        </p>
-        <h3>ហេតុអ្វីជ្រើសរើស Zurs</h3>
-        <p>
-          តម្លៃច្បាស់លាស់ គ្មានថ្លៃលាក់បាំង ការបញ្ជូនរហ័ស និងផ្នែកជំនួយជាភាសាខ្មែរ។
-          រាល់ការបង់ប្រាក់ធ្វើឡើងតាមប្រព័ន្ធ KHQR ដែលមានសុវត្ថិភាព។
-        </p>
-        <nav>
-          <a href="/">ទំព័រដើម</a>
-          <a href="/live-spin">Live Spin</a>
-          <a href="/terms">លក្ខខណ្ឌប្រើប្រាស់</a>
-          <a href="/privacy">គោលការណ៍ភាពឯកជន</a>
-        </nav>
-      </div>
-    </div>
+    <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <script
       defer

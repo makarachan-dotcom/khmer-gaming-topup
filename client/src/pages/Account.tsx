@@ -9,7 +9,6 @@ import { trpc } from "@/lib/trpc";
 import { ArrowRight, Check, ChevronDown, Crown, LogOut, Mail, ReceiptText, ShieldCheck, ShoppingBag, UserRound, Ticket } from "lucide-react";
 import React, { useState, type ReactNode } from "react";
 import { Link } from "wouter";
-import { useSeo } from "@/lib/seo";
 
 const sparklesEmoji = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/kXzBrYNIYeExUoGY.svg";
 type AccountOrderEvent = { id: string; messageKh: string; status: string; createdAt: Date | string };
@@ -18,9 +17,6 @@ type AccountTransaction = { id: string; orderNumber: string; productName: string
 type AccountLiveSpin = { weekKey: string; progress: { completed: number; remaining: number; required: number }; activeTicketCount: number; tickets: { id: string; earnedWeekKey: string; status: string; issuedAt: Date | string; eventId: string | null }[]; prizes: { eventId: string; eventWeekKey: string; awardedAt: Date | string; prizeNameKh: string; prizeValueLabel: string; prizeMediaUrl: string | null }[] };
 
 export default function Account() {
-  // Signed-in surface: keep it out of the index so Google never shows a
-  // personalised page as a brand result.
-  useSeo({ title: "គណនីរបស់ខ្ញុំ | Zurs Store", description: "គ្រប់គ្រងការបញ្ជាទិញ ប្រវត្តិការទូទាត់ និង Live Spin tickets របស់អ្នក។", path: "/account", noindex: true });
   const { user, loading, logout } = useAuth();
   const utils = trpc.useUtils();
   const [name, setName] = useState("");

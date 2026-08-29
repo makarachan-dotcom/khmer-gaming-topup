@@ -11,7 +11,6 @@ import { khqrLogoUrl } from "@/lib/mobileLegendsAssets";
 import { BadgeCheck, Check, CheckCircle2, ChevronRight, Clock3, Copy, CreditCard, Download, ExternalLink, FileText, Home, LockKeyhole, PackageCheck, RefreshCw, ShieldCheck, XCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { useSeo } from "@/lib/seo";
 
 type LedgerPayment = {
   provider: string;
@@ -39,8 +38,6 @@ type LedgerOrder = {
 type PaymentMethod = { id: string; name: string; descriptionKh: string; iconUrl: string | null; providerKey: "bakong_khqr" | "manual" };
 
 export default function Checkout() {
-  // Checkout carries order identifiers, so it stays out of the search index.
-  useSeo({ title: "ការទូទាត់ | Zurs Store", description: "បញ្ចប់ការបញ្ជាទិញ Top-up របស់អ្នកជាមួយ Bakong KHQR។", path: "/checkout", noindex: true });
   const [location] = useLocation();
   const orderId = location.split("/").pop() ?? "";
   const preview = orderId === "preview";
@@ -129,7 +126,7 @@ function SummaryDetail({ label, value, mono = false }: { label: string; value: s
 function PaymentMethodCards({ methods, selected, provider, loading }: { methods: PaymentMethod[]; selected: PaymentMethod | null; provider: string | null; loading: boolean }) {
   const khqrMethods = methods.filter((method) => method.providerKey === "bakong_khqr");
   const cards = khqrMethods.length ? khqrMethods : selected?.providerKey === "bakong_khqr" ? [selected] : [];
-  return <section className="checkout-methods" aria-labelledby="checkout-methods-title"><div className="checkout-section-heading"><div><p>PAYMENT METHOD</p><h2 id="checkout-methods-title">KHQR តែប៉ុណ្ណោះ</h2></div><span>បានជ្រើសរើសរួច</span></div>{loading ? <div className="checkout-methods__loading"><OutlineLoader size={20} color="#4f46e5" />កំពុងរៀបចំវិធីបង់ប្រាក់…</div> : cards.length ? <div className="checkout-methods__grid">{cards.map((method) => { const active = selected?.id === method.id || (method.providerKey === "bakong_khqr" && provider === "bakong_khqr"); return <article key={method.id} className={`checkout-method-card ${active ? "checkout-method-card--selected" : ""}`} aria-label={`${method.name}${active ? " បានជ្រើសរើស" : ""}`}><MethodLogo method={method} /><div><strong>{method.name}</strong><span>{method.descriptionKh}</span></div>{active ? <span className="checkout-method-card__check"><Check className="h-3.5 w-3.5" /></span> : <span className="checkout-method-card__locked">បានចាក់សោ</span>}</article>; })}</div> : <div className="checkout-methods__loading"><CreditCard className="h-5 w-5" />មិនទាន់មានវិធីបង់ប្រាក់សកម្ម</div>}<p className="checkout-methods__note">ZURS ទទួ���ការទូទាត់តាម KHQR តែប៉ុណ្ណោះ។ ដើម្បីរក្សាចំនួនទឹកប្រាក់ និង QR ឲ្យត្រឹមត្រូវ វិធីបង់ប្រាក់មិនអាចប្តូរបានទេ បន្ទាប់ពី session ត្រូវបានបង្កើត។</p></section>;
+  return <section className="checkout-methods" aria-labelledby="checkout-methods-title"><div className="checkout-section-heading"><div><p>PAYMENT METHOD</p><h2 id="checkout-methods-title">KHQR តែប៉ុណ្ណោះ</h2></div><span>បានជ្រើសរើសរួច</span></div>{loading ? <div className="checkout-methods__loading"><OutlineLoader size={20} color="#4f46e5" />កំពុងរៀបចំវិធីបង់ប្រាក់…</div> : cards.length ? <div className="checkout-methods__grid">{cards.map((method) => { const active = selected?.id === method.id || (method.providerKey === "bakong_khqr" && provider === "bakong_khqr"); return <article key={method.id} className={`checkout-method-card ${active ? "checkout-method-card--selected" : ""}`} aria-label={`${method.name}${active ? " បានជ្រើសរើស" : ""}`}><MethodLogo method={method} /><div><strong>{method.name}</strong><span>{method.descriptionKh}</span></div>{active ? <span className="checkout-method-card__check"><Check className="h-3.5 w-3.5" /></span> : <span className="checkout-method-card__locked">បានចាក់សោ</span>}</article>; })}</div> : <div className="checkout-methods__loading"><CreditCard className="h-5 w-5" />មិនទាន់មានវិធីបង់ប្រាក់សកម្ម</div>}<p className="checkout-methods__note">ZURS ទទួលការទូទាត់តាម KHQR តែប៉ុណ្ណោះ។ ដើម្បីរក្សាចំនួនទឹកប្រាក់ និង QR ឲ្យត្រឹមត្រូវ វិធីបង់ប្រាក់មិនអាចប្តូរបានទេ បន្ទាប់ពី session ត្រូវបានបង្កើត។</p></section>;
 }
 
 function PaymentUnavailable() {

@@ -2,18 +2,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle, Home } from "lucide-react";
 import { useLocation } from "wouter";
-import { useSeo } from "@/lib/seo";
 
 export default function NotFound() {
   const [, setLocation] = useLocation();
-  // A SPA returns HTTP 200 for unknown paths, so the noindex tag is what stops
-  // Google from filling the index with soft-404 duplicates of the shell.
-  useSeo({
-    title: "រកមិនឃើញទំព័រ | Zurs Store",
-    description: "ទំព័រដែលអ្នកស្វែងរកមិនមាននៅលើ Zurs Store ទេ។",
-    path: "/404",
-    noindex: true,
-  });
 
   const handleGoHome = () => {
     setLocation("/");

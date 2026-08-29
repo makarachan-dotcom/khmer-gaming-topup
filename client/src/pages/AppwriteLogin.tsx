@@ -4,7 +4,6 @@ import { completeAppwriteEmailOtp, requestAppwriteEmailOtp } from "@/lib/appwrit
 import { useAuth } from "@/_core/hooks/useAuth";
 import { ArrowLeft, KeyRound, MailCheck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { useSeo } from "@/lib/seo";
 
 function safeReturnPath() {
   const candidate = new URLSearchParams(window.location.search).get("returnTo");
@@ -12,7 +11,6 @@ function safeReturnPath() {
 }
 
 export default function AppwriteLogin() {
-  useSeo({ title: "ចូលគណនី | Zurs Store", description: "ចូលគណនី Zurs Store ដើម្បីបញ្ចូល Diamond និងតាមដានការបញ្ជាទិញរបស់អ្នក។", path: "/login", noindex: true });
   const { user, loading, refresh } = useAuth();
   const returnTo = useMemo(safeReturnPath, []);
   const [email, setEmail] = useState("");

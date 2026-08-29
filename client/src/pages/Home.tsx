@@ -28,7 +28,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
 import { gameTopupPath } from "./GameTopup";
 import { isPopularStorefrontGame, providerGameImageKey, resolvedGameArtworkFor, type ProviderGameImageOverride } from "@/lib/originalGameArtwork";
-import { useSeo } from "@/lib/seo";
 
 const bannerSlides = [
   { src: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/xftKPqLVBztUvpUZ.png", alt: "ZURS.me game top-up banner" },
@@ -36,14 +35,6 @@ const bannerSlides = [
 ];
 
 export default function Home() {
-  // The homepage owns the brand query ("zurs", "zurs store", "topup kh"), so
-  // its title and description are the ones Google shows for the brand SERP.
-  useSeo({
-    title: "Zurs Store — Top Up MLBB Diamond ភ្លាមៗ | zurs.me",
-    description:
-      "Zurs Store (TopUp KH) — បញ្ចូល Diamond MLBB, Free Fire, PUBG និងសេវាឌីជីថល ភ្លាមៗ ២៤ម៉ោង បង់តាម Bakong KHQR។ Instant MLBB diamond top up in Cambodia.",
-    path: "/",
-  });
   return (
     <StorefrontLayout>
       <main>

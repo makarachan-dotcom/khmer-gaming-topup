@@ -1,18 +1,2 @@
-# https://www.zurs.me/robots.txt
 User-agent: *
-Allow: /
-
-# Private or single-use surfaces. Crawling them wastes budget and can leak
-# order identifiers into search results.
 Disallow: /pay/
-Disallow: /api/
-Disallow: /admin
-Disallow: /admin/
-Disallow: /account
-Disallow: /checkout/
-Disallow: /order-status
-Disallow: /wallet
-Disallow: /login
-Disallow: /*?*categoryPreview=
-
-Sitemap: https://www.zurs.me/sitemap.xml
