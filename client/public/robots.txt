@@ -1,2 +1,13 @@
 User-agent: *
 Disallow: /pay/
+Disallow: /admin
+Disallow: /admin/
+Disallow: /account
+Disallow: /wallet
+Disallow: /checkout/
+Disallow: /order-status
+Disallow: /marketplace/manage
+Disallow: /marketplace/sell
+Disallow: /api/
+
+Sitemap: https://www.zurs.me/sitemap.xml

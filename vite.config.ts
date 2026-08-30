@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { defineConfig, type Plugin, type ViteDevServer } from "vite";
 import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
+import { stripDataLoc } from "./vite-plugin-strip-data-loc";
 
 // =============================================================================
 // Manus Debug Collector - Vite Plugin
@@ -150,10 +151,17 @@ function vitePluginManusDebugCollector(): Plugin {
   };
 }
 
-const basePlugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusDebugCollector()];
+// jsxLocPlugin injects data-loc="client/src/...:NN" attributes (source file
+// paths). Useful in dev tooling, but it must NEVER reach production builds —
+// it leaked 1115 source paths in the live bundle. Dev-only now, plus
+// stripDataLoc() as a build-time safety net.
+const basePlugins = [react(), tailwindcss(), vitePluginManusDebugCollector()];
 
 export default defineConfig(({ mode }) => ({
-  plugins: [...basePlugins, ...(mode === "production" ? [] : [vitePluginManusRuntime()])],
+  plugins: [
+    ...basePlugins,
+    ...(mode === "production" ? [stripDataLoc()] : [jsxLocPlugin(), vitePluginManusRuntime()]),
+  ],
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),

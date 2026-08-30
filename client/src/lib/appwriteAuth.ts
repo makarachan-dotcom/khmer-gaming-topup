@@ -1,4 +1,4 @@
-import { Account, Client, ID } from "appwrite";
+import { Account, AppwriteException, Client, ID } from "appwrite";
 
 type SessionExchangeResponse = { authenticated: boolean; user: { id: number; name: string | null; displayName: string | null; email: string | null; role: "admin" | "user" } };
 
@@ -12,8 +12,18 @@ function createAccount() {
 
 export async function requestAppwriteEmailOtp(email: string) {
   const account = createAccount();
-  const token = await account.createEmailToken({ userId: ID.unique(), email: email.trim().toLowerCase(), phrase: false });
-  return { userId: token.userId };
+  try {
+    const token = await account.createEmailToken({ userId: ID.unique(), email: email.trim().toLowerCase(), phrase: false });
+    return { userId: token.userId };
+  } catch (reason) {
+    if (reason instanceof AppwriteException) {
+      // Log code/type only (no PII) so delivery issues are diagnosable in console.
+      console.error("[OTP] createEmailToken failed:", reason.code, reason.type);
+      if (reason.code === 429) throw new Error("ស្នើកូដច្រើនពេកហើយ — សូមរង់ចាំ ១៥ នាទី រួចព្យាយាមម្តងទៀត។");
+      if (reason.code === 400) throw new Error("អ៊ីមែលមិនត្រឹមត្រូវ — សូមពិនិត្យម្តងទៀត។");
+    }
+    throw new Error("មិនអាចផ្ញើលេខកូដបានទេ — សូមព្យាយាមម្តងទៀត ឬទាក់ទង Support។");
+  }
 }
 
 export async function completeAppwriteEmailOtp(input: { userId: string; secret: string }) {

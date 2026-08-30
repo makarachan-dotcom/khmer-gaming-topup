@@ -32,8 +32,8 @@ export default function AppwriteLogin() {
       const token = await requestAppwriteEmailOtp(normalized);
       setUserId(token.userId);
       setSecret("");
-    } catch {
-      setError("មិនអាចផ្ញើលេខកូដបានទេ។ សូមពិនិត្យអ៊ីមែល ឬព្យាយាមម្ដងទៀត។");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "មិនអាចផ្ញើលេខកូដបានទេ។ សូមពិនិត្យអ៊ីមែល ឬព្យាយាមម្ដងទៀត។");
     } finally {
       setBusy(false);
     }
@@ -66,6 +66,7 @@ export default function AppwriteLogin() {
         <Button type="button" onClick={sendCode} disabled={busy} className="h-12 w-full bg-amber-400 font-bold text-slate-950 hover:bg-amber-300">{busy ? "កំពុងផ្ញើលេខកូដ…" : "ផ្ញើលេខកូដទៅអ៊ីមែល"}</Button>
       </div> : <div className="mt-7 space-y-4">
         <div className="flex items-center gap-3 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm text-emerald-100"><KeyRound className="h-5 w-5 shrink-0" /> លេខកូដត្រូវបានផ្ញើទៅ <strong className="truncate">{email}</strong></div>
+        <p className="text-xs leading-5 text-slate-400">មិនឃើញលេខកូដក្នុង ២ នាទី? សូមឆែក folder <strong>Spam/Junk</strong> ផងដែរ។</p>
         <label className="block text-sm font-semibold">លេខកូដពីអ៊ីមែល</label>
         <Input value={secret} onChange={(event) => setSecret(event.target.value)} inputMode="numeric" autoComplete="one-time-code" placeholder="បញ្ចូលលេខកូដ" className="h-12 border-white/10 bg-slate-950/60" />
         <Button type="button" onClick={verifyCode} disabled={busy} className="h-12 w-full bg-amber-400 font-bold text-slate-950 hover:bg-amber-300">{busy ? "កំពុងបញ្ជាក់…" : "បញ្ជាក់ និងចូលគណនី"}</Button>
