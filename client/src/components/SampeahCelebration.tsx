@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { SampeahFigure } from "@/components/SampeahFigure";
 
 const petalGlyphs = ["❀", "✿", "❁", "✾", "❃"] as const;
 const celebrationDurationMs = 10_000;
@@ -29,10 +30,10 @@ export function SampeahCelebration({ open, onClose }: { open: boolean; onClose: 
       <section className="sampeah-card">
         <span className="sampeah-card__ring" aria-hidden />
         <span className="sampeah-card__ring sampeah-card__ring--outer" aria-hidden />
-        <div className="sampeah-card__hands" aria-hidden>🙏</div>
+        <div className="sampeah-card__figure" aria-hidden><SampeahFigure /></div>
         <p className="sampeah-card__kbach" aria-hidden>❖ ❖ ❖</p>
         <h2>អរគុណច្រើន!</h2>
-        <p className="sampeah-card__copy">ការទូទាត់របស់អ្នកត្រូវបានបញ្ជាក់ដោយជោគជ័យ។<br />ZURS សូមសំពះអរគុណយ៉ាងជ្រាលជ្រៅ 🙏</p>
+        <p className="sampeah-card__copy">ការទូទាត់របស់អ្នកត្រូវបានបញ្ជាក់ដោយជោគជ័យ។<br />ZURS សូមសំពះអរគុណយ៉ាងជ្រាលជ្រៅ</p>
         <span className="sampeah-card__badge">PAYMENT CONFIRMED</span>
         <span className="sampeah-card__timer" style={{ "--sampeah-duration": `${celebrationDurationMs}ms` } as React.CSSProperties} aria-hidden />
         <button type="button" className="sampeah-card__close" onClick={onClose}>បិទ</button>

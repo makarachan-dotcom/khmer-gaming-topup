@@ -57,7 +57,23 @@ describe("checkout redesign contract", () => {
     expect(celebration).toContain("អរគុណច្រើន!");
     expect(checkout).toContain('previousStatus.current !== "paid" && paymentStatus === "paid"');
     expect(checkout).toContain("<SampeahCelebration open={celebrate}");
-    expect(styles).toContain(".sampeah-card__hands");
     expect(styles).toContain("sampeah-petal-fall");
+  });
+
+  it("animates a drawn sampeah person: bowing torso, nodding head, rising joined palms, blinking eyes", () => {
+    const figure = read("client/src/components/SampeahFigure.tsx");
+    const celebration = read("client/src/components/SampeahCelebration.tsx");
+    const styles = read("client/src/index.css");
+    expect(figure).toContain('aria-label="មនុស្សសំពះ"');
+    expect(figure).toContain("sampeah-figure__bow");
+    expect(figure).toContain("sampeah-figure__hands");
+    expect(figure).toContain("sampeah-figure__head");
+    expect(figure).toContain("sampeah-figure__eyes");
+    expect(celebration).toContain("<SampeahFigure />");
+    expect(celebration).not.toContain("🙏");
+    expect(styles).toContain("@keyframes sampeah-figure-bow");
+    expect(styles).toContain("@keyframes sampeah-figure-nod");
+    expect(styles).toContain("@keyframes sampeah-figure-hands");
+    expect(styles).toContain("@keyframes sampeah-figure-blink");
   });
 });
