@@ -120,6 +120,7 @@ export const appRouter = router({
   }),
   orders: router({
     createAdminKhqrTest: ownerProcedure.mutation(({ ctx }) => db.createAdminKhqrTestOrder({ userId: ctx.user.id })),
+    pendingPaymentCount: protectedProcedure.query(async ({ ctx }) => ({ count: await db.countPendingKhqrPayments(ctx.user.id), limit: db.pendingKhqrPaymentLimit })),
     createTopup: protectedProcedure.input(z.object({ packageId: z.string().min(4).max(64), playerId: z.string().trim().min(2).max(128), zoneId: z.string().trim().min(1).max(128).optional(), quantity: z.number().int().min(1).max(9) })).mutation(async ({ ctx, input }) => {
       // Ten orders per hour per account. Checked before the order is written so
       // an abusive account cannot flood the provider queue.

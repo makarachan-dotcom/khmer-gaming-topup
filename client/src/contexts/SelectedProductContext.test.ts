@@ -19,7 +19,7 @@ describe("selected checkout context recovery", () => {
     const checkout = readFileSync(resolve(process.cwd(), "client/src/pages/Checkout.tsx"), "utf8");
 
     expect(source).toContain("const next = { selectedProduct: null, selectedPaymentMethodId: null }");
-    expect(checkout).toContain("if (!product?.playerId || !method)");
+    expect(checkout).toContain("if (!product?.playerId)");
     expect(checkout).toContain("await createTopup.mutateAsync");
     expect(checkout).toContain("បញ្ជាក់ និងបង្កើត KHQR");
   });

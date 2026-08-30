@@ -406,10 +406,29 @@ export async function syncSmmCatalog(snapshot: Extract<SmmProviderCatalogRespons
   return { servicesImported, tiersImported, provider: "SMMGlob" as const };
 }
 
+/** Counts the customer's live pending KHQR payment sessions (unexpired, still awaiting money). Used to cap concurrent pending payments at two. */
+export async function countPendingKhqrPayments(userId: number, excludeOrderId?: string) {
+  const db = await getDb();
+  if (!db) return 0;
+  const rows = await db.select({ orderId: paymentTransactions.orderId }).from(paymentTransactions).innerJoin(orders, eq(paymentTransactions.orderId, orders.id)).where(and(eq(orders.userId, userId), eq(paymentTransactions.provider, "bakong_khqr"), eq(paymentTransactions.status, "pending"), gt(paymentTransactions.expiresAt, new Date())));
+  const unique = new Set(rows.map((row) => row.orderId).filter((orderId) => orderId !== excludeOrderId));
+  return unique.size;
+}
+
+export const pendingKhqrPaymentLimit = 2;
+const pendingPaymentLimitMessageKh = "អ្នកមានការទូទាត់កំពុងរង់ចាំ ២ រួចហើយ។ សូមបញ្ចប់ការទូទាត់ចាស់ ឬរង់ចាំ QR ផុតកំណត់សិន មុននឹងបង្កើតការទូទាត់ថ្មី។";
+
+async function assertPendingKhqrPaymentCapacity(userId: number, excludeOrderId?: string) {
+  if (await countPendingKhqrPayments(userId, excludeOrderId) >= pendingKhqrPaymentLimit) throw Object.assign(new Error(pendingPaymentLimitMessageKh), { code: "PENDING_PAYMENT_LIMIT" });
+}
+
 export async function createTopupOrder(input: { userId: number; packageId: string; playerId: string; zoneId?: string | null; quantity: number }) {
   await requirePublicPaymentEnabled();
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
+  // No more than two concurrent pending KHQR payments per account. Checked at
+  // order creation so a customer cannot stack unpaid QR sessions.
+  await assertPendingKhqrPaymentCapacity(input.userId);
   const result = await db.select({ game: gameProducts, package: gamePackages }).from(gamePackages).innerJoin(gameProducts, eq(gamePackages.productId, gameProducts.id)).where(and(eq(gamePackages.id, input.packageId), eq(gamePackages.isActive, true), eq(gameProducts.isActive, true))).limit(1);
   const item = result[0];
   if (!item) throw new Error("Selected game package is unavailable");
@@ -570,6 +589,9 @@ export async function beginStagedPayment(input: { orderId: string; userId: numbe
   const order = await db.select().from(orders).where(and(eq(orders.id, input.orderId), eq(orders.userId, input.userId))).limit(1);
   if (!order[0]) throw new Error("Order not found");
   if (["paid", "delivered", "failed", "expired", "refunded"].includes(order[0].status)) throw new Error("This order cannot begin a payment session");
+  // The same two-pending cap is enforced when the QR session itself is issued.
+  // The current order is excluded so refreshing or reusing an existing session keeps working.
+  await assertPendingKhqrPaymentCapacity(input.userId, input.orderId);
   const existing = await db.select().from(paymentTransactions).where(and(eq(paymentTransactions.orderId, input.orderId), eq(paymentTransactions.provider, "bakong_khqr"))).orderBy(desc(paymentTransactions.createdAt)).limit(1);
   const existingData = existing[0]?.callbackPayload && typeof existing[0].callbackPayload === "object" ? existing[0].callbackPayload as Record<string, unknown> : null;
   const canReuse = existing[0] && existing[0].status === "pending" && existing[0].expiresAt && existing[0].expiresAt.getTime() > Date.now() && typeof existingData?.qrImageDataUrl === "string" && typeof existingData.bakongMd5 === "string";

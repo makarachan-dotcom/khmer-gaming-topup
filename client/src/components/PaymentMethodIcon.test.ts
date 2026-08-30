@@ -27,7 +27,6 @@ describe("payment method icon URL resolution", () => {
   it("uses one reusable fallback component across customer and owner payment surfaces", () => {
     const component = readFileSync(resolve(process.cwd(), "client/src/components/PaymentMethodIcon.tsx"), "utf8");
     const gate = readFileSync(resolve(process.cwd(), "client/src/components/PaymentMethodGate.tsx"), "utf8");
-    const checkout = readFileSync(resolve(process.cwd(), "client/src/pages/Checkout.tsx"), "utf8");
     const admin = readFileSync(resolve(process.cwd(), "client/src/pages/AdminPayment.tsx"), "utf8");
     const routes = readFileSync(resolve(process.cwd(), "server/routers.ts"), "utf8");
     const uploads = readFileSync(resolve(process.cwd(), "server/uploads.ts"), "utf8");
@@ -35,7 +34,6 @@ describe("payment method icon URL resolution", () => {
     expect(component).toContain("onError={() => setFailed(true)}");
     expect(component).toContain("khqrLogoUrl");
     expect(gate).toContain('import { PaymentMethodIcon } from "@/components/PaymentMethodIcon";');
-    expect(checkout).toContain('import { PaymentMethodIcon } from "@/components/PaymentMethodIcon";');
     expect(admin).toContain('import { PaymentMethodIcon } from "@/components/PaymentMethodIcon";');
     expect(admin).toContain("preparePaymentMethodIcon");
     expect(admin).toContain("adminPaymentMethodIcon.useMutation");

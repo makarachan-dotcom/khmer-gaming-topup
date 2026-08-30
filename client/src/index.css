@@ -1327,6 +1327,58 @@ img.checkout-method-card__icon { object-fit: contain; }
 .checkout-preview-confirm span { margin-top: 0.18rem; color: oklch(0.43 0.04 250); font-size: 0.67rem; line-height: 1.45; }
 .checkout-preview-confirm__error { border-radius: 0.8rem; background: oklch(0.97 0.035 30); color: oklch(0.44 0.11 25); padding: 0.65rem; font-size: 0.68rem; line-height: 1.45; }
 
+/* Official Bakong KHQR card presentation: red header bar, merchant, amount, dashed ticket divider, QR body. */
+.bakong-card { position: relative; width: min(100%, 21rem); margin-inline: auto; overflow: hidden; border-radius: 1.15rem; background: #ffffff; box-shadow: 0 18px 40px rgba(15, 23, 42, 0.16), 0 2px 8px rgba(15, 23, 42, 0.08); }
+.bakong-card__header { display: flex; align-items: center; justify-content: space-between; background: #e21836; padding: 0.72rem 1rem; }
+.bakong-card__logo { color: #ffffff; font-family: "Chakra Petch", "Kantumruy Pro", sans-serif; font-size: 1.02rem; font-weight: 900; font-style: italic; letter-spacing: 0.04em; }
+.bakong-card__dot { display: block; height: 0.6rem; width: 0.6rem; border-radius: 999px; background: rgba(255, 255, 255, 0.45); }
+.bakong-card__fold { position: absolute; top: 0; right: 0; z-index: 2; height: 0; width: 0; border-top: 1.05rem solid #a90f26; border-left: 1.05rem solid transparent; }
+.bakong-card--paid .bakong-card__header { background: #059669; }
+.bakong-card--paid .bakong-card__fold { border-top-color: #036c4c; }
+.bakong-card__body { padding: 0.95rem 1.15rem 1.05rem; }
+.bakong-card__merchant { overflow: hidden; color: #1f2937; font-size: 0.78rem; font-weight: 800; letter-spacing: 0.02em; text-overflow: ellipsis; white-space: nowrap; }
+.bakong-card__amount { display: flex; align-items: baseline; gap: 0.4rem; margin-top: 0.22rem; }
+.bakong-card__amount strong { color: #0f172a; font-family: "Chakra Petch", "Kantumruy Pro", sans-serif; font-size: clamp(1.5rem, 7vw, 1.95rem); font-weight: 900; line-height: 1.15; }
+.bakong-card__amount span { color: #64748b; font-size: 0.8rem; font-weight: 800; }
+.bakong-card__divider { position: relative; margin: 0.8rem -1.15rem 0.9rem; border-top: 2px dashed #d7dce4; }
+.bakong-card__divider::before, .bakong-card__divider::after { content: ""; position: absolute; top: -0.55rem; height: 1.05rem; width: 1.05rem; border-radius: 999px; background: oklch(0.96 0.018 247); box-shadow: inset 0 1px 3px rgba(15, 23, 42, 0.12); }
+.bakong-card__divider::before { left: -0.55rem; }
+.bakong-card__divider::after { right: -0.55rem; }
+.bakong-card__qr { position: relative; display: grid; min-height: 11rem; place-items: center; }
+.bakong-card__qr img { height: min(58vw, 12.5rem); width: min(58vw, 12.5rem); max-width: 100%; object-fit: contain; }
+.bakong-card__hint { margin-top: 0.75rem; color: #64748b; font-size: 0.62rem; font-weight: 700; line-height: 1.5; text-align: center; }
+
+/* Khmer sampeah (សំពះ) payment-success celebration: full-screen 10s popup. */
+.sampeah-celebration { position: fixed; z-index: 420; inset: 0; display: grid; place-items: center; padding: 1rem; }
+.sampeah-celebration__backdrop { position: absolute; inset: 0; background: radial-gradient(circle at 50% 30%, oklch(0.32 0.09 55 / 0.55), oklch(0.08 0.04 260 / 0.86)); backdrop-filter: blur(9px); animation: sampeah-fade-in 460ms ease both; }
+.sampeah-celebration__petals { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.sampeah-petal { position: absolute; top: -8%; left: calc((var(--petal-index) * 6.4%) + 2%); color: oklch(0.87 0.14 85 / 0.9); font-size: 0.95rem; animation: sampeah-petal-fall 6.5s linear calc(var(--petal-index) * -0.75s) infinite; text-shadow: 0 2px 10px oklch(0.5 0.12 70 / 0.5); }
+.sampeah-petal:nth-child(3n) { font-size: 1.3rem; animation-duration: 8.2s; }
+.sampeah-petal:nth-child(4n + 1) { font-size: 0.75rem; animation-duration: 5.4s; }
+@keyframes sampeah-petal-fall { 0% { transform: translateY(-6vh) translateX(0) rotate(0deg); opacity: 0; } 8% { opacity: 1; } 100% { transform: translateY(112vh) translateX(4.5rem) rotate(340deg); opacity: 0.75; } }
+.sampeah-card { position: relative; width: min(100%, 22.5rem); overflow: hidden; border: 1px solid oklch(0.85 0.1 85 / 0.55); border-radius: 1.6rem; background: linear-gradient(160deg, oklch(0.99 0.012 85), oklch(0.965 0.03 80)); box-shadow: 0 30px 80px oklch(0.06 0.04 260 / 0.55), inset 0 1px 0 oklch(1 0 0 / 0.9); padding: 1.9rem 1.4rem 1.35rem; text-align: center; animation: sampeah-card-pop 640ms cubic-bezier(0.2, 1.35, 0.4, 1) both; }
+.sampeah-card__ring { position: absolute; top: -4.5rem; left: 50%; height: 12rem; width: 12rem; translate: -50% 0; border: 2px solid oklch(0.82 0.14 85 / 0.4); border-radius: 999px; animation: sampeah-ring 2.8s ease-in-out infinite; pointer-events: none; }
+.sampeah-card__ring--outer { height: 16rem; width: 16rem; top: -6.5rem; border-color: oklch(0.82 0.14 85 / 0.22); animation-delay: 0.5s; }
+@keyframes sampeah-ring { 0%, 100% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.07); opacity: 0.35; } }
+.sampeah-card__hands { position: relative; display: grid; height: 5.1rem; width: 5.1rem; margin-inline: auto; place-items: center; border-radius: 999px; background: radial-gradient(circle at 35% 30%, oklch(0.95 0.07 85), oklch(0.85 0.13 75)); box-shadow: 0 12px 26px oklch(0.62 0.14 70 / 0.4), inset 0 2px 4px oklch(1 0 0 / 0.75); font-size: 2.6rem; animation: sampeah-bow 2.4s ease-in-out infinite; }
+@keyframes sampeah-bow { 0%, 100% { transform: translateY(0) scale(1); } 18% { transform: translateY(0.45rem) scale(0.96); } 36% { transform: translateY(0) scale(1.02); } 50% { transform: translateY(0) scale(1); } }
+.sampeah-card__kbach { margin-top: 0.8rem; color: oklch(0.62 0.13 75); font-size: 0.8rem; letter-spacing: 0.65em; text-indent: 0.65em; }
+.sampeah-card h2 { margin-top: 0.35rem; background: linear-gradient(120deg, oklch(0.5 0.14 60), oklch(0.66 0.16 80), oklch(0.5 0.14 60)); background-clip: text; -webkit-background-clip: text; color: transparent; font-family: "Chakra Petch", "Kantumruy Pro", "Noto Sans Khmer", sans-serif; font-size: clamp(1.45rem, 6.5vw, 1.85rem); font-weight: 900; }
+.sampeah-card__copy { margin-top: 0.55rem; color: oklch(0.42 0.05 70); font-size: 0.78rem; font-weight: 650; line-height: 1.65; }
+.sampeah-card__badge { display: inline-flex; margin-top: 0.85rem; border: 1.5px solid oklch(0.62 0.13 155); border-radius: 999px; background: oklch(0.95 0.04 155); color: oklch(0.36 0.11 155); padding: 0.35rem 0.75rem; font-size: 0.6rem; font-weight: 900; letter-spacing: 0.14em; }
+.sampeah-card__timer { display: block; height: 0.26rem; margin-top: 1rem; border-radius: 999px; background: linear-gradient(90deg, oklch(0.72 0.15 80), oklch(0.6 0.16 60)); transform-origin: left center; animation: sampeah-timer var(--sampeah-duration, 10s) linear both; }
+@keyframes sampeah-timer { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+.sampeah-card__close { margin-top: 0.9rem; display: inline-flex; min-height: 2.4rem; align-items: center; justify-content: center; border-radius: 0.8rem; border: 1px solid oklch(0.8 0.06 75); background: oklch(1 0 0 / 0.7); color: oklch(0.4 0.07 70); padding: 0 1.3rem; font-size: 0.7rem; font-weight: 850; }
+@keyframes sampeah-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sampeah-card-pop { from { opacity: 0; transform: translateY(2.2rem) scale(0.86); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@media (prefers-reduced-motion: reduce) { .sampeah-petal, .sampeah-card__hands, .sampeah-card__ring, .sampeah-card, .sampeah-celebration__backdrop { animation: none; } }
+
+/* Order-summary confirm step: Confirm + Edit actions and the two-pending block notice. */
+.checkout-confirm-actions { display: grid; gap: 0.55rem; }
+@media (min-width: 640px) { .checkout-confirm-actions { grid-template-columns: 1.4fr 1fr; } }
+.checkout-pending-block { display: flex; align-items: flex-start; gap: 0.5rem; border: 1px solid oklch(0.8 0.09 45); border-radius: 0.85rem; background: oklch(0.97 0.03 45); color: oklch(0.42 0.11 40); padding: 0.7rem; font-size: 0.68rem; line-height: 1.5; }
+.checkout-pending-block svg { margin-top: 0.1rem; flex: none; }
+
 /* Customer package category browser: presentation-only filtering, with compact touch-safe controls. */
 .package-category-browser {
   overflow: hidden;
