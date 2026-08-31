@@ -264,6 +264,9 @@ function ProviderGameCatalogGroup({ baseName, games, imageOverrides }: { baseNam
   return <section className="zurs-game-group col-span-full rounded-[1.15rem] border p-3 sm:p-4"><div className="flex items-center gap-2.5"><ProviderGameArtwork name={primary.name} region={primary.region} logoUrl={primaryOverride?.logoUrl ?? primary.logoUrl} className="h-10 w-10 rounded-xl" showCountryFlag={false} /><div className="min-w-0"><OverflowMarquee text={baseName} className="block text-sm font-extrabold text-slate-950" /><p className="mt-0.5 text-[10px] font-semibold text-cyan-800">គាំទ្រសម្រាប់កម្ពុជា · ជ្រើសរើសប្រភេទ top-up</p></div></div><div className={games.length === 1 ? "mx-auto mt-3 grid w-full max-w-[12rem] grid-cols-1 gap-3" : "mt-3 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4"}>{games.map(game => <HomeGameCard key={game.id} game={game} displayName={providerGameVariantLabel(game)} imageOverrides={imageOverrides} />)}</div></section>;
 }
 
+/** Keep the storefront tight: only this many game tiles show before “show more”. */
+const initialVisibleGameGroups = 8;
+
 const catalogFilters: Array<{ value: ProviderGameFilter; label: string }> = [
   { value: "all", label: "ទាំងអស់" },
   { value: "cambodia", label: "កម្ពុជា" },
@@ -276,6 +279,7 @@ function HomeTopupExperience() {
   const gameImages = trpc.provider.gameImages.useQuery(undefined, { staleTime: 0, refetchInterval: 5_000 });
   const [query, setQuery] = useState("");
   const [regionFilter, setRegionFilter] = useState<ProviderGameFilter>("all");
+  const [showAllGames, setShowAllGames] = useState(false);
   useEffect(() => subscribeToPublicAssetChanges((area) => { if (area === "game-images") void utils.provider.gameImages.invalidate(); }), [utils]);
   const games = orderProviderGames(gamesQuery.data?.games ?? []);
   const visibleGames = useMemo(
@@ -285,6 +289,12 @@ function HomeTopupExperience() {
   const hasFilters = Boolean(query.trim()) || regionFilter !== "all";
   const imageOverrides = useMemo(() => new Map((gameImages.data ?? []).map((item) => [item.gameId, item])), [gameImages.data]);
   const catalogGroups = useMemo(() => groupProviderGamesByBaseName(visibleGames), [visibleGames]);
+  // Searching or filtering always reveals every match; the collapsed view only
+  // applies to the default catalog so the homepage stays short on mobile.
+  const collapsedGroups = !hasFilters && !showAllGames && catalogGroups.length > initialVisibleGameGroups;
+  const displayedGroups = collapsedGroups ? catalogGroups.slice(0, initialVisibleGameGroups) : catalogGroups;
+  const hiddenGroupCount = catalogGroups.length - displayedGroups.length;
+  useEffect(() => { if (hasFilters) setShowAllGames(false); }, [hasFilters]);
 
   return (
     <section id="topup-games" className="container mt-5 pb-8 sm:mt-9 sm:pb-10">
@@ -365,8 +375,24 @@ function HomeTopupExperience() {
             </div>
             {visibleGames.length ? (
               <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
-                {catalogGroups.map(group => group.games.length > 1 ? <ProviderGameCatalogGroup key={group.baseName} baseName={group.baseName} games={group.games} imageOverrides={imageOverrides} /> : <HomeGameCard key={group.games[0]!.id} game={group.games[0]!} imageOverrides={imageOverrides} />)}
+                {displayedGroups.map(group => group.games.length > 1 ? <ProviderGameCatalogGroup key={group.baseName} baseName={group.baseName} games={group.games} imageOverrides={imageOverrides} /> : <HomeGameCard key={group.games[0]!.id} game={group.games[0]!} imageOverrides={imageOverrides} />)}
               </div>
+            ) : (
+              <div />
+            )}
+            {!hasFilters && catalogGroups.length > initialVisibleGameGroups ? (
+              <div className="mt-4 flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => setShowAllGames(current => !current)}
+                  aria-expanded={!collapsedGroups}
+                  className="zurs-mobile-glass inline-flex h-11 items-center gap-2 rounded-xl border border-cyan-200/70 px-4 text-xs font-extrabold text-slate-800 transition hover:border-cyan-400 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2"
+                >
+                  {collapsedGroups ? `មើលហ្គេមបន្ថែម (${hiddenGroupCount})` : "បង្រួមបញ្ជីហ្គេម"}
+                </button>
+              </div>
+            ) : null}
+            {visibleGames.length ? null : (
             ) : (
               <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center">
                 <Search

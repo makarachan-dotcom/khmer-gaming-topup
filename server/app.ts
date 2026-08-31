@@ -13,7 +13,8 @@ import crypto from "node:crypto";
 import { parseKhqrWorkerCallback, verifyKhqrWorkerSignature } from "./khqrWorkerWebhook";
 import { getKhqrWorkerCredentials } from "./khqrWorkerSecrets";
 import { registerSecurePaymentLinkRoutes } from "./paymentLinkRoutes";
-import { rateLimitBuckets, rateLimitMiddleware } from "./rateLimit";
+import { clientIpFromRequest, consumeRateLimit, rateLimitBuckets, rateLimitMiddleware, sendRateLimited } from "./rateLimit";
+import { consumeWebhookNonce, isFreshWebhookTimestamp, releaseWebhookNonce, webhookReplayKey } from "./paymentSecurity";
 
 /**
  * Builds the shared Express application for the local long-running server and
@@ -26,10 +27,32 @@ export function createApp() {
   // arrives in a forwarded header. Rate limiting depends on reading it.
   app.set("trust proxy", 1);
   const khqrWorkerWebhookHandler = async (req: express.Request, res: express.Response) => {
+    // Defence in depth for the only unauthenticated endpoint that can move
+    // money. Each layer assumes the one before it may have been defeated:
+    //   1. volume cap        — bounded work per source
+    //   2. HMAC over raw bytes — authenticity
+    //   3. schema            — shape and range
+    //   4. freshness window  — a captured body keeps a valid signature forever
+    //   5. single-use nonce  — blocks concurrent and rapid replay
+    //   6. ledger guards     — amount/currency/md5/status re-checked in the DB
+    // Bad callbacks additionally burn a tight reject budget, so signature
+    // probing is throttled long before it becomes useful.
+    const sourceIp = clientIpFromRequest(req);
+    const penalise = async () => {
+      const budget = await consumeRateLimit({ bucket: rateLimitBuckets.khqrWebhookReject, identifier: sourceIp, mode: "lenient" });
+      return budget.retryAfterSeconds;
+    };
+    let claimedNonce: string | null = null;
     try {
-      if (!verifyKhqrWorkerSignature(req.body, req.header("x-khqr-signature") ?? undefined, getKhqrWorkerCredentials().callbackSecret ?? undefined)) return res.status(401).json({ success: false, error: "invalid signature" });
+      const volume = await consumeRateLimit({ bucket: rateLimitBuckets.khqrWebhook, identifier: sourceIp, mode: "lenient" });
+      if (!volume.allowed) return sendRateLimited(res, volume.retryAfterSeconds);
+      if (!verifyKhqrWorkerSignature(req.body, req.header("x-khqr-signature") ?? undefined, getKhqrWorkerCredentials().callbackSecret ?? undefined)) { await penalise(); return res.status(401).json({ success: false, error: "invalid signature" }); }
       const callback = parseKhqrWorkerCallback(req.body);
-      if (!callback) return res.status(400).json({ success: false, error: "invalid callback" });
+      if (!callback) { await penalise(); return res.status(400).json({ success: false, error: "invalid callback" }); }
+      if (!isFreshWebhookTimestamp(callback.timestamp)) { await penalise(); return res.status(401).json({ success: false, error: "stale callback" }); }
+      const nonce = webhookReplayKey(callback);
+      if (!(await consumeWebhookNonce(nonce))) { await penalise(); return res.status(409).json({ success: false, error: "callback already processed" }); }
+      claimedNonce = nonce;
       if (callback.event === "payment.paid") {
         const result = await import("./db").then(async ({ reconcileKhqrWorkerPayment, settleSecurePaymentLinks }) => { const reconciliation = await reconcileKhqrWorkerPayment(callback); await settleSecurePaymentLinks(callback.orderId, "paid"); return reconciliation; });
         return res.json({ success: true, idempotent: result.idempotent });
@@ -40,7 +63,14 @@ export function createApp() {
       }
       const result = await import("./db").then(({ recordKhqrWorkerVerificationDeferred }) => recordKhqrWorkerVerificationDeferred(callback));
       return res.json({ success: true, recorded: result.recorded });
-    } catch { return res.status(409).json({ success: false, error: "payment reconciliation rejected" }); }
+    } catch (error) {
+      // Release the claim so the worker's retry is not permanently blocked by a
+      // transient failure. Double-crediting is still impossible: the ledger
+      // transition is conditional on the row still being pending.
+      if (claimedNonce) await releaseWebhookNonce(claimedNonce);
+      console.error("[khqrWebhook] reconciliation rejected", error);
+      return res.status(409).json({ success: false, error: "payment reconciliation rejected" });
+    }
   };
   const khqrWorkerWebhookBody = express.raw({ type: "application/json", limit: "32kb" });
   app.post("/api/webhooks/khqr-worker", khqrWorkerWebhookBody, khqrWorkerWebhookHandler);

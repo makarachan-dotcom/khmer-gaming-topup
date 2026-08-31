@@ -7,7 +7,7 @@ import * as db from "./db";
 import { addOwnerLiveSpinTestEntry, announceLiveSpinEvent, createLiveSpinEvent, createOwnerLiveSpinTestEvent, endLiveSpinEvent, getLiveSpinAccountSummary, getLiveSpinAuditLog, getLiveSpinEvents, getLiveSpinOwnerEventDetail, getLiveSpinPrizeTiers, getPublicLiveSpinState, heartbeatLiveSpinConnection, lockLiveSpinParticipants, revealLiveSpinPrize, saveLiveSpinConsolationGift, saveLiveSpinPrizeTier, saveLiveSpinSettings, skipLiveSpinWeek, startLiveSpinConnection, startLiveSpinLobby } from "./liveSpinStore";
 import { createLiveSpinSubscriberToken } from "./liveSpinRealtime";
 import { advanceLiveSpinSequence, runLiveSpinSequence } from "./liveSpinSequence";
-import { fetchFzrProviderSyncSnapshot, fetchProviderGameDetails, fetchProviderGames, fetchProviderPackages, fetchProviderPreviewPackages, fetchPublicProviderPackagePreview, fetchSmmProviderServices, getProviderAvailabilityCatalog, getProviderCatalogStatus, setProviderAvailability, validateProviderPlayerIdentity } from "./providerCatalog";
+import { fetchFzrProviderSyncSnapshot, fetchProviderGameDetails, fetchProviderGames, fetchProviderPackages, fetchProviderPreviewPackages, fetchPublicProviderPackagePreview, getProviderAvailabilityCatalog, getProviderCatalogStatus, setProviderAvailability, validateProviderPlayerIdentity } from "./providerCatalog";
 import { toPublicPlayerIdentityResponse } from "./playerIdentityPrivacy";
 import { getProviderCredentialStatus } from "./providerCredentialStatus";
 import { encryptCredential } from "./credentialEnvelope";
@@ -54,7 +54,6 @@ export const appRouter = router({
   }),
   catalog: router({
     games: publicProcedure.query(() => db.getGameCatalog()),
-    smm: publicProcedure.query(() => db.getSmmCatalog()),
   }),
   payments: router({
     readiness: publicProcedure.query(() => db.getPublicPaymentAvailability()),
@@ -84,7 +83,6 @@ export const appRouter = router({
     packagePreview: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120) })).query(({ input }) => fetchPublicProviderPackagePreview(input.gameId)),
     packages: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120), fields: z.record(z.string().trim().max(64), z.string().trim().min(1).max(256)).refine((fields) => Object.keys(fields).length <= 12, "Too many provider fields"), idAccuracyConfirmed: z.boolean().optional().default(false) })).mutation(({ input }) => fetchProviderPackages(input)),
     validatePlayerId: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120), fields: z.record(z.string().trim().max(64), z.string().trim().min(1).max(256)).refine((fields) => Object.keys(fields).length <= 12, "Too many provider fields") })).mutation(async ({ input }) => toPublicPlayerIdentityResponse(await validateProviderPlayerIdentity(input))),
-    smmServices: publicProcedure.query(() => fetchSmmProviderServices()),
   }),
   marketplace: router({
     list: publicProcedure.input(z.object({ listingType: marketplaceType.optional(), game: z.string().max(120).optional(), search: z.string().max(120).optional() }).optional()).query(async ({ input }) => Promise.all((await db.listMarketplace(input ?? {})).map(async (listing) => {
@@ -127,7 +125,6 @@ export const appRouter = router({
       await enforceRateLimitOrThrow({ bucket: rateLimitBuckets.createTopup, identifier: `user:${ctx.user.id}`, mode: "strict" });
       return db.createTopupOrder({ userId: ctx.user.id, ...input });
     }),
-    createSmm: protectedProcedure.input(z.object({ tierId: z.string().min(4).max(64), target: z.string().trim().min(3).max(500) })).mutation(({ ctx, input }) => db.createSmmOrder({ userId: ctx.user.id, ...input })),
     beginPayment: protectedProcedure.input(z.object({ orderId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => db.beginStagedPayment({ userId: ctx.user.id, ...input })),
     paymentSession: protectedProcedure.input(z.object({ orderId: z.string().min(4).max(64) })).query(({ ctx, input }) => db.getCustomerPaymentSession({ userId: ctx.user.id, ...input })),
     refreshPayment: protectedProcedure.input(z.object({ orderId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => db.refreshBakongPayment({ userId: ctx.user.id, ...input })),
@@ -160,21 +157,17 @@ export const appRouter = router({
     createDisclosureRequest: scopedAdminProcedure("marketplace").input(z.object({ fraudReportId: z.string().min(4).max(64), requestBasis: z.string().trim().min(10).max(500) })).mutation(({ input }) => db.createMarketplaceDisclosureRequest(input)),
     reviewDisclosureRequest: scopedAdminProcedure("marketplace").input(z.object({ requestId: z.string().min(4).max(64), status: z.enum(disclosureRequestStatuses), reviewNote: z.string().trim().max(5000).optional() })).mutation(({ ctx, input }) => db.reviewMarketplaceDisclosureRequest({ reviewerUserId: ctx.user.id, ...input })),
     evidenceAccessLogs: scopedAdminProcedure("marketplace").query(() => db.getAdminMarketplaceEvidenceAccessLogs()),
-    catalog: scopedAdminProcedure("catalog").query(async () => ({ games: await db.getGameCatalog(), smm: await db.getSmmCatalog() })),
+    catalog: scopedAdminProcedure("catalog").query(async () => ({ games: await db.getGameCatalog() })),
     fullCatalog: scopedAdminProcedure("catalog").query(() => db.getAdminCatalog()),
     providerCatalogStatus: scopedAdminProcedure("catalog").query(() => getProviderCatalogStatus()),
     previewGamePackages: scopedAdminProcedure("catalog").input(z.object({ gameId: z.string().trim().min(1).max(120) })).query(({ input }) => fetchProviderPreviewPackages(input.gameId)),
-    previewSmmServices: scopedAdminProcedure("catalog").query(() => fetchSmmProviderServices({ includeHidden: true })),
     providerAvailability: scopedAdminProcedure("catalog").query(() => getProviderAvailabilityCatalog()),
-    setProviderAvailability: scopedAdminProcedure("catalog").input(z.object({ kind: z.enum(["game", "smm"]), providerId: z.string().trim().min(1).max(120), isActive: z.boolean() })).mutation(({ ctx, input }) => setProviderAvailability({ ...input, updatedByUserId: ctx.user.id })),
+    setProviderAvailability: scopedAdminProcedure("catalog").input(z.object({ kind: z.literal("game"), providerId: z.string().trim().min(1).max(120), isActive: z.boolean() })).mutation(({ ctx, input }) => setProviderAvailability({ ...input, updatedByUserId: ctx.user.id })),
     syncTopupCatalog: scopedAdminProcedure("catalog").mutation(async () => { const snapshot = await fetchFzrProviderSyncSnapshot(); if (snapshot.status !== "ready") throw new Error("FZR Cards catalog is currently unavailable"); return db.syncFzrCatalog(snapshot); }),
-    syncSmmCatalog: scopedAdminProcedure("catalog").mutation(async () => { const snapshot = await fetchSmmProviderServices(); if (snapshot.status !== "ready") throw new Error("SMMGlob catalog is currently unavailable"); return db.syncSmmCatalog(snapshot); }),
     updateGamePackage: scopedAdminProcedure("catalog").input(z.object({ packageId: z.string().min(4).max(64), priceUsd: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(), basePriceUsd: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(), profitMarginPercent: z.string().regex(/^\d+(\.\d{1,2})?$/).refine((value) => Number(value) <= 1000).optional(), isActive: z.boolean(), featured: z.boolean() }).refine((input) => Boolean(input.priceUsd ?? input.basePriceUsd), "A base price is required")).mutation(({ input }) => db.updateGamePackage({ ...input, basePriceUsd: input.basePriceUsd ?? input.priceUsd!, profitMarginPercent: input.profitMarginPercent ?? "0.00" })),
     savePackageCategory: scopedAdminProcedure("catalog").input(z.object({ gameId: z.string().trim().min(1).max(120), offerId: z.string().trim().min(1).max(180), categoryLabel: z.string().trim().min(1).max(80) })).mutation(({ ctx, input }) => db.saveProviderPackageCategoryOverride({ ...input, updatedByUserId: ctx.user.id })),
     resetPackageCategory: scopedAdminProcedure("catalog").input(z.object({ gameId: z.string().trim().min(1).max(120), offerId: z.string().trim().min(1).max(180) })).mutation(({ ctx, input }) => db.resetProviderPackageCategoryOverride({ ...input, updatedByUserId: ctx.user.id })),
     deleteGamePackage: scopedAdminProcedure("catalog").input(z.object({ packageId: z.string().min(4).max(64) })).mutation(({ input }) => db.deleteGamePackage(input.packageId)),
-    updateSmmTier: scopedAdminProcedure("catalog").input(z.object({ tierId: z.string().min(4).max(64), priceUsd: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(), basePriceUsd: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(), profitMarginPercent: z.string().regex(/^\d+(\.\d{1,2})?$/).refine((value) => Number(value) <= 1000).optional(), isActive: z.boolean() }).refine((input) => Boolean(input.priceUsd ?? input.basePriceUsd), "A base price is required")).mutation(({ input }) => db.updateSmmTier({ ...input, basePriceUsd: input.basePriceUsd ?? input.priceUsd!, profitMarginPercent: input.profitMarginPercent ?? "0.00" })),
-    deleteSmmTier: scopedAdminProcedure("catalog").input(z.object({ tierId: z.string().min(4).max(64) })).mutation(({ input }) => db.deleteSmmTier(input.tierId)),
     payments: scopedAdminProcedure("operations").query(() => db.getPaymentTransactions()),
     operationUsers: scopedAdminProcedure("operations").query(() => db.getAdminUsers()),
     liveSpinEvents: ownerProcedure.query(() => getLiveSpinEvents()),

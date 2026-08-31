@@ -6,10 +6,18 @@ export type KhqrWorkerCallback =
   | (KhqrWorkerCallbackBase & { event: "payment.expired" })
   | (KhqrWorkerCallbackBase & { event: "payment.verification_deferred"; reason: "bakong_daily_request_limit" });
 
+/**
+ * HMAC-SHA256 over the exact raw bytes Express captured, compared in constant
+ * time. Hashing both sides to a fixed 32 bytes first means a wrong-length
+ * signature cannot be distinguished from a wrong-value one by timing, and
+ * `timingSafeEqual` can never throw on a length mismatch.
+ */
 export function verifyKhqrWorkerSignature(rawBody: Buffer, signature: string | undefined, secret: string | undefined) {
-  if (!secret || secret.length < 32 || !signature) return false;
+  if (!secret || secret.length < 32 || !signature || !Buffer.isBuffer(rawBody) || rawBody.length === 0) return false;
   const expected = crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
-  return signature.length === expected.length && crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+  const left = crypto.createHash("sha256").update(signature.trim().toLowerCase()).digest();
+  const right = crypto.createHash("sha256").update(expected).digest();
+  return crypto.timingSafeEqual(left, right);
 }
 
 export function parseKhqrWorkerCallback(rawBody: Buffer): KhqrWorkerCallback | null {

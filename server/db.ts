@@ -14,6 +14,7 @@ import { buildEvidenceRetentionAuditReason, canApproveMarketplaceVerification, h
 import { getPublicPaymentReadiness } from "./paymentReadiness";
 import { checkBakongKhqrPayment, createBakongKhqrPayment, registerBakongKhqrWorkerWatch } from "./bakongKhqr";
 import { getKhqrReconciliationDisposition, getKhqrWalletReconciliationDisposition } from "./khqrReconciliation";
+import { assertOrderAmountIntegrity, assertPackagePriceIntegrity, assessOrderVelocity, moneyEquals } from "./paymentSecurity";
 import type { FzrProviderSyncSnapshot, SmmProviderCatalogResponse } from "./providerCatalog";
 import { submitSmmProviderOrder } from "./providerCatalog";
 
@@ -417,6 +418,7 @@ export async function countPendingKhqrPayments(userId: number, excludeOrderId?: 
 
 export const pendingKhqrPaymentLimit = 2;
 const pendingPaymentLimitMessageKh = "អ្នកមានការទូទាត់កំពុងរង់ចាំ ២ រួចហើយ។ សូមបញ្ចប់ការទូទាត់ចាស់ ឬរង់ចាំ QR ផុតកំណត់សិន មុននឹងបង្កើតការទូទាត់ថ្មី។";
+const orderVelocityMessageKh = "មានការបង្កើតការបញ្ជាទិញច្រើនពេកក្នុងមួយម៉ោង តែមិនមានការទូទាត់បានជោគជ័យ។ សូមបញ្ចប់ការទូទាត់មួយជាមុនសិន ឬសូមទាក់ទង Admin។";
 
 async function assertPendingKhqrPaymentCapacity(userId: number, excludeOrderId?: string) {
   if (await countPendingKhqrPayments(userId, excludeOrderId) >= pendingKhqrPaymentLimit) throw Object.assign(new Error(pendingPaymentLimitMessageKh), { code: "PENDING_PAYMENT_LIMIT" });
@@ -433,11 +435,26 @@ export async function createTopupOrder(input: { userId: number; packageId: strin
   const item = result[0];
   if (!item) throw new Error("Selected game package is unavailable");
   if (item.game.requiresZone && !input.zoneId?.trim()) throw new Error("Server or zone ID is required for this game");
-  const subtotal = Number(item.package.priceUsd) * input.quantity;
+  // Anti-tamper. The storefront never sends a price, but the catalog row is
+  // still untrusted input: it can be edited directly, left stale by a failed
+  // provider sync, or zeroed by a half-applied margin change. Recompute the
+  // sale price from provider cost + margin and refuse anything that would sell
+  // below cost, at zero, or outside the accepted band.
+  const priceCheck = assertPackagePriceIntegrity({
+    priceUsd: item.package.priceUsd,
+    basePriceUsd: (item.package as { basePriceUsd?: string | null }).basePriceUsd ?? null,
+    profitMarginPercent: (item.package as { profitMarginPercent?: string | null }).profitMarginPercent ?? null,
+    quantity: input.quantity,
+  });
+  // Behavioural anti-cheat: an account stacking unpaid orders with nothing ever
+  // settled is farming sessions, not shopping.
+  const recentOrders = await db.select({ createdAt: orders.createdAt, status: orders.status }).from(orders).where(and(eq(orders.userId, input.userId), gt(orders.createdAt, new Date(Date.now() - 60 * 60 * 1000))));
+  if (assessOrderVelocity(recentOrders).blocked) throw Object.assign(new Error(orderVelocityMessageKh), { code: "ORDER_VELOCITY_BLOCKED" });
+  const subtotal = priceCheck.subtotal;
   const id = nanoid(); const orderNumber = buildOrderNumber(); const trackingCode = buildTrackingCode();
-  await db.insert(orders).values({ id, orderNumber, trackingCode, userId: input.userId, orderType: "topup", status: "pending", subtotal: subtotal.toFixed(2), productName: `${item.game.titleEn} • ${item.package.amountLabel} ${item.game.currencyLabel}`, details: { packageId: item.package.id, gameProductId: item.game.id, playerId: input.playerId.trim(), zoneId: input.zoneId?.trim() ?? null, quantity: input.quantity } });
+  await db.insert(orders).values({ id, orderNumber, trackingCode, userId: input.userId, orderType: "topup", status: "pending", subtotal, productName: `${item.game.titleEn} • ${item.package.amountLabel} ${item.game.currencyLabel}`, details: { packageId: item.package.id, gameProductId: item.game.id, playerId: input.playerId.trim(), zoneId: input.zoneId?.trim() ?? null, quantity: input.quantity } });
   await appendOrderStatusEvent({ orderId: id, eventType: "order_created", status: "pending", actorType: "customer", messageKh: statusMessageKh("pending") });
-  return { id, orderNumber, trackingCode, amount: subtotal.toFixed(2), status: "pending" as const };
+  return { id, orderNumber, trackingCode, amount: subtotal, status: "pending" as const };
 }
 
 const adminKhqrTestProduct = {
@@ -596,6 +613,8 @@ export async function beginStagedPayment(input: { orderId: string; userId: numbe
   const existingData = existing[0]?.callbackPayload && typeof existing[0].callbackPayload === "object" ? existing[0].callbackPayload as Record<string, unknown> : null;
   const canReuse = existing[0] && existing[0].status === "pending" && existing[0].expiresAt && existing[0].expiresAt.getTime() > Date.now() && typeof existingData?.qrImageDataUrl === "string" && typeof existingData.bakongMd5 === "string";
   const currency = order[0].currency === "KHR" ? "KHR" : "USD" as const;
+  // Never mint a QR for an amount the ledger would refuse to reconcile later.
+  assertOrderAmountIntegrity({ amount: String(order[0].subtotal), currency });
   const generated = canReuse ? null : await createBakongKhqrPayment({ trackingCode: order[0].trackingCode, amount: String(order[0].subtotal), currency });
   const transaction = existing[0] && canReuse ? existing[0] : { id: nanoid(), orderId: input.orderId, provider: "bakong_khqr", providerRequestId: generated!.md5, status: "pending" as const, amount: order[0].subtotal, currency, checkoutUrl: generated!.deeplink ?? `/checkout/${input.orderId}`, callbackPayload: { bakongMd5: generated!.md5, merchantAccountId: generated!.merchantAccountId, qrImageDataUrl: generated!.qrImageDataUrl, deeplink: generated!.deeplink }, expiresAt: generated!.expiresAt };
   if (!canReuse) {
@@ -709,6 +728,7 @@ export async function reconcileKhqrWorkerPayment(input: { md5: string; orderId: 
     if (walletDisposition === "reject") throw new Error("Payment callback did not match an eligible wallet session.");
     if (walletDisposition === "idempotent") return { idempotent: true };
     const merchantAccountId = typeof payload.merchantAccountId === "string" ? payload.merchantAccountId : undefined;
+    if (!moneyEquals(wallet.amountKhr, input.amount, "KHR")) throw new Error("Confirmed amount did not match the stored wallet session.");
     const verification = await checkBakongKhqrPayment({ md5: input.md5, expectedAmount: String(wallet.amountKhr), expectedCurrency: "KHR", expectedMerchantAccountId: merchantAccountId });
     if (verification.status !== "paid") {
       await db.update(walletTopups).set({ paymentPayload: { ...payload, lastWorkerVerificationAt: new Date().toISOString(), lastWorkerVerificationMd5: input.md5, lastWorkerVerificationStatus: verification.status, lastWorkerVerificationError: verification.reason } }).where(and(eq(walletTopups.id, wallet.id), eq(walletTopups.status, "pending")));
@@ -744,10 +764,23 @@ export async function reconcileKhqrWorkerPayment(input: { md5: string; orderId: 
   const details = record.order.details && typeof record.order.details === "object" ? record.order.details as Record<string, unknown> : {};
   const isAdminTestPurchase = details.testPurchase === true && details.testProductCode === adminKhqrTestProduct.code && details.noProviderFulfillment === true;
   const completedStatus = isAdminTestPurchase ? "delivered" as const : "paid" as const;
-  await db.update(paymentTransactions).set({ status: "paid", providerTransactionId: verification.transactionHash, paidAt: new Date(), callbackPayload: { ...existingPayload, workerVerifiedAt: new Date().toISOString(), workerMd5: input.md5, transactionHash: verification.transactionHash } }).where(eq(paymentTransactions.id, record.payment.id));
-  await db.update(orders).set({ status: completedStatus }).where(eq(orders.id, record.order.id));
-  await appendOrderStatusEvent({ orderId: record.order.id, eventType: isAdminTestPurchase ? "admin_test_purchase_completed" : "payment_confirmed", status: completedStatus, actorType: "system", messageKh: isAdminTestPurchase ? "ការទូទាត់ Admin KHQR Test Product បានជោគជ័យ។ មិនមាន top-up ពិតត្រូវបានបញ្ជូនទៅ provider ទេ។" : statusMessageKh("paid"), providerReference: input.md5 });
-  return { idempotent: false };
+  // Final gate before money is recognised: Bakong's own confirmed amount and
+  // currency must match the stored session exactly, in minor units.
+  if (!moneyEquals(record.payment.amount, input.amount, record.payment.currency as "KHR" | "USD")) throw new Error("Confirmed amount did not match the stored payment session.");
+  // The transition is a compare-and-set inside one transaction: the update only
+  // applies while the row is still `pending`, and the order/event rows move with
+  // it. Two concurrent deliveries of the same callback therefore cannot both
+  // credit the order — the loser sees zero affected rows and reports idempotent.
+  let credited = false;
+  await db.transaction(async (tx) => {
+    const transition = await tx.update(paymentTransactions).set({ status: "paid", providerTransactionId: verification.transactionHash, paidAt: new Date(), callbackPayload: { ...existingPayload, workerVerifiedAt: new Date().toISOString(), workerMd5: input.md5, transactionHash: verification.transactionHash } }).where(and(eq(paymentTransactions.id, record.payment.id), eq(paymentTransactions.status, "pending")));
+    const affectedRows = Array.isArray(transition) ? Number((transition[0] as { affectedRows?: number } | undefined)?.affectedRows ?? 0) : 0;
+    if (affectedRows <= 0) return;
+    credited = true;
+    await tx.update(orders).set({ status: completedStatus }).where(and(eq(orders.id, record.order.id), eq(orders.status, "awaiting_payment")));
+    await tx.insert(orderStatusEvents).values({ id: nanoid(), orderId: record.order.id, eventType: isAdminTestPurchase ? "admin_test_purchase_completed" : "payment_confirmed", status: completedStatus, actorType: "system", messageKh: isAdminTestPurchase ? "ការទូទាត់ Admin KHQR Test Product បានជោគជ័យ។ មិនមាន top-up ពិតត្រូវបានបញ្ជូនទៅ provider ទេ។" : statusMessageKh("paid"), providerReference: input.md5 });
+  });
+  return { idempotent: !credited };
 }
 
 export async function getCustomerOrderTracking(input: { userId: number; trackingCode: string }) {

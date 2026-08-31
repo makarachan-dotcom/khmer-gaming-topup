@@ -1272,14 +1272,34 @@ img.checkout-method-card__icon { object-fit: contain; }
 .checkout-khqr__waiting-copy { background: oklch(0.96 0.025 232); color: oklch(0.34 0.08 230) !important; }
 .checkout-khqr__success-copy { background: oklch(0.94 0.04 156); color: oklch(0.3 0.1 156) !important; }
 .checkout-khqr__expired-copy { background: oklch(0.97 0.03 30); color: oklch(0.45 0.11 25) !important; }
-.checkout-khqr__deeplink, .checkout-primary-action, .checkout-secondary-action, .checkout-cancel-action, .checkout-receipt-action { display: inline-flex; min-height: 2.75rem; align-items: center; justify-content: center; gap: 0.45rem; border-radius: 0.85rem; font-size: 0.72rem; font-weight: 850; transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), filter 160ms ease, background-color 160ms ease; }
-.checkout-khqr__deeplink { width: 100%; margin-top: 0.9rem; border: 1px solid oklch(0.74 0.09 225); background: white; color: oklch(0.31 0.09 225); }
-.checkout-khqr__actions { display: grid; grid-template-columns: 1fr; gap: 0.5rem; margin-top: 0.9rem; }
-.checkout-primary-action, .checkout-receipt-action { background: linear-gradient(135deg, oklch(0.25 0.085 254), oklch(0.4 0.14 238)); box-shadow: 0 10px 18px oklch(0.29 0.1 240 / 0.2); color: white; }
-.checkout-secondary-action { border: 1px solid oklch(0.76 0.06 225); background: white; color: oklch(0.34 0.08 225); }
-.checkout-cancel-action { border: 1px solid oklch(0.83 0.03 248); background: oklch(0.98 0.01 250); color: oklch(0.43 0.035 252); }
-.checkout-primary-action:not(:disabled):hover, .checkout-secondary-action:not(:disabled):hover, .checkout-khqr__deeplink:hover, .checkout-receipt-action:hover { transform: translateY(-2px); filter: brightness(1.03); }
-.checkout-primary-action:disabled, .checkout-secondary-action:disabled { cursor: not-allowed; opacity: 0.55; }
+/* Premium checkout call-to-action buttons: taller tap target, gradient depth, light sweep. */
+.checkout-khqr__deeplink, .checkout-primary-action, .checkout-secondary-action, .checkout-cancel-action, .checkout-receipt-action { position: relative; isolation: isolate; overflow: hidden; display: inline-flex; min-height: 3.1rem; align-items: center; justify-content: center; gap: 0.5rem; border-radius: 1.05rem; padding: 0 1.05rem; font-size: 0.78rem; font-weight: 850; line-height: 1.25; text-align: center; -webkit-tap-highlight-color: transparent; transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 200ms ease, filter 200ms ease, background 200ms ease, border-color 200ms ease, opacity 200ms ease; }
+.checkout-khqr__deeplink svg, .checkout-primary-action svg, .checkout-secondary-action svg, .checkout-cancel-action svg, .checkout-receipt-action svg { flex: 0 0 auto; }
+.checkout-khqr__actions { display: grid; grid-template-columns: 1fr; gap: 0.55rem; margin-top: 0.95rem; }
+
+/* Primary: layered gradient, inner highlight, soft brand glow. */
+.checkout-primary-action, .checkout-receipt-action { border: 1px solid oklch(0.52 0.16 245 / 0.55); background: linear-gradient(135deg, oklch(0.29 0.11 262) 0%, oklch(0.4 0.15 244) 48%, oklch(0.55 0.15 208) 100%); background-size: 180% 180%; box-shadow: 0 14px 28px oklch(0.3 0.12 245 / 0.32), 0 2px 6px oklch(0.25 0.1 250 / 0.24), inset 0 1px 0 oklch(1 0 0 / 0.28), inset 0 -1px 0 oklch(0.2 0.08 250 / 0.34); color: white; text-shadow: 0 1px 1px oklch(0.2 0.08 250 / 0.38); }
+.checkout-primary-action::after, .checkout-receipt-action::after { position: absolute; z-index: -1; inset: 0; content: ""; background: linear-gradient(105deg, transparent 32%, oklch(1 0 0 / 0.26) 46%, oklch(1 0 0 / 0.06) 58%, transparent 68%); transform: translateX(-120%); animation: checkout-cta-sweep 3.8s cubic-bezier(0.4, 0, 0.2, 1) 1.2s infinite; }
+.checkout-primary-action:not(:disabled):hover, .checkout-receipt-action:hover { transform: translateY(-2px); background-position: 100% 50%; box-shadow: 0 20px 36px oklch(0.3 0.12 245 / 0.4), 0 3px 8px oklch(0.25 0.1 250 / 0.28), inset 0 1px 0 oklch(1 0 0 / 0.34); }
+.checkout-primary-action:not(:disabled):active, .checkout-receipt-action:active { transform: translateY(0) scale(0.985); box-shadow: 0 6px 14px oklch(0.3 0.12 245 / 0.3), inset 0 2px 5px oklch(0.2 0.08 250 / 0.32); }
+
+/* Secondary: glass outline that lifts on press. */
+.checkout-secondary-action { border: 1px solid oklch(0.78 0.065 228); background: linear-gradient(135deg, oklch(1 0 0 / 0.97), oklch(0.965 0.022 232 / 0.9)); box-shadow: 0 8px 18px oklch(0.32 0.07 242 / 0.1), inset 0 1px 0 oklch(1 0 0 / 0.95); color: oklch(0.32 0.085 228); }
+.checkout-secondary-action:not(:disabled):hover { transform: translateY(-2px); border-color: oklch(0.66 0.12 226); background: white; box-shadow: 0 14px 26px oklch(0.32 0.08 240 / 0.16); }
+.checkout-secondary-action:not(:disabled):active { transform: translateY(0) scale(0.985); }
+
+/* Deeplink shares the secondary treatment, full width under the QR. */
+.checkout-khqr__deeplink { width: 100%; margin-top: 0.9rem; border: 1px solid oklch(0.78 0.075 225 / 0.9); background: linear-gradient(135deg, oklch(1 0 0 / 0.96), oklch(0.96 0.03 228 / 0.9)); box-shadow: 0 8px 18px oklch(0.32 0.08 240 / 0.1), inset 0 1px 0 oklch(1 0 0 / 0.9); color: oklch(0.31 0.09 225); }
+.checkout-khqr__deeplink:hover { transform: translateY(-2px); border-color: oklch(0.66 0.12 226); background: white; box-shadow: 0 14px 26px oklch(0.32 0.08 240 / 0.16); }
+
+/* Quiet cancel action. */
+.checkout-cancel-action { border: 1px solid oklch(0.86 0.02 250); background: oklch(0.985 0.008 250); color: oklch(0.47 0.03 252); font-weight: 800; }
+.checkout-cancel-action:hover { border-color: oklch(0.79 0.03 250); background: white; color: oklch(0.34 0.05 252); }
+
+.checkout-primary-action:focus-visible, .checkout-secondary-action:focus-visible, .checkout-cancel-action:focus-visible, .checkout-receipt-action:focus-visible, .checkout-khqr__deeplink:focus-visible { outline: 2px solid oklch(0.6 0.15 232); outline-offset: 3px; }
+.checkout-primary-action:disabled, .checkout-secondary-action:disabled { cursor: not-allowed; opacity: 0.5; filter: saturate(0.72); transform: none; box-shadow: 0 2px 6px oklch(0.3 0.05 250 / 0.12); }
+.checkout-primary-action:disabled::after, .checkout-receipt-action:disabled::after { opacity: 0; animation: none; }
+@keyframes checkout-cta-sweep { 0% { transform: translateX(-120%); } 55%, 100% { transform: translateX(120%); } }
 .checkout-success-state { margin-top: 1rem; border: 1px solid oklch(0.74 0.105 156); border-radius: 1.15rem; background: oklch(0.97 0.025 156 / 0.88); padding: 0.9rem; }
 .checkout-success-state__head { display: flex; align-items: center; gap: 0.65rem; color: oklch(0.27 0.11 157); }
 .checkout-success-state__head h2 { font-family: var(--font-display); font-size: 1rem; font-weight: 850; }
@@ -1315,7 +1335,7 @@ img.checkout-method-card__icon { object-fit: contain; }
 .receipt-paper__actions > a { background: #eff6ff; color: #1d4ed8; }
 @media (min-width: 640px) { .checkout-order-summary, .checkout-methods, .checkout-khqr { padding: 1.25rem; } .checkout-khqr__body { grid-template-columns: 15rem minmax(0, 1fr); align-items: center; } .checkout-qr-card { min-height: 15rem; } .checkout-khqr__actions { grid-template-columns: 1.3fr 1fr 0.9fr; } .checkout-order-summary__details { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 420px) { .checkout-page__secure-copy { display: none; } .checkout-order-summary__main { align-items: flex-start; } .checkout-order-summary__amount { max-width: 6.8rem; } .checkout-status { max-width: 11rem; } }
-@media (prefers-reduced-motion: reduce) { .checkout-page__back, .checkout-primary-action, .checkout-secondary-action, .checkout-khqr__deeplink, .checkout-receipt-action, .fx-stamp { animation: none; transition: none; } .fx-stamp { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .checkout-page__back, .checkout-primary-action, .checkout-secondary-action, .checkout-khqr__deeplink, .checkout-receipt-action, .fx-stamp { animation: none; transition: none; } .checkout-primary-action::after, .checkout-receipt-action::after { animation: none; opacity: 0; } .fx-stamp { animation: none; } }
 @media print { body * { visibility: hidden !important; } .receipt-dialog, .receipt-dialog * { visibility: visible !important; } .receipt-dialog { position: absolute; inset: 0; display: block; padding: 0; } .receipt-dialog__backdrop, .receipt-paper__close, .receipt-paper__actions { display: none !important; } .receipt-paper { width: 100%; max-height: none; overflow: visible; border-radius: 0; box-shadow: none; padding: 1.5rem; } }
 
 /* Direct mobile Continue destination before a real KHQR session is created. */
@@ -1397,7 +1417,7 @@ img.checkout-method-card__icon { object-fit: contain; }
 @media (prefers-reduced-motion: reduce) { .sampeah-petal, .sampeah-card__ring, .sampeah-card, .sampeah-celebration__backdrop, .sampeah-figure__bow, .sampeah-figure__head, .sampeah-figure__hands, .sampeah-figure__eyes, .sampeah-figure__shadow, .sampeah-sparkle { animation: none; } }
 
 /* Order-summary confirm step: Confirm + Edit actions and the two-pending block notice. */
-.checkout-confirm-actions { display: grid; gap: 0.55rem; }
+.checkout-confirm-actions { display: grid; gap: 0.6rem; margin-top: 0.2rem; }
 @media (min-width: 640px) { .checkout-confirm-actions { grid-template-columns: 1.4fr 1fr; } }
 .checkout-pending-block { display: flex; align-items: flex-start; gap: 0.5rem; border: 1px solid oklch(0.8 0.09 45); border-radius: 0.85rem; background: oklch(0.97 0.03 45); color: oklch(0.42 0.11 40); padding: 0.7rem; font-size: 0.68rem; line-height: 1.5; }
 .checkout-pending-block svg { margin-top: 0.1rem; flex: none; }

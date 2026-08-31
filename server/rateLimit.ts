@@ -58,6 +58,12 @@ export const rateLimitBuckets = {
   trpcPublic: { name: "trpc", limit: 600, windowSeconds: 60 },
   // Keyed by authenticated user, not IP, so CGNAT does not apply.
   createTopup: { name: "topup", limit: 10, windowSeconds: 3600 },
+  // Signed KHQR worker callbacks. Generous, because a legitimate worker retries
+  // and one busy minute can carry many settlements.
+  khqrWebhook: { name: "khqrhook", limit: 300, windowSeconds: 60 },
+  // Callbacks that fail signature/shape/freshness. Tight, because a genuine
+  // worker never produces these: it is signature probing or replay hunting.
+  khqrWebhookReject: { name: "khqrhookbad", limit: 15, windowSeconds: 300 },
 } as const satisfies Record<string, RateLimitBucket>;
 
 const memoryHits = new Map<string, number[]>();
@@ -96,6 +102,33 @@ async function upstashPipeline(commands: (string | number)[][]): Promise<unknown
     return payload.map((entry) => entry?.result);
   } finally {
     clearTimeout(timer);
+  }
+}
+
+/**
+ * Claims `key` exactly once. Used by the payment replay guard.
+ *
+ * - `true`  — this caller created the key (first time seen).
+ * - `false` — the key already existed (replay).
+ * - `null`  — Redis is not configured, so the caller picks its own fallback.
+ *
+ * Throws when Redis *is* configured but unreachable. Money-moving callers must
+ * decide that case explicitly rather than silently degrading to per-instance
+ * memory, which does not stop a replay spread across lambdas.
+ */
+export async function redisSetIfAbsent(key: string, ttlMs: number): Promise<boolean | null> {
+  if (!rateLimitBackendConfigured) return null;
+  const [result] = await upstashPipeline([["SET", key, "1", "NX", "PX", Math.max(1, Math.round(ttlMs))]]);
+  return result !== null && result !== undefined;
+}
+
+/** Releases a key claimed by `redisSetIfAbsent`. Best effort: never throws. */
+export async function redisRelease(key: string): Promise<void> {
+  if (!rateLimitBackendConfigured) return;
+  try {
+    await upstashPipeline([["DEL", key]]);
+  } catch (error) {
+    console.error("[rateLimit] nonce release failed", error);
   }
 }
 
