@@ -44,12 +44,12 @@ export function PartnerServicesShelf({ compact = false }: { compact?: boolean })
     <section className={compact ? "" : "container py-5 sm:py-10"} aria-label="Digital services">
       <div className="max-w-2xl">
         <p className="zurs-eyebrow font-bold uppercase">DIGITAL SERVICES</p>
-        <h1 className="zp-heading mt-1.5 font-display text-xl font-bold leading-tight text-ink text-balance sm:text-3xl">សេវាឌីជីដាល</h1>
+        <h1 className="zp-heading mt-1.5 font-display text-xl font-bold leading-tight text-ink text-balance sm:text-3xl">សេវាឌីជីថល</h1>
         <p className="mt-2 text-sm leading-6 text-ink-muted text-pretty">សេវា Premium (AI, Entertainment, និងផ្សេងៗ) ពី Partner API — បន្ទាប់ពីបង់ប្រាក់ Admin បំពេញក្នុង ៥–១០ នាទី។</p>
       </div>
       <div className="mt-4 flex items-start gap-2.5 rounded-2xl border border-neon/25 bg-neon/10 p-3.5">
         <PackEmoji name="clock" size={20} className="mt-0.5" />
-        <p className="text-xs leading-5 text-ink"><strong>ចំណំះ៖</strong> សេវាកម្មង់នេះចំណាយពេល <strong>៥ ទៅ ១០ នាទី</strong> បន្ទាប់ពីការទូទាត់ជោគជ័យ។ ការកម្មង់ផ្ញើទៅផ្ទាំង Admin ដើម្បី topup។</p>
+        <p className="text-xs leading-5 text-ink"><strong>ចំណាំ៖</strong> សេវាកម្មង់នេះចំណាយពេល <strong>៥ ទៅ ១០ នាទី</strong> បន្ទាប់ពីការទូទាត់ជោគជ័យ។ ការកម្មង់ផ្ញើទៅផ្ទាំង Admin ដើម្បី topup។</p>
       </div>
       {catalog.isLoading ? (
         <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
@@ -67,7 +67,7 @@ export function PartnerServicesShelf({ compact = false }: { compact?: boolean })
           ))}
         </div>
       ) : catalog.error ? (
-        <div className="mt-4 rounded-2xl border border-dashed border-line bg-panel p-8 text-center text-xs text-ink-muted">មិនអាចផ្ទុកសេវាឌីជីដាលបានទេឧទេះនេះ។ សូមព្យាយាម្ដងទ័តឹង។</div>
+        <div className="mt-4 rounded-2xl border border-dashed border-line bg-panel p-8 text-center text-xs text-ink-muted">មិនអាចផ្ទុកសេវាឌីជីថលបានទេឥឡូវនេះ។ សូមព្យាយាមម្ដងទៀត។</div>
       ) : products.length ? (
         <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
           {products.map((product) => (
@@ -99,7 +99,7 @@ export function PartnerServicesShelf({ compact = false }: { compact?: boolean })
           ))}
         </div>
       ) : (
-        <div className="mt-4 rounded-2xl border border-dashed border-line bg-panel p-8 text-center text-xs text-ink-muted">សេវាឌីជីដាលនឹងបង្ហាយនៅទីនេះឦប់។</div>
+        <div className="mt-4 rounded-2xl border border-dashed border-line bg-panel p-8 text-center text-xs text-ink-muted">{catalog.data?.configured === false ? "សេវាឌីជីថលនឹងបង្ហាញពេល Admin ដាក់ Partner API key លើ Vercel។" : "មិនទាន់មានសេវាឌីជីថលនៅពេលនេះទេ។"}</div>
       )}
     </section>
   );

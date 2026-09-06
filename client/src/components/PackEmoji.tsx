@@ -6,10 +6,9 @@ import type { AnimationItem } from "lottie-web";
  * sticker packs in `client/public/emoji-anim` (exported from the user's
  * EmojiSaverBot packs: Mix Emoji, Various Animations, Icon-1, Product Logo).
  *
- * Each name has a Lottie JSON (`<name>.json`) plus a static PNG fallback
- * (`<name>.png`). Animations lazy-load once per name and cache forever; when
- * the fetch fails or the visitor prefers reduced motion, the crisp PNG frame
- * renders instead so the UI never breaks.
+ * Logical names map onto files that actually exist. Missing names alias to a
+ * close pack file so Lottie never 404s. A unicode glyph is painted immediately
+ * while the JSON loads; PNG is the reduced-motion / failure fallback.
  */
 
 export const PACK_EMOJI = {
@@ -35,7 +34,7 @@ export const PACK_EMOJI = {
   "rocket-plane": { emoji: "🚀", label: "Launch" },
   heart: { emoji: "💗", label: "Heart" },
   megaphone: { emoji: "📣", label: "Announcement" },
-  verified: { emoji: "☑️", label: "Verified" },
+  verified: { emoji: "✅", label: "Verified" },
   "shield-check": { emoji: "🛡️", label: "Trusted" },
   gift: { emoji: "🎁", label: "Gift" },
   question: { emoji: "❓", label: "Help" },
@@ -88,15 +87,54 @@ export const PACK_EMOJI = {
 
 export type PackEmojiName = keyof typeof PACK_EMOJI;
 
+/** Logical names that do not have their own JSON/PNG files. */
+const PACK_FILE: Partial<Record<PackEmojiName, string>> = {
+  fire: "sparkles-z",
+  gamepad: "svc-sparkle",
+  gem: "diamond-blue",
+  star: "star-purple",
+  crown: "star-purple",
+  clock: "clock-outline",
+  fireworks: "party-popper",
+  party: "party-popper",
+  plane: "rocket-plane",
+  briefcase: "shopping-bag",
+  warning: "question-blue",
+  rainbow: "sparkles-z",
+  heart: "heart-red",
+  megaphone: "chat-smile",
+  verified: "check-badge",
+  gift: "gift-blue",
+  question: "question-blue",
+  vip: "star-purple",
+  globe: "globe-2",
+  lightning: "sparkles-z",
+  moon: "star-purple",
+  bell: "chat-smile",
+  key: "shield-lock",
+  gear: "shield-check",
+  info: "question-blue",
+  help: "question-blue",
+  pencil: "search-user",
+  pin: "search-user",
+  wifi: "globe-2",
+  confetti: "party-popper",
+};
+
+export function packAssetName(name: PackEmojiName): string {
+  return PACK_FILE[name] ?? name;
+}
+
 const animationCache = new Map<string, Promise<unknown | null>>();
 
-function loadPackAnimation(name: string): Promise<unknown | null> {
-  const cached = animationCache.get(name);
+function loadPackAnimation(name: PackEmojiName): Promise<unknown | null> {
+  const asset = packAssetName(name);
+  const cached = animationCache.get(asset);
   if (cached) return cached;
-  const request = fetch(`/emoji-anim/${encodeURIComponent(name)}.json`)
+  const request = fetch(`/emoji-anim/${encodeURIComponent(asset)}.json`)
     .then((response) => (response.ok ? response.json() : null))
     .catch(() => null);
-  animationCache.set(name, request);
+  animationCache.set(asset, request);
   return request;
 }
 
@@ -119,13 +157,12 @@ export const PackEmoji = memo(function PackEmoji({
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const meta = PACK_EMOJI[name];
+  const asset = packAssetName(name);
   const [staticFrame, setStaticFrame] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(prefersStaticEmoji);
+  const [pngFailed, setPngFailed] = useState(false);
+  const [playing, setPlaying] = useState(false);
 
-  // Track the preference instead of sampling it once at mount: some mobile
-  // browsers report "reduce" while battery or data saver is on, and every pack
-  // emoji would otherwise stay frozen for the rest of the session even after
-  // the visitor turns the setting back off.
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -136,6 +173,8 @@ export const PackEmoji = memo(function PackEmoji({
   }, []);
 
   useEffect(() => {
+    setPngFailed(false);
+    setPlaying(false);
     if (reduceMotion) {
       setStaticFrame(true);
       return;
@@ -143,20 +182,24 @@ export const PackEmoji = memo(function PackEmoji({
     let cancelled = false;
     let animation: AnimationItem | null = null;
     setStaticFrame(false);
-    // lottie-web probes a <canvas> the moment it is evaluated, which jsdom does
-    // not implement, so the player is imported lazily and skipped under jsdom -
-    // the same pattern OutlineLoader and SelectedPackageCheck already use.
     if (typeof navigator !== "undefined" && navigator.userAgent.toLowerCase().includes("jsdom")) return;
     void Promise.all([loadPackAnimation(name), import("lottie-web")])
-      .then(([data, module]) => {
+      .then(async ([data, module]) => {
         if (cancelled) return;
-        if (!data || !hostRef.current) {
+        if (!data) {
+          setStaticFrame(true);
+          return;
+        }
+        if (!hostRef.current) await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        if (cancelled || !hostRef.current) {
           setStaticFrame(true);
           return;
         }
         try {
+          hostRef.current.replaceChildren();
           animation = module.default.loadAnimation({ container: hostRef.current, renderer: "svg", loop, autoplay: true, animationData: data });
           if (speed && speed > 0) animation.setSpeed(speed);
+          setPlaying(true);
         } catch {
           setStaticFrame(true);
         }
@@ -170,21 +213,37 @@ export const PackEmoji = memo(function PackEmoji({
 
   if (!meta) return null;
 
-  if (staticFrame) {
-    return (
-      <img
-        src={`/emoji-anim/${encodeURIComponent(name)}.png`}
-        width={size}
-        height={size}
-        loading="lazy"
-        decoding="async"
-        alt={meta.label}
-        className={`pack-emoji pack-emoji--static ${className}`}
-        style={{ width: size, height: size }}
-      />
-    );
-  }
-  return <div ref={hostRef} role="img" aria-label={meta.label} className={`pack-emoji ${className}`} style={{ width: size, height: size }} />;
+  return (
+    <span
+      role="img"
+      aria-label={meta.label}
+      className={`pack-emoji ${staticFrame ? "pack-emoji--static" : ""} ${className}`}
+      style={{ width: size, height: size, position: "relative", display: "inline-grid", placeItems: "center", flex: "0 0 auto", overflow: "hidden", lineHeight: 1 }}
+    >
+      {(staticFrame && pngFailed) || (!staticFrame && !playing) ? (
+        <span aria-hidden="true" className="pack-emoji__glyph" style={{ fontSize: Math.round(size * 0.86), lineHeight: 1 }}>
+          {meta.emoji}
+        </span>
+      ) : null}
+      {staticFrame ? (
+        pngFailed ? null : (
+          <img
+            src={`/emoji-anim/${encodeURIComponent(asset)}.png`}
+            width={size}
+            height={size}
+            loading="lazy"
+            decoding="async"
+            alt=""
+            onError={() => setPngFailed(true)}
+            className="pack-emoji__frame"
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain" }}
+          />
+        )
+      ) : (
+        <div ref={hostRef} aria-hidden="true" className="pack-emoji__lottie" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} />
+      )}
+    </span>
+  );
 });
 
 /** Maps a free-text provider/product name from the Partner API to a pack logo. */
@@ -212,6 +271,6 @@ export function serviceEmojiName(text: string): PackEmojiName {
     [/photoshop/, "svc-photoshop"],
     [/adobe/, "svc-adobe"],
   ];
-  for (const [pattern, name] of rules) if (pattern.test(value)) return name;
+  for (const [pattern, mapped] of rules) if (pattern.test(value)) return mapped;
   return "svc-sparkle";
 }

@@ -834,10 +834,11 @@ html, body { overflow-x: clip; }
 .storefront-header-title {
   position: relative;
   display: grid;
-  width: min(11rem, 46vw);
-  height: 1.5rem;
+  width: max-content;
+  max-width: min(11.5rem, 58vw);
+  height: 1.15rem;
   align-items: center;
-  overflow: hidden;
+  overflow: visible;
 }
 .storefront-header-title__default,
 .storefront-header-title__player {
@@ -936,7 +937,7 @@ html, body { overflow-x: clip; }
 }
 
 @media (min-width: 640px) {
-  .storefront-header-title { width: min(13rem, 52vw); }
+  .storefront-header-title { width: max-content; max-width: min(14rem, 52vw); height: 1.25rem; }
 }
 
 /* ZURS original game artwork and hero refresh */
@@ -1547,7 +1548,7 @@ img.checkout-method-card__icon { object-fit: contain; }
 .pack-emoji > svg { width: 100% !important; height: 100% !important; display: block; }
 .pack-emoji--static { object-fit: contain; }
 
-.font-emoji-brand { display: inline-flex; align-items: center; gap: 2.5px; vertical-align: middle; }
+.font-emoji-brand { display: inline-flex; align-items: center; gap: 1.5px; flex-wrap: nowrap; white-space: nowrap; vertical-align: middle; max-width: 100%; }
 .font-emoji-brand__letter { position: relative; display: inline-grid; place-items: center; overflow: hidden; border-radius: 24%; isolation: isolate; background: #101736; box-shadow: 0 1px 2px rgb(2 6 23 / 0.20), inset 0 0 0 1px rgb(255 255 255 / 0.30); }
 .font-emoji-brand__media { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
 .font-emoji-brand__char { position: relative; z-index: 1; font-family: "DM Sans", "Kantumruy Pro", sans-serif; font-weight: 900; line-height: 1; color: #fff; text-shadow: 0 1px 2px rgb(2 6 23 / 0.65), 0 0 6px rgb(2 6 23 / 0.40); transform: translateY(0.03em); }

@@ -14,7 +14,7 @@ const BURST_COUNT = BURST_EMOJI.length;
 
 export const FontEmojiBrand = memo(function FontEmojiBrand({
   text = "ZURS.me",
-  size = 24,
+  size = 16,
   className = "",
 }: {
   text?: string;

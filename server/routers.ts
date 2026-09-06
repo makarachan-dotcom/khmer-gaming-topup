@@ -4,8 +4,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, ownerProcedure, protectedProcedure, publicProcedure, router, scopedAdminProcedure } from "./_core/trpc";
 import * as db from "./db";
-import { addOwnerLiveSpinTestEntry, announceLiveSpinEvent, createLiveSpinEvent, createOwnerLiveSpinTestEvent, endLiveSpinEvent, getLiveSpinAccountSummary, getLiveSpinAuditLog, getLiveSpinEvents, getLiveSpinOwnerEventDetail, getLiveSpinPrizeTiers, getPublicLiveSpinState, heartbeatLiveSpinConnection, lockLiveSpinParticipants, revealLiveSpinPrize, saveLiveSpinConsolationGift, saveLiveSpinPrizeTier, saveLiveSpinSettings, skipLiveSpinWeek, startLiveSpinConnection, startLiveSpinLobby } from "./liveSpinStore";
-import { createLiveSpinSubscriberToken } from "./liveSpinRealtime";
+import { addOwnerLiveSpinTestEntry, announceLiveSpinEvent, createLiveSpinEvent, createOwnerLiveSpinTestEvent, endLiveSpinEvent, getLiveSpinAuditLog, getLiveSpinEvents, getLiveSpinOwnerEventDetail, getLiveSpinPrizeTiers, lockLiveSpinParticipants, revealLiveSpinPrize, saveLiveSpinConsolationGift, saveLiveSpinPrizeTier, saveLiveSpinSettings, skipLiveSpinWeek, startLiveSpinLobby } from "./liveSpinStore";
 import { advanceLiveSpinSequence, runLiveSpinSequence } from "./liveSpinSequence";
 import { fetchFzrProviderSyncSnapshot, fetchProviderGameDetails, fetchProviderGames, fetchProviderPackages, fetchProviderPreviewPackages, fetchPublicProviderPackagePreview, getProviderAvailabilityCatalog, getProviderCatalogStatus, setProviderAvailability, validateProviderPlayerIdentity } from "./providerCatalog";
 import { toPublicPlayerIdentityResponse } from "./playerIdentityPrivacy";
@@ -22,6 +21,8 @@ import { disclosureRequestStatuses, fraudReportStatuses } from "./marketplaceSaf
 import { deriveLocationRisk, resolveLocationCountry } from "./marketplaceLocation";
 import { createZursSession, getZursSessionCookieOptions, ZURS_SESSION_COOKIE } from "./zursSession";
 import { enforceRateLimitOrThrow, rateLimitBuckets } from "./rateLimit";
+import { getPartnerCatalog, getPartnerProduct, getPartnerUsage, toPublicPartnerPreview, toPublicPartnerProduct, PartnerServiceError } from "./partnerCatalog";
+import { createPartnerServiceOrder } from "./partnerOrders";
 
 const marketplaceType = z.enum(["sale", "swap", "wanted"]);
 
@@ -68,11 +69,27 @@ export const appRouter = router({
     refreshTopup: protectedProcedure.input(z.object({ topupId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => db.refreshWalletTopup({ userId: ctx.user.id, ...input })),
   }),
   liveSpin: router({
-    state: publicProcedure.query(() => getPublicLiveSpinState()),
-    realtimeAuth: publicProcedure.input(z.object({ eventId: z.string().min(4).max(64) })).query(({ input }) => createLiveSpinSubscriberToken(input.eventId)),
-    account: protectedProcedure.query(({ ctx }) => getLiveSpinAccountSummary(ctx.user.id)),
-    beginConnection: protectedProcedure.input(z.object({ eventId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => startLiveSpinConnection({ userId: ctx.user.id, ...input })),
-    heartbeatConnection: protectedProcedure.input(z.object({ eventId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => heartbeatLiveSpinConnection({ userId: ctx.user.id, ...input })),
+    state: publicProcedure.query(() => ({ retired: true as const, event: null })),
+    realtimeAuth: publicProcedure.input(z.object({ eventId: z.string().min(4).max(64) })).query(() => ({ retired: true as const, token: null })),
+    account: protectedProcedure.query(() => ({ retired: true as const })),
+    beginConnection: protectedProcedure.input(z.object({ eventId: z.string().min(4).max(64) })).mutation(() => { throw new Error("Live Spin giveaway ត្រូវបានបិទ។"); }),
+    heartbeatConnection: protectedProcedure.input(z.object({ eventId: z.string().min(4).max(64) })).mutation(() => ({ retired: true as const })),
+  }),
+  partner: router({
+    catalog: publicProcedure.query(async () => {
+      try {
+        const products = await getPartnerCatalog();
+        return { products: products.map(toPublicPartnerProduct), etaMinutes: { min: 5, max: 10 }, configured: true as const };
+      } catch (error) {
+        if (error instanceof PartnerServiceError && error.code === "NOT_CONFIGURED") return { products: [], etaMinutes: { min: 5, max: 10 }, configured: false as const };
+        throw error;
+      }
+    }),
+    preview: publicProcedure.input(z.object({ slug: z.string().trim().min(2).max(120), quantity: z.number().int().min(1).max(50).optional() })).query(async ({ input }) => {
+      const product = await getPartnerProduct(input.slug);
+      return toPublicPartnerPreview(product, input.quantity ?? 1);
+    }),
+    usage: ownerProcedure.query(() => getPartnerUsage()),
   }),
   provider: router({
     games: publicProcedure.query(() => fetchProviderGames()),
@@ -120,6 +137,10 @@ export const appRouter = router({
   orders: router({
     createAdminKhqrTest: ownerProcedure.mutation(({ ctx }) => db.createAdminKhqrTestOrder({ userId: ctx.user.id })),
     pendingPaymentCount: protectedProcedure.query(async ({ ctx }) => ({ count: await db.countPendingKhqrPayments(ctx.user.id), limit: db.pendingKhqrPaymentLimit })),
+    createService: protectedProcedure.input(z.object({ slug: z.string().trim().min(2).max(120), quantity: z.number().int().min(1).max(50).optional(), customerNote: z.string().trim().max(400).optional() })).mutation(async ({ ctx, input }) => {
+      await enforceRateLimitOrThrow({ bucket: rateLimitBuckets.createTopup, identifier: `user:service:${ctx.user.id}`, mode: "strict" });
+      return createPartnerServiceOrder({ userId: ctx.user.id, slug: input.slug, quantity: input.quantity, customerNote: input.customerNote });
+    }),
     createTopup: protectedProcedure.input(z.object({ packageId: z.string().min(4).max(64), playerId: z.string().trim().min(2).max(128), zoneId: z.string().trim().min(1).max(128).optional(), quantity: z.number().int().min(1).max(9) })).mutation(async ({ ctx, input }) => {
       // Ten orders per hour per account. Checked before the order is written so
       // an abusive account cannot flood the provider queue.

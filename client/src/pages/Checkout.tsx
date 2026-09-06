@@ -112,21 +112,31 @@ function PaymentPreview({ product }: { product: SelectedProduct | null }) {
   const paymentGate = trpc.payments.gate.useQuery(undefined, { staleTime: 15_000 });
   const pendingCount = trpc.orders.pendingPaymentCount.useQuery(undefined, { enabled: !!user, refetchInterval: 30_000 });
   const createTopup = trpc.orders.createTopup.useMutation();
+  const createService = trpc.orders.createService.useMutation();
   const [error, setError] = useState<string | null>(null);
   // Round 9 still applies, it just moved: the no-refund policy is acknowledged
   // here, one tap before the QR and the order actually exist.
   const [refundConsentOpen, setRefundConsentOpen] = useState(false);
-  const busy = createTopup.isPending;
+  const isPartner = product?.kind === "partner";
+  const busy = createTopup.isPending || createService.isPending;
   const ready = paymentGate.data?.enabled === true;
   const pendingLimitReached = (pendingCount.data?.count ?? 0) >= (pendingCount.data?.limit ?? 2);
   const confirm = async () => {
-    if (!product?.playerId) { setError("សូមត្រឡប់ទៅបញ្ជាក់ ID មុនបន្ត។"); return; }
-    if (product.requiresVerifiedPlayerName && !product.playerName) { setError("សូមត្រឡប់ទៅ Check ID រហូតទទួលបាន Username មុនពេលបន្តការទូទាត់។"); return; }
+    if (!product) return;
+    if (!isPartner) {
+      if (!product?.playerId) { setError("សូមត្រឡប់ទៅបញ្ជាក់ ID មុនបន្ត។"); return; }
+      if (product.requiresVerifiedPlayerName && !product.playerName) { setError("សូមត្រឡប់ទៅ Check ID រហូតទទួលបាន Username មុនពេលបន្តការទូទាត់។"); return; }
+    } else if (!product?.partnerSlug) {
+      setError("សូមត្រឡប់ទៅហាង រួចជ្រើសសេវាឌីជីថលម្ដងទៀត។");
+      return;
+    }
     if (!ready) { setError("ការទូទាត់ KHQR មិនទាន់ត្រូវបានបើកទេ។ ទំព័រទូទាត់នេះត្រូវបានរៀបចំរួច ហើយ QR នឹងបង្កើតបានបន្ទាប់ពី admin បើកការទូទាត់។"); return; }
     if (pendingLimitReached) { setError("អ្នកមានការទូទាត់កំពុងរង់ចាំ ២ រួចហើយ។ សូមបញ្ចប់ការទូទាត់ចាស់ ឬរង់ចាំ QR ផុតកំណត់សិន។"); return; }
     try {
       setError(null);
-      const order = await createTopup.mutateAsync({ packageId: product.id, playerId: product.playerId, zoneId: product.zoneId || undefined, quantity: 1 });
+      const order = isPartner
+        ? await createService.mutateAsync({ slug: product.partnerSlug as string, quantity: 1 })
+        : await createTopup.mutateAsync({ packageId: product.id, playerId: product.playerId as string, zoneId: product.zoneId || undefined, quantity: 1 });
       const linkResponse = await fetch("/api/pay/security/check/key", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ orderId: order.id }) });
       const link = await linkResponse.json().catch(() => ({})) as { token?: string; code?: string };
       if (!linkResponse.ok || !link.token) throw new Error(link.code === "PAYMENTS_CLOSED" ? "ការទូទាត់ KHQR ត្រូវបានបិទជាបណ្តោះអាសន្ន។" : link.code === "PENDING_PAYMENT_LIMIT" ? "អ្នកមានការទូទាត់កំពុងរង់ចាំ ២ រួចហើយ។ សូមបញ្ចប់ការទូទាត់ចាស់សិន។" : "មិនអាចបង្កើត link ទូទាត់សុវត្ថិភាពបានទេ។");
@@ -140,8 +150,8 @@ function PaymentPreview({ product }: { product: SelectedProduct | null }) {
     <section className="checkout-order-summary">
       <div className="checkout-order-summary__eyebrow"><PackageCheck className="h-4 w-4" />ORDER SUMMARY</div>
       <div className="checkout-order-summary__main"><ProviderGameArtwork name={product.gameName} logoUrl={product.gameLogoUrl} priority showCountryFlag={false} className="h-14 w-14 shrink-0 rounded-2xl" iconClassName="h-6 w-6" /><div className="min-w-0 flex-1"><h2 className="checkout-order-summary__title">{product.gameName}</h2><p className="checkout-order-summary__order">{product.label}</p></div><strong className="checkout-order-summary__amount">{product.priceLabel}</strong></div>
-      <div className="checkout-order-summary__details"><SummaryDetail label="កញ្ចប់" value={product.amountLabel} />{product.playerName ? <SummaryDetail label="Username" value={product.playerName} /> : <SummaryDetail label="Game ID" value={maskCustomerIdentifier(product.playerId ?? "បានការពារ")} />}<SummaryDetail label="Server ID" value={maskCustomerIdentifier(product.zoneId || "មិនទាមទារ")} /><SummaryDetail label="Quantity" value="1" /></div>
-      <p className="checkout-order-summary__note">សូមពិនិត្យ ID និងកញ្ចប់ឲ្យបានត្រឹមត្រូវ។ បន្ទាប់ពីបញ្ជាក់ order និង QR ពិតនឹងត្រូវបង្កើត។</p>
+      <div className="checkout-order-summary__details">{isPartner ? <><SummaryDetail label="កញ្ចប់" value={product.amountLabel} /><SummaryDetail label="ប្រភេទ" value="សេវាឌីជីថល" /><SummaryDetail label="Delivery" value={product.deliveryType || "Admin top-up"} />{product.durationDays ? <SummaryDetail label="រយៈពេល" value={`${product.durationDays} ថ្ងៃ`} /> : null}<SummaryDetail label="ពេលបំពេញ" value="៥–១០ នាទី" /><SummaryDetail label="Quantity" value="1" /></> : <><SummaryDetail label="កញ្ចប់" value={product.amountLabel} />{product.playerName ? <SummaryDetail label="Username" value={product.playerName} /> : <SummaryDetail label="Game ID" value={maskCustomerIdentifier(product.playerId ?? "បានការពារ")} />}<SummaryDetail label="Server ID" value={maskCustomerIdentifier(product.zoneId || "មិនទាមទារ")} /><SummaryDetail label="Quantity" value="1" /></>}</div>
+      <p className="checkout-order-summary__note">{isPartner ? "បន្ទាប់ពីទូទាត់ KHQR រួច ការកម្មង់នឹងចូលផ្ទាំង Admin ហើយត្រូវបានបំពេញក្នុង ៥–១០ នាទី។" : "សូមពិនិត្យ ID និងកញ្ចប់ឲ្យបានត្រឹមត្រូវ។ បន្ទាប់ពីបញ្ជាក់ order និង QR ពិតនឹងត្រូវបង្កើត។"}</p>
     </section>
     <section className="checkout-preview-confirm">
       <div><LockKeyhole className="h-5 w-5" /><p><strong>បញ្ជាក់ការបញ្ជាទិញ</strong><span>ការបង្កើត QR និង order ពិតកើតឡើងតែបន្ទាប់ពីអ្នកចុចបញ្ជាក់។ ការទូទាត់ធ្វើឡើងតាម KHQR ដែលបានជ្រើសរើសរួច។</span></p></div>

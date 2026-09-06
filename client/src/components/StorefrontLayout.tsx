@@ -9,7 +9,7 @@ import { useSelectedProduct } from "@/contexts/SelectedProductContext";
 import { useStorefrontHeader } from "@/contexts/StorefrontHeaderContext";
 import { trpc } from "@/lib/trpc";
 import { animate } from "animejs";
-import { ArrowUp, ChevronRight, House, LogIn, LogOut, Store, UserRound, WalletCards } from "lucide-react";
+import { ArrowUp, ChevronRight, LogIn, LogOut, WalletCards } from "lucide-react";
 import { FontEmojiBrand } from "@/components/FontEmojiBrand";
 import { PackEmoji } from "@/components/PackEmoji";
 import { ReactNode, useEffect, useRef, useState } from "react";
@@ -19,9 +19,9 @@ export function isProtectedMediaTarget(target: EventTarget | null) {
   return typeof Element !== "undefined" && target instanceof Element && Boolean(target.closest("img, video"));
 }
 const mobileNavigation = [
-  { href: "/", label: "ទំព័រដើម", icon: House, animation: "home" as const },
-  { href: "/topup", label: "ហាង", icon: Store },
-  { href: "/account", label: "គណនី", icon: UserRound },
+  { href: "/", label: "ដើម", animation: "home" as const, pack: "diamond-blue" as const },
+  { href: "/topup", label: "ហាង", pack: "shopping-bag" as const },
+  { href: "/account", label: "គណនី", pack: "user-laptop" as const },
 ];
 // The <nav> below keeps its literal `grid-cols-2` base class because a source
 // contract test pins that exact string. tailwind-merge keeps the LAST of two
@@ -113,7 +113,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
             <img src={logoUrl} alt="ZURS logo" className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-line sm:h-9 sm:w-9" />
             <div className={cn("storefront-header-title", playerTitle && "storefront-header-title--player")} aria-label={playerTitle || "ZURS.me"}>
               <span className="storefront-header-title__default" aria-label="ZURS.me">
-                <FontEmojiBrand text="ZURS.me" size={22} />
+                <FontEmojiBrand text="ZURS.me" size={15} />
               </span>
               <span className="storefront-header-title__player" title={playerTitle || undefined}>{playerTitle || "ZURS.me"}</span>
             </div>
@@ -131,7 +131,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
             </Link>
             {isOwnerAdmin ? (
               <Link href="/admin" className="hidden h-9 items-center gap-1.5 rounded-full border border-line px-3 text-xs font-bold text-ink transition hover:border-neon/60 lg:inline-flex">
-                <PackEmoji name="crown" size={15} />Admin
+                <PackEmoji name="star-purple" size={15} />Admin
               </Link>
             ) : null}
             {loading ? (
@@ -155,7 +155,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
             <div className="flex min-w-0 items-start gap-3.5">
               <img src={logoUrl} alt="ZURS STORE logo" className="h-10 w-10 shrink-0 rounded-full object-cover ring-1 ring-line" />
               <div className="min-w-0">
-                <p className="flex items-center gap-1.5 font-display text-sm font-extrabold tracking-wide text-ink"><PackEmoji name="gem" size={16} />ZURS STORE</p>
+                <p className="flex items-center gap-1.5 font-display text-sm font-extrabold tracking-wide text-ink"><PackEmoji name="diamond-blue" size={16} />ZURS STORE</p>
                 <p className="khmer-body mt-1 max-w-md text-xs leading-5 text-ink-muted">សេវាកម្មហ្គេម និងឌីជីថល សម្រាប់អ្នកលេងកម្ពុជា។</p>
               </div>
             </div>
@@ -191,14 +191,14 @@ function StorefrontShell({ children }: { children: ReactNode }) {
       {isTopupRoute ? <SelectedProductActionBar
         product={selectedProduct} paymentMethodName={selectedPaymentMethod?.name ?? null} isAuthenticated={Boolean(user)} isAuthenticationLoading={loading} signInHref={googleSignInHref} onContinue={() => setLocation("/checkout/preview")} /> : (
         <nav className={cn("liquid-tabbar zurs-mobile-tabbar fixed bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-1/2 z-40 grid h-14 w-full -translate-x-1/2 grid-cols-2 gap-0.5 rounded-full p-1 sm:hidden", mobileTabColumns)} aria-label="Mobile primary navigation">
-          {mobileNavigation.map(({ href, label, icon: Icon, animation }) => {
+          {mobileNavigation.map(({ href, label, animation, pack }) => {
             const active = activeMobileTabHref === href;
             const tabKind = href === "/" ? "home" : "account";
             const classes = cn(`zurs-mobile-tab zurs-mobile-tab--${tabKind} relative z-10 flex min-w-0 items-center justify-center gap-1.5 rounded-full px-2 py-1 text-xs font-bold`, href === "/topup" && "zurs-mobile-tab--store", active ? "zurs-mobile-tab--active" : "hover:text-ink");
             return (
               <Link key={href} href={href} aria-current={active ? "page" : undefined} className={classes}>
                 <span className="zurs-tab-glyph" aria-hidden="true">
-                  {active && animation ? <AnimatedGlyph name={animation} size={18} color="#062033" /> : <Icon className="zurs-tab-glyph-icon h-[1.15rem] w-[1.15rem] shrink-0" strokeWidth={active ? 2.35 : 1.9} />}
+                  {active && animation ? <AnimatedGlyph name={animation} size={18} color="#062033" /> : <PackEmoji name={pack} size={18} />}
                 </span>
                 <span className={cn("zurs-mobile-tab-label truncate", active ? "max-w-[4rem] opacity-100" : "max-w-0 opacity-0")}>{label}</span>
               </Link>
