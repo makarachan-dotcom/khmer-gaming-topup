@@ -11,6 +11,11 @@ export type SelectedProduct = {
   zoneId?: string | null;
   playerName?: string;
   requiresVerifiedPlayerName?: boolean;
+  kind?: "game" | "partner";
+  partnerSlug?: string;
+  deliveryType?: string;
+  durationDays?: number | null;
+  warrantyDays?: number | null;
 };
 
 type SelectedProductContextValue = {
@@ -27,9 +32,6 @@ type PersistedCheckoutContext = {
 };
 
 const checkoutContextStorageKey = "zurs.checkout.preview.v1";
-// Round 10: the buyer picks a payment method ONCE and it is remembered from then
-// on. Previously it was cleared whenever the selected package changed, which
-// forced people to scroll back up to the method picker again and again.
 const paymentMethodPreferenceKey = "zurs.checkout.method.v1";
 
 function readPaymentMethodPreference(): string | null {
@@ -90,8 +92,6 @@ export function SelectedProductProvider({ children }: { children: ReactNode }) {
   });
   const setSelectedProduct = useCallback((product: SelectedProduct | null) => {
     setCheckoutContext((current) => {
-      // Round 10: the payment method is a sticky preference. It must survive
-      // package changes, package clearing, and game switches.
       const next = { selectedProduct: product, selectedPaymentMethodId: current.selectedPaymentMethodId };
       persistCheckoutContext(next);
       return next;
@@ -108,8 +108,6 @@ export function SelectedProductProvider({ children }: { children: ReactNode }) {
   const clearSelectedProduct = useCallback(() => {
     const next = { selectedProduct: null, selectedPaymentMethodId: null };
     persistCheckoutContext(next);
-    // Round 10: the order is done, but the buyer's preferred payment method is
-    // kept for the next purchase so they never have to pick it twice.
     setCheckoutContext({ ...next, selectedPaymentMethodId: readPaymentMethodPreference() });
   }, []);
   const value = useMemo(() => ({ selectedProduct: checkoutContext.selectedProduct, selectedPaymentMethodId: checkoutContext.selectedPaymentMethodId, setSelectedProduct, setSelectedPaymentMethodId, clearSelectedProduct }), [checkoutContext, clearSelectedProduct, setSelectedPaymentMethodId, setSelectedProduct]);
