@@ -1,0 +1,611 @@
+/* ============================================================
+   ZURS STORE — Premium UI layer v2.1 (hotfixed)
+   Load LAST in client/src/main.tsx (after zurs-polish.css).
+   100% additive: upgrades visuals & motion only — never
+   changes layout structure, routes, logic, or data.
+
+   v2.1 fixes:
+   - Tab bar / action bar: REMOVED `transform: translate3d(-50%,...)`.
+     Tailwind v4's `-translate-x-1/2` utility already uses the CSS
+     `translate` PROPERTY, which STACKS with `transform` and pushed
+     both bars off-screen. Entrance keyframes now animate `translate`.
+   - Removed double bottom padding on <main> (shell already pads).
+   - Mascot blink now uses transform-box so eyes blink in place.
+   - Checkout primary button flexes evenly beside the edit button.
+   ============================================================ */
+
+:root {
+  --zp-accent: var(--z-neon, #38bdf8);
+  --zp-accent-2: #a78bfa;
+  --zp-accent-3: #f472b6;
+  --zp-gold: #fbbf24;
+  --zp-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --zp-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --zp-shadow-card: 0 1px 2px rgba(2, 6, 23, 0.45), 0 18px 44px -14px rgba(2, 6, 23, 0.6);
+  --zp-glow-accent: 0 0 0 1px rgba(56, 189, 248, 0.35), 0 10px 34px -8px rgba(56, 189, 248, 0.35);
+  /* Premium font system (fonts are loaded via <link> in client/index.html) */
+  --font-sans: "Kantumruy Pro", "Noto Sans Khmer", "DM Sans", system-ui, sans-serif;
+  --font-display: "Chakra Petch", "Kantumruy Pro", "Noto Sans Khmer", sans-serif;
+  --font-khmer-display: "Moul", "Kantumruy Pro", serif;
+  --font-num: "Chakra Petch", "Kantumruy Pro", sans-serif;
+}
+
+/* ---------- 0 · Font rendering polish ---------- */
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+.font-display, h1, h2, h3 {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+/* Numbers & prices get the crisp gaming numeral font */
+.zp-num, .zurs-game-card .text-amber-800, .package-choice .text-amber-800, [class*="price"], [class*="amount"] {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+/* Optional hero accent — Khmer decorative display font (opt-in via .zp-khmer-display) */
+.zp-khmer-display { font-family: var(--font-khmer-display); font-weight: 400; letter-spacing: 0; }
+
+/* ---------- 1 · Ambient aurora backdrop ---------- */
+.zurs-dotted-shell::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(44rem 30rem at 88% -12%, rgba(167, 139, 250, 0.13), transparent 62%),
+    radial-gradient(40rem 28rem at -12% 28%, rgba(56, 189, 248, 0.11), transparent 62%),
+    radial-gradient(32rem 24rem at 50% 112%, rgba(244, 114, 182, 0.09), transparent 62%);
+}
+
+/* ---------- 2 · Premium header + gradient beam ---------- */
+.zurs-compact-header {
+  /* Keep the Tailwind sticky utility active; the header follows the viewport while scrolling. */
+  position: sticky;
+  overflow: hidden;
+  box-shadow: 0 10px 34px -12px rgba(2, 6, 23, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+}
+.zurs-compact-header::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(120deg, rgba(56, 189, 248, 0.55), transparent 30%, transparent 68%, rgba(167, 139, 250, 0.55));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+/* ---------- 3 · Hero / banner: Ken Burns zoom + premium ring ---------- */
+.zurs-banner-frame {
+  border-radius: 1.35rem;
+  box-shadow: var(--zp-shadow-card), 0 0 0 1px rgba(56, 189, 248, 0.12);
+}
+.zurs-banner-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.6), transparent 35%, transparent 62%, rgba(167, 139, 250, 0.6));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .zurs-banner-slide { animation: zp-kenburns 14s ease-in-out infinite alternate; }
+  @keyframes zp-kenburns { from { scale: 1; } to { scale: 1.06; } }
+}
+
+/* ---------- 4 · Scroll-reveal system (used by <Reveal />) ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  .zp-reveal {
+    opacity: 0;
+    transform: translateY(20px) scale(0.99);
+    filter: blur(5px);
+    transition: opacity 640ms var(--zp-ease-out), transform 640ms var(--zp-ease-out), filter 640ms var(--zp-ease-out);
+    transition-delay: calc(var(--zp-i, 0) * 75ms);
+    will-change: opacity, transform, filter;
+  }
+  .zp-reveal--in { opacity: 1; transform: none; filter: none; }
+  .zp-page { animation: zp-page-in 460ms var(--zp-ease-out) both; }
+  @keyframes zp-page-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+}
+@media (prefers-reduced-motion: reduce) {
+  .zp-reveal { opacity: 1; transform: none; filter: none; }
+}
+
+/* ---------- 5 · Premium cards: lift + glow + sheen ---------- */
+.zurs-game-card, article.group.rounded-2xl, .surface, .glass-panel {
+  transition: transform 300ms var(--zp-ease-out), border-color 300ms var(--zp-ease-out), box-shadow 300ms var(--zp-ease-out), background-color 300ms var(--zp-ease-out);
+}
+@media (hover: hover) {
+  .zurs-game-card:hover, article.group.rounded-2xl:hover {
+    transform: translateY(-4px);
+    border-color: rgba(56, 189, 248, 0.5);
+    box-shadow: var(--zp-glow-accent);
+  }
+  .surface:hover, .glass-panel:hover { box-shadow: var(--zp-shadow-card); }
+}
+.zurs-game-card { position: relative; overflow: hidden; }
+.zurs-game-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 32%, rgba(255, 255, 255, 0.14) 50%, transparent 68%);
+  transform: translateX(-120%);
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .zurs-game-card:hover::before { transition: transform 720ms var(--zp-ease-out); transform: translateX(120%); }
+}
+
+/* ---------- 6 · Buttons: glow on hover, satisfying press ---------- */
+.bg-neon:is(button, a), button.bg-neon, a.bg-neon {
+  position: relative;
+  transition: transform 220ms var(--zp-ease-spring), box-shadow 220ms var(--zp-ease-out), filter 220ms var(--zp-ease-out);
+}
+@media (hover: hover) {
+  .bg-neon:is(button, a):hover {
+    transform: translateY(-1.5px);
+    box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.55), 0 12px 32px -10px rgba(56, 189, 248, 0.65);
+    filter: brightness(1.06);
+  }
+}
+.bg-neon:is(button, a):active { transform: translateY(0.5px) scale(0.985); filter: brightness(0.98); }
+
+/* ---------- 7 · Headings & gradient text ---------- */
+.zp-gradient-text {
+  background: linear-gradient(100deg, var(--zp-accent), var(--zp-accent-2) 55%, var(--zp-accent-3));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .zp-gradient-text { background-size: 200% 100%; animation: zp-gradient-pan 7s linear infinite; }
+  @keyframes zp-gradient-pan { to { background-position: 200% 0; } }
+}
+.zp-heading { position: relative; display: inline-block; padding-bottom: 0.45rem; }
+.zp-heading::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  width: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--zp-accent), transparent 85%);
+  transform-origin: left;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .zp-heading::after { animation: zp-heading-bar 900ms var(--zp-ease-out) both; }
+  @keyframes zp-heading-bar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+}
+
+/* ---------- 8 · Price pop & shimmer badge ---------- */
+.zp-price-pop { display: inline-block; }
+@media (prefers-reduced-motion: no-preference) {
+  .zp-reveal--in .zp-price-pop { animation: zp-pop 560ms var(--zp-ease-spring) both; animation-delay: 220ms; }
+  @keyframes zp-pop { 0% { transform: scale(0.7); opacity: 0; } 70% { transform: scale(1.06); } 100% { transform: scale(1); opacity: 1; } }
+}
+.zp-shimmer { position: relative; overflow: hidden; isolation: isolate; }
+.zp-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.45) 50%, transparent 65%);
+  transform: translateX(-130%);
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .zp-shimmer::after { animation: zp-shimmer 2.8s var(--zp-ease-out) infinite; }
+  @keyframes zp-shimmer { 18% { transform: translateX(130%); } 100% { transform: translateX(130%); } }
+}
+
+/* ---------- 9 · Live indicator pulse ---------- */
+.zp-live-dot { position: relative; display: inline-block; width: 0.55em; height: 0.55em; border-radius: 999px; background: #f43f5e; }
+@media (prefers-reduced-motion: no-preference) {
+  .zp-live-dot::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: inherit;
+    animation: zp-live-ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+  }
+  @keyframes zp-live-ping { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(2.6); opacity: 0; } }
+}
+
+/* ---------- 10 · Skeleton shimmer ---------- */
+.zp-skeleton { position: relative; overflow: hidden; background: rgba(141, 151, 178, 0.14); border-radius: 0.65rem; }
+.zp-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, rgba(238, 242, 255, 0.12) 50%, transparent 70%);
+  transform: translateX(-100%);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .zp-skeleton::after { animation: zp-shimmer 1.6s linear infinite; }
+}
+
+/* ---------- 11 · Selection, focus ring, scrollbar ---------- */
+::selection { background: rgba(56, 189, 248, 0.35); color: #fff; }
+:focus-visible { outline: 2px solid var(--zp-accent); outline-offset: 2px; border-radius: 4px; }
+* { scrollbar-width: thin; scrollbar-color: rgba(141, 151, 178, 0.45) transparent; }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb { background: rgba(141, 151, 178, 0.4); border-radius: 999px; }
+*::-webkit-scrollbar-thumb:hover { background: rgba(56, 189, 248, 0.6); }
+
+/* ============================================================
+   v2 — user-requested fixes (v2.1 hotfixed)
+   ============================================================ */
+
+/* ---------- 12 · MOBILE TAB BAR GLITCH FIX ----------
+   Symptoms: bar jitters/clips on scroll, content hides behind it,
+   help button overlaps it. Fixes: solid glass, safe-area, z-index
+   ladder, GPU-friendly `translate`-only entrance.
+   IMPORTANT: never set `transform` here — Tailwind v4's
+   -translate-x-1/2 already centers via the CSS `translate` property;
+   `transform` would STACK with it and push the bar off-screen. */
+/* Use clip instead of hidden so the document keeps one vertical scroll container; sticky header positioning remains viewport-aware. */
+html, body { overflow-x: clip; }
+#root { overflow-x: clip; }
+.zurs-mobile-tabbar.liquid-tabbar {
+  will-change: translate;
+  backface-visibility: hidden;
+  contain: layout paint;
+  /* solid enough that scrolling content never bleeds through */
+  background: rgba(13, 20, 38, 0.92) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  backdrop-filter: blur(18px) saturate(1.2);
+  border: 1px solid rgba(238, 242, 255, 0.14) !important;
+  box-shadow: 0 -4px 30px rgba(2, 6, 23, 0.5), 0 10px 24px -8px rgba(2, 6, 23, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  /* respect iPhone home indicator */
+  bottom: max(0.5rem, env(safe-area-inset-bottom)) !important;
+  z-index: 55;
+  max-width: min(92vw, 24rem);
+}
+/* entrance — animates the `translate` property only, keeping the -50% centering */
+@media (prefers-reduced-motion: no-preference) {
+  .zurs-mobile-tabbar.liquid-tabbar { animation: zp-tabbar-in 520ms var(--zp-ease-spring) 180ms both; }
+  @keyframes zp-tabbar-in {
+    from { translate: -50% 18px; opacity: 0; }
+    to   { translate: -50% 0; opacity: 1; }
+  }
+}
+/* tab press feedback */
+.zurs-mobile-tab { transition: transform 200ms var(--zp-ease-spring), background-color 200ms var(--zp-ease-out), color 200ms var(--zp-ease-out); }
+.zurs-mobile-tab:active { transform: scale(0.94); }
+/* NOTE: no extra <main> bottom padding — the shell already pads with
+   pb-[calc(5rem+env(safe-area-inset-bottom))]; double-padding caused
+   empty space at page bottom. */
+/* help / contact button sits ABOVE the tab bar, never overlapping */
+.contact-admin-control, [class*="contact-admin"], [class*="help-fab"] {
+  z-index: 54;
+}
+@media (max-width: 639px) {
+  .contact-admin-control, [class*="contact-admin"], [class*="help-fab"] {
+    bottom: calc(4.4rem + env(safe-area-inset-bottom)) !important;
+  }
+}
+/* scroll-to-top button ladder above tab bar too */
+[aria-label="Scroll to top"], [class*="scroll-top"], [class*="scrolltop"] {
+  z-index: 54;
+}
+@media (max-width: 639px) {
+  [aria-label="Scroll to top"], [class*="scroll-top"], [class*="scrolltop"] {
+    bottom: calc(8.4rem + env(safe-area-inset-bottom)) !important;
+  }
+}
+
+/* ---------- 13 · SELECTED-PACKAGE ACTION BAR — lower & compact ----------
+   Sits closer to the bottom browser chrome, slim premium pill.
+   Same rule: `translate` property only — never `transform`. */
+.selected-product-action-bar {
+  bottom: max(0.3rem, env(safe-area-inset-bottom)) !important;
+  height: 3.35rem !important;
+  width: min(94vw, 26rem);
+  padding: 0.4rem 0.5rem !important;
+  border-radius: 1.1rem !important;
+  background: rgba(13, 20, 38, 0.94) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(1.25);
+  backdrop-filter: blur(18px) saturate(1.25);
+  border: 1px solid rgba(56, 189, 248, 0.28) !important;
+  box-shadow: 0 -2px 24px rgba(2, 6, 23, 0.45), 0 14px 30px -10px rgba(2, 6, 23, 0.6), 0 0 0 1px rgba(56, 189, 248, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  will-change: translate;
+  z-index: 56;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .selected-product-action-bar { animation: zp-actionbar-in 480ms var(--zp-ease-spring) both; }
+  @keyframes zp-actionbar-in {
+    from { translate: -50% 120%; opacity: 0; }
+    to   { translate: -50% 0; opacity: 1; }
+  }
+}
+/* its continue/pay button: compact rounded pill */
+.selected-product-action-bar button, .selected-product-action-bar a[class*="btn"], .selected-product-action-bar [role="button"] {
+  border-radius: 0.85rem !important;
+}
+
+/* ---------- 14 · CHECKOUT CONFIRM — clean buttons ---------- */
+.checkout-primary-action {
+  position: relative;
+  width: 100%;
+  flex: 1 1 0%;
+  min-width: 0;
+  min-height: 3.15rem;
+  border-radius: 1rem !important;
+  background: linear-gradient(120deg, #0ea5e9, #38bdf8 55%, #22d3ee) !important;
+  color: #062033 !important;
+  font-weight: 800 !important;
+  font-size: 0.95rem;
+  box-shadow: 0 10px 28px -8px rgba(56, 189, 248, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  transition: transform 220ms var(--zp-ease-spring), box-shadow 220ms var(--zp-ease-out), filter 220ms var(--zp-ease-out);
+  overflow: hidden;
+}
+.checkout-primary-action::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.35) 50%, transparent 65%);
+  transform: translateX(-130%);
+  pointer-events: none;
+}
+@media (hover: hover) {
+  .checkout-primary-action:hover { transform: translateY(-2px); box-shadow: 0 16px 36px -10px rgba(56, 189, 248, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.35); filter: brightness(1.05); }
+  .checkout-primary-action:hover::after { transition: transform 800ms var(--zp-ease-out); transform: translateX(130%); }
+}
+.checkout-primary-action:active { transform: translateY(0.5px) scale(0.99); }
+.checkout-primary-action:disabled { opacity: 0.65; filter: grayscale(0.25); }
+/* secondary ("edit") button next to it */
+.checkout-secondary-action, a.checkout-secondary-action {
+  min-height: 3.15rem;
+  border-radius: 1rem !important;
+  border: 1px solid rgba(238, 242, 255, 0.16) !important;
+  background: rgba(238, 242, 255, 0.05) !important;
+  font-weight: 700;
+  transition: border-color 200ms var(--zp-ease-out), background-color 200ms var(--zp-ease-out), transform 200ms var(--zp-ease-spring);
+}
+@media (hover: hover) {
+  .checkout-secondary-action:hover { border-color: rgba(56, 189, 248, 0.45) !important; background: rgba(56, 189, 248, 0.08) !important; transform: translateY(-1px); }
+}
+/* receipt + success actions */
+.checkout-receipt-action {
+  border-radius: 0.9rem !important;
+  transition: transform 200ms var(--zp-ease-spring), box-shadow 200ms var(--zp-ease-out);
+}
+@media (hover: hover) {
+  .checkout-receipt-action:hover { transform: translateY(-1.5px); box-shadow: 0 10px 26px -10px rgba(2, 6, 23, 0.5); }
+}
+
+/* ---------- 15 · HEADER MASCOT (ប្អូន robot កំដរ) ---------- */
+.zp-mascot {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 999px;
+  background: linear-gradient(140deg, rgba(56, 189, 248, 0.16), rgba(167, 139, 250, 0.16));
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 4px 14px -4px rgba(56, 189, 248, 0.35);
+  cursor: default;
+  user-select: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .zp-mascot { animation: zp-mascot-float 3.6s ease-in-out infinite; }
+  @keyframes zp-mascot-float {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-3px); }
+  }
+  .zp-mascot:hover { animation: zp-mascot-wiggle 600ms var(--zp-ease-spring); }
+  @keyframes zp-mascot-wiggle {
+    0%, 100% { transform: rotate(0); }
+    25% { transform: rotate(-7deg); }
+    60% { transform: rotate(6deg); }
+  }
+  /* transform-box makes the blink squash around the EYES' own center
+     (not the SVG corner) so they blink in place */
+  .zp-mascot__eyes {
+    animation: zp-mascot-blink 4.4s ease-in-out infinite;
+    transform-origin: center;
+    transform-box: fill-box;
+  }
+  @keyframes zp-mascot-blink {
+    0%, 91%, 98%, 100% { transform: scaleY(1); }
+    94% { transform: scaleY(0.06); }
+  }
+  .zp-mascot__antenna-dot { animation: zp-mascot-glow 2.2s ease-in-out infinite; }
+  @keyframes zp-mascot-glow {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 1; filter: drop-shadow(0 0 4px rgba(56, 189, 248, 0.9)); }
+  }
+}
+.zp-mascot__pupils { transition: transform 140ms ease-out; will-change: transform; }
+@media (prefers-reduced-motion: reduce) {
+  .zp-mascot__pupils { transition: none; }
+}
+
+/* ---------- 16 · GAME LOGO TICKER (logos run right → left) ---------- */
+.zp-ticker {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid rgba(238, 242, 255, 0.09);
+  background: rgba(17, 26, 46, 0.55);
+  /* soft fade on both edges */
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+.zp-ticker__track {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  width: max-content;
+  padding: 0.6rem 0.85rem;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .zp-ticker__track { animation: zp-ticker-run var(--zp-ticker-speed, 30s) linear infinite; }
+  .zp-ticker:hover .zp-ticker__track { animation-play-state: paused; }
+  /* logos visually travel RIGHT → LEFT */
+  @keyframes zp-ticker-run {
+    from { transform: translate3d(0, 0, 0); }
+    to   { transform: translate3d(-50%, 0, 0); }
+  }
+}
+.zp-ticker__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-shrink: 0;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(238, 242, 255, 0.1);
+  background: rgba(238, 242, 255, 0.05);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--z-ink, #eef2ff);
+  white-space: nowrap;
+}
+.zp-ticker__item img { width: 1.35rem; height: 1.35rem; border-radius: 999px; object-fit: cover; }
+
+/* ---------- 17 · GAME GRID — staggered card entrance ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  .zp-game-grid > * { animation: zp-card-in 560ms var(--zp-ease-out) both; }
+  .zp-game-grid > *:nth-child(1) { animation-delay: 40ms; }
+  .zp-game-grid > *:nth-child(2) { animation-delay: 90ms; }
+  .zp-game-grid > *:nth-child(3) { animation-delay: 140ms; }
+  .zp-game-grid > *:nth-child(4) { animation-delay: 190ms; }
+  .zp-game-grid > *:nth-child(5) { animation-delay: 240ms; }
+  .zp-game-grid > *:nth-child(6) { animation-delay: 290ms; }
+  .zp-game-grid > *:nth-child(7) { animation-delay: 340ms; }
+  .zp-game-grid > *:nth-child(8) { animation-delay: 390ms; }
+  .zp-game-grid > *:nth-child(n+9) { animation-delay: 440ms; }
+  @keyframes zp-card-in {
+    from { opacity: 0; transform: translateY(18px) scale(0.97); }
+    to   { opacity: 1; transform: none; }
+  }
+}
+
+/* ============================================================
+   v3 — cleanup + Order Pipeline (Deploy-Pipeline style)
+   ============================================================ */
+
+/* ---------- 18 · ACTION BAR readability (compact state was too dim) ---------- */
+.selected-product-action-bar__compact-content {
+  color: #eef2ff !important;
+  font-weight: 700;
+  gap: 0.45rem;
+}
+.selected-product-action-bar__compact-content svg { color: var(--zp-accent); }
+.selected-product-action-bar__expanded-content { color: #eef2ff; }
+
+/* ---------- 19 · ORDER PIPELINE (payment success) ---------- */
+.zp-deploy {
+  border: 1px solid rgba(2, 6, 23, 0.08);
+  border-radius: 1.25rem;
+  background: linear-gradient(160deg, #ffffff, #f4f6fb);
+  box-shadow: 0 1px 2px rgba(2, 6, 23, 0.05), 0 20px 44px -18px rgba(2, 6, 23, 0.18);
+  padding: 1.1rem 1.1rem 1rem;
+}
+.zp-deploy__head { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.zp-deploy__brand {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  font-family: "Chakra Petch", "Kantumruy Pro", sans-serif;
+  font-size: 0.82rem; font-weight: 700; color: #0f172a; letter-spacing: 0.02em;
+}
+.zp-deploy__ref {
+  border: 1px solid rgba(2, 6, 23, 0.1); border-radius: 999px;
+  background: rgba(2, 6, 23, 0.04); padding: 0.1rem 0.5rem;
+  font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 0.62rem; font-weight: 600; color: #475569;
+}
+.zp-deploy__badge {
+  margin-left: auto; display: inline-flex; align-items: center; gap: 0.3rem;
+  border-radius: 999px; padding: 0.22rem 0.65rem;
+  font-size: 0.66rem; font-weight: 800; letter-spacing: 0.02em;
+}
+.zp-deploy__badge--run { background: rgba(249, 115, 22, 0.12); color: #c2410c; border: 1px solid rgba(249, 115, 22, 0.3); }
+.zp-deploy__badge--done { background: rgba(16, 185, 129, 0.12); color: #047857; border: 1px solid rgba(16, 185, 129, 0.35); }
+
+/* stepper */
+.zp-deploy__steps {
+  list-style: none; margin: 0.95rem 0 0; padding: 0;
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 0;
+}
+.zp-deploy__step { position: relative; display: flex; flex-direction: column; align-items: center; gap: 0.3rem; text-align: center; }
+.zp-deploy__line {
+  position: absolute; top: 1rem; left: -50%; right: 50%; height: 2px;
+  background: rgba(2, 6, 23, 0.1); border-radius: 999px; overflow: hidden;
+}
+.zp-deploy__line::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(90deg, #f97316, #10b981);
+  transform: scaleX(0); transform-origin: left;
+}
+.zp-deploy__line.is-filled::after { transform: scaleX(1); }
+.zp-deploy__line.is-active-line::after { animation: zp-deploy-line 1.9s var(--zp-ease-out) forwards; }
+@media (prefers-reduced-motion: no-preference) {
+  .zp-deploy__line.is-filled::after { transition: transform 480ms var(--zp-ease-out); }
+  @keyframes zp-deploy-line { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+}
+.zp-deploy__node {
+  position: relative; z-index: 1;
+  display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 999px;
+  border: 1.5px solid rgba(2, 6, 23, 0.12); background: #fff; color: #64748b;
+  box-shadow: 0 2px 8px rgba(2, 6, 23, 0.08);
+}
+.zp-deploy__step.is-active .zp-deploy__node {
+  border-color: #f97316; color: #ea580c;
+  box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.15), 0 4px 12px rgba(249, 115, 22, 0.25);
+}
+.zp-deploy__step.is-done .zp-deploy__node {
+  border-color: #10b981; background: #10b981; color: #fff;
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.14), 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+.zp-deploy__step-caption { font-size: 0.62rem; font-weight: 800; color: #334155; letter-spacing: 0.03em; }
+.zp-deploy__step.is-pending .zp-deploy__step-caption { color: #94a3b8; }
+.zp-deploy__timer { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 0.58rem; font-weight: 600; color: #94a3b8; }
+.zp-deploy__step.is-active .zp-deploy__timer { color: #ea580c; }
+.zp-deploy__step.is-done .zp-deploy__timer { color: #059669; }
+
+/* terminal */
+.zp-deploy__term {
+  margin-top: 0.95rem; border-radius: 0.85rem;
+  background: #0d1426; border: 1px solid rgba(56, 189, 248, 0.18);
+  padding: 0.7rem 0.85rem; min-height: 5.2rem; max-height: 9.5rem; overflow-y: auto;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+.zp-deploy__log { margin: 0; font-size: 0.66rem; line-height: 1.7; color: #9fb3d1; white-space: pre-wrap; }
+.zp-deploy__log.is-cmd { color: #7dd3fc; font-weight: 700; }
+.zp-deploy__log.is-ok { color: #34d399; font-weight: 700; }
+.zp-deploy__log.is-note { color: #fbbf24; line-height: 1.6; margin-top: 0.3rem; }
+.zp-deploy__cursor {
+  display: inline-block; width: 0.45rem; height: 0.8rem; margin-top: 0.15rem;
+  background: #38bdf8; border-radius: 1px; vertical-align: middle;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .zp-deploy__cursor { animation: zp-deploy-blink 0.9s steps(1) infinite; }
+  @keyframes zp-deploy-blink { 50% { opacity: 0; } }
+}
+
+/* ---------- 20 · GameTopup flow cleanup (verified bar / steps / sections) ---------- */
+.identity-verified--gold, .saved-player-picker, .checkout-order-summary,
+.zurs-otp-card, .package-section, .game-topup-container .surface {
+  box-shadow: 0 1px 2px rgba(2, 6, 23, 0.05), 0 14px 34px -16px rgba(2, 6, 23, 0.14);
+}
+/* consistent vertical rhythm inside the topup flow */
+.game-topup-container .surface > * + * { margin-top: 0.9rem; }
+.game-topup-container .surface > form.mt-4, .game-topup-container .surface > .identity-flow { margin-top: 1rem; }

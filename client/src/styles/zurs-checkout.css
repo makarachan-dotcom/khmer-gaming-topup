@@ -1,0 +1,228 @@
+/* ==========================================================================
+   ZURS - Round 9: top-up page, package picker and pre-payment consent.
+   Imported LAST from main.tsx, so these rules win over index.css on purpose.
+   ========================================================================== */
+
+:root {
+  --zc-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* --- 1. Account info: player id full width, server id short and right ----- */
+.identity-fields--single { display: block; }
+/* Round 10: Player ID and Server ID share ONE row on every game. The secondary
+   field (server / zone) stays deliberately short because it is never as long as
+   a player id. The old "flex: 1 1 100%" forced the first field to consume the
+   whole row, pushing Server ID onto a second line. */
+.identity-fields--pair { display: flex !important; flex-wrap: nowrap !important; align-items: flex-end; gap: 0.5rem; }
+.identity-fields--pair > label { min-width: 0; margin: 0; }
+.identity-fields--pair > label:first-child { flex: 1 1 auto !important; width: auto !important; min-width: 0; margin-left: 0 !important; }
+.identity-fields--pair > label + label { flex: 0 0 7.25rem !important; width: 7.25rem !important; max-width: 7.25rem; margin-left: 0 !important; }
+.identity-fields--pair > label:nth-child(n+3) { flex-basis: 5.5rem !important; width: 5.5rem !important; max-width: 5.5rem; }
+.identity-fields--pair > label + label input { text-align: center; letter-spacing: 0.04em; }
+.identity-fields--pair > label > span:first-child { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.identity-fields input { height: 2.65rem; }
+.identity-fields label > span:first-child { font-size: 0.68rem; }
+@media (max-width: 22.5rem) {
+  .identity-fields--pair { gap: 0.4rem; }
+  .identity-fields--pair > label + label { flex-basis: 5.9rem !important; width: 5.9rem !important; max-width: 5.9rem; }
+}
+
+/* --- 2. Previously confirmed IDs: one compact line, hidden once filled ---- */
+.saved-id-row {
+  display: flex; align-items: center; gap: 0.5rem;
+  margin-top: 0.75rem; padding: 0.4rem 0.5rem;
+  border: 1px solid oklch(0.9 0.03 268 / 0.85); border-radius: 0.85rem;
+  background: oklch(0.985 0.012 274 / 0.92);
+  animation: zc-slide-in 0.32s var(--zc-ease) both;
+}
+.saved-id-row__label {
+  display: inline-flex; align-items: center; gap: 0.28rem; flex: 0 0 auto;
+  color: oklch(0.45 0.1 268); font-size: 0.61rem; font-weight: 800; white-space: nowrap;
+}
+.saved-id-row__list { display: flex; gap: 0.32rem; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.saved-id-row__list::-webkit-scrollbar { display: none; }
+.saved-id-chip {
+  flex: 0 0 auto; height: 1.85rem; padding: 0 0.6rem;
+  border: 1px solid oklch(0.86 0.05 268 / 0.9); border-radius: 999px; background: #fff;
+  color: oklch(0.3 0.07 268); font-size: 0.66rem; font-weight: 800;
+  transition: transform 0.18s var(--zc-ease), box-shadow 0.18s var(--zc-ease);
+}
+.saved-id-chip:hover { transform: translateY(-1px); box-shadow: 0 6px 14px oklch(0.5 0.12 268 / 0.2); }
+
+/* --- 3. Payment method: fewer words, collapses once KHQR is chosen -------- */
+.payment-method-preselect { padding: 0.7rem 0.8rem !important; border-radius: 1rem !important; }
+.payment-method-preselect__header h3 { font-size: 0.84rem !important; margin-top: 0 !important; }
+.payment-method-preselect__header p:not(.payment-method-gate__eyebrow) { display: none !important; }
+.payment-method-preselect__hint { display: none !important; }
+.payment-method-preselect__methods { gap: 0.4rem !important; margin-top: 0.55rem !important; }
+.pm-chosen-bar {
+  display: flex; align-items: center; gap: 0.5rem;
+  margin-top: 0.9rem; padding: 0.45rem 0.55rem; border-radius: 0.9rem;
+  border: 1px solid oklch(0.8 0.1 165 / 0.6);
+  background: linear-gradient(135deg, oklch(0.96 0.05 165 / 0.92), oklch(0.99 0.01 255 / 0.92));
+  animation: zc-slide-in 0.3s var(--zc-ease) both;
+}
+.pm-chosen-bar__mark {
+  display: grid; height: 1.6rem; width: 1.6rem; flex: 0 0 auto; place-items: center;
+  border-radius: 0.55rem; background: oklch(0.55 0.13 165); color: #fff;
+}
+.pm-chosen-bar__text { min-width: 0; flex: 1; color: oklch(0.28 0.06 200); font-size: 0.68rem; font-weight: 800; }
+.pm-chosen-bar__change {
+  flex: 0 0 auto; height: 1.8rem; padding: 0 0.62rem; border-radius: 999px;
+  border: 1px solid oklch(0.86 0.03 250); background: #fff;
+  color: oklch(0.4 0.05 255); font-size: 0.62rem; font-weight: 800;
+}
+.pm-chosen-bar__change:hover { background: oklch(0.97 0.01 250); }
+
+/* --- 4. Package picker: tighter header so the grid starts sooner --------- */
+.package-category-browser { padding: 0.8rem !important; }
+.package-category-browser__header { gap: 0.55rem !important; }
+.package-category-browser__title { font-size: 0.98rem !important; }
+@media (max-width: 639px) {
+  .package-category-browser { padding: 0.68rem !important; border-radius: 1rem !important; }
+  .package-category-browser__title { font-size: 0.9rem !important; }
+  .package-category-browser__gem { height: 1.7rem !important; width: 1.7rem !important; }
+  .package-category-browser__total { height: 1.6rem !important; min-width: 1.6rem !important; }
+}
+
+/* --- 5. Per-package banner the owner can customise ---------------------- */
+.pkg-ribbon {
+  position: absolute; left: 0.4rem; top: 0.4rem; z-index: 4;
+  display: inline-flex; align-items: center; gap: 0.22rem;
+  max-width: calc(100% - 0.8rem); padding: 0.18rem 0.45rem; border-radius: 999px;
+  color: #10151f; font-size: 0.55rem; font-weight: 900; letter-spacing: 0.05em;
+  text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  background: linear-gradient(135deg, #ffd84d, #ff9a3c);
+  box-shadow: 0 4px 10px rgba(255, 150, 40, 0.35);
+  animation: zc-ribbon-in 0.42s var(--zc-ease) both;
+}
+.pkg-ribbon--discount { background: linear-gradient(135deg, #ff6b6b, #ff2d55); color: #fff; }
+.pkg-ribbon--hot { background: linear-gradient(135deg, #ff9a3c, #ff3d3d); color: #fff; }
+.pkg-ribbon--new { background: linear-gradient(135deg, #64d2ff, #3b82f6); color: #fff; }
+.pkg-ribbon--best { background: linear-gradient(135deg, #a78bfa, #6d28d9); color: #fff; }
+.package-choice { position: relative; }
+
+/* --- 6. Fallback artwork: fades in instead of popping ------------------- */
+.pkg-art-fallback { display: block; margin-top: 0.35rem; overflow: hidden; border-radius: 0.6rem; }
+.pkg-art-fallback__image {
+  display: block; width: 100%; height: 5.4rem; object-fit: contain;
+  animation: zc-art-in 0.5s var(--zc-ease) both;
+}
+
+/* --- 7. Verified Telegram profile chip --------------------------------- */
+.tg-profile {
+  display: flex; align-items: center; gap: 0.55rem; margin-top: 0.9rem;
+  padding: 0.5rem 0.6rem; border-radius: 0.95rem;
+  border: 1px solid oklch(0.82 0.09 240 / 0.6);
+  background: linear-gradient(135deg, oklch(0.96 0.04 240 / 0.9), oklch(0.99 0.01 255 / 0.9));
+  animation: zc-slide-in 0.32s var(--zc-ease) both;
+}
+.tg-profile__avatar {
+  height: 2.35rem; width: 2.35rem; flex: 0 0 auto; border-radius: 999px; object-fit: cover;
+  border: 2px solid #fff; box-shadow: 0 3px 10px oklch(0.5 0.1 240 / 0.25); background: oklch(0.9 0.03 240);
+}
+.tg-profile__name { color: oklch(0.24 0.06 250); font-size: 0.8rem; font-weight: 900; }
+.tg-profile__handle { color: oklch(0.45 0.08 240); font-size: 0.66rem; font-weight: 700; }
+
+/* --- 8. No-refund consent dialog --------------------------------------- */
+/* Round 10: the dialog is portalled to <body>, so ".zurs-dotted-shell >
+   :not(.zurs-particle-field) { position: relative; z-index: 1 }" in index.css can
+   no longer out-specify these rules and drag the modal into the page flow under
+   the footer. The !important flags are belt-and-braces insurance. */
+.refund-dialog {
+  position: fixed !important; inset: 0 !important; z-index: 2147483000 !important;
+  display: grid !important; place-items: center; padding: 1rem;
+}
+.refund-dialog__backdrop {
+  position: absolute; inset: 0; border: 0; background: rgba(6, 10, 22, 0.72);
+  backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px);
+  animation: zc-fade-in 0.26s var(--zc-ease) both;
+}
+.refund-dialog__panel {
+  position: relative; width: min(25.5rem, 100%); padding: 1.1rem;
+  border: 1px solid rgba(148, 163, 184, 0.22); border-radius: 1.35rem;
+  background: #0f1424; color: #e7ecff;
+  box-shadow: 0 30px 70px rgba(4, 8, 20, 0.62), 0 0 0 1px rgba(99, 102, 241, 0.14);
+  /* Rises from where the action bar sits so the bar reads as becoming the dialog. */
+  animation: zc-modal-rise 0.44s var(--zc-ease) both;
+  transform-origin: 50% 100%;
+}
+.refund-dialog__panel > * { animation: zc-stagger-up 0.34s var(--zc-ease) both; }
+.refund-dialog__panel > *:nth-child(1) { animation-delay: 0.10s; }
+.refund-dialog__panel > *:nth-child(2) { animation-delay: 0.15s; }
+.refund-dialog__panel > *:nth-child(3) { animation-delay: 0.20s; }
+.refund-dialog__panel > *:nth-child(4) { animation-delay: 0.25s; }
+.refund-dialog__panel > *:nth-child(5) { animation-delay: 0.30s; }
+/* While the consent step is open the bottom bars slide away. */
+body.refund-dialog-open .selected-product-action-bar,
+body.refund-dialog-open .zurs-mobile-tabbar {
+  animation: zc-bar-dismiss 0.34s var(--zc-ease) both !important;
+  pointer-events: none !important;
+}
+.refund-dialog__head { display: flex; align-items: center; gap: 0.6rem; }
+.refund-dialog__mark {
+  display: grid; height: 2.3rem; width: 2.3rem; flex: 0 0 auto; place-items: center;
+  border-radius: 0.8rem; background: linear-gradient(135deg, #f59e0b, #ef4444); color: #fff;
+  animation: zc-mark-pulse 2.4s ease-in-out 0.7s infinite;
+}
+.refund-dialog__eyebrow { color: #9aa3c0; font-size: 0.56rem; font-weight: 800; letter-spacing: 0.16em; }
+.refund-dialog__title { margin-top: 0.1rem; font-size: 0.98rem; font-weight: 900; line-height: 1.35; }
+.refund-dialog__body { margin-top: 0.8rem; color: #c8d0ec; font-size: 0.76rem; line-height: 1.65; }
+.refund-dialog__summary {
+  display: flex; align-items: center; gap: 0.45rem; margin-top: 0.8rem;
+  padding: 0.5rem 0.6rem; border-radius: 0.85rem;
+  border: 1px solid rgba(148, 163, 184, 0.18); background: rgba(148, 163, 184, 0.08);
+}
+.refund-dialog__summary-label { color: #9aa3c0; font-size: 0.62rem; font-weight: 700; }
+.refund-dialog__summary-value { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.72rem; font-weight: 800; }
+.refund-dialog__summary-price { color: #ffd84d; font-size: 0.74rem; font-weight: 900; }
+.refund-dialog__support {
+  display: flex; align-items: center; justify-content: center; gap: 0.4rem;
+  height: 2.5rem; margin-top: 0.8rem; border-radius: 0.85rem;
+  border: 1px solid rgba(139, 147, 255, 0.45); background: rgba(139, 147, 255, 0.12);
+  color: #cdd2ff; font-size: 0.74rem; font-weight: 800; transition: background 0.2s var(--zc-ease);
+}
+.refund-dialog__support:hover { background: rgba(139, 147, 255, 0.22); }
+.refund-dialog__actions { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.75rem; }
+.refund-dialog__decline,
+.refund-dialog__agree {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem;
+  height: 2.65rem; border-radius: 0.9rem; font-size: 0.76rem; font-weight: 900;
+  transition: transform 0.18s var(--zc-ease), filter 0.18s var(--zc-ease);
+}
+.refund-dialog__decline { border: 1px solid rgba(148, 163, 184, 0.28); background: transparent; color: #c8d0ec; }
+.refund-dialog__agree { background: linear-gradient(135deg, #38bdf8, #6366f1); color: #06121f; }
+.refund-dialog__decline:hover,
+.refund-dialog__agree:hover { transform: translateY(-1px); filter: brightness(1.06); }
+
+/* --- 9. Motion keyframes ---------------------------------------------- */
+@keyframes zc-modal-rise {
+  0% { opacity: 0; transform: translateY(64px) scale(0.86); }
+  55% { opacity: 1; transform: translateY(-6px) scale(1.014); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes zc-stagger-up { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: none; } }
+@keyframes zc-mark-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.5); }
+  50% { box-shadow: 0 0 0 9px rgba(245, 158, 11, 0); }
+}
+@keyframes zc-bar-dismiss {
+  from { opacity: 1; transform: translate(-50%, 0); }
+  to { opacity: 0; transform: translate(-50%, 150%); }
+}
+@keyframes zc-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes zc-slide-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@keyframes zc-pop-in { from { opacity: 0; transform: translateY(14px) scale(0.96); } to { opacity: 1; transform: none; } }
+@keyframes zc-ribbon-in { from { opacity: 0; transform: translateY(-6px) scale(0.9); } to { opacity: 1; transform: none; } }
+@keyframes zc-art-in { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .saved-id-row, .pm-chosen-bar, .tg-profile, .pkg-ribbon,
+  .pkg-art-fallback__image, .refund-dialog__panel, .refund-dialog__backdrop,
+  .refund-dialog__panel > *, .refund-dialog__mark {
+    animation: none !important;
+  }
+  body.refund-dialog-open .selected-product-action-bar,
+  body.refund-dialog-open .zurs-mobile-tabbar { animation: none !important; opacity: 0 !important; }
+  .saved-id-chip:hover, .refund-dialog__decline:hover, .refund-dialog__agree:hover { transform: none; }
+}

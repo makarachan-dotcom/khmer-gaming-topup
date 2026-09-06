@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 vi.mock("streamdown", () => ({ Streamdown: () => null }));
-import { canBrowseTopupPackages, canBrowseVerifiedPackages, gameIdFromTopupPath, gameThemedArtworkForPackage, gameTopupPath, groupProviderPackagesByMeaning, initialDiamondPackageLimit, partitionProviderPackagesForFullTicketEvent, readVerifiedPlayerEntries, requiresPlayerIdentityCheck, requiresVerifiedUsername, saveVerifiedPlayerEntry, sortProviderPackagesByPrice, usesLegacyMobileLegendsArtwork, usesMobileLegendsDiamondChestArtwork, visibleDiamondPackageItems } from "./GameTopup";
+import { canBrowseTopupPackages, canBrowseVerifiedPackages, canCreateTopupPurchaseContext, gameIdFromTopupPath, gameThemedArtworkForPackage, gameTopupPath, groupProviderPackagesByMeaning, initialDiamondPackageLimit, partitionProviderPackagesForFullTicketEvent, readVerifiedPlayerEntries, requiresPlayerIdentityCheck, requiresVerifiedUsername, saveVerifiedPlayerEntry, sortProviderPackagesByPrice, usesLegacyMobileLegendsArtwork, usesMobileLegendsDiamondChestArtwork, visibleDiamondPackageItems } from "./GameTopup";
 
 describe("dedicated game top-up routes", () => {
   it("creates and reads an encoded provider game route", () => {
@@ -69,7 +69,8 @@ describe("dedicated game top-up routes", () => {
   it("applies only responsive package-grid geometry while preserving package-card presentation", () => {
     const pageSource = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
     const css = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
-    expect(pageSource).toContain('className="container game-topup-container py-5 sm:py-9"');
+    expect(pageSource).toContain("game-topup-container py-5 sm:py-9");
+    expect(pageSource).toContain("zp-page");
     expect(css).toContain("Game top-up package layout: sizing and grid geometry only; existing package-card presentation is preserved.");
     expect(css).toContain(".package-category-grid { gap: 1rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }");
     expect(css).toContain("@media (min-width: 992px) {\n  .package-category-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }");
@@ -166,13 +167,27 @@ describe("dedicated game top-up routes", () => {
     expect(active.storefrontPackages.map((item) => item.id)).toEqual(["diamonds"]);
   });
 
-  it("allows package UI without player fields only when the protected Admin preview mode is active", () => {
+  it("keeps identity-required browsing gated while allowing the public package preview to be selected", () => {
     expect(canBrowseTopupPackages(false, "invalid", false)).toBe(false);
     expect(canBrowseTopupPackages(true, "not_supported", false)).toBe(false);
     expect(canBrowseTopupPackages(true, "not_supported", false, true, true)).toBe(true);
     expect(canBrowseTopupPackages(true, "unavailable", false, true, true)).toBe(false);
     expect(canBrowseTopupPackages(false, undefined, true)).toBe(true);
     expect(canBrowseTopupPackages(true, undefined, false, false)).toBe(true);
+    const source = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
+    expect(source).toContain("setSelectedPackageIdState(id)");
+    expect(source).toContain("clearSelectedProduct();");
+    expect(source).toContain("មើល និងជ្រើសកញ្ចប់បាន");
+    expect(source).toContain("មុនពេលបង្កើត order និងទូទាត់");
+  });
+
+  it("creates purchase context only after valid identity gates, never for admin preview", () => {
+    expect(canCreateTopupPurchaseContext(true, undefined, false, true, false, false, null, "123")).toBe(false);
+    expect(canCreateTopupPurchaseContext(true, "invalid", false, true, false, false, null, "123")).toBe(false);
+    expect(canCreateTopupPurchaseContext(true, "unavailable", false, true, false, false, null, "123")).toBe(false);
+    expect(canCreateTopupPurchaseContext(true, "verified", true, true, false, false, "Verified", "123")).toBe(false);
+    expect(canCreateTopupPurchaseContext(true, "verified", false, true, false, true, "Verified", "123")).toBe(true);
+    expect(canCreateTopupPurchaseContext(true, "verified", false, true, false, true, null, "123")).toBe(false);
   });
 
   it("requires a verified Check-ID result for Player ID, Zone ID, and account-ID game forms only", () => {
@@ -205,9 +220,9 @@ describe("dedicated game top-up routes", () => {
     expect(source).not.toContain("useEffect(() => () => { clearSelectedProduct(); setPlayerTitle(null); }");
   });
 
-  it("places payment-method preselection after an accepted identity and before the package list without blocking public preview", () => {
+  it("places payment-method preselection before the package list without blocking public preview", () => {
     const source = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
-    const preselectPosition = source.indexOf("{canBrowsePackages && !adminPreviewActive ? <PaymentMethodPreselect /> : null}");
+    const preselectPosition = source.indexOf("{!adminPreviewActive && packages.length > 0 ? <PaymentMethodPreselect /> : null}");
     const packagePosition = source.indexOf("<DiamondPackages packages={packages}");
     expect(source).toContain('import { PaymentMethodPreselect } from "@/components/PaymentMethodGate"');
     expect(preselectPosition).toBeGreaterThan(-1);

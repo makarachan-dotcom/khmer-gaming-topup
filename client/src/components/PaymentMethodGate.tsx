@@ -1,4 +1,4 @@
-import { Check, CreditCard, Info, X } from "lucide-react";
+import { Check, ChevronRight, CreditCard, Info, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -16,17 +16,24 @@ type PaymentMethod = {
 export function PaymentMethodPreselect() {
   const methodsQuery = trpc.payments.methods.useQuery(undefined, { staleTime: 30_000, refetchInterval: 15_000 });
   const { selectedPaymentMethodId, setSelectedPaymentMethodId } = useSelectedProduct();
-  const methods = (methodsQuery.data ?? []).filter((method) => method.providerKey === "bakong_khqr");
+  const methods = ((methodsQuery.data ?? []) as PaymentMethod[]).filter((method) => method.providerKey === "bakong_khqr");
   const selectedMethod = methods.find((method) => method.id === selectedPaymentMethodId) ?? null;
+
+  // Round 9: as soon as KHQR is chosen this whole block collapses into a single
+  // line, so the packages sit directly beneath it and the buyer never has to
+  // scroll back up to pick a payment method again.
+  if (selectedMethod) return <div className="pm-chosen-bar">
+    <span className="pm-chosen-bar__mark" aria-hidden="true"><Check className="h-3.5 w-3.5" /></span>
+    <span className="pm-chosen-bar__text">បង់ប្រាក់តាម {selectedMethod.name}</span>
+    <button type="button" onClick={() => setSelectedPaymentMethodId(null)} className="pm-chosen-bar__change">ប្ដូរ</button>
+  </div>;
 
   return <section className="payment-method-preselect" aria-labelledby="payment-method-preselect-title">
     <div className="payment-method-preselect__header">
       <div>
         <p className="payment-method-gate__eyebrow">ជំហានទី 2</p>
         <h3 id="payment-method-preselect-title">ជ្រើសរើសវិធីបង់ប្រាក់</h3>
-        <p>ទទួលការទូទាត់តាម KHQR ប៉ុណ្ណោះ។ តម្លៃ និង package មិនផ្លាស់ប្តូរទេ។</p>
       </div>
-      {selectedMethod ? <span className="payment-method-preselect__selected"><Check className="h-3.5 w-3.5" />{selectedMethod.name}</span> : null}
     </div>
     <div className="payment-method-preselect__methods" aria-label="ជម្រើសវិធីបង់ប្រាក់">
       {methodsQuery.isLoading ? <MethodPlaceholder /> : methods.length ? methods.map((method) => <button key={method.id} type="button" onClick={() => setSelectedPaymentMethodId(method.id)} className={`payment-method-option ${selectedPaymentMethodId === method.id ? "payment-method-option--selected" : ""}`} aria-pressed={selectedPaymentMethodId === method.id}>
@@ -45,7 +52,7 @@ export function PaymentMethodGate({ product, open, onOpenChange }: { product: Se
   const gateQuery = trpc.payments.gate.useQuery(undefined, { staleTime: 15_000, refetchInterval: 15_000 });
   const createTopup = trpc.orders.createTopup.useMutation();
   const beginPayment = trpc.orders.beginPayment.useMutation();
-  const methods = (methodsQuery.data ?? []).filter((method) => method.providerKey === "bakong_khqr");
+  const methods = ((methodsQuery.data ?? []) as PaymentMethod[]).filter((method) => method.providerKey === "bakong_khqr");
   const { selectedPaymentMethodId, setSelectedPaymentMethodId, clearSelectedProduct } = useSelectedProduct();
   const [showInfo, setShowInfo] = useState(false);
   const [paymentScreen, setPaymentScreen] = useState(false);
@@ -113,11 +120,11 @@ export function PaymentMethodGate({ product, open, onOpenChange }: { product: Se
         <PaymentSummary product={product} method={selectedMethod} />
         <div className="payment-method-gate__advance-row">
           <div className="payment-method-gate__chosen"><Check className="h-4 w-4" /><span>{selectedMethod.name} ត្រូវបានជ្រើសរើស</span></div>
-          <button type="button" onClick={advance} aria-disabled={!paymentsEnabled} className={`payment-fast-forward ${paymentsEnabled ? "payment-fast-forward--active" : "payment-fast-forward--muted"}`} title={paymentsEnabled ? "បន្តទៅការទូទាត់" : "ការបង់ប្រាក់កំពុងត្រូវបានរៀបចំ"}>
-            <span className="sr-only">បន្តទៅការទូទាត់</span><span className="payment-fast-forward__chevrons" aria-hidden="true"><i /><i /><i /></span>
+          <button type="button" onClick={advance} disabled={!paymentsEnabled} className="zbtn zbtn--primary" title={paymentsEnabled ? "បន្តទៅការទូទាត់" : "ការបង់ប្រាក់កំពុងត្រូវបានរៀបចំ"}>
+            បន្តទៅការទូទាត់<ChevronRight />
           </button>
         </div>
-        {showInfo ? <div className="payment-method-gate__info" role="status"><Info className="h-4 w-4" /><span>ការបង់ប្រាក់កំពុងត្រូវបានរៀបចំ — សូមរង់ចាំបន្តិច</span></div> : null}
+        {!paymentsEnabled || showInfo ? <div className="payment-method-gate__info" role="status"><Info className="h-4 w-4" /><span>ការបង់ប្រាក់កំពុងត្រូវបានរៀបចំ — សូមរង់ចាំបន្តិច</span></div> : null}
       </div> : <div className="payment-method-gate__missing" role="status"><Info className="h-4 w-4" /><div><strong>មិនទាន់ជ្រើសវិធីបង់ប្រាក់</strong><p>សូមបិទផ្ទាំងនេះ ហើយជ្រើសវិធីបង់ប្រាក់នៅខាងលើកញ្ចប់ មុនបន្ត។</p></div></div>}
     </section>
   </div>;

@@ -29,8 +29,8 @@ describe("secure payment-link boundary", () => {
   it("applies private cache and crawler headers plus abuse limits to raw payment routes", () => {
     expect(source).toContain('Cache-Control", "no-store, private, max-age=0');
     expect(source).toContain('X-Robots-Tag", "noindex, nofollow, noarchive');
-    expect(source).toContain('limited(issueLimiter, ip, minute, 5)');
-    expect(source).toContain('limited(invalidLimiter, ip, hour, 10)');
+    expect(source).toContain('consumeRateLimit({ bucket: rateLimitBuckets.payKeyIssue, identifier: ip, mode: "strict" })');
+    expect(source).toContain('consumeRateLimit({ bucket: rateLimitBuckets.payLinkInvalid, identifier: clientIp(req), mode: "strict" })');
     expect(app).toContain('registerSecurePaymentLinkRoutes(app)');
     expect(vercel).toContain('"source": "/pay/:path*"');
     expect(vercel).toContain('"X-Robots-Tag", "value": "noindex, nofollow, noarchive"');

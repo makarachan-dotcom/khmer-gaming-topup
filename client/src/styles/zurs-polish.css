@@ -1,0 +1,242 @@
+/* ZURS polish layer — loaded LAST (after index.css, storefront-clean.css,
+   buttons.css) so it wins the cascade.
+
+   The app runs in LIGHT theme (Tailwind), but storefront-clean.css forced the
+   --z-* shell tokens dark (#0a0f1e), which read as "too black". This layer:
+   (A) flips the --z-* shell to a bright, colourful, clean palette that matches
+       the light Tailwind cards, (B) re-skins the few hard-coded dark surfaces
+       (tab bar, product action bar, package selector) to light + vibrant,
+       (C) fixes the reported glitch (clipped prices + overlapping floating
+       bars), and (D) styles the new payment pipeline + OTP login. */
+
+/* =====================================================================
+   A. Bright, colourful shell (replaces the flat near-black canvas)
+   ===================================================================== */
+:root {
+  --z-canvas: #eef1fb;
+  --z-panel: #ffffff;
+  --z-panel-2: #f1f5ff;
+  --z-line: rgba(30, 41, 59, 0.10);
+  --z-ink: #101828;
+  --z-ink-muted: #5b6478;
+  --z-neon: #38bdf8;
+  --z-neon-ink: #062033;
+  --z-shadow: 0 14px 34px rgba(31, 41, 74, 0.12);
+  color-scheme: light;
+}
+html, body {
+  max-width: 100%;
+  overflow-x: clip;
+  background:
+    radial-gradient(1200px 620px at 10% -8%, #e7ecff, transparent 60%),
+    radial-gradient(1000px 560px at 96% 2%, #e6fbff, transparent 55%),
+    linear-gradient(180deg, #f6f8ff, #eef2fb 55%, #f5eefc) !important;
+  color: var(--z-ink);
+}
+#root { position: relative; overflow-x: clip; }
+img, svg, video, canvas { max-width: 100%; }
+
+/* Rich colourful shell instead of the flat dark one */
+.zurs-dotted-shell {
+  background:
+    radial-gradient(1100px 560px at 8% -6%, rgba(99, 102, 241, 0.14), transparent 58%),
+    radial-gradient(900px 520px at 98% 3%, rgba(56, 189, 248, 0.14), transparent 55%),
+    linear-gradient(180deg, #f6f8ff, #eaf0fb 55%, #f4eefc) !important;
+  color: var(--z-ink) !important;
+}
+.loading-overlay { background: rgba(244, 247, 255, 0.82) !important; }
+
+/* Small accent labels stay readable on light */
+.zurs-eyebrow { color: #4338ca !important; }
+
+/* Keep the compact header light so the black ZURS wordmark remains readable. */
+.zurs-compact-header {
+  border-color: rgba(79, 70, 229, 0.16) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(238, 242, 255, 0.94)) !important;
+  box-shadow: 0 10px 24px rgba(31, 41, 74, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.95) !important;
+}
+.zurs-compact-header .fx-zurs-me,
+.zurs-compact-header .storefront-header-title__player {
+  --zurs-ink: #111827;
+  color: #111827 !important;
+}
+
+/* =====================================================================
+   B. Re-skin hard-coded dark surfaces → light + vibrant
+   ===================================================================== */
+/* Floating pill tab bar */
+.liquid-tabbar,
+.zurs-mobile-tabbar {
+  border: 1px solid rgba(79, 70, 229, 0.18) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(238, 242, 255, 0.86)) !important;
+  box-shadow: 0 16px 34px rgba(31, 41, 74, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(18px) saturate(1.1);
+}
+.zurs-mobile-tab { color: #475569 !important; }
+.zurs-mobile-tab--active {
+  background: linear-gradient(135deg, #4f46e5, #06b6d4) !important;
+  color: #ffffff !important;
+  box-shadow: 0 6px 16px rgba(79, 70, 229, 0.30) !important;
+}
+.zurs-mobile-tab--active .zurs-tab-glyph-icon { color: #ffffff !important; }
+.zurs-mobile-tab--live-active {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b) !important;
+  color: #3a2600 !important;
+  box-shadow: 0 6px 16px rgba(245, 158, 11, 0.32) !important;
+}
+
+/* Sticky "selected product" action bar */
+.selected-product-action-bar {
+  border: 1px solid rgba(79, 70, 229, 0.16) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(238, 242, 255, 0.82)) !important;
+  box-shadow: 0 18px 40px rgba(31, 41, 74, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.92) !important;
+  color: var(--z-ink) !important;
+  backdrop-filter: blur(22px) saturate(1.15);
+}
+
+/* Package selector — the "khmov / too black" area → light + colourful */
+.package-category-browser {
+  border: 1px solid rgba(79, 70, 229, 0.18) !important;
+  background:
+    radial-gradient(circle at 92% -10%, rgba(56, 189, 248, 0.16), transparent 42%),
+    linear-gradient(150deg, #ffffff, #eef2ff 58%, #f6effd) !important;
+  box-shadow: 0 16px 30px rgba(31, 41, 74, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+}
+.package-category-browser__title {
+  background: linear-gradient(90deg, #4f46e5, #06b6d4) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: transparent !important;
+}
+.package-category-browser__total {
+  border: 1px solid rgba(79, 70, 229, 0.28) !important;
+  background: #eef2ff !important;
+  color: #4338ca !important;
+}
+.package-category-tab {
+  border: 1px solid rgba(79, 70, 229, 0.16) !important;
+  background: #f1f5ff !important;
+  color: #475569 !important;
+}
+.package-category-tab b { background: rgba(79, 70, 229, 0.12) !important; color: #4338ca !important; }
+.package-category-tab:hover { border-color: rgba(79, 70, 229, 0.4) !important; color: #312e81 !important; }
+.package-category-tab--active {
+  border-color: transparent !important;
+  background: linear-gradient(135deg, #4f46e5, #06b6d4) !important;
+  color: #ffffff !important;
+  box-shadow: 0 6px 16px rgba(79, 70, 229, 0.28) !important;
+}
+.package-category-tab--active b { background: rgba(255, 255, 255, 0.26) !important; color: #ffffff !important; }
+.package-category-search {
+  border: 1px solid rgba(79, 70, 229, 0.18) !important;
+  background: #f6f8ff !important;
+  color: #4338ca !important;
+}
+.package-category-search input { color: #0f172a !important; }
+.package-category-search input::placeholder { color: #94a3b8 !important; }
+
+/* Price label stays high-contrast on the light package surface */
+.package-choice .text-amber-800 { color: #92400e !important; }
+
+/* =====================================================================
+   C. Glitch fix — clipped prices + overlapping floating controls
+   ===================================================================== */
+main, .container, .game-topup-container { max-width: 100%; }
+
+/* Reserve room so the centred tab bar never covers the last row of content */
+@media (max-width: 639px) {
+  main, .game-topup-container {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 6.5rem) !important;
+  }
+}
+
+/* Clean vertical ladder for the right-edge floating controls so the help
+   button, scroll-to-top and the product action bar never overlap. When the
+   action bar is on screen, lift the help + scroll-top buttons above it. */
+@media (max-width: 639px) {
+  .selected-product-action-bar {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 4.9rem) !important;
+  }
+  body:has(.selected-product-action-bar) .contact-admin-fab:not(.contact-admin-fab--payment) {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 9.2rem) !important;
+  }
+  body:has(.selected-product-action-bar) .storefront-scroll-top {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 13rem) !important;
+  }
+}
+
+/* Account history: Safari can preserve the intrinsic width of <details>
+   children unless every flex/grid boundary is explicitly shrinkable. */
+.account-history-grid,
+.account-history-panel,
+.account-history-panel > summary,
+.account-history-panel > summary + div,
+.account-history-panel > summary + div > div,
+.account-history-panel article {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+.account-history-panel > summary {
+  -webkit-tap-highlight-color: transparent;
+}
+.account-history-panel > summary::-webkit-details-marker {
+  display: none;
+}
+.account-history-panel article {
+  contain: inline-size;
+}
+
+/* =====================================================================
+   D. Payment success pipeline (deploy-pipeline style)
+   ===================================================================== */
+.zurs-pipeline { margin-top: 1rem; border: 1px solid rgba(30, 41, 59, 0.12); border-radius: 1.1rem; background: linear-gradient(160deg, #0c1424, #0a0f1e); padding: 1rem 1rem 1.15rem; box-shadow: 0 18px 40px rgba(15, 23, 42, 0.28); }
+.zurs-pipeline__bar { height: 6px; border-radius: 999px; background: rgba(56, 189, 248, 0.16); overflow: hidden; }
+.zurs-pipeline__bar-fill { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #22d3ee, #34d399); }
+.zurs-pipeline__stages { margin-top: 0.95rem; display: grid; gap: 0.55rem; }
+.zurs-pipeline__stage { display: flex; gap: 0.7rem; align-items: flex-start; border-radius: 0.85rem; padding: 0.6rem 0.7rem; border: 1px solid transparent; }
+.zurs-pipeline__stage.is-active { border-color: rgba(56, 189, 248, 0.35); background: rgba(56, 189, 248, 0.08); }
+.zurs-pipeline__stage.is-done { background: rgba(52, 211, 153, 0.08); }
+.zurs-pipeline__dot { display: grid; place-items: center; width: 1.8rem; height: 1.8rem; border-radius: 999px; flex-shrink: 0; border: 1px solid rgba(148, 163, 184, 0.4); color: #cbd5f5; background: rgba(148, 163, 184, 0.14); }
+.zurs-pipeline__stage.is-done .zurs-pipeline__dot { background: #34d399; color: #052e1b; border-color: transparent; }
+.zurs-pipeline__stage.is-active .zurs-pipeline__dot { color: #22d3ee; border-color: rgba(56, 189, 248, 0.5); }
+.zurs-pipeline__meta { min-width: 0; }
+.zurs-pipeline__title { color: #f1f5ff; font-weight: 800; font-size: 0.82rem; }
+.zurs-pipeline__caption { color: #94a3b8; font-size: 0.66rem; letter-spacing: 0.03em; margin-top: 0.05rem; }
+.zurs-pipeline__logs { margin-top: 0.4rem; display: grid; gap: 0.16rem; }
+.zurs-pipeline__log { color: #7dd3fc; font-family: ui-monospace, monospace; font-size: 0.64rem; }
+.zurs-pipeline__stage.is-done .zurs-pipeline__log { color: #6ee7b7; }
+.zurs-pipeline__note { margin-top: 0.85rem; border-radius: 0.75rem; border: 1px solid rgba(251, 191, 36, 0.3); background: rgba(251, 191, 36, 0.12); padding: 0.6rem 0.7rem; color: #fcd34d; font-size: 0.68rem; line-height: 1.5; }
+.zurs-pipeline__done { margin-top: 0.85rem; display: inline-flex; align-items: center; gap: 0.4rem; border-radius: 999px; padding: 0.4rem 0.85rem; background: rgba(52, 211, 153, 0.16); color: #34d399; font-weight: 800; font-size: 0.74rem; }
+
+/* =====================================================================
+   E. OTP / login page (intentional dark glassmorphism, as requested)
+   ===================================================================== */
+.zurs-otp-shell { position: relative; min-height: 100vh; display: grid; place-items: center; padding: 1.5rem; background: radial-gradient(1200px 600px at 50% -10%, #16161d, #0f0f13 60%); color: #f4f4f5; overflow: hidden; }
+.zurs-otp-aura { position: absolute; inset: -30% 20% auto 20%; height: 380px; background: radial-gradient(circle at 50% 40%, rgba(239, 68, 68, 0.22), transparent 60%); filter: blur(30px); pointer-events: none; }
+.zurs-otp-card { position: relative; width: 100%; max-width: 25rem; border-radius: 1.5rem; border: 1px solid rgba(255, 255, 255, 0.09); background: rgba(24, 24, 29, 0.72); backdrop-filter: blur(18px) saturate(1.1); box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5); padding: 1.6rem; transition: box-shadow 200ms ease, border-color 200ms ease; }
+.zurs-otp-card.is-error { border-color: rgba(239, 68, 68, 0.5); box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.35), 0 30px 60px rgba(0, 0, 0, 0.5); }
+.zurs-otp-back { display: inline-flex; align-items: center; gap: 0.35rem; color: #a1a1aa; font-size: 0.78rem; margin-bottom: 1.1rem; transition: color 160ms ease; background: none; border: 0; cursor: pointer; }
+.zurs-otp-back:hover { color: #fff; }
+.zurs-otp-badge { display: grid; place-items: center; width: 3rem; height: 3rem; border-radius: 1rem; background: rgba(239, 68, 68, 0.16); color: #fca5a5; margin-bottom: 1.1rem; }
+.zurs-otp-title { font-size: 1.55rem; font-weight: 900; letter-spacing: -0.01em; }
+.zurs-otp-subtitle { margin-top: 0.5rem; color: #a1a1aa; font-size: 0.82rem; line-height: 1.55; }
+.zurs-otp-subtitle strong { color: #f4f4f5; }
+.zurs-otp-form { margin-top: 1.3rem; display: grid; gap: 0.6rem; }
+.zurs-otp-label { font-size: 0.78rem; font-weight: 700; color: #d4d4d8; }
+.zurs-otp-input { height: 3rem; border-radius: 0.85rem; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(9, 9, 11, 0.6); padding: 0 0.9rem; color: #fff; outline: none; transition: border-color 160ms ease, box-shadow 160ms ease; }
+.zurs-otp-input:focus { border-color: #ef4444; box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2); }
+.zurs-otp-boxes { margin-top: 1.3rem; display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.5rem; }
+.zurs-otp-box { aspect-ratio: 1 / 1; width: 100%; border-radius: 0.8rem; border: 1px solid rgba(255, 255, 255, 0.12); background: rgba(9, 9, 11, 0.6); color: #fff; text-align: center; font-size: 1.4rem; font-weight: 800; outline: none; transition: border-color 160ms ease, box-shadow 160ms ease, transform 120ms ease; }
+.zurs-otp-box:focus { border-color: #ef4444; box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.22); transform: translateY(-1px); }
+.zurs-otp-box.is-filled { border-color: rgba(239, 68, 68, 0.6); background: rgba(239, 68, 68, 0.08); }
+.zurs-otp-submit { margin-top: 1.3rem; height: 3rem; width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; border-radius: 0.85rem; background: linear-gradient(135deg, #ef4444, #f97316); color: #fff; font-weight: 800; font-size: 0.85rem; border: 0; cursor: pointer; transition: filter 160ms ease, transform 160ms ease, opacity 160ms ease; }
+.zurs-otp-submit:not(:disabled):hover { filter: brightness(1.05); transform: translateY(-1px); }
+.zurs-otp-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+.zurs-otp-foot { margin-top: 1rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+.zurs-otp-link { color: #a1a1aa; font-size: 0.76rem; font-weight: 600; background: none; border: 0; cursor: pointer; transition: color 160ms ease; }
+.zurs-otp-link:disabled { opacity: 0.5; cursor: not-allowed; }
+.zurs-otp-link:not(:disabled):hover { color: #fff; }
+.zurs-otp-error { margin-top: 1rem; border-radius: 0.8rem; border: 1px solid rgba(239, 68, 68, 0.25); background: rgba(239, 68, 68, 0.12); padding: 0.65rem 0.8rem; color: #fecaca; font-size: 0.8rem; }
+.zurs-otp-success { text-align: center; padding: 0.5rem 0; }
+.zurs-otp-success-ring { margin: 0 auto 1rem; display: grid; place-items: center; width: 4.5rem; height: 4.5rem; border-radius: 999px; background: rgba(34, 197, 94, 0.16); color: #4ade80; box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.08); }

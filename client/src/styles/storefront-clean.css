@@ -1,0 +1,110 @@
+/* ZURS "Clean Dark" visual system.
+   Loaded AFTER index.css (see main.tsx) so it wins the cascade.
+   Legacy selectors are kept (tests reference them) and re-skinned here. */
+:root {
+  --z-canvas: #0a0f1e;
+  --z-panel: #111a2e;
+  --z-panel-2: #18233a;
+  --z-line: rgba(238, 242, 255, 0.09);
+  --z-ink: #eef2ff;
+  --z-ink-muted: #8d97b2;
+  --z-neon: #38bdf8;
+  --z-neon-ink: #062033;
+  --z-shadow: 0 12px 32px rgba(2, 6, 23, 0.45);
+  --z-ease: cubic-bezier(0.23, 1, 0.32, 1);
+  color-scheme: dark;
+}
+html, body { background: var(--z-canvas); color: var(--z-ink); }
+/* 1 · Shell — flat canvas. No dot grid, no particles, no radial washes. */
+.zurs-dotted-shell { background: var(--z-canvas); color: var(--z-ink); }
+.zurs-dotted-shell::before { display: none; }
+.zurs-particle-field { display: none; }
+/* 2 · Header */
+.zurs-compact-header {
+  border-color: var(--z-line) !important;
+  background: rgba(17, 26, 46, 0.86) !important;
+  box-shadow: none;
+  backdrop-filter: blur(16px) saturate(1.1);
+}
+.fx-zurs-me { --zurs-ink: var(--z-ink); --zurs-accent: var(--z-neon); text-shadow: none; }
+.storefront-header-title__player { color: var(--z-ink); }
+/* 3 · Surfaces & controls */
+.zurs-mobile-glass {
+  border-color: var(--z-line) !important;
+  background: var(--z-panel) !important;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.zurs-search-field { border: 1px solid var(--z-line); background: var(--z-panel); box-shadow: none; color: var(--z-ink); }
+.zurs-search-field:hover { border-color: rgba(56, 189, 248, 0.4); }
+.zurs-search-field:focus { border-color: var(--z-neon); }
+.zurs-filter-pills { border: 1px solid var(--z-line); background: var(--z-panel); }
+.zurs-eyebrow { color: var(--z-neon); font-family: "Kantumruy Pro", sans-serif; font-size: 0.72rem; letter-spacing: 0.14em; }
+.zurs-banner-frame { box-shadow: var(--z-shadow); }
+.zurs-banner-kicker { display: none; }
+/* 4 · Game cards */
+.zurs-game-card {
+  padding: 0.35rem;
+  border: 1px solid var(--z-line);
+  background: var(--z-panel);
+  box-shadow: none;
+  transition: border-color 180ms var(--z-ease), background-color 180ms var(--z-ease), transform 180ms var(--z-ease);
+}
+.zurs-game-card:hover,
+.zurs-game-card:focus-visible {
+  border-color: rgba(56, 189, 248, 0.55);
+  background: var(--z-panel-2);
+  box-shadow: none;
+  transform: translateY(-2px);
+}
+.zurs-game-card--popular { border-color: var(--z-line); }
+.zurs-game-card-media { border: 0; background: var(--z-panel-2); box-shadow: none; }
+.zurs-game-card-art { transition: transform 320ms var(--z-ease); }
+.zurs-game-card:hover .zurs-game-card-art { transform: scale(1.03); }
+.zurs-game-card-overlay { background: linear-gradient(180deg, transparent 55%, rgba(10, 15, 30, 0.55)); }
+.zurs-game-card-popular {
+  left: 0.5rem; top: 0.5rem;
+  display: inline-flex; align-items: center; gap: 0.25rem;
+  border-radius: 999px; padding: 0.2rem 0.5rem;
+  background: var(--z-neon); color: var(--z-neon-ink);
+  font-size: 0.68rem; font-weight: 800; letter-spacing: 0.02em;
+  box-shadow: none; text-shadow: none;
+}
+.zurs-game-card-cambodia { display: none; }
+.zurs-game-group { border-color: var(--z-line); background: var(--z-panel); box-shadow: none; }
+/* 5 · Mobile tab bar */
+.liquid-tabbar,
+.zurs-mobile-tabbar {
+  border: 1px solid var(--z-line);
+  background: rgba(17, 26, 46, 0.92);
+  box-shadow: var(--z-shadow);
+  backdrop-filter: blur(16px);
+}
+.zurs-mobile-tab { color: var(--z-ink-muted); }
+.zurs-mobile-tab--active,
+.zurs-mobile-tab--live-active { background: var(--z-neon); color: var(--z-neon-ink); box-shadow: none; text-shadow: none; }
+.zurs-mobile-tab--active .zurs-tab-glyph-icon { color: var(--z-neon-ink); }
+/* 6 · Footer */
+.zurs-footer,
+.zurs-footer-glass {
+  border-color: var(--z-line) !important;
+  background: transparent !important;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.zurs-footer-inner { border: 1px solid var(--z-line); background: var(--z-panel); box-shadow: none; }
+.zurs-footer-link { color: var(--z-ink-muted); }
+.zurs-footer-link:hover,
+.zurs-footer-link:focus-visible { color: var(--z-ink); border-color: var(--z-neon); }
+/* 7 · Floating controls */
+.selected-product-action-bar {
+  border: 1px solid var(--z-line);
+  background: rgba(17, 26, 46, 0.94);
+  box-shadow: var(--z-shadow);
+  backdrop-filter: blur(16px);
+  color: var(--z-ink);
+}
+.loading-overlay { background: rgba(10, 15, 30, 0.78) !important; }
+@media (prefers-reduced-motion: reduce) {
+  .zurs-game-card, .zurs-game-card-art { transition: none; }
+}

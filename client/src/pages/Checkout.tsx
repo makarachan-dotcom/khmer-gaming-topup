@@ -10,6 +10,7 @@ import { trpc } from "@/lib/trpc";
 import { khqrLogoUrl } from "@/lib/mobileLegendsAssets";
 import { BakongKhqrCard } from "@/components/BakongKhqrCard";
 import { SampeahCelebration } from "@/components/SampeahCelebration";
+import PaymentSuccessPipeline from "@/components/PaymentSuccessPipeline";
 import { AlertTriangle, BadgeCheck, CheckCircle2, ChevronRight, Clock3, CreditCard, Download, ExternalLink, FileText, Home, LockKeyhole, PackageCheck, PencilLine, RefreshCw, ShieldCheck, XCircle } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
@@ -45,6 +46,7 @@ export default function Checkout() {
   const preview = orderId === "preview";
   const { selectedProduct } = useSelectedProduct();
   const session = trpc.orders.paymentSession.useQuery({ orderId }, { enabled: orderId.length >= 4 && !preview });
+  const refreshPayment = trpc.orders.refreshPayment.useMutation();
   const methods = trpc.payments.methods.useQuery(undefined, { staleTime: 30_000 });
   const [showReceipt, setShowReceipt] = useState(false);
   const [celebrate, setCelebrate] = useState(false);
@@ -54,11 +56,15 @@ export default function Checkout() {
   const paymentStatus = payment?.status ?? null;
   const previousStatus = useRef<string | null>(null);
 
+  const checkPayment = () => {
+    void refreshPayment.mutateAsync({ orderId }).finally(() => { void session.refetch(); });
+  };
+
   useEffect(() => {
     if (!waitingForBakong) return;
-    const timer = window.setInterval(() => { void session.refetch(); }, 10_000);
+    const timer = window.setInterval(checkPayment, 10_000);
     return () => window.clearInterval(timer);
-  }, [waitingForBakong, session]);
+  }, [waitingForBakong, orderId]);
 
   // Khmer sampeah celebration fires only on the live pending → paid transition,
   // so revisiting an already-paid receipt never replays the popup.
@@ -68,7 +74,7 @@ export default function Checkout() {
   }, [paymentStatus]);
 
   if (preview) return <PaymentPreview product={selectedProduct} />;
-  if (session.isLoading) return <StorefrontLayout><Seo noindex /><main className="container max-w-3xl pt-7 sm:pt-12"><PaymentLoading /></main></StorefrontLayout>;
+  if (session.isLoading) return <StorefrontLayout><Seo noindex /><main className="container max-w-3xl pt-7 sm:pt-12 zp-page"><PaymentLoading /></main></StorefrontLayout>;
   if (session.error || !session.data || !order) return <StorefrontLayout><Seo noindex /><main className="container max-w-xl pt-7 sm:pt-12"><CheckoutUnavailable /></main></StorefrontLayout>;
 
   const selectedMethod = resolveSessionMethod(payment, methods.data ?? []);
@@ -79,7 +85,7 @@ export default function Checkout() {
   return <StorefrontLayout><Seo noindex /><main className="checkout-page container max-w-3xl py-5 pb-28 sm:py-10 sm:pb-16">
     <CheckoutHeader />
     <OrderSummaryCard order={order} details={details} />
-    {payment?.provider === "bakong_khqr" ? <KhqrPaymentExperience payment={payment} order={order} selectedMethod={selectedMethod} waiting={waitingForBakong} refreshing={session.isFetching} expired={isExpired} onRefresh={() => void session.refetch()} onViewReceipt={() => setShowReceipt(true)} /> : <PaymentUnavailable />}
+    {payment?.provider === "bakong_khqr" ? <KhqrPaymentExperience payment={payment} order={order} selectedMethod={selectedMethod} waiting={waitingForBakong} refreshing={session.isFetching || refreshPayment.isPending} expired={isExpired} onRefresh={checkPayment} onViewReceipt={() => setShowReceipt(true)} /> : <PaymentUnavailable />}
     {isPaid ? <SuccessActions onViewReceipt={() => setShowReceipt(true)} /> : null}
     {showReceipt && payment ? <ReceiptDialog order={order} payment={payment} details={details} method={selectedMethod} onClose={() => setShowReceipt(false)} /> : null}
     <SampeahCelebration open={celebrate} onClose={() => setCelebrate(false)} />
@@ -125,7 +131,7 @@ function PaymentPreview({ product }: { product: SelectedProduct | null }) {
       {pendingLimitReached ? <p className="checkout-pending-block" role="alert"><AlertTriangle className="h-4 w-4" />អ្នកមានការទូទាត់កំពុងរង់ចាំ ២ រួចហើយ — មិនអាចបង្កើតការទូទាត់ថ្មីលើសពី ២ បានទេ។ សូមបញ្ចប់ ឬរង់ចាំ QR ចាស់ផុតកំណត់សិន។</p> : null}
       {error ? <p className="checkout-preview-confirm__error" role="alert">{error}</p> : null}
       {!loading && !user ? <a href={`/api/auth/google?returnTo=${encodeURIComponent("/checkout/preview")}`} className="checkout-primary-action">ចូលគណនីដើម្បីបន្ត</a> : <div className="checkout-confirm-actions">
-        <button type="button" disabled={busy || pendingLimitReached} className="checkout-primary-action" onClick={() => void confirm()}>{busy ? <><OutlineLoader size={18} color="#ffffff" />កំពុងបង្កើត QR…</> : <><CheckCircle2 className="h-4 w-4" />បញ្ជាក់ និងបង្កើត KHQR</>}</button>
+        <button type="button" disabled={busy || pendingLimitReached} className="checkout-primary-action" onClick={() => void confirm()}>{busy ? <><OutlineLoader size={18} color="currentColor" />កំពុងបង្កើត QR…</> : <><CheckCircle2 className="h-4 w-4" />បញ្ជាក់ និងបង្កើត KHQR</>}</button>
         <button type="button" disabled={busy} className="checkout-secondary-action" onClick={() => window.history.back()}><PencilLine className="h-4 w-4" />កែប្រែការបញ្ជាទិញ</button>
       </div>}
     </section>
@@ -134,11 +140,11 @@ function PaymentPreview({ product }: { product: SelectedProduct | null }) {
 
 
 function CheckoutHeader() {
-  return <header className="checkout-page__header"><AnimatedBackButton href="/account" className="checkout-page__back"><ChevronRight className="h-4 w-4 rotate-180" />ត្រឡប់ក្រោយ</AnimatedBackButton><div className="checkout-page__secure"><span className="checkout-page__logo-mark">Z</span><span className="font-display text-sm font-extrabold text-slate-950">ZURS.me</span><span className="checkout-page__secure-copy"><LockKeyhole className="h-3.5 w-3.5" />ការទូទាត់មានសុវត្ថិភាព</span></div></header>;
+  return <header className="checkout-page__header"><AnimatedBackButton href="/account" className="checkout-page__back"><ChevronRight className="h-4 w-4 rotate-180" />ត្រឡប់ក្រោយ</AnimatedBackButton><div className="checkout-page__secure"><span className="checkout-page__logo-mark">Z</span><span className="font-display text-sm font-extrabold text-ink">ZURS.me</span><span className="checkout-page__secure-copy"><LockKeyhole className="h-3.5 w-3.5" />ការទូទាត់មានសុវត្ថិភាព</span></div></header>;
 }
 
 function PaymentLoading() {
-  return <div className="checkout-page__loading"><OutlineLoader size={34} color="#4f46e5" /><p>កំពុងបើកទំព័រទូទាត់សុវត្ថិភាព…</p></div>;
+  return <div className="checkout-page__loading"><OutlineLoader size={34} color="#38bdf8" /><p>កំពុងបើកទំព័រទូទាត់សុវត្ថិភាព…</p></div>;
 }
 
 function CheckoutUnavailable() {
@@ -156,7 +162,7 @@ function SummaryDetail({ label, value, mono = false }: { label: string; value: s
 }
 
 function PaymentUnavailable() {
-  return <section className="checkout-khqr"><div className="checkout-section-heading"><div><p>PAYMENT SESSION</p><h2>កំពុងរៀបចំវិធីបង់ប្រាក់</h2></div><span>Pending</span></div><div className="checkout-methods__loading"><CreditCard className="h-5 w-5" />session នេះមិនទាន់មាន QR payment instruction ដែលអាចបង្ហាញបានទេ។</div></section>;
+  return <section className="checkout-khqr"><div className="checkout-section-heading"><div><p>PAYMENT SESSION</p><h2>កំពុងរៀបចំវិធីបង់ប្រ���ក់</h2></div><span>Pending</span></div><div className="checkout-methods__loading"><CreditCard className="h-5 w-5" />session នេះមិនទាន់មាន QR payment instruction ដែលអាចបង្ហាញបានទេ។</div></section>;
 }
 
 function KhqrPaymentExperience({ payment, order, selectedMethod, waiting, refreshing, expired, onRefresh, onViewReceipt }: { payment: LedgerPayment; order: LedgerOrder; selectedMethod: PaymentMethod | null; waiting: boolean; refreshing: boolean; expired: boolean; onRefresh: () => void; onViewReceipt: () => void }) {
@@ -166,17 +172,26 @@ function KhqrPaymentExperience({ payment, order, selectedMethod, waiting, refres
   return <section className={`checkout-khqr ${paid ? "checkout-khqr--paid" : ""}`} aria-live="polite">
     <div className="checkout-section-heading"><div><p>SECURE QR PAYMENT</p><h2>{paid ? "ការទូទាត់បានបញ្ជាក់" : expired ? "QR ផុតសុពលភាព" : "ស្កេនដើម្បីបង់ប្រាក់"}</h2></div>{paid ? <span className="checkout-status checkout-status--paid"><BadgeCheck className="h-4 w-4" />PAID</span> : expired ? <span className="checkout-status checkout-status--expired"><XCircle className="h-4 w-4" />EXPIRED</span> : <span className="checkout-status"><Clock3 className="h-4 w-4" />{formatCountdown(secondsLeft)}</span>}</div>
     <div className="checkout-khqr__body">
-      <BakongKhqrCard merchantName="ZURS STORE" amountLabel={money.amount} currencyLabel={money.currency} paid={paid} footer={<>ស្កេនជាមួយ ABA, Bakong, Wing, ACLEDA ឬ app KHQR ណាមួយ</>} qr={<div className="checkout-qr-card">{payment.qrImageDataUrl ? <img src={payment.qrImageDataUrl} alt="KHQR payment code" className="checkout-qr-card__image" /> : <OutlineLoader size={38} color="#4f46e5" />}{paid ? <div className="fx-stamp">PAID</div> : null}</div>} />
-      <div className="checkout-khqr__copy"><span className="checkout-khqr__brand"><img src={khqrLogoUrl} alt="KHQR" className="h-5 w-5 object-contain" />{selectedMethod?.name ?? "KHQR"}</span>{paid ? <p className="checkout-khqr__success-copy"><CheckCircle2 className="h-4 w-4" />ការទូទាត់ត្រូវបានផ្ទៀងផ្ទាត់ក្នុង ledger រួចរាល់។</p> : expired ? <p className="checkout-khqr__expired-copy">QR នេះផុតសុពលភាពហើយ។ សូមបង្កើត payment session ថ្មីពី order របស់អ្នក។</p> : <p className="checkout-khqr__waiting-copy"><AnimatedGlyph name="activity" size={18} color="#4f46e5" />កំពុងរង់ចាំការទូទាត់… ប្រព័ន្ធពិនិត្យស្ថានភាពរៀងរាល់ 10 វិនាទី។</p>}</div>
+      <BakongKhqrCard merchantName="ZURS STORE" amountLabel={money.amount} currencyLabel={money.currency} paid={paid} footer={<>ស្កេនជាមួយ ABA, Bakong, Wing, ACLEDA ឬ app KHQR ណាមួយ</>} qr={<div className="checkout-qr-card">{payment.qrImageDataUrl ? <img src={payment.qrImageDataUrl} alt="KHQR payment code" className="checkout-qr-card__image" /> : <OutlineLoader size={38} color="#38bdf8" />}{paid ? <div className="fx-stamp">PAID</div> : null}</div>} />
+      <div className="checkout-khqr__copy"><span className="checkout-khqr__brand"><img src={khqrLogoUrl} alt="KHQR" className="h-5 w-5 object-contain" />{selectedMethod?.name ?? "KHQR"}</span>{paid ? <p className="checkout-khqr__success-copy"><CheckCircle2 className="h-4 w-4" />ការទូទាត់ត្រូវបានផ្ទៀងផ្ទាត់ក្នុង ledger រួចរាល់។</p> : expired ? <p className="checkout-khqr__expired-copy">QR នេះផុតសុពលភាពហើយ។ សូមបង្កើត payment session ថ្មីពី order របស់អ្នក។</p> : <p className="checkout-khqr__waiting-copy"><AnimatedGlyph name="activity" size={18} color="#38bdf8" />កំពុងរង់ចាំការទូទាត់… ប្រព័ន្ធពិនិត្យស្ថានភាពរៀងរាល់ 10 វិនាទី។</p>}</div>
     </div>
-    {payment.deeplink && !paid && !expired ? <a href={payment.deeplink} target="_blank" rel="noreferrer" className="checkout-khqr__deeplink"><ExternalLink className="h-4 w-4" />បើកកម្មវិធីធនាគារ</a> : null}
-    {!paid ? <div className="checkout-khqr__actions"><button type="button" disabled={!waiting || refreshing} onClick={onRefresh} className="checkout-primary-action">{refreshing ? <OutlineLoader size={18} color="#ffffff" /> : <RefreshCw className="h-4 w-4" />}ខ្ញុំបានបង់រួចហើយ</button><button type="button" disabled={!waiting || refreshing} onClick={onRefresh} className="checkout-secondary-action"><RefreshCw className="h-4 w-4" />ពិនិត្យម្ដងទៀត</button><Link href="/account" className="checkout-cancel-action">បោះបង់ការទូទាត់</Link></div> : <SuccessState order={order} onViewReceipt={onViewReceipt} />}
+    {!paid ? (
+      <div className="checkout-khqr__actions">
+        {payment.deeplink && !expired ? <a href={payment.deeplink} target="_blank" rel="noreferrer" className="checkout-primary-action"><ExternalLink className="h-4 w-4" />បើកកម្មវិធីធនាគារ</a> : null}
+        <button type="button" disabled={!waiting || refreshing} onClick={onRefresh} className={payment.deeplink && !expired ? "checkout-secondary-action" : "checkout-primary-action"}>
+          {refreshing ? <OutlineLoader size={18} color="currentColor" /> : <RefreshCw className="h-4 w-4" />}ខ្ញុំបានបង់រួចហើយ — ពិនិត្យ
+        </button>
+        <Link href="/account" className="checkout-cancel-action">បោះបង់ការទូទាត់</Link>
+      </div>
+    ) : <SuccessState order={order} onViewReceipt={onViewReceipt} />}
   </section>;
 }
 
 function SuccessState({ order, onViewReceipt }: { order: LedgerOrder; onViewReceipt: () => void }) {
-  const isAdminTestPurchase = isAdminKhqrTestPurchase(readOrderDetails(order.details));
-  return <section className="checkout-success-state"><div className="checkout-success-state__head"><AnimatedGlyph name="success" size={34} color="#059669" /><div><h2>{isAdminTestPurchase ? "បានទិញ Test Product ជោគជ័យ!" : "ការទូទាត់ជោគជ័យ!"}</h2><p>{isAdminTestPurchase ? "KHQR $0.02 ត្រូវបានបញ្ជាក់ និងបានកត់ត្រាជា Test Product រួចរាល់។" : "ការបញ្ជាទិញរបស់អ្នកកំពុងត្រូវបានដំណើរការ"}</p></div></div><ol className="checkout-success-state__steps"><li className="is-complete"><CheckCircle2 className="h-4 w-4" /><span>Payment received</span></li><li className={order.status === "delivered" ? "is-complete" : "is-pending"}><Clock3 className="h-4 w-4" /><span>{isAdminTestPurchase ? "Test product recorded" : "Processing order"}</span></li><li className={order.status === "delivered" ? "is-complete" : "is-pending"}><PackageCheck className="h-4 w-4" /><span>{isAdminTestPurchase ? "Test completed" : "Completed / Delivered"}</span></li></ol><button type="button" onClick={onViewReceipt} className="checkout-receipt-action"><FileText className="h-4 w-4" />មើលបង្កាន់ដៃ</button></section>;
+  const details = readOrderDetails(order.details);
+  const isAdminTestPurchase = isAdminKhqrTestPurchase(details);
+  const playerId = typeof details.playerId === "string" ? details.playerId : null;
+  return <section className="checkout-success-state"><div className="checkout-success-state__head"><AnimatedGlyph name="success" size={34} color="#34d399" /><div><h2>{isAdminTestPurchase ? "បានទិញ Test Product ជោគជ័យ!" : "ការទូទាត់ជោគជ័យ!"}</h2><p>{isAdminTestPurchase ? "KHQR $0.02 ត្រូវបានបញ្ជាក់ និងបានកត់ត្រាជា Test Product រួចរាល់។" : "ការបញ្ជាទិញរបស់អ្នកកំពុងត្រូវបានដំណើរការ"}</p></div></div><PaymentSuccessPipeline status={order.status} productName={order.productName} isTest={isAdminTestPurchase} playerId={playerId} orderRef={order.orderNumber} /><button type="button" onClick={onViewReceipt} className="checkout-receipt-action"><FileText className="h-4 w-4" />មើលបង្កាន់ដៃ</button></section>;
 }
 
 function SuccessActions({ onViewReceipt }: { onViewReceipt: () => void }) {

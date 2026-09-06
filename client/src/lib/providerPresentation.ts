@@ -84,6 +84,13 @@ const storefrontGamePriority = [
   "pubg mobile",
   "honor of kings",
   "magic chess go go",
+  // Round 8 follow-up: the Telegram service sorted dead last (after every game),
+  // so on a phone it sat far below the fold and looked like it was missing.
+  "telegram",
+  "telegram stars",
+  "telegram premium",
+  "roblox robux",
+  "roblox",
 ];
 
 function storefrontPriority(name: string) {

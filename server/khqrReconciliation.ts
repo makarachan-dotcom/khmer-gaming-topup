@@ -1,3 +1,5 @@
+import { moneyEquals } from "./paymentSecurity";
+
 export type KhqrStoredPayment = {
   provider: string;
   md5: string;
@@ -33,7 +35,9 @@ export function getKhqrReconciliationDisposition(
     || stored.md5 !== callback.md5
     || stored.orderId !== callback.orderId
     || stored.currency !== callback.currency
-    || Number(stored.amount) !== Number(callback.amount)
+    // Exact minor-unit comparison. `Number()` would let "2.00000001" and
+    // scientific notation slip through an amount check.
+    || !moneyEquals(stored.amount, callback.amount, stored.currency)
   ) return "reject" as const;
   if (stored.paymentStatus === "paid" && stored.orderStatus === "paid") return "idempotent" as const;
   if (stored.paymentStatus !== "pending" || stored.orderStatus !== "awaiting_payment") return "reject" as const;
@@ -50,7 +54,7 @@ export function getKhqrWalletReconciliationDisposition(
     || stored.md5 !== callback.md5
     || callback.orderId !== `wallet:${stored.walletId}`
     || callback.currency !== "KHR"
-    || Number(stored.amount) !== Number(callback.amount)
+    || !moneyEquals(stored.amount, callback.amount, "KHR")
   ) return "reject" as const;
   if (stored.status === "paid") return "idempotent" as const;
   if (stored.status !== "pending") return "reject" as const;

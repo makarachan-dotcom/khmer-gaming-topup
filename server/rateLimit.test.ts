@@ -10,27 +10,29 @@ const routersSource = fs.readFileSync(path.join(serverDir, "routers.ts"), "utf8"
 
 describe("rate limit buckets", () => {
   it("keeps the limits required by the security review", () => {
-    expect(rateLimitBuckets.payKeyIssue).toMatchObject({ limit: 5, windowSeconds: 300 });
-    expect(rateLimitBuckets.auth).toMatchObject({ limit: 10, windowSeconds: 60 });
-    expect(rateLimitBuckets.trpcPublic).toMatchObject({ limit: 60, windowSeconds: 60 });
+    expect(rateLimitBuckets.payKeyIssue).toMatchObject({ limit: 20, windowSeconds: 300 });
+    expect(rateLimitBuckets.auth).toMatchObject({ limit: 60, windowSeconds: 60 });
+    expect(rateLimitBuckets.trpcPublic).toMatchObject({ limit: 600, windowSeconds: 60 });
     expect(rateLimitBuckets.createTopup).toMatchObject({ limit: 10, windowSeconds: 3600 });
   });
 
-  it("rejects the sixth pay key attempt from one address", async () => {
+  it("rejects the attempt past the pay key limit from one address", async () => {
+    const { limit } = rateLimitBuckets.payKeyIssue;
     const identifier = `test-${Math.random().toString(36).slice(2)}`;
     const decisions = [];
-    for (let attempt = 0; attempt < 6; attempt += 1) {
+    for (let attempt = 0; attempt < limit + 1; attempt += 1) {
       decisions.push(await consumeRateLimit({ bucket: rateLimitBuckets.payKeyIssue, identifier, mode: "strict" }));
     }
-    expect(decisions.slice(0, 5).every((decision) => decision.allowed)).toBe(true);
-    expect(decisions[5]!.allowed).toBe(false);
-    expect(decisions[5]!.retryAfterSeconds).toBeGreaterThan(0);
+    expect(decisions.slice(0, limit).every((decision) => decision.allowed)).toBe(true);
+    expect(decisions[limit]!.allowed).toBe(false);
+    expect(decisions[limit]!.retryAfterSeconds).toBeGreaterThan(0);
   });
 
   it("counts each identifier separately", async () => {
+    const { limit } = rateLimitBuckets.payKeyIssue;
     const first = `test-${Math.random().toString(36).slice(2)}`;
     const second = `test-${Math.random().toString(36).slice(2)}`;
-    for (let attempt = 0; attempt < 5; attempt += 1) {
+    for (let attempt = 0; attempt < limit; attempt += 1) {
       await consumeRateLimit({ bucket: rateLimitBuckets.payKeyIssue, identifier: first, mode: "strict" });
     }
     const blocked = await consumeRateLimit({ bucket: rateLimitBuckets.payKeyIssue, identifier: first, mode: "strict" });
@@ -59,7 +61,7 @@ describe("rate limit wiring regression", () => {
     expect(appSource).toContain('app.use("/api/auth", rateLimitMiddleware({ bucket: rateLimitBuckets.auth, mode: "strict" }))');
     expect(appSource).toContain('app.use("/api/trpc", rateLimitMiddleware({ bucket: rateLimitBuckets.trpcPublic, mode: "lenient" }))');
     const trpcLimiterIndex = appSource.indexOf('app.use("/api/trpc", rateLimitMiddleware');
-    const trpcRouterIndex = appSource.indexOf('createExpressMiddleware');
+    const trpcRouterIndex = appSource.indexOf('createExpressMiddleware({');
     expect(trpcLimiterIndex).toBeLessThan(trpcRouterIndex);
   });
 

@@ -34,13 +34,6 @@ export const games: GameProduct[] = [
   },
 ];
 
-export const smmServices = [
-  { id: "ig-follow", platform: "Instagram", icon: "IG", service: "អ្នកតាមដាន", description: "អ្នកតាមដានពិតប្រាកដសម្រាប់គណនីរបស់អ្នក", rates: [{ qty: 500, price: 4.5 }, { qty: 1000, price: 8.2 }, { qty: 2500, price: 19.5 }] },
-  { id: "tt-view", platform: "TikTok", icon: "TT", service: "ការមើលវីដេអូ", description: "បង្កើនការមើលវីដេអូ TikTok", rates: [{ qty: 5000, price: 2.9 }, { qty: 10000, price: 5.5 }, { qty: 25000, price: 12.5 }] },
-  { id: "fb-like", platform: "Facebook", icon: "FB", service: "Likes & Reactions", description: "បង្កើនការចូលរួមសម្រាប់ Page និង Post", rates: [{ qty: 500, price: 3.9 }, { qty: 1000, price: 7.2 }, { qty: 2500, price: 16.8 }] },
-  { id: "yt-watch", platform: "YouTube", icon: "YT", service: "Watch Time", description: "ការមើលសម្រាប់វីដេអូ YouTube", rates: [{ qty: 1000, price: 5.4 }, { qty: 2500, price: 12.2 }, { qty: 5000, price: 22.6 }] },
-  { id: "tg-member", platform: "Telegram", icon: "TG", service: "Channel Members", description: "បង្កើនសមាជិកសម្រាប់ Channel", rates: [{ qty: 500, price: 4.2 }, { qty: 1000, price: 7.8 }, { qty: 2500, price: 18.3 }] },
-];
 
 export type MarketplaceListing = {
   id: string;

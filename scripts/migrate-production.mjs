@@ -9,6 +9,7 @@ const migrationsFolder = path.resolve("drizzle");
 const journal = JSON.parse(fs.readFileSync(path.join(migrationsFolder, "meta", "_journal.json"), "utf8"));
 const liveSpinMigration = journal.entries.find((entry) => entry.tag === "0017_livespin_fairness");
 const multiWinnerMigration = journal.entries.find((entry) => entry.tag === "0020_livespin_multiwinner_consolation");
+const supportChatE2eeMigration = journal.entries.find((entry) => entry.tag === "0026_support_chat_e2ee");
 
 if (!liveSpinMigration || !multiWinnerMigration) {
   throw new Error("Live Spin migration metadata is missing.");
@@ -98,6 +99,34 @@ async function applyPartialSafeMultiWinnerMigration(connection) {
   console.log("Live Spin multi-winner migration completed and recorded.");
 }
 
+/**
+ * 0024 creates the support chat tables with `CREATE TABLE IF NOT EXISTS`, so the
+ * end-to-end encryption columns that were later added to that file never reached
+ * databases which had already applied it. 0026 adds them as real ALTERs; this
+ * applies it additively first so a database that somehow already has a piece of
+ * it cannot abort the whole migration run.
+ */
+async function applyAdditiveSupportChatE2eeMigration(connection) {
+  if (!supportChatE2eeMigration) return;
+  if (!(await tableExists(connection, "support_chat_sessions"))) return;
+
+  const { hash, statements } = migrationContent(supportChatE2eeMigration);
+  const [recorded] = await connection.query("SELECT 1 FROM `__drizzle_migrations` WHERE `hash` = ? LIMIT 1", [hash]);
+  if (recorded.length > 0) return;
+
+  for (const statement of statements) {
+    try {
+      await connection.query(statement);
+    } catch (error) {
+      const code = error && typeof error === "object" && "code" in error ? String(error.code) : "";
+      if (!["ER_DUP_FIELDNAME", "ER_TABLE_EXISTS_ERROR", "ER_DUP_KEYNAME"].includes(code)) throw error;
+      console.log(`Skipping already-applied support chat statement (${code}).`);
+    }
+  }
+  await connection.query("INSERT INTO `__drizzle_migrations` (`hash`, `created_at`) VALUES (?, ?)", [hash, supportChatE2eeMigration.when]);
+  console.log("Support chat end-to-end encryption columns applied and recorded.");
+}
+
 async function main() {
   if (!process.env.DATABASE_URL) {
     console.log("DATABASE_URL unavailable; migration skipped in safe read-only mode.");
@@ -108,6 +137,7 @@ async function main() {
   try {
     const { bootstrapped } = await bootstrapExistingDatabase(connection);
     await applyPartialSafeMultiWinnerMigration(connection);
+    await applyAdditiveSupportChatE2eeMigration(connection);
     if (bootstrapped) return;
   } finally {
     await connection.end();

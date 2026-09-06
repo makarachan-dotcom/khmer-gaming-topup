@@ -9,15 +9,17 @@ type VerifiedAccountBarProps = {
   onEdit: () => void;
   anchorRef?: RefObject<HTMLElement | null>;
   collapsed: boolean;
+  /** Round 9: public Telegram profile picture, when the handle was verified. */
+  photoUrl?: string | null;
 };
 
-export function VerifiedAccountBar({ playerName, fields, onEdit, anchorRef, collapsed }: VerifiedAccountBarProps) {
+export function VerifiedAccountBar({ playerName, fields, onEdit, anchorRef, collapsed, photoUrl }: VerifiedAccountBarProps) {
   const ids = Object.entries(fields).filter(([key]) => /id|user|account|player|zone|server/i.test(key));
   const visibleValues = (ids.length ? ids : Object.entries(fields)).slice(0, 2);
   const summary = visibleValues.length ? visibleValues.map(([, value]) => masked(value)).join(" · ") : "ID ដែលបានបញ្ជាក់";
 
   return <aside ref={anchorRef} className={`verified-account-card identity-flow-card ${collapsed ? "identity-flow-card--visible" : "identity-flow-card--hidden"} mt-4 flex items-center justify-between gap-3 rounded-2xl p-3 sm:p-3.5`} aria-label="Verified account summary">
-    <span className="verified-account-card__mark" aria-hidden="true"><CheckCircle2 className="h-5 w-5" /></span>
+    {photoUrl ? <img src={photoUrl} alt={playerName} className="tg-profile__avatar" loading="lazy" decoding="async" referrerPolicy="no-referrer" /> : <span className="verified-account-card__mark" aria-hidden="true"><CheckCircle2 className="h-5 w-5" /></span>}
     <div className="min-w-0 flex-1">
       <p className="text-[10px] font-bold tracking-[0.12em] text-emerald-700">គណនីបានបញ្ជាក់</p>
       <p className="truncate text-sm font-extrabold text-slate-950">{playerName}</p>

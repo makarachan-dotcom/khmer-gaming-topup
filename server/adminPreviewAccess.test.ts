@@ -50,7 +50,6 @@ describe("admin preview access", () => {
   it("rejects preview routes for ordinary members", async () => {
     const caller = appRouter.createCaller(createContext("user"));
     await expect(caller.admin.previewGamePackages({ gameId: "mobile_legends_global" })).rejects.toMatchObject({ code: "FORBIDDEN" });
-    await expect(caller.admin.previewSmmServices()).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
   it("allows a delegated Admin with the Catalog scope to access preview routes without touching customer identity validation", async () => {
@@ -61,6 +60,5 @@ describe("admin preview access", () => {
 
     const caller = appRouter.createCaller(createContext("admin"));
     await expect(caller.admin.previewGamePackages({ gameId: "mobile_legends_global" })).resolves.toEqual({ status: "unavailable", packages: [] });
-    await expect(caller.admin.previewSmmServices()).resolves.toEqual({ status: "unavailable", services: [] });
   });
 });

@@ -2,6 +2,7 @@ import { and, asc, desc, eq, gt, inArray, like, lt, or, sql } from "drizzle-orm"
 import { createHash, randomBytes } from "node:crypto";
 import { drizzle } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
+import { notifyPurchase } from "./purchaseNotifier";
 import {
     adminRoleAudits, customerWallets, gamePackages, gameProducts, gmailSenderConnections, InsertUser, marketplaceContacts, marketplaceDisclosureRequests, marketplaceEvidenceAccessLogs, marketplaceFavorites, marketplaceFraudReports, marketplaceListings, marketplaceVerificationEvidence, marketplaceVerifications, orders, orderStatusEvents, orderSupportTickets, paymentTransactions, paymentLinkAudits, paymentLinkTokens, providerPackageArtworkAudits, providerPackageArtworkOverrides, providerPackageCategoryAudits, providerPackageCategoryOverrides, savedPlayerIds, siteContent, smmServices, smmTiers, User,
 users, walletTopups, welcomeEmailDeliveries,
@@ -14,8 +15,9 @@ import { buildEvidenceRetentionAuditReason, canApproveMarketplaceVerification, h
 import { getPublicPaymentReadiness } from "./paymentReadiness";
 import { checkBakongKhqrPayment, createBakongKhqrPayment, registerBakongKhqrWorkerWatch } from "./bakongKhqr";
 import { getKhqrReconciliationDisposition, getKhqrWalletReconciliationDisposition } from "./khqrReconciliation";
+import { assertOrderAmountIntegrity, assertPackagePriceIntegrity, assessOrderVelocity, moneyEquals } from "./paymentSecurity";
 import type { FzrProviderSyncSnapshot, SmmProviderCatalogResponse } from "./providerCatalog";
-import { submitSmmProviderOrder } from "./providerCatalog";
+import { submitSmmProviderOrder, submitFzrTopupOrder } from "./providerCatalog";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -280,6 +282,15 @@ async function refreshAppwriteWalletTopup(input: { userId: number; topupId: stri
   return { topup: walletTopupPayload(current), wallet: await getCustomerWalletSummary(input.userId) };
 }
 
+export async function getActiveProviderPackageIds(packageIds: string[]): Promise<string[] | null> {
+  const normalizedIds = Array.from(new Set(packageIds.map((id) => id.trim()).filter(Boolean)));
+  if (!normalizedIds.length) return [];
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select({ id: gamePackages.id }).from(gamePackages).where(and(inArray(gamePackages.id, normalizedIds), eq(gamePackages.isActive, true), eq(gamePackages.providerAuthorized, true)));
+  return rows.map((row) => row.id);
+}
+
 export async function getGameCatalog() {
   const db = await getDb();
   if (!db) return [];
@@ -310,6 +321,31 @@ export async function getAdminCatalog(): Promise<{ games: any[]; smm: any[] }> {
 
 function providerRecordId(prefix: string, source: string) {
   return `${prefix}-${createHash("sha256").update(source).digest("hex").slice(0, 40)}`;
+}
+
+export async function getAdminSyncedProviderPackages(providerGameIds: string[]) {
+  const normalizedGameIds = Array.from(new Set(providerGameIds.map((id) => id.trim()).filter(Boolean)));
+  if (!normalizedGameIds.length) return [];
+  const db = await getDb();
+  if (!db) return null;
+  const productIds = normalizedGameIds.map((id) => providerRecordId("fzr-game", id));
+  const products = await db.select({ id: gameProducts.id }).from(gameProducts).where(inArray(gameProducts.id, productIds));
+  if (!products.length) return [];
+  const packages = await db.select({ id: gamePackages.id, amountLabel: gamePackages.amountLabel, priceUsd: gamePackages.priceUsd, providerSource: gamePackages.providerSource, sortOrder: gamePackages.sortOrder }).from(gamePackages).where(and(inArray(gamePackages.productId, products.map((product) => product.id)), eq(gamePackages.providerAuthorized, true))).orderBy(asc(gamePackages.sortOrder));
+  return packages.map((item) => ({ id: item.id, label: item.amountLabel, amountLabel: item.amountLabel, priceLabel: `$${Number(item.priceUsd).toFixed(2)}`, provider: "FZR Cards", paymentMethods: ["khqr", "bank"] as ("khqr" | "bank")[] }));
+}
+
+/** Public fallback for an authorized synced catalog: inactive rows never reach the storefront. */
+export async function getPublicSyncedProviderPackages(providerGameIds: string[]) {
+  const normalizedGameIds = Array.from(new Set(providerGameIds.map((id) => id.trim()).filter(Boolean)));
+  if (!normalizedGameIds.length) return [];
+  const db = await getDb();
+  if (!db) return null;
+  const productIds = normalizedGameIds.map((id) => providerRecordId("fzr-game", id));
+  const products = await db.select({ id: gameProducts.id }).from(gameProducts).where(and(inArray(gameProducts.id, productIds), eq(gameProducts.isActive, true)));
+  if (!products.length) return [];
+  const packages = await db.select({ id: gamePackages.id, amountLabel: gamePackages.amountLabel, priceUsd: gamePackages.priceUsd, providerSource: gamePackages.providerSource, sortOrder: gamePackages.sortOrder }).from(gamePackages).where(and(inArray(gamePackages.productId, products.map((product) => product.id)), eq(gamePackages.isActive, true), eq(gamePackages.providerAuthorized, true))).orderBy(asc(gamePackages.sortOrder));
+  return packages.map((item) => ({ id: item.id, label: item.amountLabel, amountLabel: item.amountLabel, priceLabel: `$${Number(item.priceUsd).toFixed(2)}`, provider: "FZR Cards", paymentMethods: ["khqr", "bank"] as ("khqr" | "bank")[] }));
 }
 
 type OrderStatus = "pending" | "awaiting_payment" | "paid" | "delivered" | "failed" | "expired" | "refunded";
@@ -351,7 +387,7 @@ export async function syncFzrCatalog(snapshot: Extract<FzrProviderSyncSnapshot, 
     if (existingGame[0]) {
       await db.update(gameProducts).set({ titleKh: game.name, titleEn: game.name, currencyLabel: "Top-up", requiresZone, sortOrder }).where(eq(gameProducts.id, gameId));
     } else {
-      await db.insert(gameProducts).values({ id: gameId, slug: `fzr-${createHash("sha256").update(game.providerGameId).digest("hex").slice(0, 32)}`, titleKh: game.name, titleEn: game.name, currencyLabel: "Top-up", iconLabel: "G", accent: "#4f46e5", requiresZone, isActive: false, sortOrder });
+      await db.insert(gameProducts).values({ id: gameId, slug: `fzr-${createHash("sha256").update(game.providerGameId).digest("hex").slice(0, 32)}`, titleKh: game.name, titleEn: game.name, currencyLabel: "Top-up", iconLabel: "G", accent: "#4f46e5", requiresZone, isActive: true, sortOrder });
       gamesImported += 1;
     }
     for (let offerOrder = 0; offerOrder < game.offers.length; offerOrder += 1) {
@@ -363,7 +399,7 @@ export async function syncFzrCatalog(snapshot: Extract<FzrProviderSyncSnapshot, 
         const margin = String(existing[0].profitMarginPercent);
         await db.update(gamePackages).set({ amountLabel: offer.name, providerAuthorized: true, providerSource: source, basePriceUsd: offer.priceUsd, priceUsd: salePriceFromMargin(offer.priceUsd, margin), sortOrder: offerOrder }).where(eq(gamePackages.id, packageId));
       } else {
-        await db.insert(gamePackages).values({ id: packageId, productId: gameId, amountLabel: offer.name, providerAuthorized: true, providerSource: source, basePriceUsd: offer.priceUsd, profitMarginPercent: "0.00", priceUsd: offer.priceUsd, featured: false, isActive: false, sortOrder: offerOrder });
+        await db.insert(gamePackages).values({ id: packageId, productId: gameId, amountLabel: offer.name, providerAuthorized: true, providerSource: source, basePriceUsd: offer.priceUsd, profitMarginPercent: "0.00", priceUsd: offer.priceUsd, featured: false, isActive: true, sortOrder: offerOrder });
         offersImported += 1;
       }
     }
@@ -417,6 +453,7 @@ export async function countPendingKhqrPayments(userId: number, excludeOrderId?: 
 
 export const pendingKhqrPaymentLimit = 2;
 const pendingPaymentLimitMessageKh = "អ្នកមានការទូទាត់កំពុងរង់ចាំ ២ រួចហើយ។ សូមបញ្ចប់ការទូទាត់ចាស់ ឬរង់ចាំ QR ផុតកំណត់សិន មុននឹងបង្កើតការទូទាត់ថ្មី។";
+const orderVelocityMessageKh = "មានការបង្កើតការបញ្ជាទិញច្រើនពេកក្នុងមួយម៉ោង តែមិនមានការទូទាត់បានជោគជ័យ។ សូមបញ្ចប់ការទូទាត់មួយជាមុនសិន ឬសូមទាក់ទង Admin។";
 
 async function assertPendingKhqrPaymentCapacity(userId: number, excludeOrderId?: string) {
   if (await countPendingKhqrPayments(userId, excludeOrderId) >= pendingKhqrPaymentLimit) throw Object.assign(new Error(pendingPaymentLimitMessageKh), { code: "PENDING_PAYMENT_LIMIT" });
@@ -433,11 +470,26 @@ export async function createTopupOrder(input: { userId: number; packageId: strin
   const item = result[0];
   if (!item) throw new Error("Selected game package is unavailable");
   if (item.game.requiresZone && !input.zoneId?.trim()) throw new Error("Server or zone ID is required for this game");
-  const subtotal = Number(item.package.priceUsd) * input.quantity;
+  // Anti-tamper. The storefront never sends a price, but the catalog row is
+  // still untrusted input: it can be edited directly, left stale by a failed
+  // provider sync, or zeroed by a half-applied margin change. Recompute the
+  // sale price from provider cost + margin and refuse anything that would sell
+  // below cost, at zero, or outside the accepted band.
+  const priceCheck = assertPackagePriceIntegrity({
+    priceUsd: item.package.priceUsd,
+    basePriceUsd: (item.package as { basePriceUsd?: string | null }).basePriceUsd ?? null,
+    profitMarginPercent: (item.package as { profitMarginPercent?: string | null }).profitMarginPercent ?? null,
+    quantity: input.quantity,
+  });
+  // Behavioural anti-cheat: an account stacking unpaid orders with nothing ever
+  // settled is farming sessions, not shopping.
+  const recentOrders = await db.select({ createdAt: orders.createdAt, status: orders.status }).from(orders).where(and(eq(orders.userId, input.userId), gt(orders.createdAt, new Date(Date.now() - 60 * 60 * 1000))));
+  if (assessOrderVelocity(recentOrders).blocked) throw Object.assign(new Error(orderVelocityMessageKh), { code: "ORDER_VELOCITY_BLOCKED" });
+  const subtotal = priceCheck.subtotal;
   const id = nanoid(); const orderNumber = buildOrderNumber(); const trackingCode = buildTrackingCode();
-  await db.insert(orders).values({ id, orderNumber, trackingCode, userId: input.userId, orderType: "topup", status: "pending", subtotal: subtotal.toFixed(2), productName: `${item.game.titleEn} • ${item.package.amountLabel} ${item.game.currencyLabel}`, details: { packageId: item.package.id, gameProductId: item.game.id, playerId: input.playerId.trim(), zoneId: input.zoneId?.trim() ?? null, quantity: input.quantity } });
+  await db.insert(orders).values({ id, orderNumber, trackingCode, userId: input.userId, orderType: "topup", status: "pending", subtotal, productName: `${item.game.titleEn} • ${item.package.amountLabel} ${item.game.currencyLabel}`, details: { packageId: item.package.id, gameProductId: item.game.id, playerId: input.playerId.trim(), zoneId: input.zoneId?.trim() ?? null, quantity: input.quantity } });
   await appendOrderStatusEvent({ orderId: id, eventType: "order_created", status: "pending", actorType: "customer", messageKh: statusMessageKh("pending") });
-  return { id, orderNumber, trackingCode, amount: subtotal.toFixed(2), status: "pending" as const };
+  return { id, orderNumber, trackingCode, amount: subtotal, status: "pending" as const };
 }
 
 const adminKhqrTestProduct = {
@@ -594,8 +646,17 @@ export async function beginStagedPayment(input: { orderId: string; userId: numbe
   await assertPendingKhqrPaymentCapacity(input.userId, input.orderId);
   const existing = await db.select().from(paymentTransactions).where(and(eq(paymentTransactions.orderId, input.orderId), eq(paymentTransactions.provider, "bakong_khqr"))).orderBy(desc(paymentTransactions.createdAt)).limit(1);
   const existingData = existing[0]?.callbackPayload && typeof existing[0].callbackPayload === "object" ? existing[0].callbackPayload as Record<string, unknown> : null;
-  const canReuse = existing[0] && existing[0].status === "pending" && existing[0].expiresAt && existing[0].expiresAt.getTime() > Date.now() && typeof existingData?.qrImageDataUrl === "string" && typeof existingData.bakongMd5 === "string";
   const currency = order[0].currency === "KHR" ? "KHR" : "USD" as const;
+  // A cached QR may only be reused while it still encodes what the order is
+  // worth RIGHT NOW. If a price or profit margin was edited after the QR was
+  // minted, the stored transaction amount no longer matches the order
+  // subtotal, so reuse is refused here and a fresh QR is generated at the new
+  // price. Without this check a shopper could be shown a stale amount that
+  // reconciliation would later refuse to match.
+  const amountStillCurrent = existing[0] ? Number(existing[0].amount) === Number(order[0].subtotal) && existing[0].currency === currency : false;
+  const canReuse = existing[0] && existing[0].status === "pending" && existing[0].expiresAt && existing[0].expiresAt.getTime() > Date.now() && typeof existingData?.qrImageDataUrl === "string" && typeof existingData.bakongMd5 === "string" && amountStillCurrent;
+  // Never mint a QR for an amount the ledger would refuse to reconcile later.
+  assertOrderAmountIntegrity({ amount: String(order[0].subtotal), currency });
   const generated = canReuse ? null : await createBakongKhqrPayment({ trackingCode: order[0].trackingCode, amount: String(order[0].subtotal), currency });
   const transaction = existing[0] && canReuse ? existing[0] : { id: nanoid(), orderId: input.orderId, provider: "bakong_khqr", providerRequestId: generated!.md5, status: "pending" as const, amount: order[0].subtotal, currency, checkoutUrl: generated!.deeplink ?? `/checkout/${input.orderId}`, callbackPayload: { bakongMd5: generated!.md5, merchantAccountId: generated!.merchantAccountId, qrImageDataUrl: generated!.qrImageDataUrl, deeplink: generated!.deeplink }, expiresAt: generated!.expiresAt };
   if (!canReuse) {
@@ -629,9 +690,15 @@ export async function refreshBakongPayment(input: { orderId: string; userId: num
   if (!current) throw new Error("Bakong payment session not found");
   if (current.status === "paid") return getCustomerPaymentSession(input);
   if (current.expiresAt && current.expiresAt.getTime() <= Date.now()) { await db.update(paymentTransactions).set({ status: "expired" }).where(eq(paymentTransactions.id, current.id)); await updateOrderStatus({ orderId: input.orderId, status: "expired" }); return getCustomerPaymentSession(input); }
-  // The worker owns provider polling and signed confirmation. This endpoint only
-  // returns the current ledger session (and expires stale rows above), preventing
-  // the browser from issuing duplicate Bakong lookups every ten seconds.
+  const payload = current.callbackPayload && typeof current.callbackPayload === "object" ? current.callbackPayload as Record<string, unknown> : {};
+  const md5 = typeof payload.bakongMd5 === "string" ? payload.bakongMd5 : current.providerRequestId;
+  if (!md5) throw new Error("Bakong payment session is missing its verification reference");
+  // Keep the browser refresh path as a safe fallback when the background worker
+  // is delayed or unavailable. Reconciliation still verifies the official
+  // Bakong response against the stored amount, currency, merchant, and pending
+  // ledger row before moving the order to paid.
+  const result = await reconcileKhqrWorkerPayment({ md5, orderId: input.orderId, amount: String(current.amount), currency: current.currency as "KHR" | "USD" });
+  if (!result.idempotent) await settleSecurePaymentLinks(input.orderId, "paid");
   return getCustomerPaymentSession(input);
 }
 
@@ -709,6 +776,7 @@ export async function reconcileKhqrWorkerPayment(input: { md5: string; orderId: 
     if (walletDisposition === "reject") throw new Error("Payment callback did not match an eligible wallet session.");
     if (walletDisposition === "idempotent") return { idempotent: true };
     const merchantAccountId = typeof payload.merchantAccountId === "string" ? payload.merchantAccountId : undefined;
+    if (!moneyEquals(wallet.amountKhr, input.amount, "KHR")) throw new Error("Confirmed amount did not match the stored wallet session.");
     const verification = await checkBakongKhqrPayment({ md5: input.md5, expectedAmount: String(wallet.amountKhr), expectedCurrency: "KHR", expectedMerchantAccountId: merchantAccountId });
     if (verification.status !== "paid") {
       await db.update(walletTopups).set({ paymentPayload: { ...payload, lastWorkerVerificationAt: new Date().toISOString(), lastWorkerVerificationMd5: input.md5, lastWorkerVerificationStatus: verification.status, lastWorkerVerificationError: verification.reason } }).where(and(eq(walletTopups.id, wallet.id), eq(walletTopups.status, "pending")));
@@ -744,10 +812,36 @@ export async function reconcileKhqrWorkerPayment(input: { md5: string; orderId: 
   const details = record.order.details && typeof record.order.details === "object" ? record.order.details as Record<string, unknown> : {};
   const isAdminTestPurchase = details.testPurchase === true && details.testProductCode === adminKhqrTestProduct.code && details.noProviderFulfillment === true;
   const completedStatus = isAdminTestPurchase ? "delivered" as const : "paid" as const;
-  await db.update(paymentTransactions).set({ status: "paid", providerTransactionId: verification.transactionHash, paidAt: new Date(), callbackPayload: { ...existingPayload, workerVerifiedAt: new Date().toISOString(), workerMd5: input.md5, transactionHash: verification.transactionHash } }).where(eq(paymentTransactions.id, record.payment.id));
-  await db.update(orders).set({ status: completedStatus }).where(eq(orders.id, record.order.id));
-  await appendOrderStatusEvent({ orderId: record.order.id, eventType: isAdminTestPurchase ? "admin_test_purchase_completed" : "payment_confirmed", status: completedStatus, actorType: "system", messageKh: isAdminTestPurchase ? "ការទូទាត់ Admin KHQR Test Product បានជោគជ័យ។ មិនមាន top-up ពិតត្រូវបានបញ្ជូនទៅ provider ទេ។" : statusMessageKh("paid"), providerReference: input.md5 });
-  return { idempotent: false };
+  // Final gate before money is recognised: Bakong's own confirmed amount and
+  // currency must match the stored session exactly, in minor units.
+  if (!moneyEquals(record.payment.amount, input.amount, record.payment.currency as "KHR" | "USD")) throw new Error("Confirmed amount did not match the stored payment session.");
+  // The transition is a compare-and-set inside one transaction: the update only
+  // applies while the row is still `pending`, and the order/event rows move with
+  // it. Two concurrent deliveries of the same callback therefore cannot both
+  // credit the order — the loser sees zero affected rows and reports idempotent.
+  let credited = false;
+  await db.transaction(async (tx) => {
+    const transition = await tx.update(paymentTransactions).set({ status: "paid", providerTransactionId: verification.transactionHash, paidAt: new Date(), callbackPayload: { ...existingPayload, workerVerifiedAt: new Date().toISOString(), workerMd5: input.md5, transactionHash: verification.transactionHash } }).where(and(eq(paymentTransactions.id, record.payment.id), eq(paymentTransactions.status, "pending")));
+    const affectedRows = Array.isArray(transition) ? Number((transition[0] as { affectedRows?: number } | undefined)?.affectedRows ?? 0) : 0;
+    if (affectedRows <= 0) return;
+    credited = true;
+    await tx.update(orders).set({ status: completedStatus }).where(and(eq(orders.id, record.order.id), eq(orders.status, "awaiting_payment")));
+    await tx.insert(orderStatusEvents).values({ id: nanoid(), orderId: record.order.id, eventType: isAdminTestPurchase ? "admin_test_purchase_completed" : "payment_confirmed", status: completedStatus, actorType: "system", messageKh: isAdminTestPurchase ? "ការទូទាត់ Admin KHQR Test Product បានជោគជ័យ។ មិនមាន top-up ពិតត្រូវបានបញ្ជូនទៅ provider ទេ។" : statusMessageKh("paid"), providerReference: input.md5 });
+  });
+  // The paid top-up must now be DELIVERED to the player's game account. This runs
+  // OUTSIDE the money transaction so a provider hiccup never rolls back a
+  // confirmed payment. fulfillTopupOrder is idempotent and, on provider failure,
+  // keeps the order at "paid" and flags it for manual delivery.
+  if (credited && !isAdminTestPurchase && record.order.orderType === "topup") {
+    try { await fulfillTopupOrder(record.order.id); } catch { /* flagged inside fulfillTopupOrder */ }
+  }
+  // Push the sale to the operator's Telegram. Guarded by `credited` so a
+  // duplicate webhook does not produce a duplicate notification, and voided so
+  // a Telegram outage can never fail a confirmed payment.
+  if (credited) {
+    void notifyPurchase({ orderId: input.orderId, amount: input.amount, currency: input.currency, reference: input.md5 });
+  }
+  return { idempotent: !credited };
 }
 
 export async function getCustomerOrderTracking(input: { userId: number; trackingCode: string }) {
@@ -982,6 +1076,54 @@ export async function getAdminOrders() {
   return db.select({ order: orders, user: { id: users.id, name: users.name, email: users.email } }).from(orders).leftJoin(users, eq(orders.userId, users.id)).orderBy(desc(orders.createdAt));
 }
 
+const topupManualReviewMessageKh = "ការទូទាត់ជោគជ័យ ប៉ុន្តែការដឹកជញ្ជូនកញ្ចប់ទៅ provider មិនទាន់សម្រេច។ ក្រុមការងារនឹងដឹកជញ្ជូនដោយដៃ ឬសាកម្ដងទៀតឆាប់ៗ។";
+
+/**
+ * Delivers a PAID top-up order to the provider (FZR Cards) and moves it to
+ * "delivered" on success. This is the missing half of the top-up flow: money was
+ * being recognised but the diamonds were never sent to the player's account.
+ * It is idempotent (guards on details.providerOrderId), never throws, and on
+ * failure keeps the order at "paid" and appends a manual-review event so the
+ * owner sees it in the admin orders list instead of the customer silently
+ * losing money.
+ */
+export async function fulfillTopupOrder(orderId: string): Promise<{ delivered: boolean; reason?: string }> {
+  const db = await getDb();
+  if (!db) return { delivered: false, reason: "database_unavailable" };
+  const rows = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
+  const order = rows[0];
+  if (!order || order.orderType !== "topup") return { delivered: false, reason: "not_topup_order" };
+  const details = (order.details && typeof order.details === "object" ? order.details : {}) as Record<string, unknown>;
+  // Admin test purchases and anything explicitly flagged never touch a provider.
+  if (details.noProviderFulfillment === true || details.testPurchase === true) return { delivered: false, reason: "no_provider_fulfillment" };
+  // Idempotency: never submit the same order to the provider twice.
+  if (typeof details.providerOrderId === "string" && details.providerOrderId) return { delivered: true };
+  // Only fulfil orders whose payment is recognised.
+  if (!["paid", "delivered"].includes(order.status)) return { delivered: false, reason: "not_paid" };
+  const packageId = typeof details.packageId === "string" ? details.packageId : "";
+  const playerId = typeof details.playerId === "string" ? details.playerId.trim() : "";
+  const zoneId = typeof details.zoneId === "string" ? details.zoneId.trim() : "";
+  const flagManualReview = async (reason: string) => {
+    await db.update(orders).set({ details: { ...details, providerFulfillment: "failed", providerFulfillmentReason: reason, providerFulfillmentAt: new Date().toISOString() } }).where(eq(orders.id, orderId));
+    await appendOrderStatusEvent({ orderId, eventType: "provider_fulfillment_failed", status: order.status as OrderStatus, actorType: "system", messageKh: topupManualReviewMessageKh });
+  };
+  if (!packageId || !playerId) { await flagManualReview("missing_order_details"); return { delivered: false, reason: "missing_order_details" }; }
+  const pkgRows = await db.select({ providerSource: gamePackages.providerSource }).from(gamePackages).where(eq(gamePackages.id, packageId)).limit(1);
+  const providerSource = pkgRows[0]?.providerSource ?? "";
+  const parsed = /^fzr_cards:([^:]+):(.+)$/.exec(providerSource);
+  if (!parsed) { await flagManualReview("unmapped_provider_package"); return { delivered: false, reason: "unmapped_provider_package" }; }
+  const categoryId = parsed[1]!;
+  const offerId = parsed[2]!;
+  const result = await submitFzrTopupOrder({ categoryId, offerId, playerId, serverId: zoneId || null });
+  if (result.status === "submitted") {
+    await db.update(orders).set({ status: "delivered", details: { ...details, providerOrderId: result.providerOrderId, providerFulfillment: "submitted", providerFulfillmentAt: new Date().toISOString() } }).where(eq(orders.id, orderId));
+    await appendOrderStatusEvent({ orderId, eventType: "provider_submitted", status: "delivered", actorType: "provider", providerReference: result.providerOrderId, messageKh: "កញ្ចប់ត្រូវបានបញ្ជូន និងដឹកជញ្ជូនទៅគណនីហ្គេមរបស់អ្នកដោយស្វ័យប្រវត្តិ។" });
+    return { delivered: true };
+  }
+  await flagManualReview(result.status);
+  return { delivered: false, reason: result.status };
+}
+
 export async function updateOrderStatus(input: { orderId: string; status: OrderStatus; actorUserId?: number }) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
@@ -1003,6 +1145,11 @@ export async function updateOrderStatus(input: { orderId: string; status: OrderS
   }
   await db.update(orders).set({ status: input.status }).where(eq(orders.id, input.orderId));
   if (input.status === "refunded") await db.update(paymentTransactions).set({ status: "refunded" }).where(eq(paymentTransactions.orderId, input.orderId));
+  // Admin manually confirming a top-up as paid triggers the same automatic
+  // provider delivery as the KHQR worker path (idempotent; flags manual review
+  // on failure). Manually setting "delivered" is a human override and is NOT
+  // re-sent to the provider.
+  if (order.orderType === "topup" && input.status === "paid" && order.status !== "paid") { try { await fulfillTopupOrder(input.orderId); } catch { /* fulfillTopupOrder flags manual review on failure */ } }
   if (order.status !== input.status) await appendOrderStatusEvent({ orderId: input.orderId, eventType: "status_changed", status: input.status, actorType: input.actorUserId ? "admin" : "system", messageKh: statusMessageKh(input.status) });
   return { success: true };
 }
@@ -1303,9 +1450,10 @@ export async function savePaymentMethod(input: { id: string; name: string; descr
 
 export async function getPaymentControl() {
   const db = await getDb();
-  if (!db) return isAppwriteStoreConfigured() ? getAppwritePaymentControl() : { enabled: false, updatedByUserId: null, updatedAt: new Date(0) };
+  if (!db) return isAppwriteStoreConfigured() ? getAppwritePaymentControl() : { enabled: true, updatedByUserId: null, updatedAt: new Date(0) };
   const record = await db.select().from(siteContent).where(eq(siteContent.contentKey, paymentControlContentKey)).limit(1);
-  return { enabled: record[0]?.isActive === true, updatedByUserId: record[0]?.updatedByUserId ?? null, updatedAt: record[0]?.updatedAt ?? new Date(0) };
+  // Store is open by default unless an administrator has explicitly turned it off.
+  return { enabled: record[0] ? record[0].isActive === true : true, updatedByUserId: record[0]?.updatedByUserId ?? null, updatedAt: record[0]?.updatedAt ?? new Date(0) };
 }
 
 export async function setPaymentControl(input: { enabled: boolean; updatedByUserId: number }) {
@@ -1447,6 +1595,72 @@ export async function resetProviderPackageCategoryOverride(input: { gameId: stri
   if (!current[0]) return { success: true, reset: false };
   await db.delete(providerPackageCategoryOverrides).where(eq(providerPackageCategoryOverrides.id, current[0].id));
   await db.insert(providerPackageCategoryAudits).values({ id: nanoid(), gameId, offerId, action: "reset", previousCategoryLabel: current[0].categoryLabel, nextCategoryLabel: null, actorUserId: input.updatedByUserId });
+  return { success: true, reset: true };
+}
+
+/*
+ * Round 9: an owner-editable banner on any single package, e.g. "DISCOUNT".
+ * These live in site_content instead of a new table so no database migration is
+ * needed, and every row is written with isActive:false so it can never leak into
+ * the public content feed.
+ */
+const packageBadgeContentPrefix = "package-badge:";
+export const packageBadgeTones = ["discount", "hot", "new", "best", "gold"] as const;
+export type PackageBadgeTone = (typeof packageBadgeTones)[number];
+
+function packageBadgeContentKey(gameId: string, offerId: string) {
+  return `${packageBadgeContentPrefix}${gameId}:${offerId}`;
+}
+
+function parsePackageBadgeRow(row: { contentKey: string; titleKh: string | null; bodyKh: string | null; updatedAt: Date }) {
+  const rest = row.contentKey.slice(packageBadgeContentPrefix.length);
+  const separator = rest.indexOf(":");
+  if (separator <= 0) return null;
+  const gameId = rest.slice(0, separator);
+  const offerId = rest.slice(separator + 1);
+  const label = (row.titleKh ?? "").trim();
+  if (!gameId || !offerId || !label) return null;
+  const rawTone = (row.bodyKh ?? "").trim();
+  const tone: PackageBadgeTone = (packageBadgeTones as readonly string[]).includes(rawTone) ? (rawTone as PackageBadgeTone) : "gold";
+  return { gameId, offerId, label, tone, updatedAt: row.updatedAt };
+}
+
+export async function getPackageBadgeOverrides(gameId?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const normalizedGameId = gameId?.trim() ?? "";
+  const familyPrefix = providerFamilyMetadataPrefix(normalizedGameId);
+  const rows = await db.select().from(siteContent).where(like(siteContent.contentKey, `${packageBadgeContentPrefix}%`)).orderBy(asc(siteContent.contentKey));
+  const parsed = rows.map(parsePackageBadgeRow).filter((item): item is NonNullable<typeof item> => Boolean(item));
+  if (!normalizedGameId) return parsed;
+  // Mirrors the artwork/category overrides: a family page also shows its variants.
+  const family = familyPrefix ? familyPrefix.replace(/%$/, "") : null;
+  return parsed.filter((item) => item.gameId === normalizedGameId || (family ? item.gameId.startsWith(family) : false));
+}
+
+export async function savePackageBadgeOverride(input: { gameId: string; offerId: string; label: string; tone?: string; updatedByUserId: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Package banner storage is unavailable");
+  const gameId = input.gameId.trim();
+  const offerId = input.offerId.trim();
+  const label = input.label.trim().slice(0, 40);
+  if (!gameId || !offerId) throw new Error("Package banner needs both a game and an offer");
+  if (!label) throw new Error("Package banner text must not be empty");
+  const rawTone = (input.tone ?? "").trim();
+  const tone: PackageBadgeTone = (packageBadgeTones as readonly string[]).includes(rawTone) ? (rawTone as PackageBadgeTone) : "gold";
+  const contentKey = packageBadgeContentKey(gameId, offerId);
+  const current = await db.select().from(siteContent).where(eq(siteContent.contentKey, contentKey)).limit(1);
+  const values = { titleKh: label, bodyKh: tone, mediaUrl: null, isActive: false, updatedByUserId: input.updatedByUserId };
+  if (current[0]) await db.update(siteContent).set(values).where(eq(siteContent.id, current[0].id));
+  else await db.insert(siteContent).values({ id: nanoid(), contentKey, ...values });
+  return { success: true, label, tone };
+}
+
+export async function resetPackageBadgeOverride(input: { gameId: string; offerId: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Package banner storage is unavailable");
+  const contentKey = packageBadgeContentKey(input.gameId.trim(), input.offerId.trim());
+  await db.delete(siteContent).where(eq(siteContent.contentKey, contentKey));
   return { success: true, reset: true };
 }
 

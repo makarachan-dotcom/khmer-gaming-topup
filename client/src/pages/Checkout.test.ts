@@ -9,7 +9,8 @@ describe("secure checkout payment page", () => {
     const source = readFileSync(join(process.cwd(), "client/src/pages/Checkout.tsx"), "utf8");
     expect(source).toContain("trpc.orders.paymentSession.useQuery({ orderId }");
     expect(source).toContain("payment.status === \"pending\"");
-    expect(source).toContain("window.setInterval(() => { void session.refetch(); }, 10_000)");
+    expect(source).toContain("window.setInterval(checkPayment, 10_000)");
+    expect(source).toContain("void refreshPayment.mutateAsync({ orderId }).finally(() => { void session.refetch(); })");
     expect(source).toContain("if (!waitingForBakong) return");
     expect(source).not.toContain("check_transaction_by_md5");
   });
@@ -37,20 +38,23 @@ describe("secure checkout payment page", () => {
 
   it("shows the verified username instead of Game ID and blocks required games without a verified username", () => {
     const source = readFileSync(join(process.cwd(), "client/src/pages/Checkout.tsx"), "utf8");
+    expect(source).toContain('if (!product?.playerId)');
     expect(source).toContain('product.requiresVerifiedPlayerName && !product.playerName');
     expect(source).toContain("Check ID រហូតទទួលបាន Username");
     expect(source).toContain('<SummaryDetail label="Username" value={product.playerName} />');
     expect(source).toContain('<SummaryDetail label="Server ID" value={maskCustomerIdentifier(product.zoneId || "មិនទាមទារ")} />');
   });
 
-  it("includes a printable receipt, visible success steps, and masks customer identifiers in the payment page", () => {
+  it("includes a printable receipt, the animated success pipeline, and masks customer identifiers in the payment page", () => {
     const source = readFileSync(join(process.cwd(), "client/src/pages/Checkout.tsx"), "utf8");
+    const pipelineSource = readFileSync(join(process.cwd(), "client/src/components/PaymentSuccessPipeline.tsx"), "utf8");
     const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
     expect(source).toContain("បង្កាន់ដៃទូទាត់");
     expect(source).toContain("Download / Print Receipt");
-    expect(source).toContain("Payment received");
-    expect(source).toContain("Processing order");
-    expect(source).toContain("Completed / Delivered");
+    expect(source).toContain("<PaymentSuccessPipeline");
+    expect(pipelineSource).toContain("Payment received");
+    expect(pipelineSource).toContain("Delivering to your account");
+    expect(pipelineSource).toContain("Completed");
     expect(source).not.toContain("Provider top-up");
     expect(source).not.toContain("no provider top-up");
     expect(source).toContain("maskCustomerIdentifier");

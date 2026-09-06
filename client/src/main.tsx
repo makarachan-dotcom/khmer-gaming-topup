@@ -7,6 +7,34 @@ import superjson from "superjson";
 import App from "./App";
 import { startLogin } from "./const";
 import "./index.css";
+import "./styles/storefront-clean.css";
+import "./styles/buttons.css";
+import "./styles/zurs-polish.css";
+import "./styles/zurs-premium.css";
+import "./styles/zurs-fixes.css";
+// These two imports were MISSING. That is why the login redesign, the mascot
+// and every animation from the earlier rounds never appeared in the browser:
+// the stylesheets existed on disk but nothing ever loaded them. zurs-support.css
+// must stay LAST so its support-sheet and banner rules win over index.css.
+import "./styles/zurs-login.css";
+import "./styles/zurs-support.css";
+// Round 9 checkout/package styles load after everything else so they win the
+// cascade over the equivalent rules in index.css.
+import "./styles/zurs-checkout.css";
+
+function loadOptionalAnalytics() {
+  const endpoint = import.meta.env.VITE_ANALYTICS_ENDPOINT?.trim();
+  const websiteId = import.meta.env.VITE_ANALYTICS_WEBSITE_ID?.trim();
+  if (!endpoint || !websiteId) return;
+
+  const script = document.createElement("script");
+  script.defer = true;
+  script.src = `${endpoint.replace(/\/+$/, "")}/umami`;
+  script.dataset.websiteId = websiteId;
+  document.head.appendChild(script);
+}
+
+loadOptionalAnalytics();
 
 const queryClient = new QueryClient();
 

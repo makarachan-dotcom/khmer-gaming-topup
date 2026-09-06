@@ -25,7 +25,9 @@ const AdminPackageArtwork = lazy(() => import("./pages/AdminPackageArtwork"));
 const AdminProviderSecurity = lazy(() => import("@/pages/AdminProviderSecurity"));
 const AdminContactAdmins = lazy(() => import("@/pages/AdminContactAdmins"));
 const AdminGameImages = lazy(() => import("@/pages/AdminGameImages"));
+const AdminLoginBans = lazy(() => import("@/pages/AdminLoginBans"));
 import AppwriteLogin from "@/pages/AppwriteLogin";
+import SupportChatPage from "@/pages/SupportChatPage";
 import Legal from "./pages/Legal";
 import GameTopup from "./pages/GameTopup";
 const LiveSpin = lazy(() => import("./pages/LiveSpin"));
@@ -36,6 +38,8 @@ function Router() {
     <Switch>
       <Route path="/ai"><Redirect to="/" /></Route>
       <Route path="/login" component={AppwriteLogin} />
+      {/* Round 6: live support is its own destination, not an overlay on zurs.me. */}
+      <Route path="/chat" component={SupportChatPage} />
       <Route path={"/"} component={Home} />
       <Route path="/topup/:gameId" component={GameTopup} />
       <Route path="/live-spin" component={() => <Suspense fallback={<div className="min-h-screen bg-slate-50" />}><LiveSpin /></Suspense>} />
@@ -62,6 +66,7 @@ function Router() {
       <Route path={"/admin/contact-admins"} component={AdminContactAdmins} />
       <Route path={"/admin/game-images"} component={AdminGameImages} />
       <Route path={"/admin/provider-security"} component={AdminProviderSecurity} />
+      <Route path={"/admin/login-bans"} component={AdminLoginBans} />
       <Route path="/privacy" component={() => <Legal kind="privacy" />} />
       <Route path="/terms" component={() => <Legal kind="terms" />} />
       <Route path={"/404"} component={NotFound} />

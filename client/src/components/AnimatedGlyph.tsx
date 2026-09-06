@@ -18,7 +18,6 @@ const glyphs = {
 } as const;
 
 export function AnimatedGlyph({ name, size = 28, color = "#4f46e5", className = "" }: { name: AnimatedGlyphName; size?: number; color?: string; className?: string }) {
-	if (name === "activity") return <OutlineLoader size={size} color={color} className={className} />;
   const [reduceMotion, setReduceMotion] = useState(false);
   const [Renderer, setRenderer] = useState<ComponentType<{ animation: unknown; size: number; strokeColor: string; loop: boolean; autoplay: boolean; speed: number }> | null>(null);
   useEffect(() => {
@@ -31,6 +30,7 @@ export function AnimatedGlyph({ name, size = 28, color = "#4f46e5", className = 
     return () => { mounted = false; media.removeEventListener("change", update); };
   }, []);
 
+  if (name === "activity") return <OutlineLoader size={size} color={color} className={className} />;
   const glyph = glyphs[name];
   if (reduceMotion || !Renderer) return <glyph.Fallback aria-hidden="true" className={className} style={{ width: size, height: size, color }} />;
   return <span aria-hidden="true" className={`animated-glyph ${className}`} style={{ width: size, height: size }}><Renderer animation={glyph.animation} size={size} strokeColor={color} loop={glyph.loop} autoplay speed={1.1} /></span>;

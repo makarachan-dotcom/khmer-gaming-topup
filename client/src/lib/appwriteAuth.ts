@@ -1,6 +1,15 @@
 import { Account, AppwriteException, Client, ID } from "appwrite";
 
-type SessionExchangeResponse = { authenticated: boolean; user: { id: number; name: string | null; displayName: string | null; email: string | null; role: "admin" | "user" } };
+type SessionExchangeResponse = {
+  authenticated: boolean;
+  /** True only the first time this mailbox ever completes sign-in here. */
+  isNewUser?: boolean;
+  /** The server asks for a display name only when it has none stored. */
+  needsName?: boolean;
+  /** The name already on file, so a returning member never re-enters it. */
+  savedName?: string | null;
+  user: { id: number; name: string | null; displayName: string | null; email: string | null; role: "admin" | "user" };
+};
 
 function createAccount() {
   const endpoint = import.meta.env.VITE_APPWRITE_ENDPOINT?.trim();
@@ -46,4 +55,12 @@ export async function logoutFromAppwrite() {
   } catch {
     // A missing/expired Appwrite session is already effectively logged out.
   }
+}
+
+export async function getAppwriteAccount() {
+  return createAccount().get();
+}
+
+export async function updateAppwriteAccountName(name: string) {
+  return createAccount().updateName(name.trim());
 }

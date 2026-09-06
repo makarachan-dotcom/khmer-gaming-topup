@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/sidebar";
 import { startLogin } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { Boxes, CircleDollarSign, ContactRound, CreditCard, ImagePlus, Images, LayoutDashboard, LogOut, PanelLeft, ReceiptText, ShieldCheck, Users } from "lucide-react";
+import { Boxes, CircleDollarSign, ContactRound, CreditCard, ImagePlus, Images, LayoutDashboard, LogOut, MessagesSquare, PanelLeft, ReceiptText, ShieldCheck, Users } from "lucide-react";
 import { type ComponentType, CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -32,12 +32,14 @@ const menuItems: AdminMenuItem[] = [
   { icon: Boxes, label: "កាតាឡុក", path: "/admin?tab=catalog", permission: "catalog" },
   { icon: ImagePlus, label: "Banner & Promo", path: "/admin/media", permission: "media" },
   { icon: ImagePlus, label: "រូបភាពកញ្ចប់", path: "/admin/package-artwork", permission: "media" },
+  { icon: MessagesSquare, label: "ការជជែកជំនួយ", path: "/admin/support-chat", permission: "support" },
   { icon: ContactRound, label: "Admin ទំនាក់ទំនង", path: "/admin/contact-admins", permission: "support" },
   { icon: Images, label: "រូបភាពហ្គេម", path: "/admin/game-images", permission: "media" },
   { icon: Users, label: "ប្រតិបត្តិការ", path: "/admin?tab=operations", permission: "operations" },
   { icon: ShieldCheck, label: "សិទ្ធិ Admin", path: "/admin/access", ownerOnly: true },
   { icon: CreditCard, label: "Payment Control", path: "/admin/payment", ownerOnly: true },
   { icon: ShieldCheck, label: "Provider Security", path: "/admin/provider-security", ownerOnly: true },
+  { icon: ShieldCheck, label: "ការផ្អាកការចូល", path: "/admin/login-bans", ownerOnly: true },
   { icon: CircleDollarSign, label: "តម្លៃ និង Margin", path: "/admin/pricing", permission: "catalog" },
 ];
 

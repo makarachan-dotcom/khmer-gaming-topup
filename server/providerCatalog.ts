@@ -2,6 +2,7 @@ import { z } from "zod";
 import { createHash } from "node:crypto";
 import { resolveProviderCredential } from "./providerCredentialResolver";
 import { getAppwriteProviderAvailability, getAppwriteProviderCatalog, isAppwriteStoreConfigured, type AppwriteProviderCatalog, updateAppwriteProviderAvailability } from "./appwriteStore";
+import { getActiveProviderPackageIds, getAdminSyncedProviderPackages, getPublicSyncedProviderPackages } from "./db";
 
 export const providerFieldSchema = z.object({
   key: z.string().trim().regex(/^[a-z][a-zA-Z0-9_]{0,63}$/),
@@ -29,22 +30,67 @@ export const providerPackageSchema = z.object({
   paymentMethods: z.array(z.enum(["khqr", "bank"])).min(1).max(2),
 });
 
+const fzrTopupItemSchema = z.object({ category_id: z.string().trim().min(1).max(120), name: z.string().trim().min(1).max(200), note: z.string().optional() });
 const fzrTopupsSchema = z.object({
   ok: z.literal(true),
   kind: z.literal("topup"),
-  items: z.array(z.object({ category_id: z.string().trim().min(1).max(120), name: z.string().trim().min(1).max(160), note: z.string().optional() })).max(500),
+  // Tolerant: keep every valid game even if one item on a page is malformed, so a single
+  // bad entry can never drop an entire page of ~100 games from the catalog.
+  items: z.array(fzrTopupItemSchema.nullable().catch(null)).max(5000).transform((items) => items.filter((item): item is Exclude<typeof item, null> => item !== null)),
   meta: z.object({ next_cursor: z.string().trim().min(1).nullable().optional(), has_more: z.boolean().optional() }).optional(),
 });
 
-const fzrOffersSchema = z.object({
-  ok: z.literal(true),
-  kind: z.literal("topup"),
-  category_id: z.string().trim().min(1).max(120),
-  name: z.string().trim().min(1).max(160),
-  offers: z.array(z.object({ offer_id: z.string().trim().min(1).max(160).nullable(), name: z.string().trim().min(1).max(160), price_usd: z.string().regex(/^\d+(\.\d+)?$/) })).max(250),
-  fields: z.array(z.object({ key: z.string().trim().regex(/^[a-z][a-zA-Z0-9_]{0,63}$/), label: z.string().trim().min(1).max(120), type: z.string().trim().max(40).optional(), placeholder: z.string().trim().max(160).optional(), required: z.boolean().optional() })).max(12).default([]),
-  imageurl: z.string().url().refine((url) => url.startsWith("https://")).optional(),
-});
+// Tolerant provider offer schema. The provider occasionally returns numeric prices,
+// numeric/blank offer IDs, long names, extra UI fields, or a non-HTTPS image URL. Instead
+// of dropping the WHOLE game when one entry is imperfect, we coerce common shapes and drop
+// only the individual bad offer/field. This schema is shared by both the live storefront
+// (fetchProviderGameDetails) and the admin catalog sync (fetchFzrProviderSyncSnapshot), so
+// loosening it fixes both "no packages on storefront" and "0/0 packages in admin" at once.
+// FazerCards is inconsistent across game types. Direct-topup games (Free Fire, 8 Ball Pool)
+// return offer_id/name/price_usd, while ID-verified games (Mobile Legends, PUBG, Magic Chess,
+// Honor of Kings, Call of Duty) frequently return the SAME denominations under different keys.
+// We coerce every common alias so those games stop importing as 0 packages.
+function coerceRawOffer(raw: unknown) {
+  if (!raw || typeof raw !== "object") return raw;
+  const o = raw as Record<string, unknown>;
+  return {
+    offer_id: o.offer_id ?? o.offerId ?? o.id ?? o.sku ?? o.code ?? o.product_id ?? o.productId ?? o.denom_id,
+    name: o.name ?? o.title ?? o.label ?? o.denom ?? o.description,
+    price_usd: o.price_usd ?? o.priceUsd ?? o.price ?? o.amount ?? o.usd ?? o.price_amount ?? o.value,
+  };
+}
+const fzrOfferSchema = z.preprocess(coerceRawOffer, z.object({
+  offer_id: z.union([z.string(), z.number()]).transform((value) => String(value).trim()).pipe(z.string().min(1).max(160)).nullable().catch(null),
+  name: z.union([z.string(), z.number()]).transform((value) => String(value).trim()).pipe(z.string().min(1).max(200)),
+  price_usd: z.union([z.string(), z.number()]).transform((value) => String(value).trim().replace(/[^0-9.]/g, "")).pipe(z.string().regex(/^\d+(\.\d+)?$/)),
+}));
+const fzrOfferFieldSchema = z.object({ key: z.string().trim().regex(/^[a-z][a-zA-Z0-9_]{0,63}$/), label: z.string().trim().min(1).max(120), type: z.string().trim().max(40).optional(), placeholder: z.string().trim().max(160).optional(), required: z.boolean().optional() });
+// Coalesce the offers/fields arrays from any key FazerCards uses, including payloads nested
+// under data/result/payload. Shared by the storefront (fetchProviderGameDetails) and the admin
+// sync (fetchFzrProviderSyncSnapshot), so loosening it fixes empty storefront AND 0/0 admin.
+function coerceRawOffersPayload(raw: unknown) {
+  if (!raw || typeof raw !== "object") return raw;
+  let o = raw as Record<string, unknown>;
+  for (const key of ["data", "result", "payload"]) {
+    const nested = o[key];
+    if ((!Array.isArray(o.offers) || o.offers.length === 0) && nested && typeof nested === "object" && !Array.isArray(nested)) {
+      o = { ...o, ...(nested as Record<string, unknown>) };
+    }
+  }
+  const offersCandidate = o.offers ?? o.packages ?? o.products ?? o.denominations ?? o.denoms ?? o.list ?? o.items ?? o.data;
+  const fieldsCandidate = o.fields ?? o.ui ?? o.inputs ?? o.form;
+  return { ...o, offers: Array.isArray(offersCandidate) ? offersCandidate : [], fields: Array.isArray(fieldsCandidate) ? fieldsCandidate : [] };
+}
+const fzrOffersSchema = z.preprocess(coerceRawOffersPayload, z.object({
+  // ok/kind are NOT gates: ID-verified games sometimes return ok:1 or kind:"topup_id"/"verify".
+  ok: z.unknown().optional(),
+  kind: z.union([z.string(), z.number(), z.boolean()]).optional(),
+  category_id: z.string().trim().min(1).max(120).optional(),
+  name: z.string().trim().min(1).max(200).optional(),
+  offers: z.array(fzrOfferSchema.nullable().catch(null)).max(5000).transform((offers) => offers.filter((offer): offer is Exclude<typeof offer, null> => offer !== null)).default([]),
+  fields: z.array(fzrOfferFieldSchema.nullable().catch(null)).max(64).transform((fields) => fields.filter((field): field is Exclude<typeof field, null> => field !== null)).default([]),
+  imageurl: z.string().trim().url().refine((url) => url.startsWith("https://")).optional().catch(undefined),
+}));
 
 const smmGlobServiceSchema = z.object({
   service: z.union([z.string(), z.number()]).transform(String).pipe(z.string().trim().min(1).max(80)),
@@ -77,7 +123,7 @@ export type ProviderPackageResponse =
   | { status: "error"; packages: [] };
 
 export type ProviderPlayerIdentityResponse =
-  | { status: "verified"; playerName: string; playerId: string | null; region: string | null }
+  | { status: "verified"; playerName: string; playerId: string | null; region: string | null; photoUrl?: string | null }
   | { status: "invalid"; playerName: null; playerId: null; region: null }
   | { status: "not_supported"; playerName: null; playerId: null; region: null }
   | { status: "unavailable"; playerName: null; playerId: null; region: null }
@@ -97,6 +143,342 @@ let providerAvailabilityRetryAt = 0;
 
 export function isThailandProviderProduct(text: string) {
   return /(?:\bthailand\b|\bthai\b|ไทย|ประเทศไทย|🇹🇭|(?:^|[_\s(])th(?:$|[_\s)]))/i.test(text);
+}
+
+// Owner curation: the storefront AND the admin sync only expose these game families. Matching is
+// by provider category_id OR display name, so every regional variant (mobile_legends_global,
+// mobile_legends_ph, pubg_mobile_auto, free_fire_sg, ...) is included automatically. Edit this
+// list to add or remove games.
+const WANTED_PROVIDER_GAME_PATTERNS: RegExp[] = [
+  /mobile[\s_]*legends/i,
+  /free[\s_]*fire/i,
+  /honor[\s_]*of[\s_]*kings/i,
+  /call[\s_]*of[\s_]*duty|(?:^|[_\s])codm(?:$|[_\s])/i,
+  /magic[\s_]*chess/i,
+  /(?:^|[_\s(])pubg/i,
+  /(?:8|eight)[\s_]*ball[\s_]*pool/i,
+  /(?:^|[_\s(])(?:eafc|ea[\s_]*fc|ea[\s_]*sports[\s_]*fc|fc[\s_]*mobile)/i,
+  /frag[\s_]*pro[\s_]*shooter/i,
+  // Telegram service (Stars + Premium) from the FazerCards Telegram panel.
+  // The provider slug may be "telegram_stars" or the short form "tg_stars".
+  // Every id-only gate below runs these patterns against the category_id ALONE
+  // (not the display name), so a short slug missing from this list makes the
+  // service invisible on the storefront even after the owner enables it in Admin.
+  /(?:^|[_\s(])telegram/i,
+  /(?:^|[_\s(])tg(?:[_\s)]|$)/i,
+  // Round 10 fix: Roblox Robux (FazerCards manual services, id `roblox_robux`).
+  // It matched NO pattern in this list, so `publicProviderGameIds` below filtered it
+  // straight back out of the owner-approved set and the storefront never rendered it,
+  // even though Admin correctly reported it as "showing in store". This is precisely
+  // the failure mode the Telegram note above warns about. Do not remove this line.
+  /(?:^|[_\s(])(?:roblox|robux)/i,
+];
+
+/**
+ * Telegram Stars / Premium are delivered to a public @username, never to a game
+ * player id, so both the identity field and the order payload differ from every
+ * game family above. Matching is by provider category_id OR display name.
+ */
+export function isTelegramProviderProduct(text: string) {
+  const normalized = text.replace(/-/g, "_");
+  return /(?:^|[_\s(])telegram/i.test(normalized) || /(?:^|[_\s(])tg(?:[_\s)]|$)/i.test(normalized);
+}
+
+/** The single identity field a Telegram top-up needs. */
+export function telegramUsernameField() {
+  return { key: "username", label: "Telegram Username", placeholder: "@username", required: true, kind: "text" as const };
+}
+
+/** Accept "@name", "name", "t.me/name" or a full profile link and return the bare handle. */
+export function normalizeTelegramUsername(raw: string) {
+  return raw.trim().replace(/^(?:https?:\/\/)?(?:www\.)?(?:t\.me|telegram\.me|telegram\.dog)\//i, "").replace(/^@+/, "").replace(/[^A-Za-z0-9_]/g, "");
+}
+
+/*
+ * ---------------------------------------------------------------------------
+ * Telegram Stars & Premium
+ * ---------------------------------------------------------------------------
+ * FazerCards does NOT publish Telegram inside GET /api/v2/topups. It is served
+ * from a dedicated endpoint family:
+ *   GET  /api/v2/telegram/stars       -> { price_per_star, min_amount, max_amount }
+ *   GET  /api/v2/telegram/premium     -> { plans: [{ months, price_usd }] }
+ *   POST /api/v2/telegram/stars/buy      { telegram_username, quantity }
+ *   POST /api/v2/telegram/premium/buy    { telegram_username, months }
+ * Because the /topups category list never contains a Telegram category_id, NO
+ * amount of allowlisting could ever make the service appear on the storefront.
+ * Both products are therefore built here and injected into the same catalog,
+ * detail, sync and order paths every game already uses, so admin pricing and
+ * margin, KHQR checkout and provider fulfilment all keep working unchanged.
+ */
+export const telegramStarsGameId = "telegram_stars";
+export const telegramPremiumGameId = "telegram_premium";
+const telegramStarPacks = [50, 75, 100, 150, 250, 350, 500, 750, 1000, 1500, 2500, 5000, 10000];
+const telegramPremiumMonths = [3, 6, 12];
+const TELEGRAM_CATALOG_CACHE_MS = 60_000;
+
+/** Telegram Stars / Premium only. These two use the /telegram/../buy endpoints. */
+export function isTelegramServiceGameId(gameId: string) {
+  const normalized = gameId.trim().toLowerCase();
+  return normalized === telegramStarsGameId || normalized === telegramPremiumGameId;
+}
+
+/**
+ * Every service that is BUILT in this file instead of arriving from GET /topups.
+ * These ids must bypass the /topups allowlist gates, still appear in the admin
+ * availability list, and remain importable by the catalog sync.
+ */
+export function isBuiltInProviderGameId(gameId: string) {
+  const normalized = gameId.trim().toLowerCase();
+  return isTelegramServiceGameId(normalized) || normalized === robloxRobuxGameId;
+}
+
+/** Default retail markup used until the owner sets a margin in Admin -> Pricing. */
+function telegramRetailPrice(costUsd: number, envValue: string | undefined = process.env.TELEGRAM_MARGIN_PERCENT) {
+  const configured = Number(envValue);
+  const margin = Number.isFinite(configured) && configured >= 0 && configured <= 300 ? configured : 20;
+  return (costUsd * (1 + margin / 100)).toFixed(2);
+}
+
+const fzrTelegramStarsSchema = z.object({
+  price_per_star: z.union([z.string(), z.number()]).transform(Number).pipe(z.number().positive().max(10)),
+  min_amount: z.union([z.string(), z.number()]).transform(Number).optional(),
+  max_amount: z.union([z.string(), z.number()]).transform(Number).optional(),
+});
+
+const fzrTelegramPremiumSchema = z.object({
+  plans: z.array(z.object({
+    months: z.union([z.string(), z.number()]).transform(Number).pipe(z.number().int().positive().max(36)),
+    price_usd: z.union([z.string(), z.number()]).transform(Number).pipe(z.number().positive().max(1000)),
+  })).max(24),
+});
+
+type TelegramSnapshotGame = {
+  providerGameId: string;
+  name: string;
+  logoUrl?: string;
+  requiredFields: z.infer<typeof providerFieldSchema>[];
+  offers: Array<{ providerOfferId: string; name: string; priceUsd: string }>;
+};
+
+let telegramCatalogCache: { at: number; games: TelegramSnapshotGame[] } | null = null;
+
+/**
+ * Reads the live Telegram quotes and returns them in the exact shape the provider
+ * sync snapshot uses. Offer ids are minted as stars_<quantity> / premium_<months>
+ * so the quantity survives the round trip through the order row's providerSource
+ * and can be replayed at fulfilment time.
+ */
+async function fetchTelegramCatalogGames(): Promise<TelegramSnapshotGame[]> {
+  const now = Date.now();
+  if (telegramCatalogCache && now - telegramCatalogCache.at < TELEGRAM_CATALOG_CACHE_MS) return telegramCatalogCache.games;
+  const games: TelegramSnapshotGame[] = [];
+  try {
+    const response = await fzrRequest("/api/v2/telegram/stars");
+    const quote = response ? fzrTelegramStarsSchema.safeParse(response) : null;
+    if (quote?.success) {
+      const min = Number.isFinite(quote.data.min_amount) ? Number(quote.data.min_amount) : 50;
+      const max = Number.isFinite(quote.data.max_amount) ? Number(quote.data.max_amount) : 10_000;
+      const offers = telegramStarPacks
+        .filter((quantity) => quantity >= min && quantity <= max)
+        .map((quantity) => ({ providerOfferId: `stars_${quantity}`, name: `${quantity.toLocaleString("en-US")} Stars`, priceUsd: (quote.data.price_per_star * quantity).toFixed(2) }));
+      if (offers.length) games.push({ providerGameId: telegramStarsGameId, name: "Telegram Stars", requiredFields: [telegramUsernameField()], offers });
+    } else if (response) {
+      console.warn(`[telegram] stars quote unparseable keys=${Object.keys((response ?? {}) as Record<string, unknown>).join(",")} raw=${JSON.stringify(response).slice(0, 300)}`);
+    }
+  } catch (error) {
+    console.warn(`[telegram] stars quote failed ${(error as Error)?.message ?? String(error)}`);
+  }
+  try {
+    const response = await fzrRequest("/api/v2/telegram/premium");
+    const quote = response ? fzrTelegramPremiumSchema.safeParse(response) : null;
+    if (quote?.success) {
+      const offers = quote.data.plans
+        .filter((plan) => telegramPremiumMonths.includes(plan.months))
+        .map((plan) => ({ providerOfferId: `premium_${plan.months}`, name: `${plan.months} Months`, priceUsd: plan.price_usd.toFixed(2) }));
+      if (offers.length) games.push({ providerGameId: telegramPremiumGameId, name: "Telegram Premium", requiredFields: [telegramUsernameField()], offers });
+    } else if (response) {
+      console.warn(`[telegram] premium quote unparseable keys=${Object.keys((response ?? {}) as Record<string, unknown>).join(",")} raw=${JSON.stringify(response).slice(0, 300)}`);
+    }
+  } catch (error) {
+    console.warn(`[telegram] premium quote failed ${(error as Error)?.message ?? String(error)}`);
+  }
+  // Cache failures too: without this a 403 (product not enabled for the key) would
+  // be retried on every single storefront render.
+  telegramCatalogCache = { at: now, games };
+  return games;
+}
+
+/** The game-list projection, matching asProviderGames so both merge cleanly. */
+async function telegramStorefrontGames() {
+  return (await fetchBuiltInProviderGames()).map((game) => ({ id: game.providerGameId, name: game.name, region: "Global", provider: "FZR Cards", requiredFields: [] as z.infer<typeof providerFieldSchema>[] }));
+}
+
+/**
+ * Package rows for a Telegram service. Before the owner runs a catalog sync these
+ * carry the default markup; afterwards the admin-managed sale price wins, exactly
+ * like every synced provider package.
+ */
+async function telegramProviderPackages(game: TelegramSnapshotGame) {
+  const livePackages = game.offers.map((offer) => ({
+    id: providerPackageRecordId(game.providerGameId, offer.providerOfferId),
+    label: offer.name,
+    amountLabel: offer.name,
+    priceLabel: `$${telegramRetailPrice(Number(offer.priceUsd), game.providerGameId === robloxRobuxGameId ? process.env.ROBLOX_MARGIN_PERCENT : undefined)}`,
+    provider: "FZR Cards",
+    paymentMethods: ["khqr", "bank"] as Array<"khqr" | "bank">,
+  }));
+  try {
+    const { getAdminCatalog } = await import("./db");
+    const adminCatalog = await getAdminCatalog();
+    const rows = new Map<string, { amountLabel: string; priceUsd: string }>();
+    adminCatalog.games.forEach((product: { packages: Array<{ id: string; amountLabel: string; priceUsd: string; isActive: boolean; providerSource?: string | null }> }) => {
+      product.packages.forEach((item) => {
+        if (item.isActive && String(item.providerSource ?? "").startsWith(`fzr_cards:${game.providerGameId}:`)) rows.set(item.id, { amountLabel: item.amountLabel, priceUsd: item.priceUsd });
+      });
+    });
+    if (!rows.size) return livePackages;
+    return livePackages.map((item) => {
+      const row = rows.get(item.id);
+      return row ? { ...item, label: row.amountLabel, amountLabel: row.amountLabel, priceLabel: `$${Number(row.priceUsd).toFixed(2)}` } : item;
+    });
+  } catch {
+    return livePackages;
+  }
+}
+
+async function telegramProviderGameDetails(gameId: string): Promise<ProviderGameDetailsResponse> {
+  const normalized = gameId.trim().toLowerCase();
+  const game = (await fetchBuiltInProviderGames()).find((item) => item.providerGameId === normalized);
+  if (!game) return { status: "unavailable", game: null, packages: [] };
+  // The owner can still switch the service off in Admin, same as any game.
+  const availability = await providerAvailability();
+  if (availability.hiddenGameIds.includes(game.providerGameId)) return { status: "unavailable", game: null, packages: [] };
+  return {
+    status: "ready",
+    game: { id: game.providerGameId, name: game.name, region: "Global", provider: "FZR Cards", requiredFields: game.requiredFields },
+    packages: await telegramProviderPackages(game),
+  };
+}
+
+/*
+ * ---------------------------------------------------------------------------
+ * Roblox Robux (FazerCards manual services)
+ * ---------------------------------------------------------------------------
+ * Robux is an operator-fulfilled SKU, so it comes from a THIRD endpoint family -
+ * neither /topups nor /telegram:
+ *   GET  /api/v2/manual-services              -> categories enabled for this key
+ *   GET  /api/v2/manual-services/:id/offers   -> offers with price_usd
+ *   POST /api/v2/manual-services/order          { manual_service_id, product_id }
+ * The offer id is minted as manual_<serviceId>~<productId> so a PAID order can be
+ * replayed to the provider later with no extra bookkeeping. `~` is used because
+ * the order row's providerSource is parsed as fzr_cards:<gameId>:<offerId>.
+ */
+export const robloxRobuxGameId = "roblox_robux";
+const ROBLOX_CATALOG_CACHE_MS = 60_000;
+
+function robloxUsernameField() {
+  return { key: "username", label: "Roblox Username", placeholder: "e.g. builderman", required: true, kind: "text" as const };
+}
+
+const fzrManualCategorySchema = z.object({
+  id: z.union([z.string(), z.number()]).transform(String).pipe(z.string().trim().min(1).max(120)),
+  name: z.string().trim().min(1).max(180),
+  kind: z.string().trim().max(80).optional(),
+  info: z.string().max(2000).optional(),
+});
+
+const fzrManualOfferSchema = z.object({
+  id: z.union([z.string(), z.number()]).transform(String).pipe(z.string().trim().min(1).max(160)),
+  name: z.string().trim().min(1).max(180),
+  price_usd: z.union([z.string(), z.number()]).transform(Number).pipe(z.number().positive().max(10_000)),
+});
+
+function manualServiceItems(response: unknown) {
+  const items = (response as { items?: unknown } | null)?.items;
+  return Array.isArray(items) ? items.slice(0, 500) : [];
+}
+
+let robloxCatalogCache: { at: number; games: TelegramSnapshotGame[] } | null = null;
+
+/** Matched by NAME, because the manual-service id differs per reseller key. */
+function isRobloxManualCategory(text: string) {
+  return /roblox|robux/i.test(text);
+}
+
+async function fetchRobloxCatalogGames(): Promise<TelegramSnapshotGame[]> {
+  const now = Date.now();
+  if (robloxCatalogCache && now - robloxCatalogCache.at < ROBLOX_CATALOG_CACHE_MS) return robloxCatalogCache.games;
+  const games: TelegramSnapshotGame[] = [];
+  try {
+    const categories = manualServiceItems(await fzrRequest("/api/v2/manual-services"))
+      .map((item) => fzrManualCategorySchema.safeParse(item))
+      .filter((item): item is z.ZodSafeParseSuccess<z.infer<typeof fzrManualCategorySchema>> => item.success)
+      .map((item) => item.data)
+      .filter((category) => isRobloxManualCategory(`${category.id} ${category.name} ${category.info ?? ""}`));
+    const offers: TelegramSnapshotGame["offers"] = [];
+    for (const category of categories.slice(0, 4)) {
+      const response = await fzrRequest(`/api/v2/manual-services/${encodeURIComponent(category.id)}/offers`);
+      manualServiceItems(response)
+        .map((item) => fzrManualOfferSchema.safeParse(item))
+        .filter((item): item is z.ZodSafeParseSuccess<z.infer<typeof fzrManualOfferSchema>> => item.success)
+        .forEach((item) => {
+          offers.push({ providerOfferId: `manual_${category.id}~${item.data.id}`, name: item.data.name, priceUsd: item.data.price_usd.toFixed(2) });
+        });
+    }
+    if (offers.length) games.push({ providerGameId: robloxRobuxGameId, name: "Roblox Robux", requiredFields: [robloxUsernameField()], offers: offers.slice(0, 60) });
+    else if (categories.length) console.warn("[roblox] a Roblox manual service exists but exposed no parseable offers");
+    else console.warn("[roblox] no Roblox manual-service category is enabled for this API key");
+  } catch (error) {
+    console.warn(`[roblox] manual-service catalog failed ${(error as Error)?.message ?? String(error)}`);
+  }
+  // Failures are cached too, so a 403 is not retried on every storefront render.
+  robloxCatalogCache = { at: now, games };
+  return games;
+}
+
+/** Telegram + Roblox, in the exact shape the provider sync snapshot expects. */
+export async function fetchBuiltInProviderGames(): Promise<TelegramSnapshotGame[]> {
+  const [telegram, roblox] = await Promise.all([fetchTelegramCatalogGames(), fetchRobloxCatalogGames()]);
+  return [...telegram, ...roblox];
+}
+
+/**
+ * Roblox fulfilment. manual_<serviceId>~<productId> is unpacked back into the two
+ * ids the provider needs, and the buyer's Roblox username travels in `fields` so
+ * the operator knows where to deliver.
+ */
+async function submitRobloxProviderOrder(input: { categoryId: string; offerId: string; username: string }): Promise<{ status: "submitted"; providerOrderId: string } | { status: "unavailable" } | { status: "error" }> {
+  const username = input.username.trim().replace(/^@+/, "");
+  // Roblox usernames are 3-20 characters of letters, digits and underscore.
+  if (!/^[A-Za-z0-9_]{3,20}$/.test(username)) return { status: "error" };
+  const parsed = /^manual_([^~]+)~(.+)$/.exec(input.offerId);
+  if (!parsed) return { status: "error" };
+  try {
+    const response = await fzrRequest("/api/v2/manual-services/order", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ manual_service_id: parsed[1], product_id: parsed[2], fields: { username, roblox_username: username } }),
+    });
+    if (!response) return { status: "unavailable" };
+    const order = fzrTopupOrderSchema.safeParse(response);
+    if (!order.success) {
+      console.warn(`[roblox-order] ${input.categoryId}/${input.offerId}: unexpected response keys=${Object.keys((response ?? {}) as Record<string, unknown>).join(",")} raw=${JSON.stringify(response).slice(0, 400)}`);
+      return { status: "error" };
+    }
+    return { status: "submitted", providerOrderId: order.data.order_id };
+  } catch (error) {
+    const status = error instanceof FzrRequestError ? error.status : 0;
+    console.warn(`[roblox-order] ${input.categoryId}/${input.offerId}: request failed status=${status} ${(error as Error)?.message ?? String(error)}`);
+    return status && status !== 429 && status < 500 ? { status: "error" } : { status: "unavailable" };
+  }
+}
+
+export function isWantedProviderProduct(text: string) {
+  return WANTED_PROVIDER_GAME_PATTERNS.some((pattern) => pattern.test(text.replace(/-/g, "_")));
+}
+
+function isWantedProviderGameId(gameId: string) {
+  return isWantedProviderProduct(gameId);
 }
 
 export function balanceSocialProviderServices<T extends { name: string; category: string }>(services: T[], limit = 120) {
@@ -146,6 +528,25 @@ async function fzrRequest(path: string, init: RequestInit = {}) {
   return response.json();
 }
 
+// Retries transient provider failures (rate limits, 5xx, network/timeout) with a short
+// backoff. Without this, a single 429/timeout among the hundreds of concurrent per-game
+// offer requests during a catalog sync would abort the entire sync and import nothing.
+async function fzrRequestWithRetry(path: string, attempts = 3): Promise<unknown> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      return await fzrRequest(path);
+    } catch (error) {
+      lastError = error;
+      const status = error instanceof FzrRequestError ? error.status : 0;
+      // Do not retry deterministic client errors other than 429 rate limiting.
+      if (status && status !== 429 && status < 500) throw error;
+      if (attempt < attempts - 1) await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
+    }
+  }
+  throw lastError;
+}
+
 async function providerAvailability() {
   const now = Date.now();
   if (providerAvailabilitySnapshot && now < providerAvailabilityRetryAt) return providerAvailabilitySnapshot;
@@ -186,8 +587,40 @@ export function providerPackageRecordId(categoryId: string, offerId: string) {
   return `fzr-offer-${createHash("sha256").update(source).digest("hex").slice(0, 40)}`;
 }
 
-function providerPackages(categoryId: string, offers: z.infer<typeof fzrOffersSchema>["offers"]) {
-  return offers.filter((offer) => Boolean(offer.offer_id)).map((offer) => ({ id: providerPackageRecordId(categoryId, offer.offer_id!), label: offer.name, amountLabel: offer.name, priceLabel: `$${Number(offer.price_usd).toFixed(2)}`, provider: "FZR Cards", paymentMethods: ["khqr", "bank"] as ("khqr" | "bank")[] }));
+async function providerPackages(categoryId: string, offers: z.infer<typeof fzrOffersSchema>["offers"]) {
+  const livePackages = offers.filter((offer) => Boolean(offer.offer_id)).map((offer) => ({ id: providerPackageRecordId(categoryId, offer.offer_id!), label: offer.name, amountLabel: offer.name, priceLabel: `$${Number(offer.price_usd).toFixed(2)}`, provider: "FZR Cards", paymentMethods: ["khqr", "bank"] as ("khqr" | "bank")[] }));
+  try {
+    // Checkout validates the primary catalog, so the storefront must expose the
+    // same active rows and admin-controlled sale prices instead of every live
+    // provider offer. This keeps displayed package IDs purchasable.
+    const { getAdminCatalog } = await import("./db");
+    const adminCatalog = await getAdminCatalog();
+    const productId = `fzr-game-${createHash("sha256").update(categoryId).digest("hex").slice(0, 40)}`;
+    const product = adminCatalog.games.find((item) => item.id === productId || item.packages.some((pkg: { providerSource?: string | null }) => String(pkg.providerSource ?? "").startsWith(`fzr_cards:${categoryId}:`)));
+    if (!product) return livePackages;
+    const activePackages = product.packages.filter((item: { isActive: boolean }) => item.isActive);
+    const activeById = new Map<string, { id: string; amountLabel: string; priceUsd: string }>(activePackages.map((item: { id: string; amountLabel: string; priceUsd: string }) => [item.id, item]));
+    const matchedLivePackages = livePackages.flatMap((item) => {
+      const catalogItem = activeById.get(item.id);
+      return catalogItem ? [{ ...item, label: catalogItem.amountLabel, amountLabel: catalogItem.amountLabel, priceLabel: `$${Number(catalogItem.priceUsd).toFixed(2)}` }] : [];
+    });
+    if (matchedLivePackages.length) return matchedLivePackages;
+    // If the live offer response uses a temporarily different shape, expose the
+    // already-synchronized active package IDs so checkout still receives rows
+    // that the order validator can resolve.
+    return activePackages.map((item: { id: string; amountLabel: string; priceUsd: string }) => ({ id: item.id, label: item.amountLabel, amountLabel: item.amountLabel, priceLabel: `$${Number(item.priceUsd).toFixed(2)}`, provider: "FZR Cards", paymentMethods: ["khqr", "bank"] as ("khqr" | "bank")[] }));
+  } catch {
+    return [];
+  }
+}
+
+export function filterProviderPackagesByActiveIds<T extends { id: string }>(packages: T[], activeIds: string[] | null) {
+  return activeIds === null ? packages : packages.filter((item) => activeIds.includes(item.id));
+}
+
+async function filterOrderableProviderPackages<T extends { id: string }>(packages: T[]) {
+  const activeIds = await getActiveProviderPackageIds(packages.map((item) => item.id));
+  return filterProviderPackagesByActiveIds(packages, activeIds);
 }
 
 function providerGameRegion(name: string, note?: string) {
@@ -255,15 +688,21 @@ async function fetchFzrTopupCatalog(): Promise<FzrTopupCatalog> {
 export function resetProviderCatalogCacheForTests() {
   fzrTopupCatalogCache = null;
   fzrTopupCatalogInFlight = null;
+  providerAvailabilitySnapshot = null;
+  providerAvailabilityRetryAt = 0;
 }
 
 /** Initial storefront baseline from the owner-approved public catalog before the Admin allowlist was persisted. */
 export const initialApprovedPublicGameIds = [
   "8_ball_pool",
-  "blood_strike",
   "eafc_mobile_kh",
   "frag_pro_shooter",
+  "free_fire_bd",
+  "free_fire_cis",
+  "free_fire_latam",
+  "free_fire_mena",
   "free_fire_my_sg",
+  "free_fire_sg",
   "honor_of_kings",
   "magic_chess_gogo_global",
   "mobile_legends_global",
@@ -292,12 +731,15 @@ function isPubgMobileFamilyGame(gameId: string) {
 }
 
 function publicProviderGameIds(availability: Awaited<ReturnType<typeof providerAvailability>>) {
-  const approvedIds = availability.activeGameIds ?? initialApprovedPublicGameIds;
-  return new Set(approvedIds.filter((id) => !availability.hiddenGameIds.includes(id)));
+  const approvedIds = availability.activeGameIds?.length ? availability.activeGameIds : initialApprovedPublicGameIds;
+  return new Set(approvedIds.filter((id) => isWantedProviderGameId(id) && !availability.hiddenGameIds.includes(id)));
 }
 
 function asProviderGames(items: FzrTopupItem[]) {
-  return items.filter((item) => !isThailandProviderProduct(`${item.category_id} ${item.name} ${item.note ?? ""}`)).map((item) => ({ id: item.category_id, name: item.name, region: providerGameRegion(item.name, item.note), provider: "FZR Cards", requiredFields: [] }));
+  return items.filter((item) => {
+    const text = `${item.category_id} ${item.name} ${item.note ?? ""}`;
+    return isWantedProviderProduct(text) && !isThailandProviderProduct(text);
+  }).map((item) => ({ id: item.category_id, name: item.name, region: providerGameRegion(item.name, item.note), provider: "FZR Cards", requiredFields: [] }));
 }
 
 /** During a transient FZR outage, preserve only the owner-approved public IDs from the persisted catalog. */
@@ -307,7 +749,7 @@ export function cachedPublicProviderGames(catalog: AppwriteProviderCatalog, avai
   return catalog.games.flatMap((game) => {
     const providerId = game.providerSourceId?.trim();
     const name = game.titleEn?.trim() || game.titleKh?.trim();
-    if (!providerId || !name || !activeIds.has(providerId) || hiddenIds.has(providerId) || isThailandProviderProduct(`${providerId} ${name}`)) return [];
+    if (!providerId || !name || !(isWantedProviderGameId(providerId) || (isBuiltInProviderGameId(providerId) || isTelegramProviderProduct(`${providerId} ${name}`))) || !(activeIds.has(providerId) || (isBuiltInProviderGameId(providerId) || isTelegramProviderProduct(`${providerId} ${name}`))) || hiddenIds.has(providerId) || isThailandProviderProduct(`${providerId} ${name}`)) return [];
     return [{ id: providerId, name, region: providerGameRegion(name), provider: "FZR Cards" as const, requiredFields: [] }];
   });
 }
@@ -323,40 +765,91 @@ export function cachedProviderAvailabilityGames(catalog: AppwriteProviderCatalog
   return catalog.games.flatMap((game) => {
     const providerId = game.providerSourceId?.trim();
     const name = game.titleEn?.trim() || game.titleKh?.trim();
-    if (!providerId || !name || isThailandProviderProduct(`${providerId} ${name}`)) return [];
+    if (!providerId || !name || !isWantedProviderGameId(providerId) || isThailandProviderProduct(`${providerId} ${name}`)) return [];
     return [{ id: providerId, name, isActive: activeIds.has(providerId) && !hiddenIds.has(providerId) }];
   });
 }
 
 async function cachedPublicProviderGamesDuringOutage(availability: Awaited<ReturnType<typeof providerAvailability>>) {
   if (!publicProviderGameIds(availability).size) return [];
-  try { return cachedPublicProviderGames(await getAppwriteProviderCatalog(), availability); } catch { return []; }
+  try {
+    const appwriteGames = cachedPublicProviderGames(await getAppwriteProviderCatalog(), availability);
+    if (appwriteGames.length) return appwriteGames;
+  } catch { /* Fall through to the primary SQL catalog. */ }
+  try {
+    const { getGameCatalog } = await import("./db");
+    const activeIds = publicProviderGameIds(availability);
+    const hiddenIds = new Set(availability.hiddenGameIds);
+    const catalog = await getGameCatalog();
+    return catalog.flatMap((game) => {
+      const providerId = game.packages.map((item) => String(item.providerSource ?? "").match(/^fzr_cards:([^:]+):/)?.[1]).find(Boolean);
+      const name = game.titleEn?.trim() || game.titleKh?.trim();
+      if (!providerId || !name || !(isWantedProviderGameId(providerId) || (isBuiltInProviderGameId(providerId) || isTelegramProviderProduct(`${providerId} ${name}`))) || !(activeIds.has(providerId) || (isBuiltInProviderGameId(providerId) || isTelegramProviderProduct(`${providerId} ${name}`))) || hiddenIds.has(providerId) || isThailandProviderProduct(`${providerId} ${name}`)) return [];
+      return [{ id: providerId, name, region: providerGameRegion(name), provider: "FZR Cards" as const, requiredFields: [] }];
+    });
+  } catch { return []; }
+}
+
+async function cachedProviderGameDetails(gameId: string, includeInactive = false): Promise<Extract<ProviderGameDetailsResponse, { status: "ready" }> | null> {
+  try {
+    const { getGameCatalog } = await import("./db");
+    const catalog = await getGameCatalog();
+    const product = catalog.find((game) => game.packages.some((item) => String(item.providerSource ?? "").startsWith(`fzr_cards:${gameId}:`)));
+    if (!product) return null;
+    const packages = product.packages.filter((item) => includeInactive || item.isActive).map((item) => ({ id: item.id, label: item.amountLabel, amountLabel: item.amountLabel, priceLabel: `$${Number(item.priceUsd).toFixed(2)}`, provider: "FZR Cards", paymentMethods: ["khqr", "bank"] as ("khqr" | "bank")[] }));
+    if (!packages.length) return null;
+    // A Telegram top-up asks for one @username and never for a server/zone.
+    const telegramService = isTelegramProviderProduct(`${gameId} ${product.titleEn ?? ""} ${product.titleKh ?? ""}`);
+    const requiredFields = telegramService ? [telegramUsernameField()] : [{ key: "player_id", label: "Player ID", placeholder: "Enter Player ID", required: true, kind: "text" as const }, ...(product.requiresZone ? [{ key: "server_id", label: "Server ID", placeholder: "Enter Server ID", required: true, kind: "text" as const }] : [])];
+    return { status: "ready", game: { id: gameId, name: product.titleEn || product.titleKh, region: providerGameRegion(product.titleEn || product.titleKh), provider: "FZR Cards", requiredFields }, packages };
+  } catch { return null; }
 }
 
 export async function fetchProviderGames(options: { includeInactive?: boolean } = {}): Promise<ProviderGameResponse> {
   if (!process.env.FZR_CARDS_API_BASE_URL || !(await resolveProviderCredential("fazercards", process.env.FZR_CARDS_API_KEY))) {
+    if (!options.includeInactive) {
+      const cachedGames = await cachedPublicProviderGamesDuringOutage(await providerAvailability());
+      if (cachedGames.length) return { status: "ready", games: cachedGames };
+    }
     return { status: "unavailable", games: [] };
   }
-  const [catalog, availability] = await Promise.all([fetchFzrTopupCatalog(), providerAvailability()]);
+  // The Telegram quotes come from their own endpoint family, so they are fetched
+  // alongside the /topups catalog and survive a /topups outage.
+  const [catalog, availability, telegramGames] = await Promise.all([fetchFzrTopupCatalog(), providerAvailability(), telegramStorefrontGames()]);
   if (catalog.status !== "ready") {
     if (!options.includeInactive) {
       const cachedGames = await cachedPublicProviderGamesDuringOutage(availability);
-      if (cachedGames.length) return { status: "ready", games: cachedGames };
+      const outageGames = [...telegramGames, ...cachedGames.filter((game) => !isBuiltInProviderGameId(game.id))];
+      if (outageGames.length) return { status: "ready", games: outageGames };
     }
+    if (telegramGames.length) return { status: "ready", games: telegramGames };
     return { status: catalog.status, games: [] };
   }
-  const games = asProviderGames(catalog.items);
+  const games = [...telegramGames, ...asProviderGames(catalog.items).filter((game) => !isBuiltInProviderGameId(game.id))];
   if (options.includeInactive) return { status: "ready", games };
   const activeIds = publicProviderGameIds(availability);
-  return { status: "ready", games: games.filter((game) => activeIds.has(game.id) && !availability.hiddenGameIds.includes(game.id)) };
+  // Games stay allowlist-driven, but the Telegram service is auto-approved: its
+  // provider category id is not in the historical baseline list, so requiring an
+  // explicit allowlist entry would keep it permanently invisible. The owner still
+  // controls it the normal way, by hiding it in Admin.
+  const livePublicGames = games.filter((game) => (activeIds.has(game.id) || isTelegramProviderProduct(`${game.id} ${game.name}`)) && !availability.hiddenGameIds.includes(game.id));
+  // Admin visibility is the source of truth. If the provider live response omits a previously synced category, keep that approved game visible from the persisted catalog.
+  const cachedPublicGames = await cachedPublicProviderGamesDuringOutage(availability);
+  const merged = new Map<string, (typeof livePublicGames)[number]>(cachedPublicGames.map((game) => [game.id, game as (typeof livePublicGames)[number]]));
+  for (const game of livePublicGames) merged.set(game.id, game);
+  return { status: "ready", games: Array.from(merged.values()) };
 }
 
 export async function fetchProviderGameDetails(gameId: string, options: { includeInactive?: boolean } = {}): Promise<ProviderGameDetailsResponse> {
   try {
+    // Telegram is quoted from /telegram/*, never from /topups/offers, so it has to
+    // be resolved before every category-id allowlist gate below.
+    if (isBuiltInProviderGameId(gameId)) return await telegramProviderGameDetails(gameId);
+    if (!isWantedProviderGameId(gameId)) return { status: "unavailable", game: null, packages: [] };
     const availableGames = await fetchProviderGames({ includeInactive: options.includeInactive });
     if (availableGames.status !== "ready") return { status: availableGames.status === "error" ? "error" : "unavailable", game: null, packages: [] };
     if (isMobileLegendsFamilyGame(gameId)) {
-      const activeVariants = mobileLegendsFamilyVariantIds.filter((variantId) => availableGames.games.some((game) => game.id === variantId));
+      const activeVariants = availableGames.games.filter((game) => game.id !== mobileLegendsFamilyGameId && /^mobile_legends(?:_|$)/i.test(game.id)).map((game) => game.id);
       if (!activeVariants.length) return { status: "unavailable", game: null, packages: [] };
       const variantDetails = await Promise.all(activeVariants.map((variantId) => fetchProviderGameDetails(variantId, options)));
       const readyVariants = variantDetails.filter((details): details is Extract<ProviderGameDetailsResponse, { status: "ready" }> => details.status === "ready");
@@ -385,7 +878,7 @@ export async function fetchProviderGameDetails(gameId: string, options: { includ
       };
     }
     if (isPubgMobileFamilyGame(gameId)) {
-      const activeVariants = pubgMobileFamilyVariantIds.filter((variantId) => availableGames.games.some((game) => game.id === variantId));
+      const activeVariants = availableGames.games.filter((game) => game.id !== pubgMobileFamilyGameId && /^pubg_mobile(?:_|$)/i.test(game.id)).map((game) => game.id);
       if (!activeVariants.length) return { status: "unavailable", game: null, packages: [] };
       const variantDetails = await Promise.all(activeVariants.map((variantId) => fetchProviderGameDetails(variantId, options)));
       const readyVariants = variantDetails.filter((details): details is Extract<ProviderGameDetailsResponse, { status: "ready" }> => details.status === "ready");
@@ -399,27 +892,55 @@ export async function fetchProviderGameDetails(gameId: string, options: { includ
     }
     if (!availableGames.games.some((game) => game.id === gameId)) return { status: "unavailable", game: null, packages: [] };
     const response = await fzrRequest(`/api/v2/topups/offers?category_id=${encodeURIComponent(gameId)}&include_ui=1`);
-    if (!response) return { status: "unavailable", game: null, packages: [] };
+    if (!response) return (await cachedProviderGameDetails(gameId, options.includeInactive)) ?? { status: "unavailable", game: null, packages: [] };
     const payload = fzrOffersSchema.safeParse(response);
-    if (!payload.success || payload.data.category_id !== gameId) return { status: "error", game: null, packages: [] };
-    if (isThailandProviderProduct(`${gameId} ${payload.data.name}`)) return { status: "unavailable", game: null, packages: [] };
+    // Only treat an unparseable response as an error. The provider sometimes echoes a
+    // normalized category_id, so we key off the requested gameId instead of requiring an
+    // exact match (which previously dropped valid packages on the storefront).
+    if (!payload.success) return (await cachedProviderGameDetails(gameId, options.includeInactive)) ?? { status: "error", game: null, packages: [] };
+    const resolvedName = payload.data.name ?? gameId;
+    if (isThailandProviderProduct(`${gameId} ${resolvedName}`)) return { status: "unavailable", game: null, packages: [] };
     const fields = providerFields(payload.data.fields);
-    return { status: "ready", game: { id: gameId, name: payload.data.name, region: providerGameRegion(payload.data.name), logoUrl: payload.data.imageurl, provider: "FZR Cards", requiredFields: fields }, packages: providerPackages(gameId, payload.data.offers) };
-  } catch { return { status: "error", game: null, packages: [] }; }
+    const livePackages = await providerPackages(gameId, payload.data.offers);
+    // If the live response parsed but produced no usable packages (e.g. an ID-verified game that
+    // returns an unexpected empty shape), fall back to the last successfully synced packages so
+    // the storefront never regresses to empty.
+    if (!livePackages.length) {
+      const cached = await cachedProviderGameDetails(gameId, options.includeInactive);
+      if (cached && cached.status === "ready" && cached.packages.length) return cached;
+    }
+    return { status: "ready", game: { id: gameId, name: resolvedName, region: providerGameRegion(resolvedName), logoUrl: payload.data.imageurl, provider: "FZR Cards", requiredFields: fields }, packages: livePackages };
+  } catch {
+    return (await cachedProviderGameDetails(gameId, options.includeInactive)) ?? { status: "error", game: null, packages: [] };
+  }
 }
 
 /** Public browsing exposes only package labels and prices from active provider catalog entries; it never accepts a customer identity or initiates an order. */
 export async function fetchPublicProviderPackagePreview(gameId: string): Promise<ProviderPackageResponse> {
+  if (!isWantedProviderGameId(gameId) && !isBuiltInProviderGameId(gameId)) return { status: "unavailable", packages: [] };
   const details = await fetchProviderGameDetails(gameId);
-  if (details.status !== "ready") return { status: details.status, packages: [] };
-  return { status: "ready", packages: details.packages };
+  if (details.status === "ready") {
+    const packages = await filterOrderableProviderPackages(details.packages);
+    if (packages.length) return { status: "ready", packages };
+  }
+
+  // Keep public browsing usable during a provider outage or missing live offer
+  // response, but only expose database rows that are active and authorized.
+  const providerGameIds = await providerGameIdVariants(gameId);
+  const fallbackPackages = await getPublicSyncedProviderPackages(providerGameIds);
+  if (fallbackPackages?.length) return { status: "ready", packages: fallbackPackages };
+  return { status: details.status, packages: [] };
 }
 
 /** Admin-only callers can additionally inspect authorized inactive package UI without supplying a customer identity. */
 export async function fetchProviderPreviewPackages(gameId: string): Promise<ProviderPackageResponse> {
+  if (!isWantedProviderGameId(gameId) && !isBuiltInProviderGameId(gameId)) return { status: "unavailable", packages: [] };
   const details = await fetchProviderGameDetails(gameId, { includeInactive: true });
-  if (details.status !== "ready") return { status: details.status, packages: [] };
-  return { status: "ready", packages: details.packages };
+  if (details.status === "ready" && details.packages.length) return { status: "ready", packages: details.packages };
+  const providerGameIds = await providerGameIdVariants(gameId);
+  const fallbackPackages = await getAdminSyncedProviderPackages(providerGameIds);
+  if (fallbackPackages?.length) return { status: "ready", packages: fallbackPackages };
+  return { status: details.status, packages: [] };
 }
 
 function hasProviderIdentityField(fields: Record<string, string>) {
@@ -429,19 +950,54 @@ function hasProviderIdentityField(fields: Record<string, string>) {
   });
 }
 
+async function providerGameIdVariants(gameId: string): Promise<string[]> {
+  const normalizedGameId = gameId.trim().toLowerCase();
+  const familyPattern =
+    normalizedGameId === mobileLegendsFamilyGameId
+      ? /^mobile_legends(?:_|$)/i
+      : normalizedGameId === freeFireFamilyGameId
+        ? /^free_fire(?:_|$)/i
+        : normalizedGameId === pubgMobileFamilyGameId
+          ? /^pubg_mobile(?:_|$)/i
+          : null;
+  if (!familyPattern) return [gameId];
+  // Match every synced variant for this family (e.g. mobile_legends_global,
+  // mobile_legends_id, mobile_legends_ph...) instead of a fixed hard-coded list,
+  // so all public packages surface even when the provider adds new region IDs.
+  const variants = (await getProviderAvailabilityCatalog()).games
+    .filter((game) => game.id !== normalizedGameId && familyPattern.test(game.id))
+    .map((game) => game.id);
+  if (variants.length) return variants;
+  if (normalizedGameId === mobileLegendsFamilyGameId) return [...mobileLegendsFamilyVariantIds];
+  if (normalizedGameId === pubgMobileFamilyGameId) return [...pubgMobileFamilyVariantIds];
+  return [];
+}
+
 export async function fetchProviderPackages(input: ProviderPackageRequest): Promise<ProviderPackageResponse> {
-  if (!process.env.FZR_CARDS_API_BASE_URL || !(await resolveProviderCredential("fazercards", process.env.FZR_CARDS_API_KEY))) return { status: "unavailable", packages: [] };
+  if (!isWantedProviderGameId(input.gameId) && !isBuiltInProviderGameId(input.gameId)) return { status: "unavailable", packages: [] };
+  const providerConfigured = Boolean(process.env.FZR_CARDS_API_BASE_URL) && Boolean(await resolveProviderCredential("fazercards", process.env.FZR_CARDS_API_KEY));
   if (!hasProviderIdentityField(input.fields)) {
-    const details = await fetchProviderGameDetails(input.gameId);
-    return details.status === "ready" ? { status: "ready", packages: details.packages } : { status: details.status, packages: [] };
+    if (providerConfigured) {
+      const details = await fetchProviderGameDetails(input.gameId);
+      if (details.status === "ready" && details.packages.length) return { status: "ready", packages: details.packages };
+    }
+    const fallbackPackages = await getPublicSyncedProviderPackages(await providerGameIdVariants(input.gameId));
+    if (fallbackPackages?.length) return { status: "ready", packages: fallbackPackages };
+    return { status: "unavailable", packages: [] };
   }
+  if (!providerConfigured) return { status: "unavailable", packages: [] };
   const identity = await validateProviderPlayerIdentity(input);
   if (identity.status === "unavailable") return { status: "unavailable", packages: [] };
   if (identity.status === "error") return { status: "error", packages: [] };
   if (identity.status !== "verified" && !(identity.status === "not_supported" && input.idAccuracyConfirmed)) return { status: "verification_required", packages: [] };
   const details = await fetchProviderGameDetails(input.gameId);
-  if (details.status !== "ready") return { status: details.status, packages: [] };
-  return { status: "ready", packages: details.packages };
+  if (details.status === "ready") {
+    const orderablePackages = await filterOrderableProviderPackages(details.packages);
+    if (orderablePackages.length) return { status: "ready", packages: orderablePackages };
+  }
+  const fallbackPackages = await getPublicSyncedProviderPackages(await providerGameIdVariants(input.gameId));
+  if (fallbackPackages?.length) return { status: "ready", packages: fallbackPackages };
+  return { status: details.status === "ready" ? "unavailable" : details.status, packages: [] };
 }
 
 const fzrPlayerIdentitySchema = z.object({
@@ -606,7 +1162,24 @@ function emptyIdentity(status: Extract<ProviderPlayerIdentityResponse, { status:
   return { status, playerName: null, playerId: null, region: null };
 }
 
+/**
+ * Round 9: Telegram handles are verified against the PUBLIC t.me preview page,
+ * which publishes only a display name and a profile picture. There is no upstream
+ * ID-check API for Stars or Premium, so this is the only thing standing between a
+ * mistyped handle and a paid delivery to a stranger.
+ */
+async function validateTelegramHandleIdentity(input: ProviderPackageRequest): Promise<ProviderPlayerIdentityResponse> {
+  const raw = Object.entries(input.fields).find(([key]) => /user[\s_-]*name|telegram|handle/i.test(key))?.[1] ?? "";
+  if (!raw.trim()) return emptyIdentity("invalid");
+  const { lookupTelegramProfile } = await import("./telegramIdentity");
+  const result = await lookupTelegramProfile(raw);
+  if (result.status === "unavailable") return emptyIdentity("unavailable");
+  if (result.status === "invalid") return emptyIdentity("invalid");
+  return { status: "verified", playerName: result.profile.displayName, playerId: `@${result.profile.handle}`, region: "Telegram", photoUrl: result.profile.photoUrl };
+}
+
 export async function validateProviderPlayerIdentity(input: ProviderPackageRequest): Promise<ProviderPlayerIdentityResponse> {
+  if (isTelegramServiceGameId(input.gameId)) return await validateTelegramHandleIdentity(input);
   const freeApiResult = await validateWithOwnerApprovedFreeApi(input);
   if (freeApiResult && freeApiResult.status !== "unavailable") return freeApiResult;
   const bridgeResult = await validateWithAuthorizedPlayerBridge(input);
@@ -628,15 +1201,40 @@ export async function fetchSmmProviderServices(options: { includeHidden?: boolea
   } catch { return { status: "error", services: [] }; }
 }
 
+async function cachedProviderAvailabilityGamesDuringOutage(availability: Awaited<ReturnType<typeof providerAvailability>>) {
+  try {
+    const appwriteGames = cachedProviderAvailabilityGames(await getAppwriteProviderCatalog(), availability);
+    if (appwriteGames.length) return appwriteGames;
+  } catch { /* Fall through to the primary SQL catalog. */ }
+  try {
+    const { getGameCatalog } = await import("./db");
+    const activeIds = publicProviderGameIds(availability);
+    const hiddenIds = new Set(availability.hiddenGameIds);
+    const catalog = await getGameCatalog();
+    return catalog.flatMap((game) => {
+      const providerId = game.packages.map((item) => String(item.providerSource ?? "").match(/^fzr_cards:([^:]+):/)?.[1]).find(Boolean);
+      const name = game.titleEn?.trim() || game.titleKh?.trim();
+      if (!providerId || !name || !isWantedProviderGameId(providerId) || isThailandProviderProduct(`${providerId} ${name}`)) return [];
+      return [{ id: providerId, name, isActive: activeIds.has(providerId) && !hiddenIds.has(providerId) }];
+    });
+  } catch { return []; }
+}
+
 export async function getProviderAvailabilityCatalog(): Promise<ProviderAvailabilityCatalog> {
   const [catalog, smmResponse, availability] = await Promise.all([fetchFzrTopupCatalog(), fetchSmmProviderServices({ includeHidden: true }), providerAvailability()]);
   const activeGames = catalog.status === "ready" ? publicProviderGameIds(availability) : new Set<string>();
   const hiddenSmm = new Set(availability.hiddenSmmServiceIds);
-  const fallbackGames = catalog.status === "ready" ? null : await getAppwriteProviderCatalog().catch(() => null);
+  const fallbackGames = catalog.status === "ready" ? null : await cachedProviderAvailabilityGamesDuringOutage(availability);
+  // Telegram is not in the /topups category list, so it is appended explicitly or
+  // the owner would never see a row to switch it on or off.
+  const telegramRows = (await fetchBuiltInProviderGames()).map((game) => ({ id: game.providerGameId, name: game.name, isActive: !availability.hiddenGameIds.includes(game.providerGameId) }));
   return {
-    games: catalog.status === "ready"
-      ? asProviderGames(catalog.items).map((game) => ({ id: game.id, name: game.name, isActive: activeGames.has(game.id) && !availability.hiddenGameIds.includes(game.id) }))
-      : fallbackGames ? cachedProviderAvailabilityGames(fallbackGames, availability) : [],
+    games: [
+      ...telegramRows,
+      ...(catalog.status === "ready"
+        ? asProviderGames(catalog.items).map((game) => ({ id: game.id, name: game.name, isActive: activeGames.has(game.id) && !availability.hiddenGameIds.includes(game.id) }))
+        : fallbackGames ?? []).filter((game) => !isBuiltInProviderGameId(game.id)),
+    ],
     smm: smmResponse.status === "ready" ? smmResponse.services.map((service) => ({ id: service.providerServiceId, name: service.name, category: service.category, isActive: !hiddenSmm.has(service.providerServiceId) })) : [],
   };
 }
@@ -658,11 +1256,10 @@ export async function setProviderAvailability(input: { kind: "game" | "smm"; pro
   const [catalog, availability] = await Promise.all([fetchFzrTopupCatalog(), providerAvailability()]);
   const validGameIds = catalog.status === "ready"
     ? new Set(asProviderGames(catalog.items).map((game) => game.id))
-    : new Set((await getAppwriteProviderCatalog().catch(() => ({ games: [], smm: [] }))).games.flatMap((game) => {
-      const providerId = game.providerSourceId?.trim();
-      const name = game.titleEn?.trim() || game.titleKh?.trim();
-      return providerId && name && !isThailandProviderProduct(`${providerId} ${name}`) ? [providerId] : [];
-    }));
+    : new Set((await cachedProviderAvailabilityGamesDuringOutage(availability)).map((game) => game.id));
+  // Same reason as above: the Telegram ids are valid targets even though they can
+  // never appear in the /topups category list this check is built from.
+  (await fetchBuiltInProviderGames()).forEach((game) => validGameIds.add(game.providerGameId));
   if (!validGameIds.size) throw new Error("No synchronized FZR Cards catalog is available for this change");
   if (!validGameIds.has(input.providerId)) throw new Error("Selected game is not available from the synchronized FZR Cards catalog");
   const legacyActiveGameIds = availability.activeGameIds ?? initialApprovedPublicGameIds.filter((id) => !availability.hiddenGameIds.includes(id));
@@ -688,6 +1285,104 @@ export async function submitSmmProviderOrder(input: { providerServiceId: string;
   } catch { return { status: "error" }; }
 }
 
+// ---------------------------------------------------------------------------
+// FZR Cards top-up ORDER submission (delivery).
+//
+// The catalog/offers endpoints only READ inventory. Placing a real top-up uses
+// POST /api/v2/topups/order. Without this call a PAID order is never delivered
+// to the player's game account (the exact bug: money taken, no diamonds).
+// The order endpoint accepts category_id, offer_id, and a nested fields object
+// matching the dynamic field keys returned by the offers endpoint. The response
+// is parsed tolerantly so the documented order.id (and compatible envelopes)
+// still yields a provider order id.
+// ---------------------------------------------------------------------------
+function coerceFzrOrderPayload(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
+  const record: Record<string, unknown> = { ...(raw as Record<string, unknown>) };
+  for (const key of ["data", "result", "order", "payload", "topup"]) {
+    const nested = record[key];
+    if (nested && typeof nested === "object" && !Array.isArray(nested)) Object.assign(record, nested as Record<string, unknown>);
+  }
+  const orderId = [record.order_id, record.orderId, record.id, record.reference, record.ref, record.txn_id, record.transaction_id, record.trx_id, record.order].find((value) => typeof value === "string" || typeof value === "number");
+  if (orderId !== undefined) record.order_id = orderId;
+  const status = [record.status, record.state].find((value) => typeof value === "string" || typeof value === "number");
+  if (status !== undefined) record.status = status;
+  return record;
+}
+
+const fzrTopupOrderSchema = z.preprocess(coerceFzrOrderPayload, z.object({
+  ok: z.unknown().optional(),
+  order_id: z.union([z.string(), z.number()]).transform(String).pipe(z.string().trim().min(1).max(180)),
+  status: z.union([z.string(), z.number()]).transform(String).optional(),
+}));
+
+export async function submitFzrTopupOrder(input: { categoryId: string; offerId: string; playerId: string; serverId: string | null }): Promise<{ status: "submitted"; providerOrderId: string } | { status: "unavailable" } | { status: "error" }> {
+  try {
+    if (!input.categoryId.trim() || !input.offerId.trim() || !input.playerId.trim()) return { status: "error" };
+    // Telegram Stars / Premium are NOT sold through /topups/order. FazerCards
+    // fulfils them from a dedicated endpoint family keyed by @username plus a
+    // quantity (Stars) or a month count (Premium). Posting them to /topups/order
+    // is rejected, which would mean a PAID order is never delivered.
+    const builtInCategoryId = input.categoryId.trim().toLowerCase();
+    if (isTelegramServiceGameId(builtInCategoryId)) return await submitTelegramProviderOrder({ categoryId: builtInCategoryId, offerId: input.offerId.trim(), username: input.playerId });
+    // Robux is fulfilled by an operator through /manual-services/order, so it must
+    // NOT be posted to /topups/order either.
+    if (builtInCategoryId === robloxRobuxGameId) return await submitRobloxProviderOrder({ categoryId: builtInCategoryId, offerId: input.offerId.trim(), username: input.playerId });
+    const fields: Record<string, string> = { player_id: input.playerId.trim() };
+    if (input.serverId && input.serverId.trim()) fields.server_id = input.serverId.trim();
+    const body: Record<string, unknown> = { category_id: input.categoryId.trim(), offer_id: input.offerId.trim(), fields };
+    const response = await fzrRequest("/api/v2/topups/order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (!response) return { status: "unavailable" };
+    const parsed = fzrTopupOrderSchema.safeParse(response);
+    if (!parsed.success) {
+      console.warn(`[fzr-order] ${input.categoryId}/${input.offerId}: unexpected response keys=${Object.keys((response ?? {}) as Record<string, unknown>).join(",")} raw=${JSON.stringify(response).slice(0, 400)}`);
+      return { status: "error" };
+    }
+    return { status: "submitted", providerOrderId: parsed.data.order_id };
+  } catch (error) {
+    const status = error instanceof FzrRequestError ? error.status : 0;
+    console.warn(`[fzr-order] ${input.categoryId}/${input.offerId}: request failed status=${status} ${(error as Error)?.message ?? String(error)}`);
+    // Deterministic 4xx (except 429) => surface as error so the order is flagged
+    // for manual review; everything else is a transient outage the owner retries.
+    return status && status !== 429 && status < 500 ? { status: "error" } : { status: "unavailable" };
+  }
+}
+
+/**
+ * Telegram fulfilment. The offer id carries the quantity (stars_100) or the plan
+ * length (premium_12), so a paid order can be replayed to the provider without any
+ * extra bookkeeping.
+ */
+async function submitTelegramProviderOrder(input: { categoryId: string; offerId: string; username: string }): Promise<{ status: "submitted"; providerOrderId: string } | { status: "unavailable" } | { status: "error" }> {
+  const username = normalizeTelegramUsername(input.username);
+  // Telegram handles are 5-32 characters. Reject before the provider call so a bad
+  // handle is flagged for manual review instead of silently failing after payment.
+  if (username.length < 5 || username.length > 32) return { status: "error" };
+  const starsMatch = /^stars_(\d{1,6})$/.exec(input.offerId);
+  const premiumMatch = /^premium_(\d{1,2})$/.exec(input.offerId);
+  const path = starsMatch ? "/api/v2/telegram/stars/buy" : "/api/v2/telegram/premium/buy";
+  const body = starsMatch
+    ? { telegram_username: `@${username}`, quantity: Number(starsMatch[1]) }
+    : premiumMatch
+      ? { telegram_username: `@${username}`, months: Number(premiumMatch[1]) }
+      : null;
+  if (!body) return { status: "error" };
+  try {
+    const response = await fzrRequest(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (!response) return { status: "unavailable" };
+    const parsed = fzrTopupOrderSchema.safeParse(response);
+    if (!parsed.success) {
+      console.warn(`[telegram-order] ${input.categoryId}/${input.offerId}: unexpected response keys=${Object.keys((response ?? {}) as Record<string, unknown>).join(",")} raw=${JSON.stringify(response).slice(0, 400)}`);
+      return { status: "error" };
+    }
+    return { status: "submitted", providerOrderId: parsed.data.order_id };
+  } catch (error) {
+    const status = error instanceof FzrRequestError ? error.status : 0;
+    console.warn(`[telegram-order] ${input.categoryId}/${input.offerId}: request failed status=${status} ${(error as Error)?.message ?? String(error)}`);
+    return status && status !== 429 && status < 500 ? { status: "error" } : { status: "unavailable" };
+  }
+}
+
 async function mapWithConcurrency<T, R>(items: T[], limit: number, worker: (item: T) => Promise<R>) {
   const output: R[] = [];
   let cursor = 0;
@@ -703,16 +1398,57 @@ async function mapWithConcurrency<T, R>(items: T[], limit: number, worker: (item
 
 export async function fetchFzrProviderSyncSnapshot(): Promise<FzrProviderSyncSnapshot> {
   try {
-    const response = await fzrRequest("/api/v2/topups");
-    if (!response) return { status: "unavailable", games: [] };
-    const catalog = fzrTopupsSchema.safeParse(response);
-    if (!catalog.success) return { status: "error", games: [] };
-    const details = await mapWithConcurrency(catalog.data.items.filter((item) => !isThailandProviderProduct(`${item.category_id} ${item.name} ${item.note ?? ""}`)), 6, async (item) => {
-      const offerResponse = await fzrRequest(`/api/v2/topups/offers?category_id=${encodeURIComponent(item.category_id)}&include_ui=1`);
-      const offers = fzrOffersSchema.safeParse(offerResponse);
-      if (!offers.success || offers.data.category_id !== item.category_id) return null;
-      return { providerGameId: item.category_id, name: offers.data.name, logoUrl: offers.data.imageurl, requiredFields: providerFields(offers.data.fields), offers: offers.data.offers.filter((offer) => Boolean(offer.offer_id)).map((offer) => ({ providerOfferId: offer.offer_id!, name: offer.name, priceUsd: Number(offer.price_usd).toFixed(2) })) };
+    // Use the SAME paginated catalog the availability list uses, so the sync covers every
+    // game across all pages, not just the first /api/v2/topups page.
+    const catalog = await fetchFzrTopupCatalog();
+    if (catalog.status !== "ready") {
+      // Telegram does not depend on the /topups catalog, so it must still import
+      // when that catalog is unavailable.
+      const telegramOnly = await fetchBuiltInProviderGames();
+      return telegramOnly.length ? { status: "ready", games: telegramOnly } : { status: catalog.status, games: [] };
+    }
+    // Owner curation: only sync the wanted game families. This focuses the store on the products
+    // we actually sell AND slashes offer requests from ~600 to a few dozen, which removes the
+    // rate-limiting that was silently emptying the catalog.
+    const items = catalog.items.filter((item) => {
+      const text = `${item.category_id} ${item.name} ${item.note ?? ""}`;
+      return isWantedProviderProduct(text) && !isThailandProviderProduct(text);
     });
-    return { status: "ready", games: details.filter((game): game is NonNullable<typeof game> => game !== null) };
+    let skipped = 0;
+    const details = await mapWithConcurrency(items, 6, async (item) => {
+      // Per-item isolation: one game's failed/rate-limited/timeout offer request (or an
+      // unparseable response) must skip ONLY that game and never abort the whole sync.
+      try {
+        const offerResponse = await fzrRequestWithRetry(`/api/v2/topups/offers?category_id=${encodeURIComponent(item.category_id)}&include_ui=1`);
+        if (!offerResponse) { console.warn(`[fzr-sync] ${item.category_id}: empty HTTP response`); skipped += 1; return null; }
+        const offers = fzrOffersSchema.safeParse(offerResponse);
+        if (!offers.success) {
+          // Diagnostic: log the raw shape so ID-verified games that ship an unexpected structure
+          // can be mapped precisely (visible in Vercel function logs during a sync run).
+          console.warn(`[fzr-sync] ${item.category_id}: offers parse failed keys=${Object.keys((offerResponse ?? {}) as Record<string, unknown>).join(",")} raw=${JSON.stringify(offerResponse).slice(0, 500)}`);
+          skipped += 1;
+          return null;
+        }
+        const mapped = offers.data.offers.filter((offer) => Boolean(offer.offer_id)).map((offer) => ({ providerOfferId: offer.offer_id!, name: offer.name, priceUsd: Number(offer.price_usd).toFixed(2) }));
+        if (!mapped.length) {
+          console.warn(`[fzr-sync] ${item.category_id}: 0 usable offers keys=${Object.keys((offerResponse ?? {}) as Record<string, unknown>).join(",")} raw=${JSON.stringify(offerResponse).slice(0, 500)}`);
+          skipped += 1;
+          return null;
+        }
+        // Key the imported game by the REQUESTED category id so a normalized/echoed
+        // category_id in the response never drops the game.
+        return { providerGameId: item.category_id, name: offers.data.name || item.name, logoUrl: offers.data.imageurl, requiredFields: providerFields(offers.data.fields), offers: mapped };
+      } catch (error) {
+        console.warn(`[fzr-sync] ${item.category_id}: offer request threw ${(error as Error)?.message ?? String(error)}`);
+        skipped += 1;
+        return null;
+      }
+    });
+    const games = details.filter((game): game is NonNullable<typeof game> => game !== null);
+    // Importing Telegram through the normal sync is what gives it real catalog rows,
+    // which is what makes admin price + margin, KHQR checkout and order fulfilment work.
+    const telegramGames = await fetchBuiltInProviderGames();
+    console.info(`[fzr-sync] wanted=${items.length} imported=${games.length} skipped=${skipped} telegram=${telegramGames.length}`);
+    return { status: "ready", games: [...telegramGames, ...games] };
   } catch { return { status: "error", games: [] }; }
 }

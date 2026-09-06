@@ -76,3 +76,24 @@ export async function uploadAdminPaymentMethodIcon(input: { adminUserId: number;
   const safeName = input.fileName.replace(/[^a-zA-Z0-9_-]/g, "-").slice(0, 48) || "payment-icon";
   return storagePut(`payment-method-icons/${input.adminUserId}/${safeName}-${nanoid(8)}.${extension}`, bytes, input.contentType);
 }
+
+/** Photos sealed in the browser arrive as opaque encrypted bytes. */
+const encryptedContentType = "application/octet-stream";
+
+/** Photo attached to a live-support conversation (customer or admin side). */
+export async function uploadSupportChatImage(input: { chatId: string; userId: number; fileName: string; contentType: string; dataUrl: string }) {
+  const encrypted = input.contentType === encryptedContentType;
+  if (!encrypted && !allowedImageTypes.has(input.contentType)) throw new Error("រូបភាពត្រូវតែជា JPG, PNG ឬ WEBP");
+  const [header, encoded] = input.dataUrl.split(",", 2);
+  if (!header?.startsWith(`data:${input.contentType};base64`) || !encoded) throw new Error("ទិន្នន័យរូបភាពមិនត្រឹមត្រូវ");
+  const bytes = Buffer.from(encoded, "base64");
+  if (bytes.length === 0 || bytes.length > maxBytes) throw new Error("រូបភាពនីមួយៗត្រូវតែតូចជាង 5 MB");
+  // Sealed photos are opaque bytes, but object storage still filters on the file
+  // extension: the media bucket accepts jpg/jpeg/png/webp/svg/mp4/webm only, so an
+  // ".enc" name was rejected before the upload ever reached the bucket. Ciphertext
+  // therefore keeps an allowed extension - only this server ever reads it back.
+  const extension = encrypted ? "jpg" : input.contentType === "image/jpeg" ? "jpg" : input.contentType.split("/")[1];
+  const safeName = input.fileName.replace(/[^a-zA-Z0-9_-]/g, "-").slice(0, 40) || "photo";
+  return storagePut(`support-chat/${input.chatId}/${input.userId}-${safeName}-${nanoid(8)}.${extension}`, bytes, input.contentType);
+}
+

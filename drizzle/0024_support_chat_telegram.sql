@@ -1,0 +1,60 @@
+CREATE TABLE IF NOT EXISTS `support_chat_sessions` (
+  `id` varchar(64) NOT NULL,
+  `reference` varchar(24) NOT NULL,
+  `userId` int NOT NULL,
+  `customerName` varchar(140),
+  `customerEmail` varchar(320),
+  `topic` enum('order','payment','account','report','other') NOT NULL DEFAULT 'other',
+  `subject` varchar(200) NOT NULL,
+  `status` enum('open','active','closed') NOT NULL DEFAULT 'open',
+  `orderTrackingCode` varchar(48),
+  `quotaDay` varchar(10) NOT NULL,
+  `adminUserId` int,
+  `adminName` varchar(140),
+  `adminJoinedAt` timestamp,
+  `adminTypingAt` timestamp,
+  `customerTypingAt` timestamp,
+  `lastMessageAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `unreadForAdmin` int NOT NULL DEFAULT 0,
+  `closedAt` timestamp,
+  `closedByUserId` int,
+  `closeReason` varchar(240),
+  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT `support_chat_sessions_id` PRIMARY KEY(`id`),
+  CONSTRAINT `support_chat_sessions_reference_unique` UNIQUE(`reference`),
+  CONSTRAINT `support_chat_sessions_user_day_unique` UNIQUE(`userId`,`quotaDay`),
+  KEY `support_chat_sessions_status_idx` (`status`,`lastMessageAt`),
+  KEY `support_chat_sessions_user_idx` (`userId`,`createdAt`)
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS `support_chat_messages` (
+  `id` varchar(64) NOT NULL,
+  `chatId` varchar(64) NOT NULL,
+  `senderType` enum('customer','admin','system') NOT NULL,
+  `senderUserId` int,
+  `senderName` varchar(140),
+  `kind` enum('text','image','voice','system') NOT NULL DEFAULT 'text',
+  `body` text,
+  `mediaUrl` varchar(2048),
+  `mediaKey` varchar(512),
+  `durationMs` int,
+  `viaTelegram` boolean NOT NULL DEFAULT false,
+  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT `support_chat_messages_id` PRIMARY KEY(`id`),
+  KEY `support_chat_messages_chat_idx` (`chatId`,`createdAt`)
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS `telegram_admin_chats` (
+  `chatId` varchar(32) NOT NULL,
+  `title` varchar(180),
+  `username` varchar(120),
+  `linkedByEmail` varchar(320),
+  `notifyPurchases` boolean NOT NULL DEFAULT true,
+  `notifySupport` boolean NOT NULL DEFAULT true,
+  `isActive` boolean NOT NULL DEFAULT true,
+  `lastSeenAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT `telegram_admin_chats_chatId` PRIMARY KEY(`chatId`)
+);

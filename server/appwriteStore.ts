@@ -43,10 +43,11 @@ function paymentControlDocumentPath() {
 }
 
 export async function getAppwritePaymentControl(): Promise<AppwritePaymentControl> {
-  if (!config()) return { enabled: false, updatedByUserId: null, updatedAt: new Date(0) };
+  if (!config()) return { enabled: true, updatedByUserId: null, updatedAt: new Date(0) };
   const record = await request("GET", paymentControlDocumentPath()) as AppwriteRecord | null;
   const value = record?.sourceTable === "payment_control" ? parsePayload<Partial<AppwritePaymentControl>>(record) : null;
-  return { enabled: value?.enabled === true, updatedByUserId: typeof value?.updatedByUserId === "number" ? value.updatedByUserId : null, updatedAt: value?.updatedAt ? asDate(value.updatedAt) : new Date(0) };
+  // Store is open by default unless an administrator has explicitly stored a disabled state.
+  return { enabled: value ? value.enabled === true : true, updatedByUserId: typeof value?.updatedByUserId === "number" ? value.updatedByUserId : null, updatedAt: value?.updatedAt ? asDate(value.updatedAt) : new Date(0) };
 }
 
 export async function setAppwritePaymentControl(input: { enabled: boolean; updatedByUserId: number }) {
@@ -118,7 +119,8 @@ async function upsertProviderCatalogRecord(table: "provider_catalog_game" | "pro
   const path = providerCatalogDocumentPath(table, sourceId);
   const body = { data: { sourceTable: table, sourceId, payload: JSON.stringify(payload), sourceUpdatedAt: now.toISOString() } };
   const existing = await request("GET", path) as AppwriteRecord | null;
-  if (existing) await request("PUT", path, body);
+  // Appwrite updates an existing document with PATCH; PUT causes catalog and margin saves to fail in production.
+  if (existing) await request("PATCH", path, body);
   else {
     try { await request("POST", `/databases/${databaseId()}/collections/${collectionId}/documents`, { documentId: documentId(`${table}:${sourceId}`), ...body }); }
     catch (error) { if (!shouldRetryAppwriteCreateAsUpdate(error)) throw error; await request("PUT", path, body); }

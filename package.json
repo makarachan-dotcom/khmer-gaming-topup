@@ -69,6 +69,7 @@
     "framer-motion": "^12.23.22",
     "input-otp": "^1.4.2",
     "jose": "6.1.0",
+    "liquid-gooey": "^0.2.1",
     "lottie-web": "^5.13.0",
     "lucide-react": "^0.453.0",
     "mysql2": "^3.15.0",
@@ -88,6 +89,7 @@
     "superjson": "^1.13.3",
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
+    "thinking-orbs": "^0.3.1",
     "vaul": "^1.1.2",
     "wouter": "^3.3.5",
     "zod": "^4.1.12"

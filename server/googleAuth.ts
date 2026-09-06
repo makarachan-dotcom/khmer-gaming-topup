@@ -5,6 +5,8 @@ import * as db from "./db";
 import { decryptRefreshToken, encryptRefreshToken, sendGmailWelcomeEmail } from "./gmailWelcome";
 import { isSingleAdminEmail } from "./storefrontDomain";
 import { createZursSession, getZursSessionCookieOptions, readZursSession, ZURS_SESSION_COOKIE } from "./zursSession";
+import { grantAccessReprieve, normalizeDeviceId } from "./loginAbuseGuard";
+import { clientIpFromRequest } from "./rateLimit";
 
 const STATE_COOKIE = "zurs_google_oauth_state";
 const LOGIN_SCOPES = ["openid", "email", "profile"];
@@ -85,6 +87,36 @@ async function fetchProfile(accessToken: string) {
   const response = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", { headers: { Authorization: `Bearer ${accessToken}` } }); const profile = await response.json() as GoogleProfile; if (!response.ok || !profile.id || !profile.email || !profile.verified_email) throw new Error("Google did not return a verified email address"); return profile as Required<Pick<GoogleProfile, "id" | "email">> & GoogleProfile;
 }
 
+/**
+ * Google has just vouched for this person, so release them from a 24-hour
+ * block on this address+device. The storefront's rule is that clearing
+ * Google's own account security is proof of a real human; the email
+ * one-time-code flow stays blocked, because that is the flow being abused.
+ *
+ * Never allowed to throw: a reprieve failure must not turn a successful
+ * sign-in into a 500.
+ */
+async function grantGoogleReprieve(req: Request, email: string | null) {
+  try {
+    const ip = clientIpFromRequest(req);
+    if (!ip) return;
+    const userAgent = req.header("user-agent") ?? null;
+    await grantAccessReprieve({
+      ip,
+      deviceId: normalizeDeviceId({
+        deviceId: req.header("x-zurs-device"),
+        userAgent,
+        acceptLanguage: req.header("accept-language") ?? null,
+        ip,
+      }),
+      email,
+      reason: "google_sign_in",
+    });
+  } catch (error) {
+    console.warn("[Google OAuth] could not grant ban reprieve", error);
+  }
+}
+
 async function sendWelcomeIfEligible(user: { id: number; email: string | null; name: string | null }) {
   if (!user.email) return;
   const existing = await db.getWelcomeEmailDelivery(user.id); const sender = await db.getGmailSenderConnection();
@@ -113,6 +145,7 @@ export function registerGoogleAuthRoutes(app: Express) {
       stage = "session";
       const session = await createZursSession(user.openId, { email, name: profile.name ?? null, loginMethod: "google" });
       res.cookie(ZURS_SESSION_COOKIE, session, getZursSessionCookieOptions(req));
+      await grantGoogleReprieve(req, email);
       stage = "welcome";
       await sendWelcomeIfEligible(user);
       return res.redirect(saved.returnPath);
@@ -122,6 +155,7 @@ export function registerGoogleAuthRoutes(app: Express) {
       console.warn("[Google OAuth] Appwrite quota exhausted; using signed session fallback until persistence recovers");
       const session = await createZursSession(fallbackOpenId, { email, name: profile.name ?? null, loginMethod: "google" });
       res.cookie(ZURS_SESSION_COOKIE, session, getZursSessionCookieOptions(req));
+      await grantGoogleReprieve(req, email);
       return res.redirect(saved.returnPath);
     }
   } catch (error) { const detail = error instanceof Error ? error.message : "unknown error"; console.error("[Google OAuth] callback failed", detail); return res.status(500).send(`Google sign-in could not be completed. Please try again. Reference: ${getGoogleCallbackFailureReference(stage)}`); } });

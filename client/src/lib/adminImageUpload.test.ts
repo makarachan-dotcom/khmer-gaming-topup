@@ -17,6 +17,9 @@ describe("admin image upload resilience", () => {
     const gameImages = readFileSync(resolve(process.cwd(), "client/src/pages/AdminGameImages.tsx"), "utf8");
     const packageArtwork = readFileSync(resolve(process.cwd(), "client/src/pages/AdminPackageArtwork.tsx"), "utf8");
     expect(gameImages).toContain('prepareAdminImage(file, slot === "logo" ? "square" : "card")');
+    expect(gameImages).toContain("Keep the base64 preview out of the save payload");
+    expect(gameImages).toContain("setDraft(previousDraft)");
+    expect(gameImages).not.toContain("setDraft((current) => ({ ...current, [field]: prepared.dataUrl }))");
     expect(packageArtwork).toContain('prepareAdminImage(file, "card")');
     expect(packageArtwork).toContain("await upload.mutateAsync");
     expect(packageArtwork).toContain("await save.mutateAsync");

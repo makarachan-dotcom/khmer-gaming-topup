@@ -1,0 +1,1104 @@
+/* ==========================================================================
+   Zurs support layer (round 3) — mascot, greeting bubble, thinking orb
+   Prefix: .zs-*
+   ========================================================================== */
+
+:root {
+  --zs-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --zs-panel: #0f1424;
+  --zs-panel-2: #151b30;
+  --zs-line: rgba(148, 163, 184, 0.18);
+  --zs-accent: #8b93ff;
+  --zs-sky: #38bdf8;
+  --zs-text: #e7ecff;
+  --zs-muted: #9aa3c0;
+}
+
+/* -------------------------------- mascot -------------------------------- */
+
+/* Locked to the right edge, and not allowed to move.
+ * The container is exactly the size of the button: the bubble is absolutely
+ * positioned, so it is out of flow and can never widen this box or push the
+ * mascot sideways. `left`/`bottom` are pinned to auto so no other stylesheet
+ * can re-anchor it, and the inset respects the phone's safe area. */
+.zs-mascot {
+  position: relative;
+  inset: auto;
+  z-index: auto;
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  animation: zs-mascot-in 620ms var(--zs-ease) both;
+  transition: opacity 260ms var(--zs-ease);
+}
+
+/* Hiding must not shift the anchor: fade only, never translate. */
+.zs-mascot.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Scales about its own centre, so the resting position never changes. */
+@keyframes zs-mascot-in {
+  from { opacity: 0; transform: scale(0.82); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.zs-mascot__btn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  padding: 0;
+  border: 1px solid rgba(56, 189, 248, 0.34);
+  border-radius: 999px;
+  background: radial-gradient(120% 120% at 30% 20%, #1c2440 0%, #0c1120 72%);
+  box-shadow: 0 12px 30px -12px rgba(56, 189, 248, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  animation: zs-float 5.2s ease-in-out infinite;
+  transition: transform 240ms var(--zs-ease), box-shadow 240ms var(--zs-ease);
+}
+
+.zs-mascot__btn:hover {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 18px 40px -14px rgba(56, 189, 248, 0.7);
+}
+
+.zs-mascot__btn:active { transform: translateY(-1px) scale(0.97); }
+
+.zs-mascot__btn:focus-visible {
+  outline: 2px solid var(--zs-sky);
+  outline-offset: 3px;
+}
+
+@keyframes zs-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+
+.zs-mascot__svg { position: relative; z-index: 1; overflow: visible; }
+
+/* soft ripple so the eye is drawn to the corner without a loud badge */
+.zs-mascot__ping {
+  position: absolute;
+  inset: -6px;
+  border-radius: 999px;
+  border: 1px solid rgba(56, 189, 248, 0.5);
+  animation: zs-ping 2.8s var(--zs-ease) infinite;
+}
+
+@keyframes zs-ping {
+  0%   { opacity: 0.55; transform: scale(0.86); }
+  70%  { opacity: 0;    transform: scale(1.18); }
+  100% { opacity: 0;    transform: scale(1.18); }
+}
+
+.zs-mascot__eyes {
+  transform-origin: 24px 26px;
+  animation: zs-blink 4.6s steps(1, end) infinite;
+}
+
+@keyframes zs-blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95%           { transform: scaleY(0.12); }
+}
+
+.zs-mascot__antenna { animation: zs-bulb 3.4s ease-in-out infinite; }
+
+@keyframes zs-bulb {
+  0%, 100% { opacity: 0.55; r: 2.4; }
+  50%      { opacity: 1;    r: 3;   }
+}
+
+.zs-mascot__hand {
+  transform-origin: 40px 25px;
+  animation: zs-wave 3.6s var(--zs-ease) infinite;
+}
+
+@keyframes zs-wave {
+  0%, 62%, 100% { transform: rotate(0deg); }
+  70%           { transform: rotate(-16deg); }
+  78%           { transform: rotate(10deg); }
+  86%           { transform: rotate(-8deg); }
+}
+
+/* --------------------------- greeting bubble ---------------------------- */
+
+/* The text always opens to the LEFT of the mascot, joined to it and fully
+ * readable. `width: max-content` keeps short greetings tight, while the clamp
+ * guarantees the bubble can never reach past the left edge of the screen.
+ * The old `white-space: nowrap` fought `max-width`: text longer than the box
+ * could not wrap, so it overflowed and got clipped off-screen. Now it wraps. */
+.zs-mascot__bubble {
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 10px);
+  left: auto;
+  transform: translateY(-50%);
+  width: max-content;
+  max-width: min(15rem, calc(100vw - 6.5rem));
+  padding: 8px 13px;
+  border: 1px solid var(--zs-line);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(21, 27, 48, 0.96), rgba(12, 17, 32, 0.96));
+  backdrop-filter: blur(8px);
+  color: var(--zs-text);
+  font-size: 0.82rem;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: right;
+  box-shadow: 0 14px 34px -18px rgba(0, 0, 0, 0.8);
+  animation: zs-bubble-in 520ms var(--zs-ease) both;
+}
+
+/* little tail pointing at the mascot */
+.zs-mascot__bubble::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -5px;
+  width: 9px;
+  height: 9px;
+  transform: translateY(-50%) rotate(45deg);
+  border-right: 1px solid var(--zs-line);
+  border-top: 1px solid var(--zs-line);
+  background: rgba(15, 20, 36, 0.96);
+}
+
+/* Every frame keeps translateY(-50%) or the bubble would jump out of its
+ * vertical centring the moment the animation takes over the transform. */
+@keyframes zs-bubble-in {
+  0%   { opacity: 0; transform: translateY(-50%) translateX(14px) scale(0.86); }
+  60%  { opacity: 1; transform: translateY(-50%) translateX(-2px) scale(1.02); }
+  100% { opacity: 1; transform: translateY(-50%) translateX(0) scale(1); }
+}
+
+.zs-mascot__bubble--greeting { color: #bfe6ff; }
+
+.zs-mascot__bubble--prompt {
+  animation: zs-bubble-in 520ms var(--zs-ease) both, zs-nudge 4.2s var(--zs-ease) 520ms infinite;
+}
+
+@keyframes zs-nudge {
+  0%, 88%, 100% { transform: translateY(-50%) translateX(0); }
+  92%           { transform: translateY(-50%) translateX(-3px); }
+  96%           { transform: translateY(-50%) translateX(2px); }
+}
+
+/* ------------------------------ orb states ------------------------------ */
+
+.zs-orb {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  animation: zs-fade-up 460ms var(--zs-ease) both;
+}
+
+.zs-orb__stage { display: grid; place-items: center; }
+
+.zs-orb__caption {
+  color: var(--zs-muted);
+  font-size: 0.76rem;
+  letter-spacing: 0.01em;
+  animation: zs-breathe 2.6s ease-in-out infinite;
+}
+
+@keyframes zs-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes zs-breathe {
+  0%, 100% { opacity: 0.6; }
+  50%      { opacity: 1; }
+}
+
+@media (max-width: 640px) {
+  /* Round 7: no viewport inset here any more. The mascot is a header child, so
+     a `right` offset would only fight the header layout. */
+  .zs-mascot__btn { width: 50px; height: 50px; }
+  .zs-mascot__bubble {
+    font-size: 0.76rem;
+    padding: 7px 11px;
+    right: calc(100% + 8px);
+    max-width: min(13rem, calc(100vw - 5.25rem));
+  }
+}
+/* ------------------------------ chat shell ------------------------------ */
+
+.zs-chat {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 18px;
+  pointer-events: none;
+}
+
+.zs-chat__scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 6, 14, 0.55);
+  backdrop-filter: blur(6px);
+  pointer-events: auto;
+  animation: zs-scrim-in 320ms var(--zs-ease) both;
+}
+
+@keyframes zs-scrim-in { from { opacity: 0; } to { opacity: 1; } }
+
+.zs-chat__panel {
+  position: relative;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  width: min(24rem, 100%);
+  height: min(34rem, 100%);
+  overflow: hidden;
+  border: 1px solid var(--zs-line);
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(17, 22, 40, 0.98), rgba(9, 12, 24, 0.98));
+  box-shadow: 0 40px 90px -30px rgba(0, 0, 0, 0.85);
+  color: var(--zs-text);
+  animation: zs-panel-in 520ms var(--zs-ease) both;
+}
+
+@keyframes zs-panel-in {
+  from { opacity: 0; transform: translateY(26px) scale(0.94); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.zs-chat__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--zs-line);
+  background: rgba(8, 11, 22, 0.6);
+}
+
+.zs-chat__dot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 999px;
+  background: #34d399;
+  animation: zs-live 2s ease-in-out infinite;
+}
+
+@keyframes zs-live {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.55); }
+  50%      { box-shadow: 0 0 0 7px rgba(52, 211, 153, 0); }
+}
+
+.zs-chat__ident { flex: 1; min-width: 0; }
+.zs-chat__title { margin: 0; font-size: 0.88rem; font-weight: 700; }
+.zs-chat__sub { margin: 0; font-size: 0.7rem; color: var(--zs-muted); }
+
+.zs-chat__end {
+  flex: none;
+  padding: 4px 10px;
+  border: 1px solid var(--zs-line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--zs-muted);
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: color 200ms var(--zs-ease), border-color 200ms var(--zs-ease);
+}
+
+.zs-chat__end:hover { color: #fda4af; border-color: rgba(251, 113, 133, 0.45); }
+
+.zs-chat__close {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--zs-muted);
+  cursor: pointer;
+  transition: background 200ms var(--zs-ease), color 200ms var(--zs-ease);
+}
+
+.zs-chat__close:hover { background: rgba(148, 163, 184, 0.12); color: var(--zs-text); }
+
+.zs-chat__body { flex: 1; overflow-y: auto; padding: 14px; }
+
+.zs-chat__center {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.zs-chat__notice p {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--zs-muted);
+}
+
+.zs-chat__intro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 6px;
+  text-align: center;
+  animation: zs-fade-up 520ms var(--zs-ease) both;
+}
+
+.zs-chat__introTitle { margin: 0; font-size: 0.98rem; font-weight: 700; color: var(--zs-text); }
+.zs-chat__introNote { margin: 0; font-size: 0.76rem; color: var(--zs-muted); }
+
+.zs-chat__seed {
+  margin: 0;
+  padding: 5px 12px;
+  border: 1px solid rgba(139, 147, 255, 0.35);
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.12);
+  font-size: 0.76rem;
+}
+
+.zs-chat__topics { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+
+.zs-chat__topic {
+  padding: 6px 11px;
+  border: 1px solid var(--zs-line);
+  border-radius: 999px;
+  background: rgba(21, 27, 48, 0.8);
+  color: var(--zs-muted);
+  font-size: 0.74rem;
+  cursor: pointer;
+  transition: transform 200ms var(--zs-ease), border-color 200ms var(--zs-ease), color 200ms var(--zs-ease);
+}
+
+.zs-chat__topic:hover { transform: translateY(-1px); color: var(--zs-text); }
+.zs-chat__topic.is-active {
+  border-color: rgba(139, 147, 255, 0.7);
+  background: rgba(99, 102, 241, 0.2);
+  color: #fff;
+}
+
+.zs-chat__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 4px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  font-size: 0.84rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 220ms var(--zs-ease), box-shadow 220ms var(--zs-ease);
+}
+
+.zs-chat__cta:hover { transform: translateY(-2px); box-shadow: 0 16px 34px -16px rgba(99, 102, 241, 0.85); }
+.zs-chat__cta:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+
+/* ------------------------------- messages ------------------------------- */
+
+.zs-chat__list { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
+
+.zs-msg {
+  display: flex;
+  flex-direction: column;
+  max-width: 82%;
+  animation: zs-msg-in 380ms var(--zs-ease) both;
+}
+
+@keyframes zs-msg-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.zs-msg--user { align-self: flex-end; align-items: flex-end; }
+.zs-msg--admin { align-self: flex-start; align-items: flex-start; }
+.zs-msg--system { align-self: center; align-items: center; max-width: 92%; }
+.zs-msg--orb { align-self: flex-start; align-items: flex-start; padding: 2px; }
+
+.zs-msg__bubble { padding: 8px 12px; border-radius: 14px; overflow: hidden; }
+
+.zs-msg--user .zs-msg__bubble {
+  border-bottom-right-radius: 5px;
+  background: linear-gradient(180deg, #4f46e5, #4338ca);
+  color: #fff;
+}
+
+.zs-msg--admin .zs-msg__bubble {
+  border: 1px solid var(--zs-line);
+  border-bottom-left-radius: 5px;
+  background: rgba(30, 38, 64, 0.9);
+}
+
+.zs-msg--system .zs-msg__bubble {
+  padding: 4px 10px;
+  background: transparent;
+  color: var(--zs-muted);
+  font-size: 0.72rem;
+}
+
+.zs-msg__text { margin: 0; font-size: 0.84rem; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
+.zs-msg__time { margin-top: 3px; font-size: 0.64rem; color: var(--zs-muted); }
+.zs-msg__audio { width: 208px; height: 34px; }
+
+/* image load animation: shimmer placeholder, then un-blur into place */
+.zs-msg__img {
+  display: block;
+  width: 100%;
+  max-width: 220px;
+  min-height: 120px;
+  border-radius: 10px;
+  opacity: 0;
+  filter: blur(14px);
+  transform: scale(1.04);
+  background: linear-gradient(100deg, rgba(148, 163, 184, 0.08), rgba(148, 163, 184, 0.2), rgba(148, 163, 184, 0.08));
+  background-size: 200% 100%;
+  animation: zs-shimmer 1.4s linear infinite;
+  transition: opacity 420ms var(--zs-ease), filter 620ms var(--zs-ease), transform 620ms var(--zs-ease);
+}
+
+.zs-msg__img.is-loaded {
+  min-height: 0;
+  opacity: 1;
+  filter: blur(0);
+  transform: scale(1);
+  background: none;
+  animation: none;
+}
+
+@keyframes zs-shimmer {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+
+.zs-chat__closed {
+  margin-top: 6px;
+  padding: 10px 12px;
+  border: 1px dashed var(--zs-line);
+  border-radius: 12px;
+  text-align: center;
+}
+
+.zs-chat__closed p { margin: 0; font-size: 0.76rem; line-height: 1.5; color: var(--zs-muted); }
+.zs-chat__quota { margin-top: 6px !important; color: #fcd34d !important; }
+
+.zs-chat__error {
+  margin: 0;
+  padding: 8px 14px;
+  border-top: 1px solid rgba(251, 113, 133, 0.3);
+  background: rgba(190, 18, 60, 0.14);
+  color: #fda4af;
+  font-size: 0.76rem;
+  animation: zs-shake 420ms var(--zs-ease) both;
+}
+
+@keyframes zs-shake {
+  0%, 100% { transform: translateX(0); }
+  25%      { transform: translateX(-4px); }
+  75%      { transform: translateX(4px); }
+}
+
+/* ------------------------------- composer ------------------------------- */
+
+.zs-chat__composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 10px 12px 12px;
+  border-top: 1px solid var(--zs-line);
+  background: rgba(8, 11, 22, 0.6);
+}
+
+.zs-chat__input {
+  flex: 1;
+  min-height: 38px;
+  max-height: 96px;
+  padding: 9px 12px;
+  resize: none;
+  border: 1px solid var(--zs-line);
+  border-radius: 12px;
+  background: rgba(15, 20, 36, 0.9);
+  color: var(--zs-text);
+  font-size: 0.84rem;
+  outline: none;
+  transition: border-color 200ms var(--zs-ease), box-shadow 200ms var(--zs-ease);
+}
+
+.zs-chat__input:focus {
+  border-color: rgba(139, 147, 255, 0.6);
+  box-shadow: 0 0 0 3px rgba(139, 147, 255, 0.16);
+}
+
+.zs-chat__mic,
+.zs-chat__send {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border: 1px solid var(--zs-line);
+  border-radius: 999px;
+  background: rgba(21, 27, 48, 0.95);
+  color: var(--zs-text);
+  cursor: pointer;
+  transition: transform 200ms var(--zs-ease), background 200ms var(--zs-ease), border-color 200ms var(--zs-ease);
+}
+
+.zs-chat__mic:hover,
+.zs-chat__send:hover { transform: translateY(-2px) scale(1.05); }
+
+.zs-chat__send { background: linear-gradient(135deg, #6366f1, #8b5cf6); border-color: transparent; color: #fff; }
+
+.zs-chat__mic.is-live {
+  background: #e11d48;
+  border-color: #fb7185;
+  color: #fff;
+  animation: zs-rec 1.2s ease-in-out infinite;
+}
+
+@keyframes zs-rec {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.55); }
+  50%      { box-shadow: 0 0 0 8px rgba(225, 29, 72, 0); }
+}
+
+.zs-chat__mic:disabled,
+.zs-chat__send:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+/* --------------------- gooey image picker (image only) ------------------ */
+
+.zs-pick { position: relative; width: 38px; height: 38px; flex: none; }
+
+.zs-pick__input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+.zs-pick__btn {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--zs-line);
+  border-radius: 999px;
+  background: rgba(21, 27, 48, 0.95);
+  color: var(--zs-text);
+  cursor: pointer;
+  transition: transform 220ms var(--zs-ease), opacity 220ms var(--zs-ease), background 220ms var(--zs-ease);
+}
+
+.zs-pick__btn--main { position: relative; z-index: 2; }
+.zs-pick__btn--main:hover { transform: scale(1.06); }
+
+/* The children share the main button's origin so the goo can merge them.
+   liquid-gooey moves them with transforms; this only fixes the origin. */
+.zs-pick__btn--gallery,
+.zs-pick__btn--camera { position: absolute; top: 0; left: 0; }
+
+.zs-pick:not(.is-open) .zs-pick__btn--gallery,
+.zs-pick:not(.is-open) .zs-pick__btn--camera { opacity: 0; pointer-events: none; }
+
+.zs-pick.is-open .zs-pick__btn--gallery,
+.zs-pick.is-open .zs-pick__btn--camera { opacity: 1; }
+
+.zs-pick__btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+@media (max-width: 640px) {
+  .zs-chat { padding: 0; align-items: stretch; justify-content: stretch; }
+  .zs-chat__panel { width: 100%; height: 100%; border: none; border-radius: 0; }
+}
+
+/* ---------------------------- reduced motion ---------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .zs-mascot,
+  .zs-mascot__btn,
+  .zs-mascot__bubble,
+  .zs-mascot__bubble--prompt,
+  .zs-mascot__ping,
+  .zs-mascot__eyes,
+  .zs-mascot__antenna,
+  .zs-mascot__hand,
+  .zs-orb,
+  .zs-orb__caption,
+  .zs-chat__scrim,
+  .zs-chat__panel,
+  .zs-chat__intro,
+  .zs-chat__error,
+  .zs-chat__dot,
+  .zs-chat__mic.is-live,
+  .zs-msg,
+  .zs-msg__img {
+    animation: none !important;
+    transition-duration: 1ms !important;
+  }
+
+  .zs-msg__img { opacity: 1 !important; filter: none !important; transform: none !important; }
+}
+
+/* ==========================================================================
+ * ZURS SUPPORT SHEET - GLITCH REPAIR (round 4)
+ *
+ * Bug: the "ZURS SUPPORT / Admin" sheet overlapped its own header. Three
+ * causes stacked up in index.css:
+ *   1. the whole sheet was the scroll container (overflow: auto)
+ *   2. .contact-admin-sheet__header had no background of its own
+ *   3. .contact-admin-card was only 80-90% opaque
+ * So as soon as the content was taller than the sheet, a translucent card
+ * slid across the bold title and the title showed THROUGH the card.
+ * A hard `max-height: min(58dvh, 29rem) !important` on phones guaranteed it.
+ *
+ * Fix: the sheet stops scrolling, the list scrolls instead, the header is
+ * sticky and fully opaque, and cards are fully opaque. This file is imported
+ * last, so these rules win without touching index.css's oklch rules.
+ * ======================================================================= */
+
+.contact-admin-sheet {
+	display: flex !important;
+	flex-direction: column !important;
+	/* the list scrolls, never the sheet */
+	overflow: hidden !important;
+	padding: 0.9rem 0.9rem max(0.9rem, env(safe-area-inset-bottom)) !important;
+}
+
+/* Doubled class so this beats the `!important` 58dvh cap in index.css. */
+.contact-admin-layer.contact-admin-layer .contact-admin-sheet {
+	max-height: min(86dvh, 44rem) !important;
+}
+
+.contact-admin-sheet__handle {
+	flex: 0 0 auto;
+}
+
+/* Sticky and fully opaque - nothing can bleed through it again. */
+.contact-admin-sheet__header {
+	position: sticky;
+	top: 0;
+	z-index: 3;
+	flex: 0 0 auto;
+	background: #f7f9ff;
+	padding-bottom: 0.7rem;
+	border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+}
+
+.contact-admin-sheet__title {
+	font-size: 1.26rem !important;
+	letter-spacing: -0.01em;
+}
+
+.contact-admin-sheet__lead {
+	margin-top: 0.25rem !important;
+	font-size: 0.72rem !important;
+	color: #64748b !important;
+}
+
+/* The real scroll container. overscroll-behavior stops iOS from
+ * rubber-banding the storefront underneath the sheet. */
+.contact-admin-sheet__list {
+	flex: 1 1 auto;
+	min-height: 0;
+	margin-top: 0.75rem !important;
+	padding: 0.15rem 0.15rem 0.3rem;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	-webkit-overflow-scrolling: touch;
+	scrollbar-width: thin;
+	scrollbar-color: rgba(100, 116, 139, 0.35) transparent;
+}
+
+.contact-admin-sheet__list::-webkit-scrollbar {
+	width: 6px;
+}
+
+.contact-admin-sheet__list::-webkit-scrollbar-thumb {
+	border-radius: 999px;
+	background: rgba(100, 116, 139, 0.32);
+}
+
+/* Fully opaque. This is the actual bleed-through fix. */
+.contact-admin-card {
+	background: #ffffff !important;
+	border: 1px solid rgba(148, 163, 184, 0.28) !important;
+	border-radius: 1.1rem !important;
+	box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08) !important;
+	isolation: isolate;
+}
+
+.contact-admin-card--skeleton {
+	background: linear-gradient(90deg, #eef2f7 25%, #f8fafc 50%, #eef2f7 75%) !important;
+	background-size: 200% 100% !important;
+}
+
+/* Retire the stale index.css selectors that targeted an older DOM shape
+ * (`> .flex`, `> .mt-5`) and fought the current header/list markup. */
+.contact-admin-sheet > .flex,
+.contact-admin-sheet > .mt-5 {
+	gap: normal;
+	margin-top: 0;
+}
+
+.contact-admin-telegram {
+	margin-top: 0.7rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.45rem;
+	border-radius: 0.9rem;
+	background: linear-gradient(135deg, #1d4ed8, #0ea5e9);
+	padding: 0.7rem 0.9rem;
+	font-weight: 800;
+	color: #ffffff;
+	box-shadow: 0 10px 22px rgba(29, 78, 216, 0.28);
+	transition: transform 180ms var(--zs-ease), box-shadow 180ms var(--zs-ease);
+}
+
+.contact-admin-telegram:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 14px 28px rgba(29, 78, 216, 0.34);
+}
+
+.contact-admin-empty {
+	border-radius: 1rem;
+	border: 1px dashed rgba(148, 163, 184, 0.5);
+	background: #ffffff;
+	padding: 1.1rem;
+	text-align: center;
+	font-size: 0.78rem;
+	line-height: 1.6;
+	color: #64748b;
+}
+
+@media (min-width: 640px) {
+	.contact-admin-sheet {
+		padding: 1.25rem !important;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.contact-admin-telegram {
+		transition: none;
+	}
+}
+
+/* ==========================================================================
+ * HERO BANNER - one banner, no background, running colour line (round 4)
+ *
+ * The carousel is gone from Home.tsx. Here we strip the frame's chrome
+ * (border + bg-panel + the zurs-premium.css ::after overlay) and wrap the
+ * artwork in a 2px ring that a colour arc travels around.
+ * ======================================================================= */
+
+.zurs-banner-beam {
+	position: relative;
+	isolation: isolate;
+	border-radius: 1.15rem;
+	/* thickness of the running line */
+	padding: 2px;
+	overflow: hidden;
+}
+
+/* A large conic-gradient square spinning behind the artwork. Only the 2px of
+ * padding is left uncovered, so you see a colour arc travelling around the
+ * edge. Using transform (not the individual rotate property) keeps Safari,
+ * older WebKit and Android WebView happy. */
+.zurs-banner-beam::before {
+	content: "";
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	width: 240%;
+	aspect-ratio: 1 / 1;
+	z-index: 0;
+	background: conic-gradient(
+		from 0deg,
+		rgba(56, 189, 248, 0) 0deg,
+		rgba(56, 189, 248, 0) 188deg,
+		#38bdf8 248deg,
+		#8b5cf6 284deg,
+		#f472b6 316deg,
+		rgba(244, 114, 182, 0) 352deg,
+		rgba(244, 114, 182, 0) 360deg
+	);
+	transform: translate(-50%, -50%) rotate(0deg);
+	animation: zurs-banner-run 4.6s linear infinite;
+}
+
+@keyframes zurs-banner-run {
+	to {
+		transform: translate(-50%, -50%) rotate(360deg);
+	}
+}
+
+.zurs-banner-beam > .zurs-banner-frame {
+	position: relative;
+	z-index: 1;
+}
+
+/* Background removed: no border, no panel fill, no premium gradient overlay. */
+.zurs-banner-frame--bare {
+	background: transparent !important;
+	border: 0 !important;
+	box-shadow: none !important;
+}
+
+.zurs-banner-frame--bare::after,
+.zurs-banner-frame--bare::before {
+	display: none !important;
+}
+
+/* Image-load animation: the artwork resolves out of a soft blur. */
+.zurs-banner-slide {
+	opacity: 0;
+	transform: scale(1.035);
+	filter: blur(12px);
+	transition: opacity 520ms var(--zs-ease), transform 760ms var(--zs-ease),
+		filter 560ms var(--zs-ease);
+}
+
+.zurs-banner-slide.is-loaded {
+	opacity: 1;
+	transform: none;
+	filter: none;
+}
+
+/* zurs-premium.css runs a ken-burns animation on this element, and an
+ * animation beats a transition on transform - so hold it off until the
+ * image has actually arrived. */
+.zurs-banner-slide:not(.is-loaded) {
+	animation: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.zurs-banner-beam {
+		background: rgba(148, 163, 184, 0.38);
+	}
+
+	.zurs-banner-beam::before {
+		animation: none;
+	}
+
+	.zurs-banner-slide {
+		transition: none;
+		opacity: 1;
+		transform: none;
+		filter: none;
+	}
+}
+
+/* ==========================================================================
+   ROUND 6 - mascot docked in the header, chat promoted to its own /chat page
+   ========================================================================== */
+
+/* The mascot is no longer a floating fixed element: it is a header control.
+   position: relative survives only so the bubble can anchor to it. Every
+   round-5 viewport anchor is explicitly unwound here. */
+.zs-mascot {
+  position: relative;
+  top: auto;
+  right: auto;
+  bottom: auto;
+  left: auto;
+  z-index: auto;
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  animation: zs-mascot-in 620ms var(--zs-ease) both;
+}
+
+.zs-mascot__btn {
+  width: 36px;
+  height: 36px;
+  text-decoration: none;
+}
+
+.zs-mascot__svg { width: 34px; height: 34px; }
+
+/* The bubble still opens to the LEFT, glued to the mascot, and wraps so it can
+   never be clipped. Inside the header it also has to out-rank the nav row. */
+.zs-mascot__bubble {
+  z-index: 3;
+  max-width: min(13rem, calc(100vw - 8rem));
+  box-shadow: 0 16px 38px -18px rgba(0, 0, 0, 0.9);
+}
+
+@media (max-width: 640px) {
+  .zs-mascot { top: auto; right: auto; }
+  .zs-mascot__btn { width: 34px; height: 34px; }
+  .zs-mascot__svg { width: 32px; height: 32px; }
+  .zs-mascot__bubble {
+    right: calc(100% + 8px);
+    max-width: min(11.5rem, calc(100vw - 7.5rem));
+  }
+}
+
+/* ---------------------------- /chat page shell --------------------------- */
+
+.zs-page {
+  position: relative;
+  min-height: 100dvh;
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(56, 189, 248, 0.12), transparent 60%),
+    linear-gradient(180deg, #0b1020, #070912 60%);
+}
+
+/* Re-host the dialog as a page: no fixed overlay, no scrim, full height. */
+.zs-page .zs-chat {
+  position: static;
+  inset: auto;
+  z-index: auto;
+  display: block;
+  padding: 0;
+  pointer-events: auto;
+}
+
+.zs-page .zs-chat__scrim { display: none; }
+
+.zs-page .zs-chat__panel {
+  width: min(30rem, 100%);
+  height: 100dvh;
+  margin: 0 auto;
+  border-top: 0;
+  border-bottom: 0;
+  border-radius: 0;
+  box-shadow: none;
+  animation: none;
+}
+
+/* ------------------- parked media controls (text only) ------------------- */
+
+.zs-chat__soon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border: 1px dashed rgba(148, 163, 184, 0.3);
+  border-radius: 999px;
+  background: rgba(30, 37, 56, 0.55);
+  color: #6b748f;
+  cursor: not-allowed;
+}
+
+.zs-chat__soonFile {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: not-allowed;
+}
+
+.zs-chat__mic.zs-chat__soon,
+.zs-chat__mic.zs-chat__soon:disabled {
+  opacity: 1;
+  border: 1px dashed rgba(148, 163, 184, 0.3);
+  background: rgba(30, 37, 56, 0.55);
+  color: #6b748f;
+  transform: none;
+  cursor: not-allowed;
+}
+
+.zs-chat__soon:hover,
+.zs-chat__mic.zs-chat__soon:hover {
+  transform: none;
+  background: rgba(30, 37, 56, 0.55);
+}
+
+/* -------------- Telegram fallback once the daily chat is used ------------ */
+
+.zs-chat__tgcard {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(24, 35, 58, 0.9), rgba(12, 17, 32, 0.9));
+  animation: zs-fade-up 460ms var(--zs-ease) both;
+}
+
+.zs-chat__tgtext {
+  margin: 0;
+  color: var(--zs-text);
+  font-size: 0.78rem;
+  line-height: 1.55;
+  text-align: center;
+}
+
+.zs-chat__tg {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 15px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #229ed9, #1d8bc0);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: 0 14px 30px -14px rgba(34, 158, 217, 0.8);
+  transition: transform 200ms var(--zs-ease), box-shadow 200ms var(--zs-ease);
+}
+
+.zs-chat__tg:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 36px -14px rgba(34, 158, 217, 0.9);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zs-mascot,
+  .zs-chat__tgcard,
+  .zs-page .zs-chat__panel { animation: none !important; }
+  .zs-chat__tg:hover { transform: none; }
+}
+
+/* ==========================================================================
+   ROUND 7 - the mascot must never touch, or hide behind, the right edge
+   ========================================================================== */
+
+/* Reported: on a phone the mascot was squeezed into the right edge and could
+   barely be seen. Four things now make that impossible:
+     1. a real margin from the header's right edge, so the flex row reserves
+        the gap instead of letting the mascot hang over it,
+     2. a fixed width, so even an in-flow bubble cannot shove it sideways,
+     3. overflow: visible across the header chain, so nothing can clip it,
+     4. the round-5 `position: fixed` inset is gone from the base rule, so a
+        partial merge cannot re-anchor it to the viewport again. */
+.zs-mascot {
+  width: 36px;
+  margin-inline-start: 2px;
+  margin-inline-end: 6px;
+}
+
+.zurs-compact-header,
+.zurs-compact-header > .container,
+.zurs-compact-header nav[aria-label="Account"] {
+  overflow: visible;
+}
+
+@media (max-width: 640px) {
+  .zs-mascot {
+    width: 34px;
+    /* clears the header's rounded corner, the container padding and the
+       notch safe area in one go */
+    margin-inline-end: calc(10px + env(safe-area-inset-right, 0px));
+  }
+
+  /* The bubble opens leftwards from a mascot that now sits further in, so the
+     clamp is tightened to keep it clear of the ZURS.me wordmark. */
+  .zs-mascot__bubble {
+    max-width: min(10.5rem, calc(100vw - 9.5rem));
+    font-size: 0.74rem;
+  }
+}

@@ -2,7 +2,7 @@ import { getBakongPaymentReadiness } from "./bakongKhqr";
 import { getKhqrWorkerCredentials } from "./khqrWorkerSecrets";
 
 export type PaymentReadiness = { ready: boolean; reason: "automatic_payment_pending" | "merchant_unverified" | "ready" };
-export type ProductPurchaseReadiness = { ready: false; reason: "security_review" };
+export type ProductPurchaseReadiness = { ready: true; reason: "ready" };
 
 export async function getAutomaticPaymentReadiness(): Promise<PaymentReadiness> {
   const bakong = await getBakongPaymentReadiness();
@@ -27,9 +27,10 @@ export async function getPublicPaymentReadiness(paymentSwitchEnabled: boolean): 
 }
 
 export function getProductPurchaseReadiness(): ProductPurchaseReadiness {
-  return { ready: false, reason: "security_review" };
+  return { ready: true, reason: "ready" };
 }
 
 export function requireProductPurchaseEnabled() {
-  throw new Error("Product purchase is temporarily disabled while ZURS STORE completes its payment-security review.");
+  // The storefront is open; automatic payment readiness remains enforced downstream.
+  return;
 }

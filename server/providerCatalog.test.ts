@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { balanceSocialProviderServices, cachedProviderAvailabilityGames, cachedPublicProviderGames, fetchProviderGameDetails, fetchProviderGames, fetchProviderPackages, fetchProviderPreviewPackages, fetchSmmProviderServices, getProviderAvailabilityCatalog, getProviderCatalogStatus, isThailandProviderProduct, providerPackageRecordId, resetProviderCatalogCacheForTests, setProviderAvailability, submitSmmProviderOrder, validateProviderPlayerIdentity } from "./providerCatalog";
+
+import { balanceSocialProviderServices, cachedProviderAvailabilityGames, cachedPublicProviderGames, fetchFzrProviderSyncSnapshot, fetchProviderGameDetails, fetchProviderGames, fetchProviderPackages, fetchProviderPreviewPackages, fetchSmmProviderServices, filterProviderPackagesByActiveIds, getProviderAvailabilityCatalog, getProviderCatalogStatus, isThailandProviderProduct, providerPackageRecordId, resetProviderCatalogCacheForTests, setProviderAvailability, submitSmmProviderOrder, validateProviderPlayerIdentity } from "./providerCatalog";
 
 const originalEndpoint = process.env.FZR_CARDS_API_BASE_URL;
 const originalApiKey = process.env.FZR_CARDS_API_KEY;
@@ -56,6 +57,15 @@ afterEach(() => {
 });
 
 describe("provider catalog", () => {
+  it("keeps public package IDs aligned with orderable active records", () => {
+    const packages = [
+      { id: providerPackageRecordId("mobile_legends_global", "5_diamonds"), label: "5 Diamonds" },
+      { id: providerPackageRecordId("mobile_legends_global", "25_diamonds"), label: "25 Diamonds" },
+    ];
+    expect(filterProviderPackagesByActiveIds(packages, [packages[1]!.id])).toEqual([packages[1]]);
+    expect(filterProviderPackagesByActiveIds(packages, null)).toEqual(packages);
+  });
+
   it("keeps games and packages empty until authorized provider credentials are configured", async () => {
     delete process.env.FZR_CARDS_API_BASE_URL;
     delete process.env.FZR_CARDS_API_KEY;
@@ -74,20 +84,20 @@ describe("provider catalog", () => {
   it("preserves owner-approved cached public games when the live FazerCards catalog is unavailable", () => {
     const games = cachedPublicProviderGames({
       games: [
-        { id: "cached-public", providerSourceId: "public-game", titleKh: "Public Game", titleEn: "Public Game", packages: [] },
-        { id: "cached-hidden", providerSourceId: "hidden-game", titleKh: "Hidden Game", titleEn: "Hidden Game", packages: [] },
-        { id: "cached-unapproved", providerSourceId: "unapproved-game", titleKh: "Unapproved Game", titleEn: "Unapproved Game", packages: [] },
+        { id: "cached-public", providerSourceId: "8_ball_pool", titleKh: "8 Ball Pool", titleEn: "8 Ball Pool", packages: [] },
+        { id: "cached-hidden", providerSourceId: "free_fire_bd", titleKh: "Free Fire (BD)", titleEn: "Free Fire (BD)", packages: [] },
+        { id: "cached-unapproved", providerSourceId: "acecraft", titleKh: "Acecraft", titleEn: "Acecraft", packages: [] },
         { id: "cached-thai", providerSourceId: "thai-game", titleKh: "Thai Game", titleEn: "Thai Game", packages: [] },
       ],
       smm: [],
     }, {
-      activeGameIds: ["public-game", "hidden-game", "thai-game"],
-      hiddenGameIds: ["hidden-game"],
+      activeGameIds: ["8_ball_pool", "free_fire_bd", "thai-game"],
+      hiddenGameIds: ["free_fire_bd"],
       hiddenSmmServiceIds: [],
       updatedAt: new Date(),
     });
 
-    expect(games).toEqual([{ id: "public-game", name: "Public Game", region: "Global", provider: "FZR Cards", requiredFields: [] }]);
+    expect(games).toEqual([{ id: "8_ball_pool", name: "8 Ball Pool", region: "Global", provider: "FZR Cards", requiredFields: [] }]);
   });
 
   it("keeps synchronized provider games available to the owner inventory during a live FZR outage", () => {
@@ -118,6 +128,153 @@ describe("provider catalog", () => {
 
     await expect(fetchProviderGames()).resolves.toEqual({ status: "ready", games: [{ id: "8_ball_pool", name: "8 Ball Pool", region: "Global", provider: "FZR Cards", requiredFields: [] }] });
     await expect(getProviderAvailabilityCatalog()).resolves.toMatchObject({ games: [{ id: "8_ball_pool", isActive: true }, { id: "new-pubg", isActive: false }] });
+  });
+
+  it("imports every valid paginated FZR offer despite normalized echoes, malformed entries, and transient per-game failures", async () => {
+    process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
+    process.env.FZR_CARDS_API_KEY = "server-only-key";
+    const offerAttempts = new Map<string, number>();
+
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (url.includes("/api/v2/topups?") && url.includes("cursor=page-2")) {
+        return {
+          ok: true,
+          json: async () => ({
+            ok: true,
+            kind: "topup",
+            items: [
+              { category_id: "free_fire_bd", name: "Second Game" },
+              { category_id: "broken-topup", name: null },
+            ],
+            meta: { next_cursor: null, has_more: false },
+          }),
+        };
+      }
+      if (url.endsWith("/api/v2/topups")) {
+        return {
+          ok: true,
+          json: async () => ({
+            ok: true,
+            kind: "topup",
+            items: [
+              { category_id: "mobile_legends_global", name: "First Game" },
+              { category_id: "pubg_mobile_auto", name: "Retry Game" },
+              { category_id: "call_of_duty", name: "Skip Game" },
+            ],
+            meta: { next_cursor: "page-2", has_more: true },
+          }),
+        };
+      }
+
+      const categoryId = new URL(url).searchParams.get("category_id") ?? "";
+      offerAttempts.set(categoryId, (offerAttempts.get(categoryId) ?? 0) + 1);
+      if (categoryId === "call_of_duty") return { ok: false, status: 503, json: async () => ({}) };
+      if (categoryId === "pubg_mobile_auto" && offerAttempts.get(categoryId)! < 3) return { ok: false, status: 429, json: async () => ({}) };
+      if (categoryId === "mobile_legends_global") {
+        return {
+          ok: true,
+          json: async () => ({
+            ok: true,
+            kind: "topup",
+            category_id: "provider-normalized-first-game",
+            name: "First Game",
+            imageurl: "http://invalid-image.example.test/game.png",
+            fields: [
+              { key: "player_id", label: "Player ID", type: "text" },
+              { key: "not a field", label: "Broken field", type: "text" },
+            ],
+            offers: [
+              { offer_id: 101, name: "100 Coins", price_usd: 2.5 },
+              { offer_id: null, name: "No ID", price_usd: "1.00" },
+              { offer_id: "bad-price", name: "Broken price", price_usd: "not-a-price" },
+              { offer_id: "starter", name: "Starter Pass", price_usd: "3" },
+            ],
+          }),
+        };
+      }
+      return {
+        ok: true,
+        json: async () => ({
+          ok: true,
+          kind: "topup",
+            category_id: "provider-normalized-free-fire-bd",
+            name: "Second Game",
+          fields: [],
+          offers: [{ offer_id: "second", name: "Second Pack", price_usd: "1.25" }],
+        }),
+      };
+    }));
+
+    const snapshot = await fetchFzrProviderSyncSnapshot();
+    expect(snapshot).toMatchObject({ status: "ready" });
+    if (snapshot.status === "ready") {
+      expect(snapshot.games.map((game) => game.providerGameId)).toEqual(["mobile_legends_global", "pubg_mobile_auto", "free_fire_bd"]);
+      expect(snapshot.games[0]).toEqual({
+        providerGameId: "mobile_legends_global",
+        name: "First Game",
+        requiredFields: [{ key: "player_id", label: "Player ID", required: true, kind: "text" }],
+        offers: [
+          { providerOfferId: "101", name: "100 Coins", priceUsd: "2.50" },
+          { providerOfferId: "starter", name: "Starter Pass", priceUsd: "3.00" },
+        ],
+      });
+    }
+    expect(offerAttempts.get("pubg_mobile_auto")).toBe(3);
+    expect(offerAttempts.get("call_of_duty")).toBe(3);
+  });
+
+  it("coerces nested alternate FZR offer payloads without requiring ok or kind", async () => {
+    process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
+    process.env.FZR_CARDS_API_KEY = "server-only-key";
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (url.endsWith("/api/v2/topups")) return { ok: true, json: async () => ({ ok: true, kind: "topup", items: [{ category_id: "magic_chess_gogo_global", name: "Magic Chess Go Go" }], meta: { next_cursor: null, has_more: false } }) };
+      return { ok: true, json: async () => ({ ok: 0, kind: "verify", result: {
+        title: "Magic Chess Go Go",
+        imageurl: "not-a-url",
+        fields: [{ key: "player_id", label: "Player ID", type: "text" }],
+        packages: [
+          { id: 101, label: "100 Diamonds", amount: "$1.25" },
+          { id: null, label: "Missing ID", amount: "1.00" },
+          { id: "bad", label: "Bad Price", amount: "unknown" },
+        ],
+      } }) };
+    }));
+
+    const snapshot = await fetchFzrProviderSyncSnapshot();
+    expect(snapshot).toMatchObject({ status: "ready" });
+    if (snapshot.status === "ready") expect(snapshot.games).toEqual([{
+      providerGameId: "magic_chess_gogo_global",
+      name: "Magic Chess Go Go",
+      requiredFields: [{ key: "player_id", label: "Player ID", required: true, kind: "text" }],
+      offers: [{ providerOfferId: "101", name: "100 Diamonds", priceUsd: "1.25" }],
+    }]);
+  });
+
+  it("curates provider inventory to the nine owner-approved game families", async () => {
+    process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
+    process.env.FZR_CARDS_API_KEY = "server-only-key";
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ok: true, kind: "topup", items: [
+      { category_id: "mobile_legends_global", name: "Mobile Legends Global" },
+      { category_id: "free_fire_sg", name: "Free Fire Singapore" },
+      { category_id: "honor_of_kings_global", name: "Honor of Kings" },
+      { category_id: "call_of_duty_mobile", name: "Call of Duty Mobile" },
+      { category_id: "magic_chess_gogo_global", name: "Magic Chess Go Go" },
+      { category_id: "pubg_mobile_auto", name: "PUBG Mobile Auto" },
+      { category_id: "8_ball_pool", name: "8 Ball Pool" },
+      { category_id: "eafc_mobile_kh", name: "EA FC Mobile" },
+      { category_id: "frag_pro_shooter", name: "Frag Pro Shooter" },
+      { category_id: "acecraft", name: "Acecraft" },
+      { category_id: "blood_strike", name: "Blood Strike" },
+    ], meta: { next_cursor: null, has_more: false } }) }));
+
+    const result = await fetchProviderGames({ includeInactive: true });
+    expect(result.status).toBe("ready");
+    if (result.status === "ready") expect(result.games.map((game) => game.id)).toEqual([
+      "mobile_legends_global", "free_fire_sg", "honor_of_kings_global", "call_of_duty_mobile",
+      "magic_chess_gogo_global", "pubg_mobile_auto", "8_ball_pool", "eafc_mobile_kh", "frag_pro_shooter",
+    ]);
+    await expect(fetchProviderGameDetails("acecraft", { includeInactive: true })).resolves.toEqual({ status: "unavailable", game: null, packages: [] });
+    await expect(fetchProviderPackages({ gameId: "acecraft", fields: {} })).resolves.toEqual({ status: "unavailable", packages: [] });
   });
 
   it("keeps a confirmed admin visibility update in the shared catalog cache immediately", async () => {
@@ -159,24 +316,28 @@ describe("provider catalog", () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "server-only-key";
     vi.stubGlobal("fetch", vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, kind: "topup", items: [{ category_id: "acecraft", name: "Acecraft" }], meta: { next_cursor: null, has_more: false } }) })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "acecraft", name: "Acecraft", imageurl: "https://cdn.example.test/acecraft.png", fields: [{ key: "user_id", label: "User ID", type: "text" }], offers: [{ offer_id: "80_diamonds", name: "80 Diamonds", price_usd: "0.9864" }] }) }));
-    await expect(fetchProviderGameDetails("acecraft", { includeInactive: true })).resolves.toEqual({ status: "ready", game: { id: "acecraft", name: "Acecraft", region: "Global", logoUrl: "https://cdn.example.test/acecraft.png", provider: "FZR Cards", requiredFields: [{ key: "user_id", label: "User ID", required: true, kind: "text" }] }, packages: [{ id: providerPackageRecordId("acecraft", "80_diamonds"), label: "80 Diamonds", amountLabel: "80 Diamonds", priceLabel: "$0.99", provider: "FZR Cards", paymentMethods: ["khqr", "bank"] }] });
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, kind: "topup", items: [{ category_id: "8_ball_pool", name: "8 Ball Pool" }], meta: { next_cursor: null, has_more: false } }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "8_ball_pool", name: "8 Ball Pool", imageurl: "https://cdn.example.test/8-ball-pool.png", fields: [{ key: "user_id", label: "User ID", type: "text" }], offers: [{ offer_id: "80_diamonds", name: "80 Diamonds", price_usd: "0.9864" }] }) }));
+    await expect(fetchProviderGameDetails("8_ball_pool", { includeInactive: true })).resolves.toEqual({ status: "ready", game: { id: "8_ball_pool", name: "8 Ball Pool", region: "Global", logoUrl: "https://cdn.example.test/8-ball-pool.png", provider: "FZR Cards", requiredFields: [{ key: "user_id", label: "User ID", required: true, kind: "text" }] }, packages: [{ id: providerPackageRecordId("8_ball_pool", "80_diamonds"), label: "80 Diamonds", amountLabel: "80 Diamonds", priceLabel: "$0.99", provider: "FZR Cards", paymentMethods: ["khqr", "bank"] }] });
   });
 
-  it("merges active Mobile Legends Global, Promo, and Special variants into one family page", async () => {
+  it("merges every owner-enabled Mobile Legends family variant, including dynamic region IDs", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "server-only-key";
+    process.env.APPWRITE_ENDPOINT = "https://appwrite.example.test/v1";
+    process.env.APPWRITE_PROJECT_ID = "zurs-project";
+    process.env.APPWRITE_API_KEY = "appwrite-server-only-key";
+    const variants = ["mobile_legends_id", "mobile_legends_ph"];
     vi.stubGlobal("fetch", vi.fn(async (url: string) => {
-      if (url.includes("/offers?category_id=mobile_legends_global")) return { ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "mobile_legends_global", name: "Mobile Legends (Global)", fields: [{ key: "player_id", label: "Player ID", type: "text" }, { key: "server_id", label: "Server ID", type: "text" }], offers: [{ offer_id: "global", name: "86 Diamonds", price_usd: "1.00" }] }) };
-      if (url.includes("/offers?category_id=mobile_legends_promo")) return { ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "mobile_legends_promo", name: "Mobile Legends (Promo)", fields: [{ key: "player_id", label: "Player ID", type: "text" }, { key: "server_id", label: "Server ID", type: "text" }], offers: [{ offer_id: "promo", name: "Promo Pass", price_usd: "2.00" }] }) };
-      if (url.includes("/offers?category_id=mobile_legends_special")) return { ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "mobile_legends_special", name: "Mobile Legends (Special)", fields: [{ key: "player_id", label: "Player ID", type: "text" }, { key: "server_id", label: "Server ID", type: "text" }], offers: [{ offer_id: "special", name: "Special Pack", price_usd: "3.00" }] }) };
-      return { ok: true, json: async () => ({ ok: true, kind: "topup", items: [{ category_id: "mobile_legends_global", name: "Mobile Legends (Global)" }, { category_id: "mobile_legends_promo", name: "Mobile Legends (Promo)" }, { category_id: "mobile_legends_special", name: "Mobile Legends (Special)" }], meta: { next_cursor: null, has_more: false } }) };
+      if (url.startsWith("https://provider.example.test") && url.includes("/offers?category_id=mobile_legends_id")) return { ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "mobile_legends_id", name: "Mobile Legends (Indonesia)", fields: [{ key: "player_id", label: "Player ID", type: "text" }, { key: "server_id", label: "Server ID", type: "text" }], offers: [{ offer_id: "id", name: "86 Diamonds", price_usd: "1.00" }] }) };
+      if (url.startsWith("https://provider.example.test") && url.includes("/offers?category_id=mobile_legends_ph")) return { ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "mobile_legends_ph", name: "Mobile Legends (Philippines)", fields: [{ key: "player_id", label: "Player ID", type: "text" }, { key: "server_id", label: "Server ID", type: "text" }], offers: [{ offer_id: "ph", name: "172 Diamonds", price_usd: "2.00" }] }) };
+      if (url.startsWith("https://provider.example.test")) return { ok: true, json: async () => ({ ok: true, kind: "topup", items: variants.map((category_id) => ({ category_id, name: category_id === "mobile_legends_id" ? "Mobile Legends (Indonesia)" : "Mobile Legends (Philippines)" })), meta: { next_cursor: null, has_more: false } }) };
+      return { ok: true, json: async () => ({ sourceTable: "provider_availability", sourceId: "global", payload: JSON.stringify({ activeGameIds: variants, hiddenGameIds: [], hiddenSmmServiceIds: [], updatedAt: new Date().toISOString() }) }) };
     }));
 
     const result = await fetchProviderGameDetails("mobile_legends");
     expect(result).toMatchObject({ status: "ready", game: { id: "mobile_legends", name: "Mobile Legends" } });
-    if (result.status === "ready") expect(result.packages.map((item) => item.id)).toEqual([providerPackageRecordId("mobile_legends_global", "global"), providerPackageRecordId("mobile_legends_promo", "promo"), providerPackageRecordId("mobile_legends_special", "special")]);
+    if (result.status === "ready") expect(result.packages.map((item) => item.id)).toEqual([providerPackageRecordId("mobile_legends_id", "id"), providerPackageRecordId("mobile_legends_ph", "ph")]);
   });
 
   it("merges owner-enabled Free Fire regional variants into one public Free Fire family page", async () => {
@@ -193,30 +354,35 @@ describe("provider catalog", () => {
     if (result.status === "ready") expect(result.packages.map((item) => item.id)).toEqual([providerPackageRecordId("free_fire_my_sg", "my-sg"), providerPackageRecordId("free_fire_bd", "bd")]);
   });
 
-  it("merges active PUBG Mobile Auto and Fast variants into one family page", async () => {
+  it("merges every owner-enabled PUBG Mobile family variant, including dynamic region IDs", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "server-only-key";
+    process.env.APPWRITE_ENDPOINT = "https://appwrite.example.test/v1";
+    process.env.APPWRITE_PROJECT_ID = "zurs-project";
+    process.env.APPWRITE_API_KEY = "appwrite-server-only-key";
+    const variants = ["pubg_mobile_kh", "pubg_mobile_id"];
     vi.stubGlobal("fetch", vi.fn(async (url: string) => {
-      if (url.includes("/offers?category_id=pubg_mobile_auto")) return { ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "pubg_mobile_auto", name: "PUBG Mobile (Auto)", fields: [{ key: "player_id", label: "Player ID", type: "text" }], offers: [{ offer_id: "auto", name: "60 UC", price_usd: "1.00" }] }) };
-      if (url.includes("/offers?category_id=pubg_mobile_fast")) return { ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "pubg_mobile_fast", name: "PUBG Mobile (Fast)", fields: [{ key: "player_id", label: "Player ID", type: "text" }], offers: [{ offer_id: "fast", name: "120 UC", price_usd: "2.00" }] }) };
-      return { ok: true, json: async () => ({ ok: true, kind: "topup", items: [{ category_id: "pubg_mobile_auto", name: "PUBG Mobile (Auto)" }, { category_id: "pubg_mobile_fast", name: "PUBG Mobile (Fast)" }], meta: { next_cursor: null, has_more: false } }) };
+      if (url.startsWith("https://provider.example.test") && url.includes("/offers?category_id=pubg_mobile_kh")) return { ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "pubg_mobile_kh", name: "PUBG Mobile (Cambodia)", fields: [{ key: "player_id", label: "Player ID", type: "text" }], offers: [{ offer_id: "kh", name: "60 UC", price_usd: "1.00" }] }) };
+      if (url.startsWith("https://provider.example.test") && url.includes("/offers?category_id=pubg_mobile_id")) return { ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "pubg_mobile_id", name: "PUBG Mobile (Indonesia)", fields: [{ key: "player_id", label: "Player ID", type: "text" }], offers: [{ offer_id: "id", name: "120 UC", price_usd: "2.00" }] }) };
+      if (url.startsWith("https://provider.example.test")) return { ok: true, json: async () => ({ ok: true, kind: "topup", items: variants.map((category_id) => ({ category_id, name: category_id === "pubg_mobile_kh" ? "PUBG Mobile (Cambodia)" : "PUBG Mobile (Indonesia)" })), meta: { next_cursor: null, has_more: false } }) };
+      return { ok: true, json: async () => ({ sourceTable: "provider_availability", sourceId: "global", payload: JSON.stringify({ activeGameIds: variants, hiddenGameIds: [], hiddenSmmServiceIds: [], updatedAt: new Date().toISOString() }) }) };
     }));
 
     const result = await fetchProviderGameDetails("pubg_mobile");
     expect(result).toMatchObject({ status: "ready", game: { id: "pubg_mobile", name: "PUBG Mobile" } });
-    if (result.status === "ready") expect(result.packages.map((item) => item.id)).toEqual([providerPackageRecordId("pubg_mobile_auto", "auto"), providerPackageRecordId("pubg_mobile_fast", "fast")]);
+    if (result.status === "ready") expect(result.packages.map((item) => item.id)).toEqual([providerPackageRecordId("pubg_mobile_kh", "kh"), providerPackageRecordId("pubg_mobile_id", "id")]);
   });
 
   it("returns authorized package UI for an admin preview without submitting a player identity", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "server-only-key";
     vi.stubGlobal("fetch", vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, kind: "topup", items: [{ category_id: "preview-only-game", name: "Preview Only Game" }], meta: { next_cursor: null, has_more: false } }) })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "preview-only-game", name: "Preview Only Game", fields: [{ key: "user_id", label: "User ID", type: "text" }], offers: [{ offer_id: "starter", name: "Starter Pack", price_usd: "1.25" }] }) }));
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, kind: "topup", items: [{ category_id: "8_ball_pool", name: "8 Ball Pool" }], meta: { next_cursor: null, has_more: false } }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "8_ball_pool", name: "8 Ball Pool", fields: [{ key: "user_id", label: "User ID", type: "text" }], offers: [{ offer_id: "starter", name: "Starter Pack", price_usd: "1.25" }] }) }));
 
-    await expect(fetchProviderPreviewPackages("preview-only-game")).resolves.toEqual({ status: "ready", packages: [{ id: providerPackageRecordId("preview-only-game", "starter"), label: "Starter Pack", amountLabel: "Starter Pack", priceLabel: "$1.25", provider: "FZR Cards", paymentMethods: ["khqr", "bank"] }] });
+    await expect(fetchProviderPreviewPackages("8_ball_pool")).resolves.toEqual({ status: "ready", packages: [{ id: providerPackageRecordId("8_ball_pool", "starter"), label: "Starter Pack", amountLabel: "Starter Pack", priceLabel: "$1.25", provider: "FZR Cards", paymentMethods: ["khqr", "bank"] }] });
     expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(2);
-    expect((fetch as ReturnType<typeof vi.fn>).mock.calls[1]?.[0]).toContain("/offers?category_id=preview-only-game");
+    expect((fetch as ReturnType<typeof vi.fn>).mock.calls[1]?.[0]).toContain("/offers?category_id=8_ball_pool");
   });
 
   it("validates Mobile Legends only through the documented server-side free endpoint", async () => {

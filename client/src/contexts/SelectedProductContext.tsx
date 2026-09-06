@@ -27,6 +27,30 @@ type PersistedCheckoutContext = {
 };
 
 const checkoutContextStorageKey = "zurs.checkout.preview.v1";
+// Round 10: the buyer picks a payment method ONCE and it is remembered from then
+// on. Previously it was cleared whenever the selected package changed, which
+// forced people to scroll back up to the method picker again and again.
+const paymentMethodPreferenceKey = "zurs.checkout.method.v1";
+
+function readPaymentMethodPreference(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const stored = window.localStorage.getItem(paymentMethodPreferenceKey);
+    return typeof stored === "string" && stored.trim() ? stored : null;
+  } catch {
+    return null;
+  }
+}
+
+function persistPaymentMethodPreference(methodId: string | null) {
+  if (typeof window === "undefined") return;
+  try {
+    if (methodId) window.localStorage.setItem(paymentMethodPreferenceKey, methodId);
+    else window.localStorage.removeItem(paymentMethodPreferenceKey);
+  } catch {
+    // Remembering the method is a convenience only; checkout still works without it.
+  }
+}
 const SelectedProductContext = createContext<SelectedProductContextValue | null>(null);
 
 function isSelectedProduct(value: unknown): value is SelectedProduct {
@@ -59,15 +83,22 @@ function persistCheckoutContext(value: PersistedCheckoutContext) {
 }
 
 export function SelectedProductProvider({ children }: { children: ReactNode }) {
-  const [checkoutContext, setCheckoutContext] = useState<PersistedCheckoutContext>(readPersistedCheckoutContext);
+  const [checkoutContext, setCheckoutContext] = useState<PersistedCheckoutContext>(() => {
+    const restored = readPersistedCheckoutContext();
+    if (restored.selectedPaymentMethodId) return restored;
+    return { ...restored, selectedPaymentMethodId: readPaymentMethodPreference() };
+  });
   const setSelectedProduct = useCallback((product: SelectedProduct | null) => {
     setCheckoutContext((current) => {
-      const next = { selectedProduct: product, selectedPaymentMethodId: product ? current.selectedPaymentMethodId : null };
+      // Round 10: the payment method is a sticky preference. It must survive
+      // package changes, package clearing, and game switches.
+      const next = { selectedProduct: product, selectedPaymentMethodId: current.selectedPaymentMethodId };
       persistCheckoutContext(next);
       return next;
     });
   }, []);
   const setSelectedPaymentMethodId = useCallback((methodId: string | null) => {
+    persistPaymentMethodPreference(methodId);
     setCheckoutContext((current) => {
       const next = { ...current, selectedPaymentMethodId: methodId };
       persistCheckoutContext(next);
@@ -77,7 +108,9 @@ export function SelectedProductProvider({ children }: { children: ReactNode }) {
   const clearSelectedProduct = useCallback(() => {
     const next = { selectedProduct: null, selectedPaymentMethodId: null };
     persistCheckoutContext(next);
-    setCheckoutContext(next);
+    // Round 10: the order is done, but the buyer's preferred payment method is
+    // kept for the next purchase so they never have to pick it twice.
+    setCheckoutContext({ ...next, selectedPaymentMethodId: readPaymentMethodPreference() });
   }, []);
   const value = useMemo(() => ({ selectedProduct: checkoutContext.selectedProduct, selectedPaymentMethodId: checkoutContext.selectedPaymentMethodId, setSelectedProduct, setSelectedPaymentMethodId, clearSelectedProduct }), [checkoutContext, clearSelectedProduct, setSelectedPaymentMethodId, setSelectedProduct]);
   return <SelectedProductContext.Provider value={value}>{children}</SelectedProductContext.Provider>;

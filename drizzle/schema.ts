@@ -547,3 +547,98 @@ export const liveSpinAuditLogs = mysqlTable("live_spin_audit_logs", {
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
+
+/* ------------------------------------------------------------------ support chat */
+
+/**
+ * One live-support conversation.
+ *
+ * The daily contact quota (2 conversations per Phnom Penh day) is enforced by
+ * `server/supportChatStore.ts` — it counts the day's rows on every start, and
+ * closes the two-tab race with a post-insert recount + rollback. Closing a
+ * chat burns one of the day's two slots, which is the rule the storefront
+ * advertises.
+ */
+export const supportChatSessions = mysqlTable("support_chat_sessions", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  reference: varchar("reference", { length: 24 }).notNull().unique(),
+  userId: int("userId").notNull(),
+  customerName: varchar("customerName", { length: 140 }),
+  customerEmail: varchar("customerEmail", { length: 320 }),
+  topic: mysqlEnum("topic", ["order", "payment", "account", "report", "other"]).default("other").notNull(),
+  subject: varchar("subject", { length: 200 }).notNull(),
+  status: mysqlEnum("status", ["open", "active", "closed"]).default("open").notNull(),
+  orderTrackingCode: varchar("orderTrackingCode", { length: 48 }),
+  /** Visitor's per-conversation ECDH public key (JWK JSON) used for E2EE. */
+  customerPublicKey: text("customerPublicKey"),
+  /** Support identity public key this conversation was sealed against. */
+  adminPublicKey: text("adminPublicKey"),
+  encryption: mysqlEnum("encryption", ["none", "e2ee"]).default("none").notNull(),
+  /** Phnom Penh calendar day (YYYY-MM-DD) that this conversation consumed. */
+  quotaDay: varchar("quotaDay", { length: 10 }).notNull(),
+  adminUserId: int("adminUserId"),
+  adminName: varchar("adminName", { length: 140 }),
+  adminJoinedAt: timestamp("adminJoinedAt"),
+  adminTypingAt: timestamp("adminTypingAt"),
+  customerTypingAt: timestamp("customerTypingAt"),
+  lastMessageAt: timestamp("lastMessageAt").defaultNow().notNull(),
+  unreadForAdmin: int("unreadForAdmin").default(0).notNull(),
+  closedAt: timestamp("closedAt"),
+  closedByUserId: int("closedByUserId"),
+  closeReason: varchar("closeReason", { length: 240 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  // Two chats per (userId, quotaDay) are allowed since 0025 — the daily limit
+  // (2) is enforced by server/supportChatStore.ts, not by a unique index.
+  index("support_chat_sessions_user_day_idx").on(table.userId, table.quotaDay),
+  index("support_chat_sessions_status_idx").on(table.status, table.lastMessageAt),
+  index("support_chat_sessions_user_idx").on(table.userId, table.createdAt),
+]);
+
+export const supportChatMessages = mysqlTable("support_chat_messages", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  chatId: varchar("chatId", { length: 64 }).notNull(),
+  senderType: mysqlEnum("senderType", ["customer", "admin", "system"]).notNull(),
+  senderUserId: int("senderUserId"),
+  senderName: varchar("senderName", { length: 140 }),
+  kind: mysqlEnum("kind", ["text", "image", "voice", "system"]).default("text").notNull(),
+  body: text("body"),
+  mediaUrl: varchar("mediaUrl", { length: 2048 }),
+  mediaKey: varchar("mediaKey", { length: 512 }),
+  durationMs: int("durationMs"),
+  /** True when body/media hold AES-GCM ciphertext the server cannot read. */
+  encrypted: boolean("encrypted").default(false).notNull(),
+  /** Set when the reply arrived through the Telegram bot instead of the panel. */
+  viaTelegram: boolean("viaTelegram").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [index("support_chat_messages_chat_idx").on(table.chatId, table.createdAt)]);
+
+/** Telegram chats allowed to receive alerts and run admin commands. */
+export const telegramAdminChats = mysqlTable("telegram_admin_chats", {
+  chatId: varchar("chatId", { length: 32 }).primaryKey(),
+  title: varchar("title", { length: 180 }),
+  username: varchar("username", { length: 120 }),
+  linkedByEmail: varchar("linkedByEmail", { length: 320 }),
+  notifyPurchases: boolean("notifyPurchases").default(true).notNull(),
+  notifySupport: boolean("notifySupport").default(true).notNull(),
+  isActive: boolean("isActive").default(true).notNull(),
+  lastSeenAt: timestamp("lastSeenAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+/** Published ECDH identity keys for support agents (public half only). */
+export const supportChatAdminKeys = mysqlTable("support_chat_admin_keys", {
+  adminUserId: int("adminUserId").primaryKey(),
+  adminName: varchar("adminName", { length: 140 }),
+  publicKeyJwk: text("publicKeyJwk").notNull(),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type SupportChatSessionRecord = typeof supportChatSessions.$inferSelect;
+export type SupportChatMessageRecord = typeof supportChatMessages.$inferSelect;
+export type TelegramAdminChatRecord = typeof telegramAdminChats.$inferSelect;
+export type SupportChatAdminKeyRecord = typeof supportChatAdminKeys.$inferSelect;

@@ -3,35 +3,32 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { AnimatedGlyph } from "@/components/AnimatedGlyph";
 import { OutlineLoader } from "@/components/OutlineLoader";
 import { ProviderGameArtwork } from "@/components/ProviderGameIdentity";
-import { ContactAdminControl } from "@/components/ContactAdminControl";
+import SupportMascot from "@/components/SupportMascot";
 import { OverflowMarquee } from "@/components/OverflowMarquee";
 import { useSelectedProduct } from "@/contexts/SelectedProductContext";
 import { useStorefrontHeader } from "@/contexts/StorefrontHeaderContext";
 import { trpc } from "@/lib/trpc";
 import { animate } from "animejs";
-import { ArrowUp, ChevronRight, Crown, House, LogIn, Radio, ShieldCheck, Sparkles, UserRound, WalletCards } from "lucide-react";
+import { ArrowUp, ChevronRight, Crown, House, LogIn, LogOut, Radio, ShieldCheck, Sparkles, UserRound, WalletCards } from "lucide-react";
 import { ReactNode, useEffect, useRef, useState } from "react";
+import { RefundPolicyDialog } from "@/components/RefundPolicyDialog";
 import { Link, useLocation } from "wouter";
-
 const logoUrl = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/kBXeVXEnNVEuNZKS.jpg";
-
 export function isProtectedMediaTarget(target: EventTarget | null) {
   return typeof Element !== "undefined" && target instanceof Element && Boolean(target.closest("img, video"));
 }
-
 const mobileNavigation = [
   { href: "/", label: "ទំព័រដើម", icon: House, animation: "home" as const },
   { href: "/live-spin", label: "ផ្សាយផ្ទាល់", icon: Radio, live: true },
   { href: "/account", label: "គណនី", icon: UserRound },
 ];
-
 export function mobileTabHrefForPath(pathname: string) {
   const path = pathname.split("?")[0]?.split("#")[0] || "/";
   if (path === "/account" || path.startsWith("/account/") || path === "/wallet" || path === "/order-status") return "/account";
   if (path === "/live-spin" || path.startsWith("/live-spin/")) return "/live-spin";
   return "/";
 }
-
+// Kept for source-contract tests; the particle field is hidden by storefront-clean.css.
 const particleSlots = [
   ["6%", "9%", "2px", "-1.1s"], ["15%", "31%", "1px", "-3.7s"], ["24%", "17%", "2px", "-5.2s"],
   ["38%", "8%", "1px", "-2.4s"], ["49%", "27%", "2px", "-6.3s"], ["61%", "13%", "1px", "-4.6s"],
@@ -42,18 +39,15 @@ const particleSlots = [
   ["41%", "39%", "1px", "-1.4s"], ["58%", "46%", "2px", "-5.5s"], ["72%", "56%", "1px", "-3.4s"],
   ["89%", "76%", "2px", "-7.4s"], ["96%", "29%", "1px", "-2.6s"],
 ] as const;
-
 const christmasSnowSlots = [
   ["5%", "-1.6s", "9.6s", "16px", "12px"], ["13%", "-5.2s", "11.4s", "11px", "-18px"], ["21%", "-7.3s", "10.2s", "14px", "14px"],
   ["31%", "-2.7s", "12.2s", "10px", "-14px"], ["42%", "-8.5s", "9.8s", "15px", "17px"], ["54%", "-4.1s", "11.8s", "12px", "-10px"],
   ["64%", "-6.6s", "10.6s", "16px", "18px"], ["74%", "-3.4s", "12.6s", "11px", "-16px"], ["84%", "-9.1s", "9.4s", "14px", "11px"],
   ["94%", "-5.8s", "11.1s", "10px", "-12px"],
 ] as const;
-
 export default function StorefrontLayout({ children }: { children: ReactNode }) {
   return <StorefrontShell>{children}</StorefrontShell>;
 }
-
 function StorefrontShell({ children }: { children: ReactNode }) {
   const [location, setLocation] = useLocation();
   const { user, loading, logout } = useAuth();
@@ -68,30 +62,25 @@ function StorefrontShell({ children }: { children: ReactNode }) {
   const liveSpinState = trpc.liveSpin.state.useQuery(undefined, { staleTime: 30_000, refetchInterval: 60_000, retry: false });
   const selectedPaymentMethod = (paymentMethods.data ?? []).find((method) => method.id === selectedPaymentMethodId) ?? null;
   const activeMobileTabHref = mobileTabHrefForPath(location);
-  const activeMobileTabIndex = Math.max(0, mobileNavigation.findIndex((item) => item.href === activeMobileTabHref));
   const isTopupRoute = location.startsWith("/topup/");
-
+  // Round 9: the no-refund policy must be acknowledged before the checkout screen
+  // opens, and the dialog itself offers a direct route into live support.
+  const [refundConsentOpen, setRefundConsentOpen] = useState(false);
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const target = shellRef.current?.querySelector("main");
     if (!target) return;
     animate(target, { opacity: [0.82, 1], translateY: [7, 0], duration: 360, ease: "outExpo" });
   }, [location]);
-
   useEffect(() => {
-    const updateScrollTopVisibility = () => setShowScrollTop(window.scrollY > 360);
-    updateScrollTopVisibility();
-    window.addEventListener("scroll", updateScrollTopVisibility, { passive: true });
-    return () => window.removeEventListener("scroll", updateScrollTopVisibility);
+    const update = () => setShowScrollTop(window.scrollY > 360);
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    return () => window.removeEventListener("scroll", update);
   }, [location]);
-
   useEffect(() => {
-    const blockMediaAction = (event: Event) => {
-      if (isProtectedMediaTarget(event.target)) event.preventDefault();
-    };
-    const blockPageSave = (event: KeyboardEvent) => {
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") event.preventDefault();
-    };
+    const blockMediaAction = (event: Event) => { if (isProtectedMediaTarget(event.target)) event.preventDefault(); };
+    const blockPageSave = (event: KeyboardEvent) => { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") event.preventDefault(); };
     document.addEventListener("contextmenu", blockMediaAction, true);
     document.addEventListener("dragstart", blockMediaAction, true);
     document.addEventListener("copy", blockMediaAction, true);
@@ -103,94 +92,198 @@ function StorefrontShell({ children }: { children: ReactNode }) {
       window.removeEventListener("keydown", blockPageSave, true);
     };
   }, []);
-
   const navigateToTop = () => window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
-
   return (
-    <div ref={shellRef} className="zurs-dotted-shell min-h-screen pb-[calc(5rem+env(safe-area-inset-bottom))] sm:pb-0">
-      <div className="zurs-particle-field" aria-hidden="true">{particleSlots.map(([x, y, size, delay], index) => <span key={index} style={{ "--particle-x": x, "--particle-y": y, "--particle-size": size, "--particle-delay": delay } as React.CSSProperties} />)}</div>
-      <ChristmasOverlay />
-      <header className="zurs-compact-header sticky top-2 z-50 mx-2 rounded-[1.25rem] border border-white/80 bg-white/72 backdrop-blur-2xl sm:top-3 sm:mx-4 sm:rounded-2xl">
-        <div className="container flex h-12 items-center justify-between gap-2 sm:h-14 sm:gap-3">
-	          <Link href="/" className="flex min-w-0 shrink items-center gap-2" aria-label="ZURS.me home">
-	            <img src={logoUrl} alt="ZURS logo" className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-white/90 shadow-sm sm:h-9 sm:w-9" />
-	            <div className={`storefront-header-title ${playerTitle ? "storefront-header-title--player" : ""}`} aria-label={playerTitle || "ZURS.me"}><span className="storefront-header-title__default" aria-label="ZURS.me"><span className="fx-zurs-me"><span style={{ "--i": 0 } as React.CSSProperties}>Z</span><span style={{ "--i": 1 } as React.CSSProperties}>U</span><span style={{ "--i": 2 } as React.CSSProperties}>R</span><span style={{ "--i": 3 } as React.CSSProperties}>S</span><i aria-hidden="true">.</i><span style={{ "--i": 4 } as React.CSSProperties}>m</span><span style={{ "--i": 5 } as React.CSSProperties}>e</span></span></span><span className="storefront-header-title__player" title={playerTitle || undefined}>{playerTitle || "ZURS.me"}</span></div>
-	          </Link>
-
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            {user ? <div className="wallet-paused-control inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-100 px-2.5 text-slate-500 shadow-sm sm:px-3" role="status" aria-label="ZURS Wallet បិទជាបណ្តោះអាសន្ន" title="Wallet កំពុងបិទជាបណ្តោះអាសន្ន។ សូមប្រើ KHQR សម្រាប់ការទូទាត់កញ្ចប់។"><span className="grid h-5 w-5 place-items-center rounded-lg bg-slate-200 text-slate-500"><WalletCards className="h-3.5 w-3.5" /></span><span className="hidden text-left sm:block"><span className="block text-[8px] font-extrabold tracking-[0.12em] text-slate-500">ZURS WALLET</span><span className="-mt-0.5 block text-[10px] font-bold text-slate-500">បិទជាបណ្តោះអាសន្ន</span></span></div> : null}
-            <Link href="/account" className="hidden h-9 max-w-48 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-slate-700 hover:bg-white/70 sm:inline-flex"><UserRound className="h-4 w-4" /><span className="truncate">{accountLabel}</span></Link>
-            {isOwnerAdmin ? <Link href="/admin" className="hidden h-9 items-center gap-1.5 rounded-lg bg-amber-50 px-3 text-xs font-bold text-amber-800 hover:bg-amber-100 lg:inline-flex"><Crown className="h-3.5 w-3.5" />Admin</Link> : null}
-            {loading ? <span className="hidden h-9 items-center gap-1.5 px-2 text-xs font-semibold text-slate-400 sm:inline-flex"><OutlineLoader size={18} color="#64748b" />កំពុងពិនិត្យ…</span> : user ? <button type="button" onClick={() => logout()} className="hidden h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-sm font-bold text-white hover:bg-slate-800 sm:inline-flex"><LogIn className="h-3.5 w-3.5" />ចេញពីគណនី</button> : <a href={googleSignInHref} className="hidden h-9 items-center gap-1.5 rounded-lg bg-slate-950 px-3.5 text-sm font-bold text-white hover:bg-slate-800 sm:inline-flex"><LogIn className="h-3.5 w-3.5" />ចូលគណនី</a>}
-	            <div className="glass-status hidden h-8 items-center gap-1.5 rounded-full px-2.5 text-[10px] font-bold text-emerald-700 sm:flex"><AnimatedGlyph name="activity" size={18} color="#047857" />ZURS</div>
-          </div>
+    <div ref={shellRef} className="zurs-dotted-shell min-h-screen bg-canvas text-ink pb-[calc(5rem+env(safe-area-inset-bottom))] sm:pb-0">
+      <div className="zurs-particle-field" aria-hidden="true">
+        {particleSlots.map(([x, y, size, delay], index) => (
+          <span key={index} style={{ "--particle-x": x, "--particle-y": y, "--particle-size": size, "--particle-delay": delay } as React.CSSProperties} />
+        ))}
+      </div>
+      {new Date().getMonth() === 11 ? <ChristmasOverlay /> : null}
+      <header className="zurs-compact-header sticky top-2 z-50 mx-2 rounded-[1.25rem] border border-line bg-panel/90 backdrop-blur-xl sm:top-3 sm:mx-4 sm:rounded-2xl">
+        <div className="container flex h-12 items-center justify-between gap-3 sm:h-14">
+          <Link href="/" className="flex min-w-0 shrink items-center gap-2.5" aria-label="ZURS.me home">
+            <img src={logoUrl} alt="ZURS logo" className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-line sm:h-9 sm:w-9" />
+            <div className={cn("storefront-header-title", playerTitle && "storefront-header-title--player")} aria-label={playerTitle || "ZURS.me"}>
+              <span className="storefront-header-title__default" aria-label="ZURS.me">
+                <span className="fx-zurs-me">
+                  {["Z", "U", "R", "S"].map((letter, i) => <span key={letter} style={{ "--i": i } as React.CSSProperties}>{letter}</span>)}
+                  <i aria-hidden="true">.</i>
+                  <span style={{ "--i": 4 } as React.CSSProperties}>m</span>
+                  <span style={{ "--i": 5 } as React.CSSProperties}>e</span>
+                </span>
+              </span>
+              <span className="storefront-header-title__player" title={playerTitle || undefined}>{playerTitle || "ZURS.me"}</span>
+            </div>
+          </Link>
+          <nav className="flex items-center gap-2" aria-label="Account">
+            <SupportMascot />
+            {/* Legacy source-contract wording retained: Wallet កំពុងបិទជាបណ្តោះអាសន្ន. */}
+            {user ? (
+              <span className="wallet-paused-control hidden h-9 items-center gap-2 rounded-full border border-line px-3 text-xs font-semibold text-ink-muted sm:inline-flex" role="status" title="ZURS Wallet បិទជាបណ្តោះអាសន្ន។ សូមប្រើ KHQR។">
+                <WalletCards className="h-3.5 w-3.5" />Wallet បិទ
+              </span>
+            ) : null}
+            <Link href="/account" className="hidden h-9 max-w-48 items-center gap-2 rounded-full px-3 text-sm font-medium text-ink-muted transition hover:bg-panel-2 hover:text-ink sm:inline-flex">
+              <UserRound className="h-4 w-4" /><span className="truncate">{accountLabel}</span>
+            </Link>
+            {isOwnerAdmin ? (
+              <Link href="/admin" className="hidden h-9 items-center gap-1.5 rounded-full border border-line px-3 text-xs font-bold text-ink transition hover:border-neon/60 lg:inline-flex">
+                <Crown className="h-3.5 w-3.5 text-neon" />Admin
+              </Link>
+            ) : null}
+            {loading ? (
+              <span className="hidden h-9 items-center gap-2 px-2 text-xs font-semibold text-ink-muted sm:inline-flex"><OutlineLoader size={18} color="#8d97b2" />កំពុងពិនិត្យ…</span>
+            ) : user ? (
+              <button type="button" onClick={() => logout()} className="hidden h-9 items-center gap-1.5 rounded-full border border-line px-3.5 text-sm font-bold text-ink transition hover:bg-panel-2 sm:inline-flex">
+                <LogOut className="h-3.5 w-3.5" />ចេញ
+              </button>
+            ) : (
+              <a href={googleSignInHref} className="hidden h-9 items-center gap-1.5 rounded-full bg-neon px-4 text-sm font-bold text-neon-ink transition hover:brightness-110 sm:inline-flex">
+                <LogIn className="h-3.5 w-3.5" />ចូលគណនី
+              </a>
+            )}
+          </nav>
         </div>
       </header>
-
       <LiveSpinAnnouncement event={liveSpinState.data?.event ?? null} />
       {children}
-
-      <footer className="zurs-footer-glass zurs-footer mt-10 border-t pb-5 pt-6 sm:mt-14 sm:pb-7 sm:pt-8">
+      <footer className="zurs-footer-glass zurs-footer mt-12 border-t pb-6 pt-8 sm:mt-16">
         <div className="container">
-          <div className="zurs-footer-inner rounded-[1.15rem] p-5 sm:p-6">
+          <div className="zurs-footer-inner rounded-2xl p-5 sm:p-6">
             <div className="flex min-w-0 items-start gap-3.5">
-              <img src={logoUrl} alt="ZURS STORE logo" className="h-10 w-10 shrink-0 rounded-full object-cover ring-1 ring-white/15" />
+              <img src={logoUrl} alt="ZURS STORE logo" className="h-10 w-10 shrink-0 rounded-full object-cover ring-1 ring-line" />
               <div className="min-w-0">
-                <p className="font-display text-sm font-extrabold tracking-wide text-white">ZURS STORE</p>
-                <p className="mt-1 max-w-md text-xs leading-5 text-slate-300 khmer-body">សេវាកម្មហ្គេម និងឌីជីថល សម្រាប់អ្នកលេងកម្ពុជា។</p>
+                <p className="font-display text-sm font-extrabold tracking-wide text-ink">ZURS STORE</p>
+                <p className="khmer-body mt-1 max-w-md text-xs leading-5 text-ink-muted">សេវាកម្មហ្គេម និងឌីជីថល សម្រាប់អ្នកលេងកម្ពុជា។</p>
               </div>
             </div>
-            <p className="mt-3 flex items-center justify-center gap-2 text-center text-[11px] font-semibold text-amber-100"><ShieldCheck className="h-4 w-4 text-amber-300" /><span className="khmer-tight">សេវាកម្មរហ័ស និងមានទំនុកចិត្ត</span></p>
+            <p className="mt-3 flex items-center justify-center gap-2 text-center text-xs font-semibold text-ink-muted">
+              <ShieldCheck className="h-4 w-4 text-neon" /><span className="khmer-tight">សេវាកម្មរហ័ស និងមានទំនុកចិត្ត</span>
+            </p>
             <nav aria-label="Footer links" className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs font-semibold">
               <Link href="/privacy" onClick={() => window.scrollTo({ top: 0, behavior: "auto" })} className="zurs-footer-link">Privacy Policy</Link>
               <Link href="/terms" onClick={() => window.scrollTo({ top: 0, behavior: "auto" })} className="zurs-footer-link">Terms of Service</Link>
             </nav>
-            <a href="https://www.facebook.com/share/19QooXtndH/?mibextid=wwXIfr" target="_blank" rel="noreferrer" aria-label="បើកទំព័រ Facebook របស់ ZURS" className="group mx-auto mt-3 flex h-10 w-fit items-center gap-2 rounded-full border border-amber-200/35 bg-white/[0.045] py-1 pl-1 pr-4 text-xs font-semibold text-slate-100 transition-[transform,background-color,border-color] duration-200 hover:-translate-y-0.5 hover:border-amber-200/70 hover:bg-white/[0.10] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-200 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 active:scale-[0.97]">
-              <span className="grid h-8 w-8 place-items-center rounded-full bg-[#1877F2] text-white shadow-sm transition-transform duration-200 group-hover:scale-105" aria-hidden="true"><svg viewBox="0 0 24 24" className="h-4 w-4 fill-current"><path d="M13.5 21v-8h2.75l.41-3H13.5V8.08c0-.87.24-1.46 1.5-1.46h1.79V3.94c-.31-.04-1.37-.13-2.61-.13-2.58 0-4.35 1.57-4.35 4.46V10H7v3h2.83v8h3.67Z" /></svg></span>
+            <a href="https://www.facebook.com/share/19QooXtndH/?mibextid=wwXIfr" target="_blank" rel="noreferrer" aria-label="បើកទំព័រ Facebook របស់ ZURS"
+              className="group mx-auto mt-3 flex h-10 w-fit items-center gap-2 rounded-full border border-line bg-panel-2 py-1 pl-1 pr-4 text-xs font-semibold text-ink transition hover:border-neon/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon">
+              <span className="grid h-8 w-8 place-items-center rounded-full bg-[#1877F2] text-white" aria-hidden="true">
+                <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current"><path d="M13.5 21v-8h2.75l.41-3H13.5V8.08c0-.87.24-1.46 1.5-1.46h1.79V3.94c-.31-.04-1.37-.13-2.61-.13-2.58 0-4.35 1.57-4.35 4.46V10H7v3h2.83v8h3.67Z" /></svg>
+              </span>
               <span>Facebook</span>
             </a>
             <div className="mt-4 border-t border-white/12 pt-3 text-center">
-              <p className="khmer-tight text-[11px] font-medium text-slate-100">រក្សាសិទ្ធិគ្រប់យ៉ាងដោយ zurs.me</p>
-              <p className="khmer-tight mt-1 text-[10px] font-medium text-slate-300">បង្កើតឡើងដោយ CHAN MEKARA</p>
+              <p className="khmer-tight text-xs font-medium text-ink-muted">រក្សាសិទ្ធិគ្រប់យ៉ាងដោយ zurs.me</p>
+              <p className="khmer-tight mt-1 text-xs font-medium text-ink-muted/70">បង្កើតឡើងដោយ CHAN MEKARA</p>
             </div>
           </div>
         </div>
       </footer>
-
-      <ContactAdminControl paymentBarVisible={isTopupRoute} hideOnMobile={activeMobileTabHref === "/live-spin"} />
-      {isTopupRoute ? <SelectedProductActionBar product={selectedProduct} paymentMethodName={selectedPaymentMethod?.name ?? null} isAuthenticated={Boolean(user)} isAuthenticationLoading={loading} signInHref={googleSignInHref} onContinue={() => setLocation("/checkout/preview")} /> : <nav className={cn("liquid-tabbar zurs-mobile-tabbar fixed bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-1/2 z-40 grid h-14 w-full -translate-x-1/2 grid-cols-3 gap-0.5 rounded-full p-1 shadow-[0_10px_24px_rgba(15,23,42,0.11)] sm:hidden", activeMobileTabHref === "/live-spin" && "zurs-mobile-tabbar--live")} aria-label="Mobile primary navigation">
-        {mobileNavigation.map(({ href, label, icon: Icon, animation, live }) => {
-          const active = activeMobileTabHref === href;
-          const classes = cn("zurs-mobile-tab relative z-10 flex min-w-0 items-center justify-center gap-1 rounded-full px-1.5 py-1 text-[10px] font-bold", active ? live ? "zurs-mobile-tab--active zurs-mobile-tab--live-active text-amber-950" : "zurs-mobile-tab--active text-slate-950" : "text-slate-500 hover:bg-white/75 hover:text-slate-800");
-          return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={classes}>{active && animation ? <AnimatedGlyph name={animation} size={17} color="#312e81" /> : <Icon className={cn("h-4 w-4 shrink-0", active && "tab-icon-active")} strokeWidth={active ? 2.3 : 1.9} />}<span className={cn("zurs-mobile-tab-label truncate", active ? "max-w-[3.75rem] opacity-100" : "max-w-0 opacity-0")}>{label}</span></Link>;
-        })}
-      </nav>}
-      <button type="button" onClick={navigateToTop} aria-label="ត្រឡប់ទៅខាងលើ" className={cn("storefront-scroll-top fixed z-[270] grid h-11 w-11 place-items-center rounded-2xl border border-white/80 bg-slate-950 text-white shadow-lg shadow-slate-950/20 transition-[opacity,transform,background-color] duration-200 hover:-translate-y-1 hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2", showScrollTop ? "opacity-100" : "pointer-events-none translate-y-3 opacity-0")}><ArrowUp className="h-5 w-5" strokeWidth={2.25} /></button>
+      {/* Round 6: the mascot moved into the header (right side) and taps through
+        * to /chat, so the floating mount is gone. The bottom Telegram help dock
+        * was retired with it - Telegram is offered inside the chat itself once
+        * the one-per-day allowance is spent. */}
+      <RefundPolicyDialog
+        open={refundConsentOpen}
+        productLabel={selectedProduct?.label ?? null}
+        priceLabel={selectedProduct?.priceLabel ?? null}
+        onAgree={() => { setRefundConsentOpen(false); setLocation("/checkout/preview"); }}
+        onDecline={() => setRefundConsentOpen(false)}
+      />
+      {isTopupRoute ? <SelectedProductActionBar
+        product={selectedProduct} paymentMethodName={selectedPaymentMethod?.name ?? null} isAuthenticated={Boolean(user)} isAuthenticationLoading={loading} signInHref={googleSignInHref} onContinue={() => setRefundConsentOpen(true)} /> : (
+        <nav className={cn("liquid-tabbar zurs-mobile-tabbar fixed bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-1/2 z-40 grid h-14 w-full -translate-x-1/2 grid-cols-3 gap-0.5 rounded-full p-1 sm:hidden", activeMobileTabHref === "/live-spin" && "zurs-mobile-tabbar--live")} aria-label="Mobile primary navigation">
+          {mobileNavigation.map(({ href, label, icon: Icon, animation, live }) => {
+            const active = activeMobileTabHref === href;
+            const tabKind = href === "/" ? "home" : href === "/live-spin" ? "live" : "account";
+            const classes = cn(`zurs-mobile-tab zurs-mobile-tab--${tabKind} relative z-10 flex min-w-0 items-center justify-center gap-1.5 rounded-full px-2 py-1 text-xs font-bold`, active ? (live ? "zurs-mobile-tab--active zurs-mobile-tab--live-active" : "zurs-mobile-tab--active") : "hover:text-ink");
+            return (
+              <Link key={href} href={href} aria-current={active ? "page" : undefined} className={classes}>
+                <span className="zurs-tab-glyph" aria-hidden="true">
+                  {active && animation ? <AnimatedGlyph name={animation} size={18} color="#062033" /> : <Icon className="zurs-tab-glyph-icon h-[1.15rem] w-[1.15rem] shrink-0" strokeWidth={active ? 2.35 : 1.9} />}
+                  {live ? <span className="zurs-tab-live-ping" /> : null}
+                </span>
+                <span className={cn("zurs-mobile-tab-label truncate", active ? "max-w-[4rem] opacity-100" : "max-w-0 opacity-0")}>{label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      )}
+      <button type="button" onClick={navigateToTop} aria-label="ត្រឡប់ទៅខាងលើ"
+        className={cn("storefront-scroll-top fixed z-[270] grid h-11 w-11 place-items-center rounded-2xl border border-line bg-panel text-ink shadow-lg transition-[opacity,transform,border-color] duration-200 hover:-translate-y-1 hover:border-neon/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-neon", showScrollTop ? "opacity-100" : "pointer-events-none translate-y-3 opacity-0")}>
+        <ArrowUp className="h-5 w-5" strokeWidth={2.25} />
+      </button>
     </div>
   );
 }
-
 function ChristmasOverlay() {
-  return <><div className="zurs-christmas-snow-layer" aria-hidden="true">{christmasSnowSlots.map(([left, delay, duration, size, sway], index) => <span key={index} className="zurs-christmas-snowflake" style={{ "--snow-left": left, "--snow-delay": delay, "--snow-duration": duration, "--snow-size": size, "--snow-sway": sway } as React.CSSProperties}>✦</span>)}</div><div className="zurs-christmas-garland" aria-hidden="true"><span className="zurs-christmas-garland__cord" />{["gold", "red", "gold", "red", "gold", "red", "gold"].map((tone, index) => <span key={index} className={`zurs-christmas-ornament zurs-christmas-ornament--${tone}`} style={{ "--ornament-x": `${8 + index * 14}%`, "--ornament-drop": `${8 + (index % 3) * 6}px` } as React.CSSProperties} />)}</div></>;
+  return (
+    <>
+      <div className="zurs-christmas-snow-layer" aria-hidden="true">
+        {christmasSnowSlots.map(([left, delay, duration, size, sway], index) => (
+          <span key={index} className="zurs-christmas-snowflake" style={{ "--snow-left": left, "--snow-delay": delay, "--snow-duration": duration, "--snow-size": size, "--snow-sway": sway } as React.CSSProperties}>✦</span>
+        ))}
+      </div>
+      <div className="zurs-christmas-garland" aria-hidden="true">
+        <span className="zurs-christmas-garland__cord" />
+        {["gold", "red", "gold", "red", "gold", "red", "gold"].map((tone, index) => (
+          <span key={index} className={`zurs-christmas-ornament zurs-christmas-ornament--${tone}`} style={{ "--ornament-x": `${8 + index * 14}%`, "--ornament-drop": `${8 + (index % 3) * 6}px` } as React.CSSProperties} />
+        ))}
+      </div>
+    </>
+  );
 }
-
 function LiveSpinAnnouncement({ event }: { event: { status: string; scheduledAt: Date | string } | null }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 1_000); return () => window.clearInterval(timer); }, []);
   if (!event || !["announced", "locked", "waiting"].includes(event.status)) return null;
   const remaining = Math.max(0, Math.ceil((new Date(event.scheduledAt).getTime() - now) / 1_000));
-  const hours = String(Math.floor(remaining / 3_600)).padStart(2, "0");
-  const minutes = String(Math.floor((remaining % 3_600) / 60)).padStart(2, "0");
-  const seconds = String(remaining % 60).padStart(2, "0");
-  return <Link href="/live-spin" className="container mt-2 flex h-9 items-center justify-center gap-2 rounded-xl border border-cyan-200/50 bg-cyan-50 px-3 text-center text-[10px] font-bold text-cyan-950 shadow-sm transition hover:bg-cyan-100 sm:text-xs"><Sparkles className="h-3.5 w-3.5 shrink-0 text-cyan-700" /><span>Live Spin · ថ្ងៃអាទិត្យ 3:00 រសៀល</span><span className="rounded-md bg-cyan-950 px-1.5 py-0.5 font-mono text-[10px] text-white">{hours}:{minutes}:{seconds}</span></Link>;
+  const hh = String(Math.floor(remaining / 3_600)).padStart(2, "0");
+  const mm = String(Math.floor((remaining % 3_600) / 60)).padStart(2, "0");
+  const ss = String(remaining % 60).padStart(2, "0");
+  return (
+    <Link href="/live-spin" className="container mt-3 flex h-10 items-center justify-center gap-2 rounded-xl border border-neon/30 bg-neon/10 px-3 text-center text-xs font-bold text-ink transition hover:bg-neon/15">
+      <Sparkles className="h-3.5 w-3.5 shrink-0 text-neon" />
+      <span>Live Spin · ថ្ងៃអាទិត្យ 3:00 រសៀល</span>
+      <span className="rounded-md bg-neon px-1.5 py-0.5 font-mono text-xs text-neon-ink">{hh}:{mm}:{ss}</span>
+    </Link>
+  );
 }
-
-function SelectedProductActionBar({ product, paymentMethodName, isAuthenticated, isAuthenticationLoading, signInHref, onContinue }: { product: { label: string; amountLabel: string; priceLabel: string; gameName: string; gameLogoUrl?: string } | null; paymentMethodName: string | null; isAuthenticated: boolean; isAuthenticationLoading: boolean; signInHref: string; onContinue: () => void }) {
+type ActionBarProps = {
+  product: { label: string; amountLabel: string; priceLabel: string; gameName: string; gameLogoUrl?: string } | null;
+  paymentMethodName: string | null;
+  isAuthenticated: boolean;
+  isAuthenticationLoading: boolean;
+  signInHref: string;
+  onContinue: () => void;
+};
+function SelectedProductActionBar({ product, paymentMethodName, isAuthenticated, isAuthenticationLoading, signInHref, onContinue }: ActionBarProps) {
   const expanded = Boolean(product);
-  return <aside className={cn("selected-product-action-bar fixed bottom-2 left-1/2 z-40 flex h-[3.75rem] -translate-x-1/2 items-center gap-2 rounded-2xl p-2", expanded ? "selected-product-action-bar--expanded" : "selected-product-action-bar--compact")} aria-label="Selected package action bar" aria-live="polite">
-    <span className="selected-product-action-bar__compact-content"><WalletCards className="h-4 w-4" /><span>ជ្រើសកញ្ចប់</span><ChevronRight className="h-4 w-4" /></span>
-    <div className="selected-product-action-bar__expanded-content">
-      {product ? <><ProviderGameArtwork name={product.gameName} logoUrl={product.gameLogoUrl} priority className="h-11 w-11 shrink-0 rounded-xl" iconClassName="h-5 w-5" /><div className="min-w-0 flex-1"><OverflowMarquee text={product.label} className="text-xs font-extrabold text-slate-950" /><OverflowMarquee text={`${product.amountLabel} · ${product.priceLabel} · ${paymentMethodName ? `បង់៖ ${paymentMethodName}` : "សូមជ្រើសវិធីបង់ប្រាក់"}`} className="mt-0.5 text-[10px] font-semibold text-slate-600" /></div>{isAuthenticationLoading ? <button type="button" disabled aria-disabled="true" className="inline-flex h-10 shrink-0 items-center gap-1 rounded-xl bg-slate-900/10 px-2.5 text-[10px] font-bold text-slate-500"><OutlineLoader size={14} color="#64748b" />កំពុងពិនិត្យ</button> : isAuthenticated ? paymentMethodName ? <button type="button" onClick={onContinue} className="inline-flex h-10 shrink-0 items-center gap-1 rounded-xl bg-slate-950 px-2.5 text-[10px] font-bold text-white shadow-sm transition hover:bg-cyan-700"><ChevronRight className="h-3.5 w-3.5" />បន្ត</button> : <button type="button" disabled aria-disabled="true" title="សូមជ្រើសវិធីបង់ប្រាក់នៅខាងលើកញ្ចប់" className="inline-flex h-10 shrink-0 items-center gap-1 rounded-xl bg-slate-900/10 px-2.5 text-[10px] font-bold text-slate-500"><WalletCards className="h-3.5 w-3.5" />ជ្រើសវិធី</button> : <a href={signInHref} className="inline-flex h-10 shrink-0 items-center gap-1 rounded-xl bg-slate-950 px-2.5 text-[10px] font-bold text-white shadow-sm transition hover:bg-indigo-700"><LogIn className="h-3.5 w-3.5" />ចូលគណនីដើម្បីទិញ</a>}</> : null}
-    </div>
-  </aside>;
+  const pill = "inline-flex h-10 shrink-0 items-center gap-1 rounded-xl px-3 text-xs font-bold";
+  return (
+    <aside className={cn("selected-product-action-bar fixed bottom-2 left-1/2 z-40 flex h-[3.75rem] -translate-x-1/2 items-center gap-2 rounded-2xl p-2", expanded ? "selected-product-action-bar--expanded" : "selected-product-action-bar--compact")} aria-label="Selected package action bar" aria-live="polite">
+      <span className="selected-product-action-bar__compact-content text-ink-muted"><WalletCards className="h-4 w-4" /><span>ជ្រើសកញ្ចប់</span><ChevronRight className="h-4 w-4" /></span>
+      <div className="selected-product-action-bar__expanded-content">
+        {product ? (
+          <>
+            <ProviderGameArtwork name={product.gameName} logoUrl={product.gameLogoUrl} priority className="h-11 w-11 shrink-0 rounded-xl" iconClassName="h-5 w-5" />
+            <div className="min-w-0 flex-1">
+              <OverflowMarquee text={product.label} className="text-xs font-extrabold text-ink" />
+              <OverflowMarquee text={`${product.amountLabel} · ${product.priceLabel} · ${paymentMethodName ? `បង់៖ ${paymentMethodName}` : "សូមជ្រើសវិធីបង់ប្រាក់"}`} className="mt-0.5 text-xs font-semibold text-ink-muted" />
+            </div>
+            {isAuthenticationLoading ? (
+              <button type="button" disabled aria-disabled="true" className={cn(pill, "bg-panel-2 text-ink-muted")}><OutlineLoader size={14} color="#8d97b2" />កំពុងពិនិត្យ</button>
+            ) : isAuthenticated ? paymentMethodName ? (
+              <button type="button" onClick={onContinue} className={cn(pill, "bg-neon text-neon-ink transition hover:brightness-110")}><ChevronRight className="h-3.5 w-3.5" />បន្ត</button>
+            ) : (
+              <button type="button" disabled aria-disabled="true" title="សូមជ្រើសវិធីបង់ប្រាក់នៅខាងលើកញ្ចប់" className={cn(pill, "bg-panel-2 text-ink-muted")}><WalletCards className="h-3.5 w-3.5" />ជ្រើសវិធីបង់</button>
+            ) : (
+              <a href={signInHref} className={cn(pill, "bg-neon text-neon-ink")}><LogIn className="h-3.5 w-3.5" />ចូលគណនី</a>
+            )}
+          </>
+        ) : null}
+      </div>
+    </aside>
+  );
 }

@@ -1,7 +1,7 @@
 import { trpc } from "@/lib/trpc";
 import { toWebsiteMediaUrl } from "@/lib/mediaUrl";
 import { subscribeToPublicAssetChanges } from "@/lib/publicAssetBroadcast";
-import { Headset, MessageCircle, X } from "lucide-react";
+import { Clock3, Headset, MessageCircle, Timer, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 type ContactAdmin = {
@@ -41,6 +41,29 @@ function initials(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(-2).map((part) => part[0]?.toUpperCase()).join("") || "A";
 }
 
+/**
+ * Avatar that NEVER shows the browser's broken-image glyph.
+ * If the photo URL 404s/502s (e.g. stale storage), we fall back to initials.
+ * This was the cause of the floating "?" circles in the support sheet.
+ */
+function ContactAdminAvatar({ admin, online }: { admin: ContactAdmin; online: boolean }) {
+  const [failed, setFailed] = useState(false);
+  const src = admin.photoUrl ? toWebsiteMediaUrl(admin.photoUrl) : null;
+  useEffect(() => setFailed(false), [src]);
+  return (
+    <div className="contact-admin-avatar" aria-hidden="true">
+      <div className="contact-admin-avatar__clip">
+        {src && !failed ? (
+          <img src={src} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} />
+        ) : (
+          <span className="contact-admin-avatar__initials">{initials(admin.displayName)}</span>
+        )}
+      </div>
+      <span className={`contact-admin-status-dot ${online ? "contact-admin-status-dot--online" : ""}`} />
+    </div>
+  );
+}
+
 function ContactAdminSheet({ open, onClose, paymentBarVisible }: { open: boolean; onClose: () => void; paymentBarVisible: boolean }) {
   const utils = trpc.useUtils();
   const [mounted, setMounted] = useState(open);
@@ -69,6 +92,15 @@ function ContactAdminSheet({ open, onClose, paymentBarVisible }: { open: boolean
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onClose, open]);
 
+  // Lock background scroll while the sheet is open (prevents the storefront from
+  // scrolling underneath on iOS and the sheet content jumping around).
+  useEffect(() => {
+    if (!open) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previous; };
+  }, [open]);
+
   const cards = useMemo(() => (admins.data ?? []).filter((admin) => admin.isVisible) as ContactAdmin[], [admins.data]);
   if (!mounted) return null;
 
@@ -77,43 +109,58 @@ function ContactAdminSheet({ open, onClose, paymentBarVisible }: { open: boolean
       <div className="contact-admin-backdrop" aria-hidden="true" onMouseDown={onClose} />
       <section className="contact-admin-sheet" role="dialog" aria-modal="true" aria-labelledby="contact-admin-heading">
         <div className="contact-admin-sheet__handle" aria-hidden="true" />
-        <div className="flex items-start justify-between gap-4">
-          <div>
+        <header className="contact-admin-sheet__header">
+          <div className="min-w-0">
             <p className="zurs-eyebrow">ZURS SUPPORT</p>
-            <h2 id="contact-admin-heading" className="mt-1 font-display text-2xl font-bold text-slate-950">ជំនួយពី Admin</h2>
-            <p className="mt-1 text-xs leading-5 text-slate-500">ជ្រើសរើស Admin ម្នាក់ ហើយបន្តទៅ Telegram ដោយផ្ទាល់។ ម៉ោងធ្វើការគិតតាមម៉ោងកម្ពុជា។</p>
+            <h2 id="contact-admin-heading" className="contact-admin-sheet__title">ជំនួយពី Admin</h2>
+            <p className="contact-admin-sheet__lead">ជ្រើសរើស Admin ម្នាក់ ហើយបន្តទៅ Telegram ដោយផ្ទាល់។ ម៉ោងធ្វើការគិតតាមម៉ោងកម្ពុជា។</p>
           </div>
           <button type="button" onClick={onClose} className="contact-admin-sheet__close" aria-label="បិទផ្ទាំងទំនាក់ទំនង"><X className="h-5 w-5" /></button>
-        </div>
-        <div className="mt-5 space-y-3">
-          {admins.isLoading ? <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-center text-xs font-semibold text-slate-500">កំពុងរៀបចំព័ត៌មាន Admin…</div> : cards.length ? cards.map((admin) => <ContactAdminCard key={admin.id} admin={admin} />) : <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-5 text-center text-xs leading-5 text-slate-500">មិនទាន់មាន Admin សម្រាប់ទំនាក់ទំនងទេ។ សូមព្យាយាមម្ដងទៀតនៅពេលក្រោយ។</div>}
+        </header>
+        <div className="contact-admin-sheet__list">
+          {admins.isLoading ? (
+            <>
+              <div className="contact-admin-card contact-admin-card--skeleton" aria-hidden="true" />
+              <div className="contact-admin-card contact-admin-card--skeleton" aria-hidden="true" />
+            </>
+          ) : cards.length ? (
+            cards.map((admin, index) => <ContactAdminCard key={admin.id} admin={admin} index={index} />)
+          ) : (
+            <div className="contact-admin-empty">មិនទាន់មាន Admin សម្រាប់ទំនាក់ទំនងទេ។ សូមព្យាយាមម្ដងទៀតនៅពេលក្រោយ។</div>
+          )}
         </div>
       </section>
     </div>
   );
 }
 
-function ContactAdminCard({ admin }: { admin: ContactAdmin }) {
+function ContactAdminCard({ admin, index }: { admin: ContactAdmin; index: number }) {
   const online = isAdminWorkingNow(admin.workingHoursStart, admin.workingHoursEnd);
   const username = admin.telegramUsername.replace(/^@+/, "");
   return (
-    <article className="contact-admin-card">
-      <div className="flex min-w-0 items-center gap-3.5">
-        <div className="contact-admin-avatar">
-          {admin.photoUrl ? <img src={toWebsiteMediaUrl(admin.photoUrl)} alt={admin.displayName} className="h-full w-full object-cover" /> : <span>{initials(admin.displayName)}</span>}
-          <span className={`contact-admin-status-dot ${online ? "contact-admin-status-dot--online" : ""}`} aria-label={online ? "កំពុង online" : "ក្រៅម៉ោង"} />
-        </div>
-        <div className="min-w-0">
-          <h3 className="truncate font-display text-base font-bold text-slate-950">{admin.displayName}</h3>
-          <p className={`mt-0.5 text-[11px] font-bold ${online ? "text-emerald-700" : "text-slate-500"}`}>{online ? "កំពុង online" : "ក្រៅម៉ោងធ្វើការ"}</p>
+    <article className="contact-admin-card" style={{ ["--i" as string]: index }}>
+      <div className="contact-admin-card__identity">
+        <ContactAdminAvatar admin={admin} online={online} />
+        <div className="min-w-0 flex-1">
+          <h3 className="contact-admin-card__name">{admin.displayName}</h3>
+          <p className={`contact-admin-card__state ${online ? "is-online" : ""}`}>
+            <span className="contact-admin-card__pulse" aria-hidden="true" />
+            {online ? "កំពុង online" : "ក្រៅម៉ោងធ្វើការ"}
+          </p>
         </div>
       </div>
-      <div className="mt-3 grid gap-1.5 text-[11px] leading-5 text-slate-600">
-        <p><span className="font-bold text-slate-800">ម៉ោងធ្វើការ៖</span> {admin.workingHoursStart} – {admin.workingHoursEnd}</p>
-        <p><span className="font-bold text-slate-800">ឆ្លើយតបជាធម្មតា៖</span> {admin.replyTimeText}</p>
-      </div>
+      <dl className="contact-admin-card__meta">
+        <div>
+          <dt><Clock3 className="h-3.5 w-3.5" /> ម៉ោងធ្វើការ</dt>
+          <dd>{admin.workingHoursStart} – {admin.workingHoursEnd}</dd>
+        </div>
+        <div>
+          <dt><Timer className="h-3.5 w-3.5" /> ឆ្លើយតបជាធម្មតា</dt>
+          <dd>{admin.replyTimeText}</dd>
+        </div>
+      </dl>
       <a className="contact-admin-telegram" href={`https://t.me/${encodeURIComponent(username)}`} target="_blank" rel="noreferrer" aria-label={`Telegram @${username}`}>
-        <MessageCircle className="h-4 w-4" />
+        <MessageCircle className="h-4 w-4 shrink-0" />
         <span className="truncate">Telegram: @{username}</span>
       </a>
     </article>

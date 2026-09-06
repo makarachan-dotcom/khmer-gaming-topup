@@ -1,0 +1,141 @@
+/* ZURS button system — loaded after storefront-clean.css.
+   New code uses .zbtn; legacy classes are re-skinned onto the same tokens. */
+.zbtn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+  min-height: 2.75rem; padding: 0 1.1rem; border-radius: 0.875rem;
+  border: 1px solid transparent;
+  font: 700 0.875rem/1.2 "Kantumruy Pro", sans-serif; white-space: nowrap;
+  cursor: pointer; user-select: none; text-decoration: none;
+  transition: background-color 160ms var(--z-ease), border-color 160ms var(--z-ease), color 160ms var(--z-ease), transform 120ms var(--z-ease), opacity 160ms;
+}
+.zbtn:active:not(:disabled) { transform: scale(0.98); }
+.zbtn:disabled, .zbtn[aria-disabled="true"] { cursor: not-allowed; opacity: 0.45; }
+.zbtn:focus-visible { outline: 2px solid var(--z-neon); outline-offset: 2px; }
+.zbtn svg { width: 1rem; height: 1rem; flex: 0 0 auto; }
+.zbtn--primary   { background: var(--z-neon); color: var(--z-neon-ink); }
+.zbtn--primary:hover:not(:disabled) { background: #5cc8fa; }
+.zbtn--secondary { background: var(--z-panel-2); color: var(--z-ink); border-color: var(--z-line); }
+.zbtn--secondary:hover:not(:disabled) { border-color: rgba(56,189,248,0.55); }
+.zbtn--ghost     { background: transparent; color: var(--z-ink-muted); }
+.zbtn--ghost:hover:not(:disabled) { background: var(--z-panel-2); color: var(--z-ink); }
+.zbtn--danger    { background: rgba(248,113,113,0.12); color: #fca5a5; border-color: rgba(248,113,113,0.35); }
+.zbtn--sm   { min-height: 2.25rem; padding: 0 0.85rem; font-size: 0.8125rem; border-radius: 0.75rem; }
+.zbtn--lg   { min-height: 3.25rem; padding: 0 1.4rem; font-size: 0.9375rem; border-radius: 1rem; }
+.zbtn--full { width: 100%; }
+.zbtn--icon { width: 2.75rem; padding: 0; }
+/* ───────── Legacy payment classes → same tokens ───────── */
+/* Checkout page */
+.checkout-page { color: var(--z-ink); }
+.checkout-page__back {
+  min-height: 2.5rem; border: 1px solid var(--z-line); border-radius: 0.75rem;
+  background: var(--z-panel); color: var(--z-ink); box-shadow: none; font-size: 0.8125rem; font-weight: 700;
+}
+.checkout-page__back::before { display: none; }
+.checkout-page__back:hover { transform: none; background: var(--z-panel-2); border-color: rgba(56,189,248,0.55); box-shadow: none; }
+.checkout-page__secure { color: var(--z-ink); }
+.checkout-page__secure .text-slate-950 { color: var(--z-ink) !important; }
+.checkout-page__logo-mark { background: var(--z-neon); color: var(--z-neon-ink); }
+.checkout-page__secure-copy { color: var(--z-neon); font-size: 0.75rem; }
+.checkout-page__loading, .checkout-unavailable { border: 1px solid var(--z-line); background: var(--z-panel); color: var(--z-ink); border-radius: 1rem; }
+.checkout-unavailable .text-slate-900 { color: var(--z-ink) !important; }
+.checkout-unavailable .text-slate-500 { color: var(--z-ink-muted) !important; }
+.checkout-unavailable .text-indigo-600 { color: var(--z-neon) !important; }
+.checkout-unavailable a { background: var(--z-neon) !important; color: var(--z-neon-ink) !important; }
+.checkout-preview-hero {
+  border: 1px solid var(--z-line); border-radius: 1rem; background: var(--z-panel); box-shadow: none; color: var(--z-ink);
+}
+.checkout-preview-hero > p { color: var(--z-neon); font-size: 0.72rem; letter-spacing: 0.14em; }
+.checkout-preview-hero h1 { font-weight: 800; }
+.checkout-preview-hero > span { border-color: var(--z-line); background: var(--z-panel-2); color: var(--z-ink-muted); font-size: 0.75rem; }
+.checkout-order-summary, .checkout-khqr, .checkout-preview-confirm, .checkout-success-state {
+  border: 1px solid var(--z-line) !important; border-radius: 1rem !important;
+  background: var(--z-panel) !important; box-shadow: none !important; color: var(--z-ink);
+}
+.checkout-order-summary__eyebrow, .checkout-section-heading p { color: var(--z-neon); font-size: 0.72rem; letter-spacing: 0.14em; }
+.checkout-order-summary__title, .checkout-section-heading h2 { color: var(--z-ink); }
+.checkout-order-summary__order, .checkout-order-summary__note, .checkout-order-summary__details span { color: var(--z-ink-muted); }
+.checkout-order-summary__details strong { color: var(--z-ink); }
+.checkout-order-summary__details > div { border-color: var(--z-line); background: var(--z-panel-2); }
+.checkout-order-summary__amount { color: var(--z-neon); }
+.checkout-preview-confirm strong { color: var(--z-ink); }
+.checkout-preview-confirm span, .checkout-preview-confirm > div { color: var(--z-ink-muted); }
+.checkout-preview-confirm__error, .checkout-pending-block {
+  border: 1px solid rgba(248,113,113,0.35); background: rgba(248,113,113,0.1); color: #fca5a5; border-radius: 0.75rem; padding: 0.7rem 0.85rem; font-size: 0.8125rem;
+}
+.checkout-status { border-color: var(--z-line); background: var(--z-panel-2); color: var(--z-ink); font-size: 0.75rem; }
+.checkout-status--paid { border-color: rgba(52,211,153,0.4); background: rgba(52,211,153,0.12); color: #6ee7b7; }
+.checkout-status--expired { border-color: rgba(248,113,113,0.4); background: rgba(248,113,113,0.12); color: #fca5a5; }
+.checkout-khqr__brand { color: var(--z-ink); }
+.checkout-khqr__waiting-copy { color: var(--z-ink-muted); }
+.checkout-khqr__success-copy { color: #6ee7b7; }
+.checkout-khqr__expired-copy { color: #fca5a5; }
+.checkout-qr-card { background: #fff; border-radius: 0.75rem; } /* QR must stay on white for scanners */
+/* Action row: deeplink = primary, check = secondary, cancel = ghost */
+.checkout-khqr__deeplink, .checkout-primary-action, .checkout-secondary-action, .checkout-cancel-action, .checkout-receipt-action {
+  min-height: 2.75rem; border-radius: 0.875rem; font-size: 0.875rem; font-weight: 700; box-shadow: none !important; filter: none !important;
+}
+.checkout-khqr__deeplink, .checkout-primary-action, .checkout-receipt-action { border: 0; background: var(--z-neon); color: var(--z-neon-ink); }
+.checkout-secondary-action { border: 1px solid var(--z-line); background: var(--z-panel-2); color: var(--z-ink); }
+.checkout-cancel-action { border: 1px solid transparent; background: transparent; color: var(--z-ink-muted); }
+.checkout-khqr__deeplink:hover, .checkout-primary-action:not(:disabled):hover, .checkout-receipt-action:hover { transform: none; background: #5cc8fa; }
+.checkout-secondary-action:not(:disabled):hover { transform: none; border-color: rgba(56,189,248,0.55); }
+.checkout-cancel-action:hover { background: var(--z-panel-2); color: var(--z-ink); }
+.checkout-khqr__actions { display: grid; gap: 0.5rem; margin-top: 1rem; }
+@media (min-width: 640px) { .checkout-khqr__actions { grid-template-columns: 1fr 1fr; } .checkout-khqr__actions .checkout-cancel-action { grid-column: span 2; } }
+.checkout-success-state__head h2 { color: var(--z-ink); }
+.checkout-success-state__head p, .checkout-success-state__steps li { color: var(--z-ink-muted); font-size: 0.8125rem; }
+.checkout-success-state__steps li.is-complete { color: #6ee7b7; }
+.checkout-success-links > * {
+  min-height: 3.25rem; border: 1px solid var(--z-line); border-radius: 0.875rem; background: var(--z-panel); color: var(--z-ink); font-size: 0.75rem; font-weight: 700;
+}
+.checkout-success-links > *:hover { border-color: rgba(56,189,248,0.55); }
+/* Receipt (stays light — it is a printable paper) */
+.receipt-dialog__backdrop { background: rgba(10,15,30,0.78); }
+.receipt-paper__actions > * { min-height: 2.75rem; border-radius: 0.875rem; font-size: 0.8125rem; background: #0a0f1e; color: #fff; }
+.receipt-paper__actions > a { background: #e0f2fe; color: #075985; }
+/* Payment method gate (modal) */
+.payment-method-gate__backdrop { background: rgba(10,15,30,0.78); backdrop-filter: blur(8px); }
+.payment-method-gate__panel {
+  border: 1px solid var(--z-line); border-radius: 1.25rem; background: var(--z-panel); box-shadow: var(--z-shadow); color: var(--z-ink);
+}
+.payment-method-gate__eyebrow { color: var(--z-neon); font-size: 0.72rem; letter-spacing: 0.14em; }
+.payment-method-gate__header h2, .payment-method-preselect__header h3 { color: var(--z-ink); }
+.payment-method-gate__copy, .payment-method-preselect__header p, .payment-method-preselect__hint { color: var(--z-ink-muted); font-size: 0.8125rem; }
+.payment-method-gate__close { border: 1px solid var(--z-line); background: var(--z-panel-2); color: var(--z-ink); border-radius: 0.75rem; }
+.payment-method-gate__review-card, .payment-method-gate__review-line, .payment-method-gate__review-info, .payment-method-gate__missing, .payment-method-gate__info {
+  border: 1px solid var(--z-line); background: var(--z-panel-2); color: var(--z-ink); border-radius: 0.875rem;
+}
+.payment-method-gate__review-card .text-slate-950, .payment-method-gate__review-card p { color: var(--z-ink) !important; }
+.payment-method-gate__review-card .text-slate-600 { color: var(--z-ink-muted) !important; }
+.payment-method-gate__review-card > span { background: rgba(56,189,248,0.14) !important; color: var(--z-neon) !important; }
+.payment-method-gate__review-line span, .payment-method-gate__review-info p { color: var(--z-ink-muted); }
+.payment-method-gate__review-line strong { color: var(--z-ink); }
+.payment-method-gate__info--error { border-color: rgba(248,113,113,0.35); background: rgba(248,113,113,0.1); color: #fca5a5; }
+.payment-method-gate__chosen { color: #6ee7b7; font-size: 0.8125rem; }
+.payment-method-gate__confirm, .payment-method-gate__back { min-height: 2.75rem; border-radius: 0.875rem; font-size: 0.875rem; box-shadow: none !important; }
+.payment-method-gate__confirm { border: 0; background: var(--z-neon); color: var(--z-neon-ink); }
+.payment-method-gate__confirm:hover:not(:disabled) { transform: none; background: #5cc8fa; box-shadow: none; }
+.payment-method-gate__back { border: 1px solid var(--z-line); background: var(--z-panel-2); color: var(--z-ink); }
+.payment-method-gate__back:hover:not(:disabled) { transform: none; border-color: rgba(56,189,248,0.55); background: var(--z-panel-2); }
+/* Method options */
+.payment-method-preselect { border: 1px solid var(--z-line) !important; border-radius: 1rem !important; background: var(--z-panel) !important; box-shadow: none !important; }
+.payment-method-option { border: 1px solid var(--z-line); border-radius: 0.875rem; background: var(--z-panel-2); color: var(--z-ink); box-shadow: none; }
+.payment-method-option:hover { transform: none; border-color: rgba(56,189,248,0.55); }
+.payment-method-option--selected { border-color: var(--z-neon); background: rgba(56,189,248,0.1); box-shadow: none; }
+.payment-method-option__copy strong { color: var(--z-ink); font-size: 0.875rem; }
+.payment-method-option__copy span { color: var(--z-ink-muted); font-size: 0.8125rem; }
+.payment-method-option__check { border: 1px solid var(--z-line); background: transparent; color: transparent; }
+.payment-method-option--selected .payment-method-option__check { border-color: var(--z-neon); background: var(--z-neon); color: var(--z-neon-ink); }
+.payment-method-option__icon { background: #fff; border-radius: 0.6rem; padding: 0.2rem; }
+.payment-method-preselect__selected { border: 1px solid rgba(52,211,153,0.4); background: rgba(52,211,153,0.12); color: #6ee7b7; border-radius: 999px; }
+/* Package tiles — calm them down, keep the tier hue as a hairline only */
+.package-choice, .package-choice::before { background: none !important; box-shadow: none !important; }
+.package-choice { border: 1px solid var(--z-line) !important; padding: 0 !important; border-radius: 0.875rem !important; }
+.package-choice::before { display: none; }
+.package-choice-surface { background: var(--z-panel) !important; color: var(--z-ink); border-radius: inherit; }
+.package-choice:hover { transform: translateY(-2px); border-color: rgba(56,189,248,0.55) !important; }
+.package-choice--selected { border-color: var(--z-neon) !important; }
+.package-choice--selected .package-choice-surface { margin: 0 !important; background: rgba(56,189,248,0.08) !important; }
+.package-choice--mlbb-bonus.package-choice--selected { border-color: #34d399 !important; }
+.package-choice--mlbb-pass.package-choice--selected { border-color: #60a5fa !important; }
+.package-choice--mlbb-special.package-choice--selected { border-color: #f472b6 !important; }

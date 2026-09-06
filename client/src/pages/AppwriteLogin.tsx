@@ -1,78 +1,610 @@
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { completeAppwriteEmailOtp, requestAppwriteEmailOtp } from "@/lib/appwriteAuth";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { ArrowLeft, KeyRound, MailCheck } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { completeAppwriteEmailOtp, getAppwriteAccount, requestAppwriteEmailOtp, updateAppwriteAccountName } from "@/lib/appwriteAuth";
+import {
+  LoginBlockedError,
+  LoginRateLimitedError,
+  checkLoginGuard,
+  closeVerifyAttempt,
+  formatCountdownKh,
+  guardCodeRequest,
+  openVerifyAttempt,
+  type LoginGuardState,
+} from "@/lib/loginGuard";
+import ZursLoginMascot, { type MascotState } from "@/components/ZursLoginMascot";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { ArrowLeft, Check, Loader2, Lock, Mail, ShieldAlert, ShieldCheck, User } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ClipboardEvent as ReactClipboardEvent, KeyboardEvent as ReactKeyboardEvent } from "react";
+
+const OTP_LENGTH = 6;
+const BLOCK_SECONDS = 24 * 60 * 60;
+
+type Phase = "email" | "otp" | "name" | "verifying" | "success" | "blocked";
 
 function safeReturnPath() {
   const candidate = new URLSearchParams(window.location.search).get("returnTo");
   return candidate?.startsWith("/") && !candidate.startsWith("//") && !candidate.startsWith("/login") ? candidate : "/account";
 }
 
+/*
+ * Motion language for this screen.
+ *
+ * Everything shares one easing curve and one short duration, and only opacity
+ * and transform are animated. The previous version also animated `filter:
+ * blur()` on each step change, which is what made the transitions feel heavy on
+ * mid-range Android — blur cannot be composited on the GPU the way transforms
+ * can. Removing it is most of the "smoother" the redesign asked for; the rest
+ * is simply moving less far (10px instead of 16px) and settling faster.
+ */
+const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
+
+const step = {
+  initial: { opacity: 0, y: 10 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -8 },
+};
+
+const stepTransition = { duration: 0.32, ease: EASE };
+
+/** Small hardware mark. Calm by default; only its badge changes with state. */
+function OtpDevice({ state }: { state: "idle" | "typing" | "verifying" | "success" | "error" | "locked" }) {
+  return (
+    <div className={`zl-device zl-device--${state}`} aria-hidden="true">
+      <div className="zl-device__screen">
+        <span className="zl-device__dot" />
+        <span className="zl-device__dot" />
+        <span className="zl-device__dot" />
+      </div>
+      <div className="zl-device__badge">
+        {state === "success" ? <Check className="h-4 w-4" strokeWidth={3} /> : state === "locked" ? <ShieldAlert className="h-4 w-4" strokeWidth={2.5} /> : <Lock className="h-4 w-4" strokeWidth={2.5} />}
+      </div>
+    </div>
+  );
+}
+
 export default function AppwriteLogin() {
   const { user, loading, refresh } = useAuth();
   const returnTo = useMemo(safeReturnPath, []);
+  const reduce = useReducedMotion();
+
+  const [phase, setPhase] = useState<Phase>("email");
   const [email, setEmail] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
-  const [secret, setSecret] = useState("");
+  const [digits, setDigits] = useState<string[]>(() => Array(OTP_LENGTH).fill(""));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resendIn, setResendIn] = useState(0);
+  const [name, setName] = useState("");
+
+  // Lockout state. `lockLeft` is a live countdown so the visitor can see the
+  // 24 hours actually draining instead of reloading to find out.
+  const [lockLeft, setLockLeft] = useState(0);
+  const [lockTotal, setLockTotal] = useState(BLOCK_SECONDS);
+  const [lockMessage, setLockMessage] = useState<string | null>(null);
+  const [attemptsLeft, setAttemptsLeft] = useState<number | null>(null);
+
+  const inputsRef = useRef<Array<HTMLInputElement | null>>([]);
+  const redirectTimer = useRef<number | null>(null);
+  const code = digits.join("");
+
+  const applyLock = useCallback((state: Pick<LoginGuardState, "retryAfter" | "message">) => {
+    const seconds = Math.max(1, state.retryAfter || BLOCK_SECONDS);
+    setLockLeft(seconds);
+    setLockTotal(Math.max(seconds, BLOCK_SECONDS));
+    setLockMessage(state.message);
+    setAttemptsLeft(0);
+    setError(null);
+    setBusy(false);
+    setPhase("blocked");
+  }, []);
 
   useEffect(() => {
     if (!loading && user) window.location.replace(returnTo);
   }, [loading, returnTo, user]);
 
+  // Ask the server about this address/device before rendering the form, so a
+  // visitor who is already locked out never gets to type an email at all.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const state = await checkLoginGuard("request");
+        if (!cancelled && state.blocked) applyLock(state);
+      } catch (reason) {
+        if (!cancelled && reason instanceof LoginBlockedError) applyLock(reason.state);
+        // Any other failure stays silent: the guard re-runs on every action, and
+        // a probe that could not reach the server must not block a real customer.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [applyLock]);
+
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const timer = window.setTimeout(() => setResendIn((value) => value - 1), 1000);
+    return () => window.clearTimeout(timer);
+  }, [resendIn]);
+
+  // Lockout countdown. On reaching zero it re-checks rather than assuming: the
+  // server owns the clock, and the block may have been extended meanwhile.
+  useEffect(() => {
+    if (phase !== "blocked") return;
+    if (lockLeft <= 0) {
+      void (async () => {
+        try {
+          const state = await checkLoginGuard("request");
+          if (state.blocked) {
+            setLockLeft(Math.max(1, state.retryAfter));
+            return;
+          }
+          setPhase("email");
+          setLockMessage(null);
+          setAttemptsLeft(null);
+        } catch (reason) {
+          if (reason instanceof LoginBlockedError) setLockLeft(Math.max(1, reason.state.retryAfter));
+        }
+      })();
+      return;
+    }
+    const timer = window.setTimeout(() => setLockLeft((value) => value - 1), 1000);
+    return () => window.clearTimeout(timer);
+  }, [lockLeft, phase]);
+
+  useEffect(() => {
+    if (phase === "otp") inputsRef.current[0]?.focus();
+  }, [phase]);
+
+  useEffect(
+    () => () => {
+      if (redirectTimer.current) window.clearTimeout(redirectTimer.current);
+    },
+    [],
+  );
+
+  const goHome = () => {
+    redirectTimer.current = window.setTimeout(() => window.location.replace(returnTo), 1400);
+  };
+
   const sendCode = async () => {
     setError(null);
     const normalized = email.trim().toLowerCase();
-    if (!/^\S+@\S+\.\S+$/.test(normalized)) return setError("សូមបញ្ចូលអ៊ីមែលឲ្យត្រឹមត្រូវ។");
+    if (!/^\S+@\S+\.\S+$/.test(normalized)) {
+      setError("សូមបញ្ចូលអ៊ីមែលឲ្យត្រឹមត្រូវ។");
+      return;
+    }
     setBusy(true);
     try {
+      // Server-side gate first. Nothing is sent if this address, this device or
+      // this mailbox is locked — which also means a locked actor cannot use the
+      // login form to send mail to somebody else.
+      const guard = await guardCodeRequest(normalized);
+      setAttemptsLeft(guard.remainingAttempts < guard.threshold ? guard.remainingAttempts : null);
+
       const token = await requestAppwriteEmailOtp(normalized);
       setUserId(token.userId);
-      setSecret("");
+      setDigits(Array(OTP_LENGTH).fill(""));
+      setPhase("otp");
+      setResendIn(45);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "មិនអាចផ្ញើលេខកូដបានទេ។ សូមពិនិត្យអ៊ីមែល ឬព្យាយាមម្ដងទៀត។");
+      if (reason instanceof LoginBlockedError) {
+        applyLock(reason.state);
+        return;
+      }
+      if (reason instanceof LoginRateLimitedError) {
+        setError(`ស្នើកូដញិកញាប់ពេក។ សូមរង់ចាំ ${formatCountdownKh(reason.retryAfter)} រួចព្យាយាមម្ដងទៀត។`);
+        return;
+      }
+      setError(reason instanceof Error ? reason.message : "មិនអាចផ្ញើលេខកូដបានទេ។ សូមព្យាយាមម្ដងទៀត។");
     } finally {
       setBusy(false);
     }
   };
 
-  const verifyCode = async () => {
-    if (!userId || !secret.trim()) return setError("សូមបញ្ចូលលេខកូដពីអ៊ីមែល។");
+  /*
+   * Verification is pre-charged.
+   *
+   * Appwrite checks the code in the browser, so our server never sees a wrong
+   * one. `openVerifyAttempt` therefore spends the strike up front and returns a
+   * claim; `closeVerifyAttempt(..., "success")` refunds it only when the code
+   * was right. Closing the tab mid-attempt costs a strike, which is the correct
+   * direction to fail in — the alternative is an attacker who simply never
+   * reports a failure.
+   */
+  const verify = async (value: string) => {
+    if (!userId || value.length < OTP_LENGTH) {
+      setError("សូមបញ្ចូលលេខកូដ ៬ ខ្ទង់ពីអ៊ីមែល។");
+      return;
+    }
+    const normalized = email.trim().toLowerCase();
     setError(null);
     setBusy(true);
+    setPhase("verifying");
+
+    let claimId: string | null = null;
     try {
-      await completeAppwriteEmailOtp({ userId, secret });
+      const opened = await openVerifyAttempt(normalized);
+      claimId = opened.claimId;
+      setAttemptsLeft(opened.state.remainingAttempts);
+
+      const session = await completeAppwriteEmailOtp({ userId, secret: value });
+      await closeVerifyAttempt(claimId, "success", normalized);
+      setAttemptsLeft(null);
+
       await refresh();
-      window.location.replace(returnTo);
+
+      // The name step belongs to first-time registration only.
+      //
+      // The server is the ONLY authority here: it answers `needsName` from what
+      // is actually stored in our own users table, and echoes `savedName` back
+      // for everyone who already has one. Requiring BOTH conditions means a
+      // returning member can never be re-prompted, so a saved name can never be
+      // overwritten on a later sign-in. Only a brand-new registration sees this
+      // step. The old Appwrite-profile fallback was removed: members who set
+      // their name here have no name on the Appwrite account, so that fallback
+      // was exactly what re-asked returning users for their name.
+      const needsName = session.needsName === true && !session.savedName?.trim();
+      if (needsName) {
+        setPhase("name");
+      } else {
+        if (session.savedName) setName(session.savedName);
+        setPhase("success");
+        goHome();
+      }
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "លេខកូដមិនត្រឹមត្រូវ ឬផុតកំណត់។");
+      if (reason instanceof LoginBlockedError) {
+        applyLock(reason.state);
+        return;
+      }
+      if (reason instanceof LoginRateLimitedError) {
+        setPhase("otp");
+        setDigits(Array(OTP_LENGTH).fill(""));
+        setError(`ព្យាយាមញាប់ពេក។ សូមរង់ចាំ ${formatCountdownKh(reason.retryAfter)}។`);
+        return;
+      }
+
+      const settled = await closeVerifyAttempt(claimId, "failure", normalized);
+      if (settled?.blocked) {
+        applyLock(settled);
+        return;
+      }
+      setPhase("otp");
+      if (settled) setAttemptsLeft(settled.remainingAttempts);
+      setError(reason instanceof Error ? reason.message : "លេខកូដមិនត្រឹមត្រូវ ញូផុតកំណត់។");
+      setDigits(Array(OTP_LENGTH).fill(""));
+      window.setTimeout(() => inputsRef.current[0]?.focus(), 30);
     } finally {
       setBusy(false);
     }
   };
 
-  return <main className="min-h-screen bg-slate-950 px-4 py-12 text-slate-100">
-    <section className="mx-auto w-full max-w-md rounded-3xl border border-white/10 bg-slate-900/85 p-7 shadow-2xl shadow-black/30">
-      <button type="button" onClick={() => window.history.back()} className="mb-6 inline-flex items-center gap-2 text-sm text-slate-300 transition hover:text-white"><ArrowLeft className="h-4 w-4" /> ត្រឡប់ក្រោយ</button>
-      <div className="mb-7 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-400/15 text-amber-300"><MailCheck className="h-6 w-6" /></div>
-      <h1 className="text-2xl font-black tracking-tight">ចូលគណនី ZURS</h1>
-      <p className="mt-2 text-sm leading-6 text-slate-300">ប្រើលេខកូដមួយដងពីអ៊ីមែលរបស់អ្នក។ Admin access នឹងត្រូវបានផ្ទៀងផ្ទាត់តាមអ៊ីមែលដែលបានអនុញ្ញាត។</p>
-      {!userId ? <div className="mt-7 space-y-4">
-        <label className="block text-sm font-semibold">អ៊ីមែល</label>
-        <Input value={email} onChange={(event) => setEmail(event.target.value)} type="email" autoComplete="email" placeholder="you@example.com" className="h-12 border-white/10 bg-slate-950/60" />
-        <Button type="button" onClick={sendCode} disabled={busy} className="h-12 w-full bg-amber-400 font-bold text-slate-950 hover:bg-amber-300">{busy ? "កំពុងផ្ញើលេខកូដ…" : "ផ្ញើលេខកូដទៅអ៊ីមែល"}</Button>
-      </div> : <div className="mt-7 space-y-4">
-        <div className="flex items-center gap-3 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm text-emerald-100"><KeyRound className="h-5 w-5 shrink-0" /> លេខកូដត្រូវបានផ្ញើទៅ <strong className="truncate">{email}</strong></div>
-        <p className="text-xs leading-5 text-slate-400">មិនឃើញលេខកូដក្នុង ២ នាទី? សូមឆែក folder <strong>Spam/Junk</strong> ផងដែរ។</p>
-        <label className="block text-sm font-semibold">លេខកូដពីអ៊ីមែល</label>
-        <Input value={secret} onChange={(event) => setSecret(event.target.value)} inputMode="numeric" autoComplete="one-time-code" placeholder="បញ្ចូលលេខកូដ" className="h-12 border-white/10 bg-slate-950/60" />
-        <Button type="button" onClick={verifyCode} disabled={busy} className="h-12 w-full bg-amber-400 font-bold text-slate-950 hover:bg-amber-300">{busy ? "កំពុងបញ្ជាក់…" : "បញ្ជាក់ និងចូលគណនី"}</Button>
-        <button type="button" onClick={() => setUserId(null)} disabled={busy} className="w-full text-sm text-slate-300 underline-offset-4 hover:text-white hover:underline">ប្រើអ៊ីមែលផ្សេង</button>
-      </div>}
-      {error ? <p role="alert" className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/10 p-3 text-sm text-rose-100">{error}</p> : null}
-    </section>
-  </main>;
+  const saveName = async () => {
+    const normalized = name.trim();
+    if (normalized.length < 2) {
+      setError("សូមបញ្ចូលឈ្មោ��យ៉ាងតិច ២ តួអក្សរ។");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await updateAppwriteAccountName(normalized);
+    } catch (reason) {
+      console.error("[Appwrite] updateName failed:", reason);
+    } finally {
+      setBusy(false);
+      setPhase("success");
+      goHome();
+    }
+  };
+
+  const setDigit = (index: number, raw: string) => {
+    const clean = raw.replace(/\D/g, "");
+    // Mobile keyboards sometimes deliver the whole code into one box — spread it.
+    if (clean.length > 1) {
+      const next = Array(OTP_LENGTH).fill("");
+      for (let i = 0; i < Math.min(clean.length, OTP_LENGTH); i += 1) next[i] = clean[i];
+      setDigits(next);
+      inputsRef.current[Math.min(clean.length, OTP_LENGTH) - 1]?.focus();
+      return;
+    }
+    const char = clean.slice(-1);
+    setDigits((prev) => {
+      const next = [...prev];
+      next[index] = char;
+      return next;
+    });
+    if (char && index < OTP_LENGTH - 1) inputsRef.current[index + 1]?.focus();
+  };
+
+  const onKeyDown = (index: number, event: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Backspace" && !digits[index] && index > 0) inputsRef.current[index - 1]?.focus();
+    if (event.key === "ArrowLeft" && index > 0) inputsRef.current[index - 1]?.focus();
+    if (event.key === "ArrowRight" && index < OTP_LENGTH - 1) inputsRef.current[index + 1]?.focus();
+  };
+
+  const onPaste = (event: ReactClipboardEvent<HTMLInputElement>) => {
+    const text = event.clipboardData.getData("text").replace(/\D/g, "").slice(0, OTP_LENGTH);
+    if (!text) return;
+    event.preventDefault();
+    const next = Array(OTP_LENGTH).fill("");
+    for (let i = 0; i < text.length; i += 1) next[i] = text[i];
+    setDigits(next);
+    inputsRef.current[Math.min(text.length, OTP_LENGTH - 1)]?.focus();
+  };
+
+  // Auto-submit as soon as all six boxes are filled.
+  useEffect(() => {
+    if (phase === "otp" && code.length === OTP_LENGTH && !busy) void verify(code);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code]);
+
+  const deviceState =
+    phase === "blocked" ? "locked" : phase === "success" ? "success" : phase === "verifying" ? "verifying" : error ? "error" : code.length ? "typing" : "idle";
+  const filledCount = digits.filter(Boolean).length;
+  const lockProgress = lockTotal > 0 ? Math.min(100, Math.max(0, ((lockTotal - lockLeft) / lockTotal) * 100)) : 0;
+
+  /*
+   * What the mascot is doing, derived from the same state the form already
+   * tracks so it can never disagree with the screen.
+   *
+   *   peeking — leans over and looks down at the boxes while a code is typed
+   *   wrong   — straightens up and looks at you after a bad code
+   *   banned  — sticks its tongue out for the duration of the lockout
+   *
+   * `error` is checked before typing so a wrong code wins over the digits
+   * still sitting in the boxes.
+   */
+  const mascotState: MascotState =
+    phase === "blocked" ? "banned" : phase === "success" ? "success" : error ? "wrong" : phase === "otp" || phase === "verifying" ? "peeking" : "idle";
+  // Which box the eyes track. Clamped so the pupils stop at the last box
+  // instead of drifting off the face once the code is complete.
+  const mascotFocus = Math.min(filledCount, OTP_LENGTH - 1);
+
+  const backAction = () => {
+    if (phase === "otp") {
+      setPhase("email");
+      setError(null);
+      return;
+    }
+    if (phase === "name") {
+      setPhase("otp");
+      return;
+    }
+    window.history.back();
+  };
+
+  return (
+    <main className="zl-shell">
+      {/* Ambient background: hairline grid, one slow aurora, one floor glow. */}
+      <div className="zl-bg" aria-hidden="true">
+        <div className="zl-bg__grid" />
+        <div className="zl-bg__aurora" />
+        <div className="zl-bg__floor" />
+      </div>
+
+      <motion.section
+        className={`zl-card ${error ? "is-error" : ""} ${phase === "success" ? "is-success" : ""} ${phase === "blocked" ? "is-locked" : ""}`}
+        initial={reduce ? false : { opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: EASE }}
+      >
+        <div className="zl-topbar">
+          {phase !== "success" && phase !== "verifying" && phase !== "blocked" ? (
+            <button type="button" onClick={backAction} className="zl-back">
+              <ArrowLeft className="h-4 w-4" /> ត្រឡប់ក្រោយ
+            </button>
+          ) : (
+            <span />
+          )}
+          <span className="zl-brand">
+            ZURS<span>.me</span>
+          </span>
+        </div>
+
+        <div className="zl-hero">
+          <ZursLoginMascot state={mascotState} focusIndex={mascotFocus} filled={filledCount} total={OTP_LENGTH} />
+          <OtpDevice state={deviceState} />
+          {phase !== "blocked" ? (
+            <div className="zl-steps" aria-hidden="true">
+              {(["email", "otp", "name"] as const).map((item, index) => {
+                const order: Phase[] = ["email", "otp", "verifying", "name", "success"];
+                const active = order.indexOf(phase) >= order.indexOf(item);
+                return <span key={item} className={`zl-steps__dot ${active ? "is-active" : ""}`} style={{ ["--d" as string]: `${index * 70}ms` }} />;
+              })}
+            </div>
+          ) : null}
+        </div>
+
+        <AnimatePresence mode="wait" initial={false}>
+          {phase === "blocked" ? (
+            <motion.div key="blocked" className="zl-lock" {...(reduce ? {} : step)} transition={stepTransition}>
+              <div className="zl-lock__badge">
+                <ShieldAlert className="h-6 w-6" strokeWidth={2} />
+              </div>
+              <h1 className="zl-title">បិទបណ្តោះអាសន្ន</h1>
+              <p className="zl-lock__meta">{lockMessage ?? "មានការព្យាយាមចូលខុសច្រើក្រនេពេក។ សូមព្យាយាមម្ដងទៀតក្រោយ។"}</p>
+              <p className="zl-lock__time" aria-live="polite">
+                {formatCountdownKh(lockLeft)}
+              </p>
+              <div className="zl-lock__bar" aria-hidden="true">
+                <span style={{ width: `${lockProgress}%` }} />
+              </div>
+              <p className="zl-lock__note">
+                ការផ្លាស់ប្ដូរឧបករណ៍ ចេញចូលគណនីថ្មី ឬប្ដូរអិនិទើណណេត មិនផ្លាស់ប្ដូររយៈពេលនេះទេ។ បើអ្នកគិតថានេះជាកំហុស សូមទាក់ទង Support ព្រមទាំងម៉ោងពេល។
+              </p>
+            </motion.div>
+          ) : phase === "email" ? (
+            <motion.div key="email" {...(reduce ? {} : step)} transition={stepTransition}>
+              <h1 className="zl-title">
+                ចូលគណនី <span className="zl-title__accent">ZURS</span>
+              </h1>
+              <p className="zl-subtitle">បញ្ចូលអ៊ីមែលរបស់អ្នក — យើងផ្ញើលេខកូដ ៬ ខ្ទង់ ដែលបញ្ជាក់ដោយស្វ័យប្រវត្តិ។</p>
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void sendCode();
+                }}
+                className="zl-form"
+              >
+                <label className="zl-field">
+                  <span className="zl-field__label">អ៊ីមែល</span>
+                  <span className="zl-field__control">
+                    <Mail className="zl-field__icon" />
+                    <input
+                      value={email}
+                      onChange={(event) => {
+                        setEmail(event.target.value);
+                        if (error) setError(null);
+                      }}
+                      type="email"
+                      autoComplete="email"
+                      inputMode="email"
+                      placeholder="you@example.com"
+                      autoFocus
+                    />
+                  </span>
+                </label>
+                <button type="submit" disabled={busy} className="zl-btn">
+                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+                  {busy ? "កំពុងផ្ញើលេខកូដ…" : "ផ្ញើលេខកូដ"}
+                </button>
+              </form>
+            </motion.div>
+          ) : phase === "otp" || phase === "verifying" ? (
+            <motion.div key="otp" {...(reduce ? {} : step)} transition={stepTransition}>
+              <h1 className="zl-title">បញ្ចូលលេខកូដ</h1>
+              <p className="zl-subtitle">
+                ផ្ញើទៅ <strong>{email}</strong> រួចហើយ។ ពិនិត្យ Spam/Junk ផងដែរ។
+              </p>
+              <motion.div className="zl-otp" animate={error && !reduce ? { x: [0, -6, 6, -4, 0] } : { x: 0 }} transition={{ duration: 0.36, ease: EASE }}>
+                {digits.map((digit, index) => (
+                  <input
+                    key={index}
+                    ref={(element) => {
+                      inputsRef.current[index] = element;
+                    }}
+                    value={digit}
+                    disabled={phase === "verifying"}
+                    onChange={(event) => {
+                      setDigit(index, event.target.value);
+                      if (error) setError(null);
+                    }}
+                    onKeyDown={(event) => onKeyDown(index, event)}
+                    onPaste={onPaste}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    autoComplete="one-time-code"
+                    maxLength={OTP_LENGTH}
+                    className={`zl-otp__box ${digit ? "is-filled" : ""} ${index === filledCount && phase === "otp" ? "is-next" : ""}`}
+                    aria-label={`ខ្ទង់ទី ${index + 1}`}
+                    style={{ ["--d" as string]: `${index * 40}ms` }}
+                  />
+                ))}
+              </motion.div>
+              <div className="zl-progress" aria-hidden="true">
+                <span style={{ width: `${(filledCount / OTP_LENGTH) * 100}%` }} />
+              </div>
+              <button type="button" onClick={() => void verify(code)} disabled={busy || code.length < OTP_LENGTH} className={`zl-btn ${phase === "verifying" ? "is-busy" : ""}`}>
+                {phase === "verifying" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
+                {phase === "verifying" ? "កំពុងបញ្ជាក់…" : "បញ្ជាក់ និងចូល"}
+              </button>
+              <div className="zl-foot">
+                <button type="button" disabled={resendIn > 0 || busy} onClick={() => void sendCode()} className="zl-link">
+                  {resendIn > 0 ? (
+                    <>
+                      ផ្ញើឡើងវិញក្នុង <span className="zl-link__count">{resendIn}s</span>
+                    </>
+                  ) : (
+                    "ផ្ញើលេខកូដឡើងវិញ"
+                  )}
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    setPhase("email");
+                    setUserId(null);
+                    setError(null);
+                  }}
+                  className="zl-link"
+                >
+                  ប្រើអ៊ីមែលផ្សេង
+                </button>
+              </div>
+              {attemptsLeft !== null && attemptsLeft > 0 ? (
+                <p className="zl-attempts" aria-live="polite">
+                  នៅសល់ <strong>{attemptsLeft}</strong> ដងទៀត មុនពេលគណនីត្រូវបិទ ២៤ ម៉ោង
+                </p>
+              ) : null}
+            </motion.div>
+          ) : phase === "name" ? (
+            <motion.div key="name" {...(reduce ? {} : step)} transition={stepTransition}>
+              <h1 className="zl-title">ឈ្មោះរបស់អ្នក</h1>
+              <p className="zl-subtitle">បំពេញឈ្មោះតែម្ដងគត់ — លើកក្រោយចូលដោយស្វ័យប្រវត្តិ។</p>
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void saveName();
+                }}
+                className="zl-form"
+              >
+                <label className="zl-field">
+                  <span className="zl-field__label">ឈ្មោះ</span>
+                  <span className="zl-field__control">
+                    <User className="zl-field__icon" />
+                    <input
+                      value={name}
+                      onChange={(event) => {
+                        setName(event.target.value.slice(0, 40));
+                        if (error) setError(null);
+                      }}
+                      autoFocus
+                      minLength={2}
+                      maxLength={40}
+                      autoComplete="name"
+                      placeholder="ឈ្មោះក្នុងហ្គេម ឬឈ្មោះពិត"
+                    />
+                  </span>
+                </label>
+                <button type="submit" disabled={busy || name.trim().length < 2} className="zl-btn">
+                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                  {busy ? "កំពុងរក្សាទុក…" : "រក្សាទុក និងចូល"}
+                </button>
+              </form>
+            </motion.div>
+          ) : (
+            <motion.div key="success" className="zl-success" {...(reduce ? {} : step)} transition={stepTransition}>
+              <div className="zl-success__ring">
+                <svg viewBox="0 0 52 52" className="zl-success__check" aria-hidden="true">
+                  <circle cx="26" cy="26" r="24" />
+                  <path d="M15 27l7 7 15-16" />
+                </svg>
+              </div>
+              <h1 className="zl-title">ចូលរួចរាល់</h1>
+              <p className="zl-subtitle">កំពុងនាំអ្នកចូល…</p>
+              <button type="button" disabled className="zl-btn is-success">
+                <Check className="h-4 w-4" /> Verified
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {error ? (
+            <motion.p
+              role="alert"
+              className="zl-error"
+              initial={reduce ? false : { opacity: 0, height: 0, marginTop: 0 }}
+              animate={{ opacity: 1, height: "auto", marginTop: 16 }}
+              exit={reduce ? undefined : { opacity: 0, height: 0, marginTop: 0 }}
+              transition={stepTransition}
+            >
+              {error}
+            </motion.p>
+          ) : null}
+        </AnimatePresence>
+      </motion.section>
+    </main>
+  );
 }

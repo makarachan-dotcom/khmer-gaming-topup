@@ -38,6 +38,12 @@ describe("storefront media protection", () => {
     expect(styleSource).not.toContain(".fx-topographic");
   });
 
+  it("keeps AnimatedGlyph hooks unconditional before the activity-only fast path", () => {
+    const componentSource = readFileSync(join(process.cwd(), "client/src/components/AnimatedGlyph.tsx"), "utf8");
+    expect(componentSource.indexOf("useState")).toBeLessThan(componentSource.indexOf('name === "activity"'));
+    expect(componentSource.indexOf("useEffect")).toBeLessThan(componentSource.indexOf('name === "activity"'));
+  });
+
   it("removes the Gaming & Digital subtitle and retains a clean AI-free mobile tab bar", () => {
     const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
     const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
@@ -57,9 +63,18 @@ describe("storefront media protection", () => {
     expect(styleSource).toContain(".zurs-mobile-tab--live-active");
     expect(componentSource).toContain('href: "/live-spin"');
     expect(componentSource).toContain("zurs-mobile-tab-label");
+    expect(componentSource).toContain("zurs-tab-glyph");
+    expect(componentSource).toContain("zurs-tab-live-ping");
+    expect(componentSource).toContain('const tabKind = href === "/" ? "home" : href === "/live-spin" ? "live" : "account";');
+    expect(componentSource).toContain("zurs-mobile-tab--${tabKind}");
     expect(componentSource).toContain("zurs-mobile-tabbar--live");
     expect(styleSource).not.toContain("zurs-mobile-tab-indicator-enter");
     expect(styleSource).toContain("tab-icon-active");
+    expect(styleSource).toContain("zurs-tab-glyph-pop");
+    expect(styleSource).toContain("zurs-tab-glyph-bob");
+    expect(styleSource).toContain("zurs-tab-glyph-broadcast");
+    expect(styleSource).toContain("zurs-tab-live-ping");
+    expect(styleSource).toContain("@media (prefers-reduced-motion: no-preference)");
     expect(styleSource).toContain("100% + 0.125rem");
     expect(styleSource).not.toContain("100% + 0.25rem");
     expect(styleSource).not.toContain("width: calc((100% - 0.625rem) / 2)");
@@ -124,6 +139,7 @@ describe("storefront media protection", () => {
   it("layers a lightweight Christmas garland and snowfall above the public storefront without blocking interactions", () => {
     const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
     const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
+    expect(componentSource).toContain("{new Date().getMonth() === 11 ? <ChristmasOverlay /> : null}");
     expect(componentSource).toContain("ChristmasOverlay");
     expect(componentSource).toContain("christmasSnowSlots");
     expect(componentSource).toContain("zurs-christmas-garland");
@@ -158,12 +174,16 @@ describe("storefront media protection", () => {
     expect(styleSource).toContain("oklch(0.82 0.15 84)");
   });
 
-  it("docks the Contact Admin control above storefront actions and locks the mobile viewport scale", () => {
+  it("retires the storefront Contact Admin dock and locks the mobile viewport scale", () => {
     const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
     const contactSource = readFileSync(join(process.cwd(), "client/src/components/ContactAdminControl.tsx"), "utf8");
     const documentSource = readFileSync(join(process.cwd(), "client/index.html"), "utf8");
     const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
-    expect(componentSource).toContain('hideOnMobile={activeMobileTabHref === "/live-spin"}');
+    // Round 6: the bottom Telegram help dock was removed from the storefront.
+    // Support is reached from the header mascot, which links to /chat, and
+    // Telegram is offered inside the chat once the daily allowance is spent.
+    expect(componentSource).not.toContain("<ContactAdminControl");
+    expect(componentSource).toContain("<SupportMascot />");
     expect(contactSource).toContain("contact-admin-fab--hide-mobile");
     expect(contactSource).toContain("ទំនាក់ទំនង Admin");
     expect(contactSource).toContain("Asia/Phnom_Penh");

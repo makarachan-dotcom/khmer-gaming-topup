@@ -15,7 +15,7 @@ import { createContext, isPublicProviderCatalogRequest } from "./_core/context";
 
 describe("request context catalog resilience", () => {
   it("bypasses account-store resolution for public provider catalog procedures", async () => {
-    expect(isPublicProviderCatalogRequest({ originalUrl: "/api/trpc/provider.smmServices?batch=1", url: "/api/trpc/provider.smmServices?batch=1" } as any)).toBe(true);
+    expect(isPublicProviderCatalogRequest({ originalUrl: "/api/trpc/provider.gameDetails?batch=1", url: "/api/trpc/provider.gameDetails?batch=1" } as any)).toBe(true);
     expect(isPublicProviderCatalogRequest({ originalUrl: "/api/trpc/admin.fullCatalog?batch=1", url: "/api/trpc/admin.fullCatalog?batch=1" } as any)).toBe(false);
 
     const context = await createContext({ req: { headers: {}, protocol: "https", originalUrl: "/api/trpc/provider.games?batch=1", url: "/api/trpc/provider.games?batch=1" }, res: {} } as any);
