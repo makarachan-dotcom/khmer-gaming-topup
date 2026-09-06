@@ -1596,19 +1596,76 @@ img.checkout-method-card__icon { object-fit: contain; }
 .zurs-provider-dot .zurs-brand,
 .zurs-provider-dot .pack-emoji { animation: none; }
 
-.zurs-product-sheet { position: fixed; inset: 0; z-index: 80; }
-.zurs-product-sheet__backdrop { position: absolute; inset: 0; border: 0; background: rgb(2 6 23 / 0.48); }
-.zurs-product-sheet__panel {
-  position: absolute;
-  left: 0;
+.zurs-product-sheet {
+  position: fixed;
+  top: 0;
   right: 0;
-  bottom: 0;
-  max-height: min(88vh, 44rem);
-  overflow: auto;
-  border-radius: 1.5rem 1.5rem 0 0;
+  left: 0;
+  /* Dock above the floating Home/Store/Account tab bar so Pay is never hidden. */
+  bottom: calc(4.75rem + env(safe-area-inset-bottom));
+  z-index: 320;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.zurs-product-sheet__backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgb(2 6 23 / 0.48);
+}
+.zurs-product-sheet__panel {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: min(calc(100% - 1.1rem), 28rem);
+  max-height: min(78dvh, 42rem);
+  overflow: hidden;
+  border-radius: 1.5rem;
   background: #fff;
-  padding: 0.75rem 1rem calc(1.1rem + env(safe-area-inset-bottom));
-  box-shadow: 0 -12px 40px rgb(2 6 23 / 0.18);
+  margin: 0 0.55rem 0.35rem;
+  box-shadow: 0 18px 48px rgb(2 6 23 / 0.28);
+}
+.zurs-product-sheet__scroll {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 0.75rem 1rem 0.35rem;
+  -webkit-overflow-scrolling: touch;
+}
+.zurs-product-sheet__cta {
+  flex: 0 0 auto;
+  padding: 0.65rem 1rem 0.9rem;
+  background: #fff;
+  box-shadow: 0 -12px 18px rgb(255 255 255 / 0.92);
+}
+@media (min-width: 640px) {
+  .zurs-product-sheet {
+    bottom: 0;
+    align-items: center;
+    padding: 1.25rem;
+  }
+  .zurs-product-sheet__panel {
+    margin: 0 auto;
+    max-height: min(84dvh, 44rem);
+  }
+}
+body.product-sheet-open .storefront-scroll-top,
+body.product-sheet-open .contact-admin-fab {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .zurs-product-sheet__backdrop { animation: zurs-product-sheet-fade 220ms ease both; }
+  .zurs-product-sheet__panel { animation: zurs-product-sheet-in 320ms cubic-bezier(0.23, 1, 0.32, 1) both; }
+}
+@keyframes zurs-product-sheet-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes zurs-product-sheet-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .zurs-product-sheet__backdrop,
+  .zurs-product-sheet__panel { animation: none; }
 }
 
 .font-emoji-brand { display: inline-flex; align-items: center; gap: 1.5px; flex-wrap: nowrap; white-space: nowrap; vertical-align: middle; max-width: 100%; }

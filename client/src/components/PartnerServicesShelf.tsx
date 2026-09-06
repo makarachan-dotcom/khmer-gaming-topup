@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { PackEmoji } from "@/components/PackEmoji";
 import { BrandMark, ServiceLogo, matchBrand } from "@/components/BrandMark";
 import { useSelectedProduct } from "@/contexts/SelectedProductContext";
@@ -181,59 +182,86 @@ export function PartnerServicesShelf({ compact = false }: { compact?: boolean })
 
 function ProductSheet({ product, onClose, onBuy }: { product: PartnerProduct; onClose: () => void; onBuy: () => void }) {
   const brandText = `${product.providerName} ${product.name}`;
-  return (
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    // Same stacking trap as RefundPolicyDialog: the storefront shell sets
+    // `.zurs-dotted-shell > :not(.zurs-particle-field) { z-index: 1 }` and
+    // `.zp-page` animates `transform`, so an in-tree fixed sheet sits in the
+    // page flow under the tab bar. Portal + this class keep Pay above it.
+    document.body.classList.add("product-sheet-open");
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+      document.body.classList.remove("product-sheet-open");
+    };
+  }, [onClose]);
+
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <div className="zurs-product-sheet" role="dialog" aria-modal="true" aria-labelledby="zurs-product-title">
       <button type="button" className="zurs-product-sheet__backdrop" aria-label="បិទ" onClick={onClose} />
       <div className="zurs-product-sheet__panel">
-        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-line" />
-        <div className="flex items-start gap-3">
-          <span className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-line">
-            <ServiceLogo text={brandText} size={40} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-ink-muted">{product.providerName}</p>
-            <h2 id="zurs-product-title" className="mt-0.5 font-display text-base font-extrabold leading-snug text-ink">{product.name}</h2>
-            <p className="mt-1 text-xs font-semibold text-ink-muted">
-              {product.durationDays ? `${product.durationDays} ថ្ងៃ` : "—"} · {DELIVERY_LABEL[product.deliveryType] ?? product.deliveryType}
-              {product.warrantyDays ? ` · warranty ${product.warrantyDays} ថ្ងៃ` : ""}
-            </p>
+        <div className="zurs-product-sheet__scroll">
+          <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-line" />
+          <div className="flex items-start gap-3">
+            <span className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-line">
+              <ServiceLogo text={brandText} size={40} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-ink-muted">{product.providerName}</p>
+              <h2 id="zurs-product-title" className="mt-0.5 font-display text-base font-extrabold leading-snug text-ink">{product.name}</h2>
+              <p className="mt-1 text-xs font-semibold text-ink-muted">
+                {product.durationDays ? `${product.durationDays} ថ្ងៃ` : "—"} · {DELIVERY_LABEL[product.deliveryType] ?? product.deliveryType}
+                {product.warrantyDays ? ` · warranty ${product.warrantyDays} ថ្ងៃ` : ""}
+              </p>
+            </div>
+            <button type="button" onClick={onClose} className="grid h-8 w-8 place-items-center rounded-full bg-panel-2 text-lg leading-none text-ink-muted" aria-label="បិទ">×</button>
           </div>
-          <button type="button" onClick={onClose} className="grid h-8 w-8 place-items-center rounded-full bg-panel-2 text-lg leading-none text-ink-muted" aria-label="បិទ">×</button>
-        </div>
-        <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[10px] font-bold">
-          {product.inStock ? (
-            <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-emerald-700">មានស្តុក{typeof product.stockCount === "number" ? ` ${product.stockCount}` : ""}</span>
-          ) : (
-            <span className="rounded-full bg-rose-500/10 px-2 py-0.5 text-rose-600">អស់ស្តុក</span>
-          )}
-          <span className="rounded-full bg-panel-2 px-2 py-0.5 text-ink-muted">{DELIVERY_LABEL[product.deliveryType] ?? product.deliveryType}</span>
-          <span className="rounded-full bg-neon/15 px-2 py-0.5 text-ink">៥–១០ នាទី</span>
-        </div>
-        <p className="mt-3 font-display text-2xl font-extrabold text-ink">${product.priceUsd} <span className="text-sm font-bold text-ink-muted">USD</span></p>
-        {product.description ? (
-          <section className="mt-4">
-            <h3 className="text-[10px] font-extrabold uppercase tracking-wide text-ink-muted">ព័ត៌មាន</h3>
-            <p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-ink">{product.description}</p>
+          <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[10px] font-bold">
+            {product.inStock ? (
+              <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-emerald-700">មានស្តុក{typeof product.stockCount === "number" ? ` ${product.stockCount}` : ""}</span>
+            ) : (
+              <span className="rounded-full bg-rose-500/10 px-2 py-0.5 text-rose-600">អស់ស្តុក</span>
+            )}
+            <span className="rounded-full bg-panel-2 px-2 py-0.5 text-ink-muted">{DELIVERY_LABEL[product.deliveryType] ?? product.deliveryType}</span>
+            <span className="rounded-full bg-neon/15 px-2 py-0.5 text-ink">៥–១០ នាទី</span>
+          </div>
+          <p className="mt-3 font-display text-2xl font-extrabold text-ink">${product.priceUsd} <span className="text-sm font-bold text-ink-muted">USD</span></p>
+          {product.description ? (
+            <section className="mt-4">
+              <h3 className="text-[10px] font-extrabold uppercase tracking-wide text-ink-muted">ព័ត៌មាន</h3>
+              <p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-ink">{product.description}</p>
+            </section>
+          ) : null}
+          {product.instructions ? (
+            <section className="mt-4 rounded-2xl bg-panel-2/80 p-3">
+              <h3 className="text-[10px] font-extrabold uppercase tracking-wide text-ink-muted">វិធីប្រើ / Activation</h3>
+              <p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-ink">{product.instructions}</p>
+            </section>
+          ) : null}
+          <section className="mt-4 rounded-2xl border border-line p-3">
+            <h3 className="text-[10px] font-extrabold uppercase tracking-wide text-ink-muted">ចំណាំ</h3>
+            <ul className="mt-1 list-disc space-y-1 pl-4 text-xs leading-5 text-ink">
+              <li>បន្ទាប់ពីបង់ប្រាក់ Admin បំពេញក្នុង ៥ ទៅ ១០ នាទី។</li>
+              {product.warrantyDays ? <li>Warranty {product.warrantyDays} ថ្ងៃ តាមលក្ខខណ្ឌរបស់សេវា។</li> : null}
+              <li>សូមអានវិធីប្រើខាងលើឲ្យបានច្បាស់ មុនទិញ។</li>
+            </ul>
           </section>
-        ) : null}
-        {product.instructions ? (
-          <section className="mt-4 rounded-2xl bg-panel-2/80 p-3">
-            <h3 className="text-[10px] font-extrabold uppercase tracking-wide text-ink-muted">វិធីប្រើ / Activation</h3>
-            <p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-ink">{product.instructions}</p>
-          </section>
-        ) : null}
-        <section className="mt-4 rounded-2xl border border-line p-3">
-          <h3 className="text-[10px] font-extrabold uppercase tracking-wide text-ink-muted">ចំណាំ</h3>
-          <ul className="mt-1 list-disc space-y-1 pl-4 text-xs leading-5 text-ink">
-            <li>បន្ទាប់ពីបង់ប្រាក់ Admin បំពេញក្នុង ៥ ទៅ ១០ នាទី។</li>
-            {product.warrantyDays ? <li>Warranty {product.warrantyDays} ថ្ងៃ តាមលក្ខខណ្ឌរបស់សេវា។</li> : null}
-            <li>សូមអានវិធីប្រើខាងលើឲ្យបានច្បាស់ មុនទិញ។</li>
-          </ul>
-        </section>
-        <button type="button" disabled={!product.inStock} onClick={onBuy} className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-2xl bg-neon text-sm font-extrabold text-neon-ink disabled:opacity-40">
-          ទិញឥឡូវ · ${product.priceUsd}
-        </button>
+        </div>
+        <div className="zurs-product-sheet__cta">
+          <button type="button" disabled={!product.inStock} onClick={onBuy} className="inline-flex h-11 w-full items-center justify-center rounded-2xl bg-neon text-sm font-extrabold text-neon-ink disabled:opacity-40">
+            ទិញឥឡូវ · ${product.priceUsd}
+          </button>
+        </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
