@@ -1562,6 +1562,55 @@ img.checkout-method-card__icon { object-fit: contain; }
   50% { transform: scale(1); }
 }
 
+.zurs-brand { display: inline-grid; place-items: center; flex: none; line-height: 0; }
+.zurs-brand svg { display: block; }
+@media (prefers-reduced-motion: no-preference) {
+  .zurs-brand { animation: pack-emoji-pulse 2.6s ease-in-out infinite; }
+}
+
+.zurs-provider-strip {
+  display: flex;
+  gap: 0.45rem;
+  overflow-x: auto;
+  padding: 0.15rem 0.1rem 0.35rem;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.zurs-provider-strip::-webkit-scrollbar { display: none; }
+.zurs-provider-dot {
+  width: 2.35rem;
+  height: 2.35rem;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 0.85rem;
+  overflow: hidden;
+  background: oklch(0.97 0.01 270);
+  border: 1px solid oklch(0.90 0.02 270);
+}
+.zurs-provider-dot.is-on {
+  background: #fff;
+  border-color: oklch(0.78 0.14 210);
+  box-shadow: 0 0 0 2px oklch(0.78 0.14 210 / 0.45);
+}
+.zurs-provider-dot .zurs-brand,
+.zurs-provider-dot .pack-emoji { animation: none; }
+
+.zurs-product-sheet { position: fixed; inset: 0; z-index: 80; }
+.zurs-product-sheet__backdrop { position: absolute; inset: 0; border: 0; background: rgb(2 6 23 / 0.48); }
+.zurs-product-sheet__panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: min(88vh, 44rem);
+  overflow: auto;
+  border-radius: 1.5rem 1.5rem 0 0;
+  background: #fff;
+  padding: 0.75rem 1rem calc(1.1rem + env(safe-area-inset-bottom));
+  box-shadow: 0 -12px 40px rgb(2 6 23 / 0.18);
+}
+
 .font-emoji-brand { display: inline-flex; align-items: center; gap: 1.5px; flex-wrap: nowrap; white-space: nowrap; vertical-align: middle; max-width: 100%; }
 .font-emoji-brand__letter { position: relative; display: inline-grid; place-items: center; overflow: hidden; border-radius: 24%; isolation: isolate; background: #101736; box-shadow: 0 1px 2px rgb(2 6 23 / 0.20), inset 0 0 0 1px rgb(255 255 255 / 0.30); }
 .font-emoji-brand__media { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }

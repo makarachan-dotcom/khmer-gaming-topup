@@ -35,7 +35,8 @@ export function toPublicPartnerProduct(product:PartnerProduct){
     stockCount: product.stock.inStock ? product.stock.count : 0,
     maxQuantity: product.stock.maxQuantity,
     emoji: product.emoji,
-    description: product.description.slice(0, 800),
+    description: product.description.slice(0, 1500),
+    instructions: product.instructions.slice(0, 2500),
     etaMinutes: { min: 5, max: 10 },
     fulfillment: "admin_manual" as const,
   };

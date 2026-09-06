@@ -118,6 +118,10 @@ function PaymentPreview({ product }: { product: SelectedProduct | null }) {
   // here, one tap before the QR and the order actually exist.
   const [refundConsentOpen, setRefundConsentOpen] = useState(false);
   const isPartner = product?.kind === "partner";
+  const partnerInfo = trpc.partner.preview.useQuery(
+    { slug: product?.partnerSlug ?? "none", quantity: 1 },
+    { enabled: isPartner && Boolean(product?.partnerSlug), staleTime: 60_000, retry: 1 },
+  );
   const busy = createTopup.isPending || createService.isPending;
   const ready = paymentGate.data?.enabled === true;
   const pendingLimitReached = (pendingCount.data?.count ?? 0) >= (pendingCount.data?.limit ?? 2);
@@ -153,6 +157,22 @@ function PaymentPreview({ product }: { product: SelectedProduct | null }) {
       <div className="checkout-order-summary__details">{isPartner ? <><SummaryDetail label="កញ្ចប់" value={product.amountLabel} /><SummaryDetail label="ប្រភេទ" value="សេវាឌីជីថល" /><SummaryDetail label="Delivery" value={product.deliveryType || "Admin top-up"} />{product.durationDays ? <SummaryDetail label="រយៈពេល" value={`${product.durationDays} ថ្ងៃ`} /> : null}<SummaryDetail label="ពេលបំពេញ" value="៥–១០ នាទី" /><SummaryDetail label="Quantity" value="1" /></> : <><SummaryDetail label="កញ្ចប់" value={product.amountLabel} />{product.playerName ? <SummaryDetail label="Username" value={product.playerName} /> : <SummaryDetail label="Game ID" value={maskCustomerIdentifier(product.playerId ?? "បានការពារ")} />}<SummaryDetail label="Server ID" value={maskCustomerIdentifier(product.zoneId || "មិនទាមទារ")} /><SummaryDetail label="Quantity" value="1" /></>}</div>
       <p className="checkout-order-summary__note">{isPartner ? "បន្ទាប់ពីទូទាត់ KHQR រួច ការកម្មង់នឹងចូលផ្ទាំង Admin ហើយត្រូវបានបំពេញក្នុង ៥–១០ នាទី។" : "សូមពិនិត្យ ID និងកញ្ចប់ឲ្យបានត្រឹមត្រូវ។ បន្ទាប់ពីបញ្ជាក់ order និង QR ពិតនឹងត្រូវបង្កើត។"}</p>
     </section>
+    {isPartner && (partnerInfo.data?.description || partnerInfo.data?.instructions) ? (
+      <section className="mt-3 space-y-3 rounded-2xl border border-line bg-panel p-4">
+        {partnerInfo.data?.description ? (
+          <div>
+            <p className="text-[10px] font-extrabold uppercase tracking-wide text-ink-muted">ព័ត៌មានសេវា</p>
+            <p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-ink">{partnerInfo.data.description}</p>
+          </div>
+        ) : null}
+        {partnerInfo.data?.instructions ? (
+          <div className="rounded-xl bg-panel-2 p-3">
+            <p className="text-[10px] font-extrabold uppercase tracking-wide text-ink-muted">វិធីប្រើ / Activation</p>
+            <p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-ink">{partnerInfo.data.instructions}</p>
+          </div>
+        ) : null}
+      </section>
+    ) : null}
     <section className="checkout-preview-confirm">
       <div><LockKeyhole className="h-5 w-5" /><p><strong>បញ្ជាក់ការបញ្ជាទិញ</strong><span>ការបង្កើត QR និង order ពិតកើតឡើងតែបន្ទាប់ពីអ្នកចុចបញ្ជាក់។ ការទូទាត់ធ្វើឡើងតាម KHQR ដែលបានជ្រើសរើសរួច។</span></p></div>
       {pendingLimitReached ? <p className="checkout-pending-block" role="alert"><AlertTriangle className="h-4 w-4" />អ្នកមានការទូទាត់កំពុងរង់ចាំ ២ រួចហើយ — មិនអាចបង្កើតការទូទាត់ថ្មីលើសពី ២ បានទេ។ សូមបញ្ចប់ ឬរង់ចាំ QR ចាស់ផុតកំណត់សិន។</p> : null}
