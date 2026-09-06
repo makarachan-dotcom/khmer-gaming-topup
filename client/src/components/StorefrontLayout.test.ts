@@ -27,14 +27,14 @@ describe("storefront media protection", () => {
     expect(styleSource).not.toContain(".fx-contour");
   });
 
-  it("uses a compact animated ZURS.me wordmark rather than the former Topographic brand", () => {
+  it("uses the animated Font Emoji ZURS.me wordmark rather than the former Topographic brand", () => {
     const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
     const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
-    expect(componentSource).toContain('className="fx-zurs-me"');
+    expect(componentSource).toContain('<FontEmojiBrand text="ZURS.me"');
     expect(componentSource).toContain('aria-label="ZURS.me"');
     expect(componentSource).not.toContain("fx-topographic");
-    expect(styleSource).toContain(".fx-zurs-me");
-    expect(styleSource).toContain("zurs-letter-settle");
+    expect(styleSource).toContain(".font-emoji-brand");
+    expect(styleSource).toContain(".font-emoji-brand__letter");
     expect(styleSource).not.toContain(".fx-topographic");
   });
 
@@ -54,48 +54,41 @@ describe("storefront media protection", () => {
     expect(styleSource).toContain("zurs-particle-field");
   });
 
-  it("moves a pill indicator between the three mobile tabs including Live", () => {
+  it("keeps a clean two-tab mobile bar after the Live Spin giveaway was retired", () => {
     const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
     const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
     expect(componentSource).not.toContain("zurs-mobile-tab-indicator");
     expect(componentSource).not.toContain('"--mobile-tab-index": activeMobileTabIndex');
     expect(styleSource).toContain(".zurs-mobile-tab--active");
-    expect(styleSource).toContain(".zurs-mobile-tab--live-active");
-    expect(componentSource).toContain('href: "/live-spin"');
+    expect(componentSource).not.toContain('href: "/live-spin"');
     expect(componentSource).toContain("zurs-mobile-tab-label");
     expect(componentSource).toContain("zurs-tab-glyph");
-    expect(componentSource).toContain("zurs-tab-live-ping");
-    expect(componentSource).toContain('const tabKind = href === "/" ? "home" : href === "/live-spin" ? "live" : "account";');
+    expect(componentSource).not.toContain("zurs-tab-live-ping");
+    expect(componentSource).toContain('const tabKind = href === "/" ? "home" : "account";');
     expect(componentSource).toContain("zurs-mobile-tab--${tabKind}");
-    expect(componentSource).toContain("zurs-mobile-tabbar--live");
+    expect(componentSource).not.toContain("zurs-mobile-tabbar--live");
     expect(styleSource).not.toContain("zurs-mobile-tab-indicator-enter");
     expect(styleSource).toContain("tab-icon-active");
     expect(styleSource).toContain("zurs-tab-glyph-pop");
     expect(styleSource).toContain("zurs-tab-glyph-bob");
-    expect(styleSource).toContain("zurs-tab-glyph-broadcast");
-    expect(styleSource).toContain("zurs-tab-live-ping");
     expect(styleSource).toContain("@media (prefers-reduced-motion: no-preference)");
-    expect(styleSource).toContain("100% + 0.125rem");
-    expect(styleSource).not.toContain("100% + 0.25rem");
-    expect(styleSource).not.toContain("width: calc((100% - 0.625rem) / 2)");
-    expect(componentSource).toContain('activeMobileTabHref === "/live-spin" && "zurs-mobile-tabbar--live"');
   });
 
   it("keeps Home active across Top-up paths and assigns account-owned routes to Account", () => {
     expect(mobileTabHrefForPath("/")).toBe("/");
     expect(mobileTabHrefForPath("/topup/mobile_legends")).toBe("/");
     expect(mobileTabHrefForPath("/topup/blood_strike?from_webdev=1")).toBe("/");
-    expect(mobileTabHrefForPath("/live-spin?from=tabbar")).toBe("/live-spin");
-    expect(mobileTabHrefForPath("/live-spin/archive")).toBe("/live-spin");
+    expect(mobileTabHrefForPath("/live-spin?from=tabbar")).toBe("/");
+    expect(mobileTabHrefForPath("/live-spin/archive")).toBe("/");
     expect(mobileTabHrefForPath("/account")).toBe("/account");
     expect(mobileTabHrefForPath("/wallet")).toBe("/account");
   });
 
-  it("uses a compact three-item rounded mobile tab bar with a Live entry and no public AI entry", () => {
+  it("uses a compact two-item rounded mobile tab bar and no public AI entry", () => {
     const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
     const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
     expect(componentSource).toContain("storefront-scroll-top fixed z-[270] grid h-11 w-11");
-    expect(componentSource).toContain("grid h-14 w-full -translate-x-1/2 grid-cols-3");
+    expect(componentSource).toContain("grid h-14 w-full -translate-x-1/2 grid-cols-2");
     expect(styleSource).toContain("width: min(calc(100vw - 1.5rem), 21rem)");
     expect(componentSource).toContain("gap-0.5");
     expect(componentSource).not.toContain('href: "/ai"');

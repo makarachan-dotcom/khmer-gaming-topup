@@ -789,60 +789,6 @@
 	}
 }
 
-/* ==========================================================================
- * HERO BANNER - one banner, no background, running colour line (round 4)
- *
- * The carousel is gone from Home.tsx. Here we strip the frame's chrome
- * (border + bg-panel + the zurs-premium.css ::after overlay) and wrap the
- * artwork in a 2px ring that a colour arc travels around.
- * ======================================================================= */
-
-.zurs-banner-beam {
-	position: relative;
-	isolation: isolate;
-	border-radius: 1.15rem;
-	/* thickness of the running line */
-	padding: 2px;
-	overflow: hidden;
-}
-
-/* A large conic-gradient square spinning behind the artwork. Only the 2px of
- * padding is left uncovered, so you see a colour arc travelling around the
- * edge. Using transform (not the individual rotate property) keeps Safari,
- * older WebKit and Android WebView happy. */
-.zurs-banner-beam::before {
-	content: "";
-	position: absolute;
-	left: 50%;
-	top: 50%;
-	width: 240%;
-	aspect-ratio: 1 / 1;
-	z-index: 0;
-	background: conic-gradient(
-		from 0deg,
-		rgba(56, 189, 248, 0) 0deg,
-		rgba(56, 189, 248, 0) 188deg,
-		#38bdf8 248deg,
-		#8b5cf6 284deg,
-		#f472b6 316deg,
-		rgba(244, 114, 182, 0) 352deg,
-		rgba(244, 114, 182, 0) 360deg
-	);
-	transform: translate(-50%, -50%) rotate(0deg);
-	animation: zurs-banner-run 4.6s linear infinite;
-}
-
-@keyframes zurs-banner-run {
-	to {
-		transform: translate(-50%, -50%) rotate(360deg);
-	}
-}
-
-.zurs-banner-beam > .zurs-banner-frame {
-	position: relative;
-	z-index: 1;
-}
-
 /* Background removed: no border, no panel fill, no premium gradient overlay. */
 .zurs-banner-frame--bare {
 	background: transparent !important;
@@ -878,14 +824,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.zurs-banner-beam {
-		background: rgba(148, 163, 184, 0.38);
-	}
-
-	.zurs-banner-beam::before {
-		animation: none;
-	}
-
 	.zurs-banner-slide {
 		transition: none;
 		opacity: 1;

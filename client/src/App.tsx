@@ -30,7 +30,7 @@ import AppwriteLogin from "@/pages/AppwriteLogin";
 import SupportChatPage from "@/pages/SupportChatPage";
 import Legal from "./pages/Legal";
 import GameTopup from "./pages/GameTopup";
-const LiveSpin = lazy(() => import("./pages/LiveSpin"));
+import Topup from "./pages/Topup";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -42,8 +42,9 @@ function Router() {
       <Route path="/chat" component={SupportChatPage} />
       <Route path={"/"} component={Home} />
       <Route path="/topup/:gameId" component={GameTopup} />
-      <Route path="/live-spin" component={() => <Suspense fallback={<div className="min-h-screen bg-slate-50" />}><LiveSpin /></Suspense>} />
-      <Route path={"/topup"}><Redirect to="/" /></Route>
+      {/* Live Spin giveaway was retired store-wide; keep the URL as a safe redirect. */}
+      <Route path="/live-spin"><Redirect to="/" /></Route>
+      <Route path={"/topup"} component={Topup} />
       <Route path={"/smm"}><Redirect to="/" /></Route>
       <Route path="/marketplace/sell"><Redirect to="/" /></Route>
       <Route path="/marketplace/verify"><Redirect to="/" /></Route>

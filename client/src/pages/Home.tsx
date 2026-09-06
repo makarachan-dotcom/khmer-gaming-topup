@@ -71,26 +71,24 @@ function HomeBanner() {
   }, []);
   return (
     <section className="container pt-4 sm:pt-6" aria-label="ZURS banner">
-      {/* zurs-banner-beam paints the colour that runs around the edge. The
-        * frame is bare now - no border, no bg-panel, no gradient overlay - so
-        * only your artwork and the moving line are visible. */}
-      <div className="zurs-banner-beam">
-        <div className="zurs-banner-frame zurs-banner-frame--bare relative isolate aspect-[16/7] overflow-hidden rounded-2xl sm:aspect-[16/6]">
-          {heroBanners.map((banner, index) => (
-            <img
-              key={banner.src}
-              src={banner.src}
-              alt={banner.alt}
-              aria-hidden={index === active ? undefined : true}
-              className={`zurs-banner-slide absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${index === active ? "opacity-100" : "opacity-0"} ${loaded ? "is-loaded" : ""}`}
-              onLoad={() => setLoaded(true)}
-              loading={index === 0 ? "eager" : "lazy"}
-              fetchPriority={index === 0 ? "high" : "auto"}
-              decoding="async"
-              sizes="100vw"
-            />
-          ))}
-        </div>
+      {/* The artwork ships with its own transparent background and its own
+        * blue edge, so nothing is painted behind it: no conic beam, no panel
+        * fill, no gradient. Only the PNG itself is visible. */}
+      <div className="zurs-banner-frame zurs-banner-frame--bare relative isolate aspect-[16/7] overflow-hidden rounded-2xl sm:aspect-[16/6]">
+        {heroBanners.map((banner, index) => (
+          <img
+            key={banner.src}
+            src={banner.src}
+            alt={banner.alt}
+            aria-hidden={index === active ? undefined : true}
+            className={`zurs-banner-slide absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${index === active ? "opacity-100" : "opacity-0"} ${loaded ? "is-loaded" : ""}`}
+            onLoad={() => setLoaded(true)}
+            loading={index === 0 ? "eager" : "lazy"}
+            fetchPriority={index === 0 ? "high" : "auto"}
+            decoding="async"
+            sizes="100vw"
+          />
+        ))}
       </div>
     </section>
   );

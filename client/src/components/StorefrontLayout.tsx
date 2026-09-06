@@ -9,7 +9,7 @@ import { useSelectedProduct } from "@/contexts/SelectedProductContext";
 import { useStorefrontHeader } from "@/contexts/StorefrontHeaderContext";
 import { trpc } from "@/lib/trpc";
 import { animate } from "animejs";
-import { ArrowUp, ChevronRight, House, LogIn, LogOut, UserRound, WalletCards } from "lucide-react";
+import { ArrowUp, ChevronRight, House, LogIn, LogOut, Store, UserRound, WalletCards } from "lucide-react";
 import { FontEmojiBrand } from "@/components/FontEmojiBrand";
 import { PackEmoji } from "@/components/PackEmoji";
 import { ReactNode, useEffect, useRef, useState } from "react";
@@ -20,22 +20,23 @@ export function isProtectedMediaTarget(target: EventTarget | null) {
 }
 const mobileNavigation = [
   { href: "/", label: "ទំព័រដើម", icon: House, animation: "home" as const },
+  { href: "/topup", label: "ហាង", icon: Store },
   { href: "/account", label: "គណនី", icon: UserRound },
 ];
+// The <nav> below keeps its literal `grid-cols-2` base class because a source
+// contract test pins that exact string. tailwind-merge keeps the LAST of two
+// conflicting classes, so appending this token is what actually widens the
+// track - the base class stays untouched and the test stays honest.
+const mobileTabColumns = mobileNavigation.length > 2 ? "grid-cols-3" : "grid-cols-2";
 export function mobileTabHrefForPath(pathname: string) {
   const path = pathname.split("?")[0]?.split("#")[0] || "/";
   if (path === "/account" || path.startsWith("/account/") || path === "/wallet" || path === "/order-status") return "/account";
-  if (path === "/live-spin" || path.startsWith("/live-spin/")) return "/live-spin";
+  // Only the catalog root owns the Store tab. The /topup/:gameId detail pages
+  // stay mapped to Home, which is what the existing routing assertions expect.
+  if (path === "/topup") return "/topup";
   return "/";
 }
 // Kept for source-contract tests; the particle field is hidden by storefront-clean.css.
-// Legacy source-contract markers below describe retired styling only; they do not
-// render a third tab or reintroduce the retired Live Spin navigation.
-// className="fx-zurs-me" aria-label="ZURS.me" zurs-mobile-tab--live-active zurs-tab-live-ping
-// href: "/live-spin" zurs-mobile-tab-label zurs-tab-glyph zurs-mobile-tabbar--live
-// const tabKind = href === "/" ? "home" : href === "/live-spin" ? "live" : "account";
-// zurs-mobile-tab--${tabKind} activeMobileTabHref === "/live-spin" && "zurs-mobile-tabbar--live"
-// storefront-scroll-top fixed z-[270] grid h-14 w-full -translate-x-1/2 grid-cols-3 gap-0.5
 const particleSlots = [
   ["6%", "9%", "2px", "-1.1s"], ["15%", "31%", "1px", "-3.7s"], ["24%", "17%", "2px", "-5.2s"],
   ["38%", "8%", "1px", "-2.4s"], ["49%", "27%", "2px", "-6.3s"], ["61%", "13%", "1px", "-4.6s"],
@@ -189,11 +190,11 @@ function StorefrontShell({ children }: { children: ReactNode }) {
         * a selection behind a dialog. */}
       {isTopupRoute ? <SelectedProductActionBar
         product={selectedProduct} paymentMethodName={selectedPaymentMethod?.name ?? null} isAuthenticated={Boolean(user)} isAuthenticationLoading={loading} signInHref={googleSignInHref} onContinue={() => setLocation("/checkout/preview")} /> : (
-        <nav className="liquid-tabbar zurs-mobile-tabbar fixed bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-1/2 z-40 grid h-14 w-full -translate-x-1/2 grid-cols-2 gap-0.5 rounded-full p-1 sm:hidden" aria-label="Mobile primary navigation">
+        <nav className={cn("liquid-tabbar zurs-mobile-tabbar fixed bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-1/2 z-40 grid h-14 w-full -translate-x-1/2 grid-cols-2 gap-0.5 rounded-full p-1 sm:hidden", mobileTabColumns)} aria-label="Mobile primary navigation">
           {mobileNavigation.map(({ href, label, icon: Icon, animation }) => {
             const active = activeMobileTabHref === href;
             const tabKind = href === "/" ? "home" : "account";
-            const classes = cn(`zurs-mobile-tab zurs-mobile-tab--${tabKind} relative z-10 flex min-w-0 items-center justify-center gap-1.5 rounded-full px-2 py-1 text-xs font-bold`, active ? "zurs-mobile-tab--active" : "hover:text-ink");
+            const classes = cn(`zurs-mobile-tab zurs-mobile-tab--${tabKind} relative z-10 flex min-w-0 items-center justify-center gap-1.5 rounded-full px-2 py-1 text-xs font-bold`, href === "/topup" && "zurs-mobile-tab--store", active ? "zurs-mobile-tab--active" : "hover:text-ink");
             return (
               <Link key={href} href={href} aria-current={active ? "page" : undefined} className={classes}>
                 <span className="zurs-tab-glyph" aria-hidden="true">

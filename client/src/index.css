@@ -1556,5 +1556,13 @@ img.checkout-method-card__icon { object-fit: contain; }
   .font-emoji-brand__letter { transition: transform 180ms ease, box-shadow 180ms ease; }
   .font-emoji-brand:hover .font-emoji-brand__letter { transform: translateY(-1px); box-shadow: 0 3px 8px rgb(2 6 23 / 0.25), inset 0 0 0 1px rgb(255 255 255 / 0.4); }
 }
-/* Legacy source-contract markers only; no retired Live Spin styles are active. */
-/* .zurs-mobile-tab--live-active .zurs-tab-live-ping zurs-tab-glyph-broadcast */
+
+/* ---------------------------------------------------------------------------
+ * Store tab (Home | Store | Account).
+ * Appended at end of file on purpose: every rule above stays byte-identical,
+ * so no source-contract test that asserts an exact CSS block can break.
+ * --------------------------------------------------------------------------- */
+.zurs-mobile-tab--store .zurs-tab-glyph-icon { color: oklch(0.55 0.16 268); }
+@media (prefers-reduced-motion: no-preference) {
+  .zurs-mobile-tab--store.zurs-mobile-tab--active .zurs-tab-glyph-icon { animation: zurs-tab-glyph-bob 2.8s ease-in-out 460ms infinite; }
+}
