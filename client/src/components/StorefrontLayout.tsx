@@ -113,7 +113,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
             <img src={logoUrl} alt="ZURS logo" className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-line sm:h-9 sm:w-9" />
             <div className={cn("storefront-header-title", playerTitle && "storefront-header-title--player")} aria-label={playerTitle || "ZURS.me"}>
               <span className="storefront-header-title__default" aria-label="ZURS.me">
-                <FontEmojiBrand text="ZURS.me" size={15} />
+                <FontEmojiBrand text="ZURS.me" size={18} />
               </span>
               <span className="storefront-header-title__player" title={playerTitle || undefined}>{playerTitle || "ZURS.me"}</span>
             </div>

@@ -2,139 +2,130 @@ import { memo, useEffect, useRef, useState } from "react";
 import type { AnimationItem } from "lottie-web";
 
 /**
- * PackEmoji — Telegram-style animated emoji/icons served from the local
- * sticker packs in `client/public/emoji-anim` (exported from the user's
- * EmojiSaverBot packs: Mix Emoji, Various Animations, Icon-1, Product Logo).
+ * PackEmoji — Telegram-style animated icons.
  *
- * Logical names map onto files that actually exist. Missing names alias to a
- * close pack file so Lottie never 404s. A unicode glyph is painted immediately
- * while the JSON loads; PNG is the reduced-motion / failure fallback.
+ * Real Noto Animated Emoji Lottie files are vendored in `/emoji-anim`.
+ * A unicode glyph is always painted underneath, so the icon is never blank
+ * while JSON loads, if Lottie fails, or if the visitor prefers reduced motion.
  */
 
 export const PACK_EMOJI = {
   fire: { emoji: "🔥", label: "Popular" },
-  gamepad: { emoji: "🎮", label: "Game" },
+  gamepad: { emoji: "🎯", label: "Game" },
   gem: { emoji: "💎", label: "Diamonds" },
   "diamond-blue": { emoji: "💎", label: "Diamond" },
   star: { emoji: "⭐", label: "Star" },
   crown: { emoji: "👑", label: "Admin" },
-  clock: { emoji: "🕒", label: "Processing time" },
-  "shield-lock": { emoji: "🛡️", label: "Secure" },
+  clock: { emoji: "⏰", label: "Processing time" },
+  "shield-lock": { emoji: "🔒", label: "Secure" },
   fireworks: { emoji: "🎆", label: "Celebration" },
   party: { emoji: "🎉", label: "Party" },
   plane: { emoji: "✈️", label: "Fast delivery" },
-  "shopping-bag": { emoji: "🛍️", label: "Shopping" },
-  briefcase: { emoji: "💼", label: "Package" },
+  "shopping-bag": { emoji: "🛒", label: "Shopping" },
+  briefcase: { emoji: "📦", label: "Package" },
   "check-badge": { emoji: "✅", label: "Done" },
   "sparkles-z": { emoji: "✨", label: "Sparkles" },
   warning: { emoji: "❗", label: "Warning" },
-  "search-user": { emoji: "🔍", label: "Find account" },
+  "search-user": { emoji: "🔎", label: "Find account" },
   "heart-red": { emoji: "❤️", label: "Love" },
   rainbow: { emoji: "🌈", label: "Rainbow" },
   "rocket-plane": { emoji: "🚀", label: "Launch" },
   heart: { emoji: "💗", label: "Heart" },
   megaphone: { emoji: "📣", label: "Announcement" },
   verified: { emoji: "✅", label: "Verified" },
-  "shield-check": { emoji: "🛡️", label: "Trusted" },
+  "shield-check": { emoji: "🔒", label: "Trusted" },
   gift: { emoji: "🎁", label: "Gift" },
   question: { emoji: "❓", label: "Help" },
-  vip: { emoji: "🏅", label: "VIP" },
+  vip: { emoji: "🏆", label: "VIP" },
   "new-badge": { emoji: "🆕", label: "New" },
-  globe: { emoji: "🌐", label: "Global" },
+  globe: { emoji: "🌍", label: "Global" },
   lightning: { emoji: "⚡", label: "Instant" },
   "party-popper": { emoji: "🎊", label: "Congrats" },
   "star-purple": { emoji: "🌟", label: "Featured" },
-  moon: { emoji: "🌙", label: "Night" },
-  "gem-pink": { emoji: "💠", label: "Gem" },
+  moon: { emoji: "🌝", label: "Night" },
+  "gem-pink": { emoji: "💎", label: "Gem" },
   "telegram-plane": { emoji: "✈️", label: "Telegram" },
   bell: { emoji: "🔔", label: "Notification" },
-  "user-laptop": { emoji: "👤", label: "Account" },
-  key: { emoji: "🔑", label: "API key" },
+  "user-laptop": { emoji: "💻", label: "Account" },
+  key: { emoji: "🔒", label: "API key" },
   gear: { emoji: "⚙️", label: "Settings" },
   "chat-smile": { emoji: "💬", label: "Chat" },
-  "clock-outline": { emoji: "⏱️", label: "Timer" },
-  info: { emoji: "ℹ️", label: "Info" },
+  "clock-outline": { emoji: "⏳", label: "Timer" },
+  info: { emoji: "💡", label: "Info" },
   help: { emoji: "🆘", label: "Support" },
   pencil: { emoji: "✏️", label: "Edit" },
-  pin: { emoji: "📍", label: "Location" },
+  pin: { emoji: "🎯", label: "Location" },
   "globe-2": { emoji: "🌍", label: "Worldwide" },
-  wifi: { emoji: "📶", label: "Online" },
-  "question-blue": { emoji: "❔", label: "Question" },
+  wifi: { emoji: "⚡", label: "Online" },
+  "question-blue": { emoji: "❓", label: "Question" },
   confetti: { emoji: "🎊", label: "Confetti" },
   "gift-blue": { emoji: "🎁", label: "Reward" },
   "svc-gemini": { emoji: "✨", label: "Gemini" },
   "svc-chatgpt": { emoji: "🤖", label: "ChatGPT" },
   "svc-netflix": { emoji: "🎬", label: "Netflix" },
-  "svc-youtube": { emoji: "▶️", label: "YouTube" },
-  "svc-tiktok": { emoji: "🎵", label: "TikTok" },
-  "svc-spotify": { emoji: "🎧", label: "Spotify" },
-  "svc-discord": { emoji: "🎮", label: "Discord" },
+  "svc-youtube": { emoji: "🎬", label: "YouTube" },
+  "svc-tiktok": { emoji: "🎶", label: "TikTok" },
+  "svc-spotify": { emoji: "🎶", label: "Spotify" },
+  "svc-discord": { emoji: "🎯", label: "Discord" },
   "svc-whatsapp": { emoji: "💬", label: "WhatsApp" },
   "svc-telegram": { emoji: "✈️", label: "Telegram" },
-  "svc-playstation": { emoji: "🎮", label: "PlayStation" },
-  "svc-xbox": { emoji: "🎮", label: "Xbox" },
-  "svc-steam": { emoji: "🕹️", label: "Steam" },
-  "svc-microsoft": { emoji: "🪟", label: "Microsoft" },
+  "svc-playstation": { emoji: "🎯", label: "PlayStation" },
+  "svc-xbox": { emoji: "🎯", label: "Xbox" },
+  "svc-steam": { emoji: "👾", label: "Steam" },
+  "svc-microsoft": { emoji: "💻", label: "Microsoft" },
   "svc-apple": { emoji: "🍎", label: "Apple" },
-  "svc-instagram": { emoji: "📸", label: "Instagram" },
-  "svc-facebook": { emoji: "📘", label: "Facebook" },
-  "svc-canva": { emoji: "🎨", label: "Canva" },
+  "svc-instagram": { emoji: "📷", label: "Instagram" },
+  "svc-facebook": { emoji: "💙", label: "Facebook" },
+  "svc-canva": { emoji: "✨", label: "Canva" },
   "svc-google": { emoji: "🔎", label: "Google" },
-  "svc-adobe": { emoji: "🅰️", label: "Adobe" },
-  "svc-photoshop": { emoji: "🖌️", label: "Photoshop" },
+  "svc-adobe": { emoji: "✨", label: "Adobe" },
+  "svc-photoshop": { emoji: "✨", label: "Photoshop" },
   "svc-sparkle": { emoji: "✨", label: "Premium service" },
 } as const;
 
 export type PackEmojiName = keyof typeof PACK_EMOJI;
 
-/** Logical names that do not have their own JSON/PNG files. */
-const PACK_FILE: Partial<Record<PackEmojiName, string>> = {
-  fire: "sparkles-z",
-  gamepad: "svc-sparkle",
-  gem: "diamond-blue",
-  star: "star-purple",
-  crown: "star-purple",
-  clock: "clock-outline",
-  fireworks: "party-popper",
-  party: "party-popper",
-  plane: "rocket-plane",
-  briefcase: "shopping-bag",
-  warning: "question-blue",
-  rainbow: "sparkles-z",
-  heart: "heart-red",
-  megaphone: "chat-smile",
-  verified: "check-badge",
-  gift: "gift-blue",
-  question: "question-blue",
-  vip: "star-purple",
-  globe: "globe-2",
-  lightning: "sparkles-z",
-  moon: "star-purple",
-  bell: "chat-smile",
-  key: "shield-lock",
-  gear: "shield-check",
-  info: "question-blue",
-  help: "question-blue",
-  pencil: "search-user",
-  pin: "search-user",
-  wifi: "globe-2",
-  confetti: "party-popper",
-};
+export function isRealLottie(data: unknown): boolean {
+  if (!data || typeof data !== "object") return false;
+  const layers = (data as { layers?: unknown }).layers;
+  if (!Array.isArray(layers) || layers.length === 0) return false;
+  try {
+    return JSON.stringify(data).length >= 2000;
+  } catch {
+    return false;
+  }
+}
 
-export function packAssetName(name: PackEmojiName): string {
-  return PACK_FILE[name] ?? name;
+function notoLottieUrl(emoji: string) {
+  const codepoints = Array.from(emoji.replace(/\ufe0f/g, ""))
+    .map((char) => char.codePointAt(0)!.toString(16))
+    .join("_");
+  return `https://fonts.gstatic.com/s/e/notoemoji/latest/${codepoints}/lottie.json`;
 }
 
 const animationCache = new Map<string, Promise<unknown | null>>();
 
+async function readJsonIfReal(url: string): Promise<unknown | null> {
+  try {
+    const response = await fetch(url);
+    const type = response.headers.get("content-type") ?? "";
+    if (!response.ok || !type.includes("json")) return null;
+    const data = await response.json();
+    return isRealLottie(data) ? data : null;
+  } catch {
+    return null;
+  }
+}
+
 function loadPackAnimation(name: PackEmojiName): Promise<unknown | null> {
-  const asset = packAssetName(name);
-  const cached = animationCache.get(asset);
+  const cached = animationCache.get(name);
   if (cached) return cached;
-  const request = fetch(`/emoji-anim/${encodeURIComponent(asset)}.json`)
-    .then((response) => (response.ok ? response.json() : null))
-    .catch(() => null);
-  animationCache.set(asset, request);
+  const request = (async () => {
+    const local = await readJsonIfReal(`/emoji-anim/${encodeURIComponent(name)}.json`);
+    if (local) return local;
+    return readJsonIfReal(notoLottieUrl(PACK_EMOJI[name].emoji));
+  })();
+  animationCache.set(name, request);
   return request;
 }
 
@@ -157,11 +148,9 @@ export const PackEmoji = memo(function PackEmoji({
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const meta = PACK_EMOJI[name];
-  const asset = packAssetName(name);
   const [staticFrame, setStaticFrame] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(prefersStaticEmoji);
   const [pngFailed, setPngFailed] = useState(false);
-  const [playing, setPlaying] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
@@ -174,7 +163,6 @@ export const PackEmoji = memo(function PackEmoji({
 
   useEffect(() => {
     setPngFailed(false);
-    setPlaying(false);
     if (reduceMotion) {
       setStaticFrame(true);
       return;
@@ -197,9 +185,14 @@ export const PackEmoji = memo(function PackEmoji({
         }
         try {
           hostRef.current.replaceChildren();
-          animation = module.default.loadAnimation({ container: hostRef.current, renderer: "svg", loop, autoplay: true, animationData: data });
+          animation = module.default.loadAnimation({
+            container: hostRef.current,
+            renderer: "svg",
+            loop,
+            autoplay: true,
+            animationData: data,
+          });
           if (speed && speed > 0) animation.setSpeed(speed);
-          setPlaying(true);
         } catch {
           setStaticFrame(true);
         }
@@ -220,27 +213,24 @@ export const PackEmoji = memo(function PackEmoji({
       className={`pack-emoji ${staticFrame ? "pack-emoji--static" : ""} ${className}`}
       style={{ width: size, height: size, position: "relative", display: "inline-grid", placeItems: "center", flex: "0 0 auto", overflow: "hidden", lineHeight: 1 }}
     >
-      {(staticFrame && pngFailed) || (!staticFrame && !playing) ? (
-        <span aria-hidden="true" className="pack-emoji__glyph" style={{ fontSize: Math.round(size * 0.86), lineHeight: 1 }}>
-          {meta.emoji}
-        </span>
+      <span aria-hidden="true" className="pack-emoji__glyph" style={{ fontSize: Math.round(size * 0.86), lineHeight: 1, zIndex: 0 }}>
+        {meta.emoji}
+      </span>
+      {staticFrame && !pngFailed ? (
+        <img
+          src={`/emoji-anim/${encodeURIComponent(name)}.png`}
+          width={size}
+          height={size}
+          loading="lazy"
+          decoding="async"
+          alt=""
+          onError={() => setPngFailed(true)}
+          className="pack-emoji__frame"
+          style={{ position: "absolute", inset: 0, zIndex: 1, width: "100%", height: "100%", objectFit: "contain" }}
+        />
       ) : null}
-      {staticFrame ? (
-        pngFailed ? null : (
-          <img
-            src={`/emoji-anim/${encodeURIComponent(asset)}.png`}
-            width={size}
-            height={size}
-            loading="lazy"
-            decoding="async"
-            alt=""
-            onError={() => setPngFailed(true)}
-            className="pack-emoji__frame"
-            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain" }}
-          />
-        )
-      ) : (
-        <div ref={hostRef} aria-hidden="true" className="pack-emoji__lottie" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }} />
+      {staticFrame ? null : (
+        <div ref={hostRef} aria-hidden="true" className="pack-emoji__lottie" style={{ position: "absolute", inset: 0, zIndex: 2, width: "100%", height: "100%" }} />
       )}
     </span>
   );
@@ -251,8 +241,9 @@ export function serviceEmojiName(text: string): PackEmojiName {
   const value = text.toLowerCase();
   const rules: Array<[RegExp, PackEmojiName]> = [
     [/gemini/, "svc-gemini"],
-    [/chatgpt|openai|gpt/, "svc-chatgpt"],
+    [/chatgpt|openai|gpt|claude|anthropic/, "svc-chatgpt"],
     [/netflix/, "svc-netflix"],
+    [/capcut|cap cut/, "svc-netflix"],
     [/youtube|ytb/, "svc-youtube"],
     [/tiktok/, "svc-tiktok"],
     [/spotify/, "svc-spotify"],

@@ -1,26 +1,26 @@
-import { memo } from "react";
-import { PackEmoji, type PackEmojiName } from "./PackEmoji";
+import { memo, useEffect, useState } from "react";
 
-const BURST_EMOJI: readonly PackEmojiName[] = [
-  "sparkles-z",
-  "party-popper",
-  "star-purple",
-  "rocket-plane",
-  "gift-blue",
-  "diamond-blue",
-  "gem-pink",
-];
-const BURST_COUNT = BURST_EMOJI.length;
+const BURST_COUNT = 7;
 
 export const FontEmojiBrand = memo(function FontEmojiBrand({
   text = "ZURS.me",
-  size = 16,
+  size = 18,
   className = "",
 }: {
   text?: string;
   size?: number;
   className?: string;
 }) {
+  const [reduceMotion, setReduceMotion] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReduceMotion(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
   const chars = Array.from(text);
   let letterIndex = 0;
   return (
@@ -35,14 +35,20 @@ export const FontEmojiBrand = memo(function FontEmojiBrand({
           );
         const burst = letterIndex % BURST_COUNT;
         letterIndex += 1;
+        const poster = `/emoji-anim/font/burst-${burst}.png`;
         return (
           <span
             key={`${char}-${index}`}
             aria-hidden="true"
             className="font-emoji-brand__letter"
-            style={{ width: size, height: size, fontSize: Math.round(size * 0.6) }}
+            style={{ width: size, height: size, fontSize: Math.round(size * 0.62) }}
           >
-            <PackEmoji name={BURST_EMOJI[burst]} size={size} className="font-emoji-brand__media" />
+            <img src={poster} alt="" className="font-emoji-brand__media" draggable={false} />
+            {reduceMotion ? null : (
+              <video className="font-emoji-brand__media font-emoji-brand__media--video" autoPlay muted loop playsInline poster={poster} aria-hidden="true">
+                <source src={`/emoji-anim/font/burst-${burst}.webm`} type="video/webm" />
+              </video>
+            )}
             <span className="font-emoji-brand__char">{char}</span>
           </span>
         );

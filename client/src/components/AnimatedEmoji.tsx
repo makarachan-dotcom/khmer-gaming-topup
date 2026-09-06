@@ -1,5 +1,6 @@
 import { memo, useEffect, useRef, useState } from "react";
 import type { AnimationItem } from "lottie-web";
+import { isRealLottie } from "./PackEmoji";
 
 /**
  * Telegram-style animated emoji.
@@ -45,7 +46,7 @@ function loadEmojiAnimation(emoji: string): Promise<unknown | null> {
     ? fetch(`/emoji-anim/${encodeURIComponent(localName)}.json`).then((response) => (response.ok ? response.json() : null)).catch(() => null)
     : Promise.resolve(null)
   ).then((localData) =>
-    localData ?? fetch(notoLottieUrl(emoji))
+    (isRealLottie(localData) ? localData : null) ?? fetch(notoLottieUrl(emoji))
       .then((response) => (response.ok ? response.json() : null))
       .catch(() => null),
   );

@@ -835,8 +835,9 @@ html, body { overflow-x: clip; }
   position: relative;
   display: grid;
   width: max-content;
-  max-width: min(11.5rem, 58vw);
-  height: 1.15rem;
+  max-width: min(12.5rem, 62vw);
+  height: auto;
+  min-height: 1.2rem;
   align-items: center;
   overflow: visible;
 }
@@ -937,7 +938,7 @@ html, body { overflow-x: clip; }
 }
 
 @media (min-width: 640px) {
-  .storefront-header-title { width: max-content; max-width: min(14rem, 52vw); height: 1.25rem; }
+  .storefront-header-title { width: max-content; max-width: min(14rem, 52vw); height: auto; min-height: 1.3rem; }
 }
 
 /* ZURS original game artwork and hero refresh */
@@ -1544,18 +1545,22 @@ img.checkout-method-card__icon { object-fit: contain; }
  * Animated pack emoji (Telegram sticker packs, served from /emoji-anim) and
  * the Font Emoji ZURS.me wordmark (Font Emoji · @StickersPackRobot pack).
  * ------------------------------------------------------------------------- */
-.pack-emoji { display: inline-block; line-height: 0; flex: none; vertical-align: middle; }
-.pack-emoji > svg { width: 100% !important; height: 100% !important; display: block; }
+.pack-emoji { display: inline-grid; place-items: center; line-height: 0; flex: none; vertical-align: middle; overflow: hidden; }
+.pack-emoji svg, .pack-emoji__lottie, .pack-emoji__frame { width: 100% !important; height: 100% !important; display: block; }
+.pack-emoji__glyph { position: relative; z-index: 0; pointer-events: none; }
 .pack-emoji--static { object-fit: contain; }
 
 .font-emoji-brand { display: inline-flex; align-items: center; gap: 1.5px; flex-wrap: nowrap; white-space: nowrap; vertical-align: middle; max-width: 100%; }
 .font-emoji-brand__letter { position: relative; display: inline-grid; place-items: center; overflow: hidden; border-radius: 24%; isolation: isolate; background: #101736; box-shadow: 0 1px 2px rgb(2 6 23 / 0.20), inset 0 0 0 1px rgb(255 255 255 / 0.30); }
-.font-emoji-brand__media { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
-.font-emoji-brand__char { position: relative; z-index: 1; font-family: "DM Sans", "Kantumruy Pro", sans-serif; font-weight: 900; line-height: 1; color: #fff; text-shadow: 0 1px 2px rgb(2 6 23 / 0.65), 0 0 6px rgb(2 6 23 / 0.40); transform: translateY(0.03em); }
+.font-emoji-brand__media { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+.font-emoji-brand__char { position: relative; z-index: 2; font-family: "DM Sans", "Kantumruy Pro", sans-serif; font-weight: 900; line-height: 1; color: #fff; text-shadow: 0 1px 2px rgb(2 6 23 / 0.65), 0 0 6px rgb(2 6 23 / 0.40); transform: translateY(0.03em); }
 .font-emoji-brand__dot { align-self: flex-end; font-family: "DM Sans", "Kantumruy Pro", sans-serif; font-weight: 900; line-height: 0.82; color: oklch(0.50 0.16 279); padding-inline: 1px; }
 @media (prefers-reduced-motion: no-preference) {
   .font-emoji-brand__letter { transition: transform 180ms ease, box-shadow 180ms ease; }
   .font-emoji-brand:hover .font-emoji-brand__letter { transform: translateY(-1px); box-shadow: 0 3px 8px rgb(2 6 23 / 0.25), inset 0 0 0 1px rgb(255 255 255 / 0.4); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .font-emoji-brand__media--video { display: none; }
 }
 
 /* ---------------------------------------------------------------------------
