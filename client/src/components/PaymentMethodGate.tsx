@@ -42,6 +42,7 @@ export function PaymentMethodPreselect() {
         <span className="payment-method-option__check" aria-hidden="true"><Check className="h-3.5 w-3.5" /></span>
       </button>) : <MethodPlaceholder empty />}
     </div>
+    <p className="payment-method-preselect__notice">ZURS ទទួលការទូទាត់តាម KHQR ប៉ុណ្ណោះ។ គ្មានវិធីបង់ប្រាក់ផ្សេងត្រូវបានបើកសម្រាប់អតិថិជនទេ។</p>
     <p className="payment-method-preselect__hint">{selectedMethod ? "KHQR នឹងត្រូវប្រើនៅពេលអ្នកជ្រើសកញ្ចប់ និងបន្ត checkout។" : "សូមជ្រើស KHQR មុនជ្រើសកញ្ចប់។"}</p>
   </section>;
 }

@@ -193,7 +193,12 @@ function actorKeys(actor: LoginActor) {
 
 /* ------------------------------------------------------------------- store */
 
-type StoredBlock = Omit<LoginBlockRecord, "scope"> & { scope: LoginActorScope };
+/**
+ * `origin` is the ban id (`<scope>:<hash>`) of the block that caused this row to
+ * be written. A row blocked on its own evidence carries its own id, so lifting
+ * one ban can release exactly the rows that ban created - and nothing else.
+ */
+type StoredBlock = Omit<LoginBlockRecord, "scope"> & { scope: LoginActorScope; origin?: string | null };
 
 const memoryBlocks = new Map<string, { record: StoredBlock; expiresAt: number }>();
 const memoryStrikes = new Map<string, { count: number; expiresAt: number }>();
@@ -247,6 +252,7 @@ function parseBlock(raw: unknown): StoredBlock | null {
       ip: typeof parsed.ip === "string" ? parsed.ip : null,
       device: typeof parsed.device === "string" ? parsed.device : null,
       email: typeof parsed.email === "string" ? parsed.email : null,
+      origin: typeof parsed.origin === "string" ? parsed.origin : null,
     };
   } catch {
     return null;
@@ -509,6 +515,8 @@ async function applyBlock(options: {
   expiresAt: string;
   /** Operator context stored alongside every scope for the admin table. */
   context?: { ip?: string | null; device?: string | null; email?: string | null };
+  /** Ban id of the block this row was cascaded from. Defaults to its own id. */
+  origin?: string | null;
 }) {
   const ttl = Math.max(1, remainingSeconds(options.expiresAt));
   const record: StoredBlock = {
@@ -521,6 +529,7 @@ async function applyBlock(options: {
     ip: options.context?.ip ?? null,
     device: options.context?.device ?? null,
     email: options.context?.email ?? null,
+    origin: options.origin ?? banId(options.scope, options.hash),
   };
   const degraded = await store.writeBlock(options.scope, options.hash, record, ttl);
   await store.indexBan(options.scope, options.hash, Date.parse(options.expiresAt) || Date.now() + ttl * 1_000);
@@ -557,11 +566,16 @@ async function cascadeBlock(options: {
   };
 
   const context = blockContext(options.actor);
+  // Every row written by this cascade points back at the block that caused it,
+  // so releasing that one ban releases the whole actor in a single admin action
+  // instead of leaving the device or the mailbox locked out behind it.
+  const originHash = options.origin === "ip" ? keys.ip : options.origin === "device" ? keys.device : keys.identity ?? keys.ip;
+  const origin = banId(options.origin, originHash);
 
-  await applyBlock({ scope: "ip", hash: keys.ip, label: options.actor.ip, reason: reasonFor("ip"), strikes: options.strikes, expiresAt: options.expiresAt, context });
-  await applyBlock({ scope: "device", hash: keys.device, label: keys.device.slice(0, 10), reason: reasonFor("device"), strikes: options.strikes, expiresAt: options.expiresAt, context });
+  await applyBlock({ scope: "ip", hash: keys.ip, label: options.actor.ip, reason: reasonFor("ip"), strikes: options.strikes, expiresAt: options.expiresAt, context, origin });
+  await applyBlock({ scope: "device", hash: keys.device, label: keys.device.slice(0, 10), reason: reasonFor("device"), strikes: options.strikes, expiresAt: options.expiresAt, context, origin });
   if (keys.identity) {
-    await applyBlock({ scope: "identity", hash: keys.identity, label: maskEmail(options.actor.email) ?? "", reason: reasonFor("identity"), strikes: options.strikes, expiresAt: options.expiresAt, context });
+    await applyBlock({ scope: "identity", hash: keys.identity, label: maskEmail(options.actor.email) ?? "", reason: reasonFor("identity"), strikes: options.strikes, expiresAt: options.expiresAt, context, origin });
   }
 
   // Devices previously seen from this address, and addresses previously seen
@@ -571,10 +585,10 @@ async function cascadeBlock(options: {
   await Promise.all([
     ...linkedDevices
       .filter((hash) => hash !== keys.device)
-      .map((hash) => applyBlock({ scope: "device", hash, label: hash.slice(0, 10), reason: "linked_to_blocked_ip", strikes: options.strikes, expiresAt: options.expiresAt })),
+      .map((hash) => applyBlock({ scope: "device", hash, label: hash.slice(0, 10), reason: "linked_to_blocked_ip", strikes: options.strikes, expiresAt: options.expiresAt, origin })),
     ...linkedIps
       .filter((hash) => hash !== keys.ip)
-      .map((hash) => applyBlock({ scope: "ip", hash, label: "linked", reason: "linked_to_blocked_device", strikes: options.strikes, expiresAt: options.expiresAt })),
+      .map((hash) => applyBlock({ scope: "ip", hash, label: "linked", reason: "linked_to_blocked_device", strikes: options.strikes, expiresAt: options.expiresAt, origin })),
   ]);
 
   await store.pushReport({
@@ -1023,9 +1037,10 @@ export async function listActiveLoginBans(): Promise<{ durable: boolean; bans: L
  * released customer starts from a clean five attempts rather than being one
  * mistake away from another 24 hours.
  *
- * Only the scope named by `id` is lifted. A cascaded ban therefore needs each
- * of its rows released, which is intentional: releasing an address should not
- * silently release a device that was blocked on its own evidence.
+ * Lifting a ban also releases the rows that exist *only* because of it: the
+ * device and the mailbox taken down by the same cascade come back together with
+ * the address, so one admin action restores one actor. A row that was blocked
+ * on its own evidence carries its own origin id and is never released by proxy.
  */
 export async function liftLoginBan(input: { id: string; actorLabel: string }): Promise<{ lifted: boolean; degraded: boolean }> {
   const parsed = parseBanId(input.id);
@@ -1033,6 +1048,7 @@ export async function liftLoginBan(input: { id: string; actorLabel: string }): P
   const { blocks } = await store.readBlocks([parsed]);
   const existing = blocks[0];
   const degraded = await store.dropBan(parsed.scope, parsed.hash);
+  const released = await releaseCascadedBlocks(banId(parsed.scope, parsed.hash));
   await store.pushReport({
     at: new Date().toISOString(),
     event: "cleared",
@@ -1046,9 +1062,28 @@ export async function liftLoginBan(input: { id: string; actorLabel: string }): P
     expiresAt: null,
     // The audit trail records *who* released it. An unban is a security
     // decision, so it must never be anonymous.
-    userAgent: `lifted by ${input.actorLabel}`.slice(0, 160),
+    userAgent: `lifted by ${input.actorLabel}${released ? ` (+${released} linked)` : ""}`.slice(0, 160),
   });
   return { lifted: Boolean(existing), degraded };
+}
+
+/**
+ * Releases every block that was written by the cascade identified by `origin`.
+ *
+ * The ban index is the only enumerable list of live blocks, so we walk it and
+ * drop the rows that point back at the ban just lifted. A device that earned a
+ * block on its own evidence carries its own origin id and therefore stays down.
+ */
+async function releaseCascadedBlocks(origin: string): Promise<number> {
+  const targets = (await store.readBanIds())
+    .filter((id) => id !== origin)
+    .map((id) => parseBanId(id))
+    .filter((target): target is { scope: LoginActorScope; hash: string } => target !== null);
+  if (targets.length === 0) return 0;
+  const { blocks } = await store.readBlocks(targets);
+  const cascaded = targets.filter((_, index) => blocks[index]?.origin === origin);
+  await Promise.all(cascaded.map((target) => store.dropBan(target.scope, target.hash)));
+  return cascaded.length;
 }
 
 /** Test seam. Never called from request handlers. */

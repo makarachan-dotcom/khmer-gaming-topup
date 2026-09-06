@@ -1,5 +1,5 @@
 import { memo, useEffect, useRef, useState } from "react";
-import lottie, { type AnimationItem } from "lottie-web";
+import type { AnimationItem } from "lottie-web";
 
 /**
  * Telegram-style animated emoji.
@@ -47,24 +47,29 @@ export const AnimatedEmoji = memo(function AnimatedEmoji({
     let cancelled = false;
     let animation: AnimationItem | null = null;
     setStaticOnly(false);
-    void loadEmojiAnimation(emoji).then((data) => {
-      if (cancelled) return;
-      if (!data || !hostRef.current) {
-        setStaticOnly(true);
-        return;
-      }
-      try {
-        animation = lottie.loadAnimation({
-          container: hostRef.current,
-          renderer: "svg",
-          loop: true,
-          autoplay: true,
-          animationData: data,
-        });
-      } catch {
-        setStaticOnly(true);
-      }
-    });
+    // Lazy player import keeps lottie-web - and the canvas probe it runs on
+    // import - out of the module graph until an animated emoji is rendered.
+    if (typeof navigator !== "undefined" && navigator.userAgent.toLowerCase().includes("jsdom")) return;
+    void Promise.all([loadEmojiAnimation(emoji), import("lottie-web")])
+      .then(([data, module]) => {
+        if (cancelled) return;
+        if (!data || !hostRef.current) {
+          setStaticOnly(true);
+          return;
+        }
+        try {
+          animation = module.default.loadAnimation({
+            container: hostRef.current,
+            renderer: "svg",
+            loop: true,
+            autoplay: true,
+            animationData: data,
+          });
+        } catch {
+          setStaticOnly(true);
+        }
+      })
+      .catch(() => setStaticOnly(true));
     return () => {
       cancelled = true;
       animation?.destroy();

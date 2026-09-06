@@ -11,7 +11,6 @@ import { trpc } from "@/lib/trpc";
 import { animate } from "animejs";
 import { ArrowUp, ChevronRight, Crown, House, LogIn, LogOut, Radio, ShieldCheck, Sparkles, UserRound, WalletCards } from "lucide-react";
 import { ReactNode, useEffect, useRef, useState } from "react";
-import { RefundPolicyDialog } from "@/components/RefundPolicyDialog";
 import { Link, useLocation } from "wouter";
 const logoUrl = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/kBXeVXEnNVEuNZKS.jpg";
 export function isProtectedMediaTarget(target: EventTarget | null) {
@@ -63,9 +62,6 @@ function StorefrontShell({ children }: { children: ReactNode }) {
   const selectedPaymentMethod = (paymentMethods.data ?? []).find((method) => method.id === selectedPaymentMethodId) ?? null;
   const activeMobileTabHref = mobileTabHrefForPath(location);
   const isTopupRoute = location.startsWith("/topup/");
-  // Round 9: the no-refund policy must be acknowledged before the checkout screen
-  // opens, and the dialog itself offers a direct route into live support.
-  const [refundConsentOpen, setRefundConsentOpen] = useState(false);
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const target = shellRef.current?.querySelector("main");
@@ -184,15 +180,12 @@ function StorefrontShell({ children }: { children: ReactNode }) {
         * to /chat, so the floating mount is gone. The bottom Telegram help dock
         * was retired with it - Telegram is offered inside the chat itself once
         * the one-per-day allowance is spent. */}
-      <RefundPolicyDialog
-        open={refundConsentOpen}
-        productLabel={selectedProduct?.label ?? null}
-        priceLabel={selectedProduct?.priceLabel ?? null}
-        onAgree={() => { setRefundConsentOpen(false); setLocation("/checkout/preview"); }}
-        onDecline={() => setRefundConsentOpen(false)}
-      />
+      {/* The action bar now hands the buyer straight to the payment preview.
+        * The no-refund acknowledgement moved onto that preview screen, next to
+        * the button that actually creates the KHQR, so the shell never blocks
+        * a selection behind a dialog. */}
       {isTopupRoute ? <SelectedProductActionBar
-        product={selectedProduct} paymentMethodName={selectedPaymentMethod?.name ?? null} isAuthenticated={Boolean(user)} isAuthenticationLoading={loading} signInHref={googleSignInHref} onContinue={() => setRefundConsentOpen(true)} /> : (
+        product={selectedProduct} paymentMethodName={selectedPaymentMethod?.name ?? null} isAuthenticated={Boolean(user)} isAuthenticationLoading={loading} signInHref={googleSignInHref} onContinue={() => setLocation("/checkout/preview")} /> : (
         <nav className={cn("liquid-tabbar zurs-mobile-tabbar fixed bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-1/2 z-40 grid h-14 w-full -translate-x-1/2 grid-cols-3 gap-0.5 rounded-full p-1 sm:hidden", activeMobileTabHref === "/live-spin" && "zurs-mobile-tabbar--live")} aria-label="Mobile primary navigation">
           {mobileNavigation.map(({ href, label, icon: Icon, animation, live }) => {
             const active = activeMobileTabHref === href;

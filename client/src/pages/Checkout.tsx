@@ -11,6 +11,7 @@ import { khqrLogoUrl } from "@/lib/mobileLegendsAssets";
 import { BakongKhqrCard } from "@/components/BakongKhqrCard";
 import { SampeahCelebration } from "@/components/SampeahCelebration";
 import PaymentSuccessPipeline from "@/components/PaymentSuccessPipeline";
+import { RefundPolicyDialog } from "@/components/RefundPolicyDialog";
 import { AlertTriangle, BadgeCheck, CheckCircle2, ChevronRight, Clock3, CreditCard, Download, ExternalLink, FileText, Home, LockKeyhole, PackageCheck, PencilLine, RefreshCw, ShieldCheck, XCircle } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
@@ -92,6 +93,19 @@ export default function Checkout() {
   </main></StorefrontLayout>;
 }
 
+/**
+ * Flags a preview that cannot legally become an order yet: a game top-up with
+ * no Game ID, or one whose provider demands a verified username that was never
+ * resolved. Optional chaining keeps it safe while the checkout context is still
+ * being restored from session storage, so the warning renders before the buyer
+ * taps confirm instead of failing afterwards.
+ */
+function needsIdentityRepair(product: SelectedProduct | null) {
+  if (product?.kind === "partner") return false;
+  if (!product?.playerId) return true;
+  return Boolean(product.requiresVerifiedPlayerName && !product.playerName);
+}
+
 function PaymentPreview({ product }: { product: SelectedProduct | null }) {
   const [, setLocation] = useLocation();
   const { user, loading } = useAuth();
@@ -99,6 +113,9 @@ function PaymentPreview({ product }: { product: SelectedProduct | null }) {
   const pendingCount = trpc.orders.pendingPaymentCount.useQuery(undefined, { enabled: !!user, refetchInterval: 30_000 });
   const createTopup = trpc.orders.createTopup.useMutation();
   const [error, setError] = useState<string | null>(null);
+  // Round 9 still applies, it just moved: the no-refund policy is acknowledged
+  // here, one tap before the QR and the order actually exist.
+  const [refundConsentOpen, setRefundConsentOpen] = useState(false);
   const busy = createTopup.isPending;
   const ready = paymentGate.data?.enabled === true;
   const pendingLimitReached = (pendingCount.data?.count ?? 0) >= (pendingCount.data?.limit ?? 2);
@@ -129,12 +146,20 @@ function PaymentPreview({ product }: { product: SelectedProduct | null }) {
     <section className="checkout-preview-confirm">
       <div><LockKeyhole className="h-5 w-5" /><p><strong>បញ្ជាក់ការបញ្ជាទិញ</strong><span>ការបង្កើត QR និង order ពិតកើតឡើងតែបន្ទាប់ពីអ្នកចុចបញ្ជាក់។ ការទូទាត់ធ្វើឡើងតាម KHQR ដែលបានជ្រើសរើសរួច។</span></p></div>
       {pendingLimitReached ? <p className="checkout-pending-block" role="alert"><AlertTriangle className="h-4 w-4" />អ្នកមានការទូទាត់កំពុងរង់ចាំ ២ រួចហើយ — មិនអាចបង្កើតការទូទាត់ថ្មីលើសពី ២ បានទេ។ សូមបញ្ចប់ ឬរង់ចាំ QR ចាស់ផុតកំណត់សិន។</p> : null}
+      {needsIdentityRepair(product) ? <p className="checkout-preview-confirm__error" role="alert"><AlertTriangle className="h-4 w-4" />សូមត្រឡប់ទៅបញ្ជាក់ ID និងឈ្មោះគណនី មុនបន្ត។</p> : null}
       {error ? <p className="checkout-preview-confirm__error" role="alert">{error}</p> : null}
       {!loading && !user ? <a href={`/api/auth/google?returnTo=${encodeURIComponent("/checkout/preview")}`} className="checkout-primary-action">ចូលគណនីដើម្បីបន្ត</a> : <div className="checkout-confirm-actions">
-        <button type="button" disabled={busy || pendingLimitReached} className="checkout-primary-action" onClick={() => void confirm()}>{busy ? <><OutlineLoader size={18} color="currentColor" />កំពុងបង្កើត QR…</> : <><CheckCircle2 className="h-4 w-4" />បញ្ជាក់ និងបង្កើត KHQR</>}</button>
+        <button type="button" disabled={busy || pendingLimitReached} className="checkout-primary-action" onClick={() => setRefundConsentOpen(true)}>{busy ? <><OutlineLoader size={18} color="currentColor" />កំពុងបង្កើត QR…</> : <><CheckCircle2 className="h-4 w-4" />បញ្ជាក់ និងបង្កើត KHQR</>}</button>
         <button type="button" disabled={busy} className="checkout-secondary-action" onClick={() => window.history.back()}><PencilLine className="h-4 w-4" />កែប្រែការបញ្ជាទិញ</button>
       </div>}
     </section>
+    <RefundPolicyDialog
+      open={refundConsentOpen}
+      productLabel={product.label}
+      priceLabel={product.priceLabel}
+      onAgree={() => { setRefundConsentOpen(false); void confirm(); }}
+      onDecline={() => setRefundConsentOpen(false)}
+    />
   </main></StorefrontLayout>;
 }
 

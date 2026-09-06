@@ -1,3 +1,21 @@
+/**
+ * HTTP surface for the /login abuse guard.
+ *
+ * Why the browser has to talk to us at all: the one-time code is verified by
+ * Appwrite directly from the browser, so our server never sees a wrong code.
+ * A client that simply "forgets" to report its failures would then be immune,
+ * which is why the flow is **pre-charged**:
+ *
+ *   1. `POST /api/auth/login/verify-attempt` — charges the strike and hands
+ *      back a claim id, BEFORE the browser talks to Appwrite.
+ *   2. `POST /api/auth/login/verify-result` — refunds that strike only when the
+ *      code was actually correct.
+ *
+ * Skipping step 2 therefore costs the attacker a strike; skipping step 1 costs
+ * them the session, because `/api/auth/appwrite/session` re-runs the guard and
+ * is the only route that mints a ZURS cookie or creates an account row.
+ */
+
 import crypto from "node:crypto";
 import type { Express, Request, Response } from "express";
 import { sdk } from "./_core/sdk";
@@ -19,24 +37,6 @@ import {
   type LoginIntent,
 } from "./loginAbuseGuard";
 import { describeRequestDevice } from "./deviceInsight";
-
-/**
- * HTTP surface for the /login abuse guard.
- *
- * Why the browser has to talk to us at all: the one-time code is verified by
- * Appwrite directly from the browser, so our server never sees a wrong code.
- * A client that simply "forgets" to report its failures would then be immune,
- * which is why the flow is **pre-charged**:
- *
- *   1. `POST /api/auth/login/verify-attempt` — charges the strike and hands
- *      back a claim id, BEFORE the browser talks to Appwrite.
- *   2. `POST /api/auth/login/verify-result` — refunds that strike only when the
- *      code was actually correct.
- *
- * Skipping step 2 therefore costs the attacker a strike; skipping step 1 costs
- * them the session, because `/api/auth/appwrite/session` re-runs the guard and
- * is the only route that mints a ZURS cookie or creates an account row.
- */
 
 const CLAIM_TTL_MS = 10 * 60 * 1000;
 const claims = new Map<string, { fingerprint: string; expiresAt: number }>();

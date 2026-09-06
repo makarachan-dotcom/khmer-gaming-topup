@@ -15,12 +15,20 @@ import { Flame, Image as ImageIcon, Search, Video, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
 import { gameTopupPath } from "./GameTopup";
-// One banner only - the artwork you supplied. The old suit-photo slide and the
-// entire carousel (rotation + dot controls) were removed on purpose.
-const heroBanner = {
-  src: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/mMwkxBRkmMXfalck.png",
-  alt: "ZURS.me top-up diamond banner",
-};
+// Both deployment-safe banner artworks, served straight from the upload CDN.
+// The old suit-photo slide and the dot controls stay gone; what is left is a
+// gentle cross-fade between the two supplied images, and nothing else.
+const heroBanners = [
+  {
+    src: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/mMwkxBRkmMXfalck.png",
+    alt: "ZURS.me top-up diamond banner",
+  },
+  {
+    src: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/xftKPqLVBztUvpUZ.png",
+    alt: "ZURS.me game top-up promotion banner",
+  },
+];
+const heroRotationMs = 6500;
 export default function Home() {
   return (
     <StorefrontLayout>
@@ -46,6 +54,15 @@ function SectionHeading({ eyebrow, title, description, aside }: { eyebrow: strin
 }
 function HomeBanner() {
   const [loaded, setLoaded] = useState(false);
+  const [active, setActive] = useState(0);
+  // Gentle automatic rotation between the two supplied banners. Visitors who
+  // ask for reduced motion keep the first artwork and never see a swap.
+  useEffect(() => {
+    if (typeof window === "undefined" || heroBanners.length < 2) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const timer = window.setInterval(() => setActive((current) => (current + 1) % heroBanners.length), heroRotationMs);
+    return () => window.clearInterval(timer);
+  }, []);
   return (
     <section className="container pt-4 sm:pt-6" aria-label="ZURS banner">
       {/* zurs-banner-beam paints the colour that runs around the edge. The
@@ -53,16 +70,20 @@ function HomeBanner() {
         * only your artwork and the moving line are visible. */}
       <div className="zurs-banner-beam">
         <div className="zurs-banner-frame zurs-banner-frame--bare relative isolate aspect-[16/7] overflow-hidden rounded-2xl sm:aspect-[16/6]">
-          <img
-            src={heroBanner.src}
-            alt={heroBanner.alt}
-            className={`zurs-banner-slide absolute inset-0 h-full w-full object-cover ${loaded ? "is-loaded" : ""}`}
-            onLoad={() => setLoaded(true)}
-            loading="eager"
-            fetchPriority="high"
-            decoding="async"
-            sizes="100vw"
-          />
+          {heroBanners.map((banner, index) => (
+            <img
+              key={banner.src}
+              src={banner.src}
+              alt={banner.alt}
+              aria-hidden={index === active ? undefined : true}
+              className={`zurs-banner-slide absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${index === active ? "opacity-100" : "opacity-0"} ${loaded ? "is-loaded" : ""}`}
+              onLoad={() => setLoaded(true)}
+              loading={index === 0 ? "eager" : "lazy"}
+              fetchPriority={index === 0 ? "high" : "auto"}
+              decoding="async"
+              sizes="100vw"
+            />
+          ))}
         </div>
       </div>
     </section>
