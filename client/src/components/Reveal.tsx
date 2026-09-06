@@ -1,4 +1,3 @@
-import * as React from "react";
 import { CSSProperties, ElementType, ReactNode, useEffect, useRef, useState } from "react";
 
 type RevealProps = {
@@ -8,27 +7,26 @@ type RevealProps = {
   as?: ElementType;
   /** Stagger index — each step adds 75ms delay (see .zp-reveal in zurs-premium.css). */
   index?: number;
-  /** IntersectionObserver threshold. Default 0.15. */
+  /** IntersectionObserver threshold. Default 0.01 so first-screen content never stays blank. */
   threshold?: number;
 };
 
 /**
- * Scroll-reveal wrapper. Fades/slides children in the first time they enter
- * the viewport. Zero dependencies; motion styles live in styles/zurs-premium.css
- * (`.zp-reveal` / `.zp-reveal--in`) and automatically respect
- * prefers-reduced-motion.
- *
- * Usage:
- *   <Reveal as="section">...</Reveal>
- *   <Reveal index={2}>...</Reveal>   // staggers after index 0 and 1
+ * Scroll-reveal wrapper. The first item (index 0) starts visible so a slow
+ * IntersectionObserver — or a tall first section — can never leave the shop
+ * or home hero at opacity 0. Later items fade in when they enter view.
  */
-export function Reveal({ children, className = "", as: Tag = "div", index = 0, threshold = 0.15 }: RevealProps) {
+export function Reveal({ children, className = "", as: Tag = "div", index = 0, threshold = 0.01 }: RevealProps) {
   const ref = useRef<HTMLElement | null>(null);
-  const [inView, setInView] = useState(false);
+  const [inView, setInView] = useState(index === 0);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setInView(true);
+      return;
+    }
+    if (index === 0) {
       setInView(true);
       return;
     }
@@ -47,11 +45,11 @@ export function Reveal({ children, className = "", as: Tag = "div", index = 0, t
           }
         }
       },
-      { threshold, rootMargin: "0px 0px -8% 0px" },
+      { threshold, rootMargin: "64px 0px 64px 0px" },
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [threshold]);
+  }, [threshold, index]);
 
   return (
     <Tag

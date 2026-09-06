@@ -46,14 +46,16 @@ export function PartnerServicesShelf({ compact = false }: { compact?: boolean })
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    return products.filter((item) => {
-      if (provider !== "all" && item.providerName !== provider) return false;
-      if (delivery !== "all" && item.deliveryType !== delivery) return false;
-      if (stock === "in" && !item.inStock) return false;
-      if (stock === "out" && item.inStock) return false;
-      if (!needle) return true;
-      return `${item.name} ${item.providerName} ${item.deliveryType}`.toLowerCase().includes(needle);
-    });
+    return products
+      .filter((item) => {
+        if (provider !== "all" && item.providerName !== provider) return false;
+        if (delivery !== "all" && item.deliveryType !== delivery) return false;
+        if (stock === "in" && !item.inStock) return false;
+        if (stock === "out" && item.inStock) return false;
+        if (!needle) return true;
+        return `${item.name} ${item.providerName} ${item.deliveryType}`.toLowerCase().includes(needle);
+      })
+      .sort((a, b) => Number(b.inStock) - Number(a.inStock) || a.providerName.localeCompare(b.providerName) || Number(a.priceUsd) - Number(b.priceUsd));
   }, [delivery, products, provider, query, stock]);
 
   const order = (product: PartnerProduct) => {
@@ -73,7 +75,7 @@ export function PartnerServicesShelf({ compact = false }: { compact?: boolean })
   };
 
   const chip = (active: boolean) =>
-    `shrink-0 rounded-full px-3 py-1 text-[11px] font-bold transition ${active ? "bg-neon text-neon-ink" : "bg-panel-2 text-ink-muted hover:text-ink"}`;
+    `inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-bold transition ${active ? "bg-neon text-neon-ink shadow-sm" : "bg-panel-2 text-ink-muted hover:text-ink"}`;
 
   return (
     <section className={compact ? "" : "container py-5 sm:py-10"} aria-label="Digital services">
@@ -90,9 +92,9 @@ export function PartnerServicesShelf({ compact = false }: { compact?: boolean })
       {catalog.isLoading ? (
         <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
           {[1, 2, 3, 4].map((item) => (
-            <div key={item} className="flex h-40 flex-col justify-between rounded-2xl border border-line bg-panel p-3">
+            <div key={item} className="flex h-44 flex-col justify-between rounded-2xl border border-line bg-panel p-3">
               <div className="flex items-center gap-2.5">
-                <span className="grid h-11 w-11 place-items-center rounded-xl bg-panel-2 text-lg">✨</span>
+                <span className="h-12 w-12 animate-pulse rounded-2xl bg-panel-2" />
                 <div className="min-w-0 flex-1 space-y-2">
                   <div className="h-3 w-24 animate-pulse rounded bg-panel-2" />
                   <div className="h-2 w-16 animate-pulse rounded bg-panel-2" />
@@ -106,8 +108,8 @@ export function PartnerServicesShelf({ compact = false }: { compact?: boolean })
         <div className="mt-4 rounded-2xl border border-dashed border-line bg-panel p-8 text-center text-xs text-ink-muted">មិនអាចផ្ទុកសេវាឌីជីថលបានទេឥឡូវនេះ។ សូមព្យាយាមម្ដងទៀត។</div>
       ) : products.length ? (
         <>
-          <div className="mt-4 space-y-2.5">
-            <label className="flex h-11 items-center gap-2 rounded-2xl border border-line bg-panel px-3">
+          <div className="mt-4 space-y-3 rounded-2xl border border-line bg-panel/80 p-3">
+            <label className="flex h-11 items-center gap-2 rounded-2xl border border-line bg-canvas px-3">
               <PackEmoji name="search-user" size={18} />
               <input
                 value={query}
@@ -116,11 +118,12 @@ export function PartnerServicesShelf({ compact = false }: { compact?: boolean })
                 className="h-full min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-ink-muted"
               />
             </label>
-            <div className="flex gap-1.5 overflow-x-auto pb-1" aria-label="Provider filter">
+            <div className="flex flex-wrap gap-1.5" aria-label="Provider filter">
               <button type="button" className={chip(provider === "all")} onClick={() => setProvider("all")}>ទាំងអស់</button>
               {providers.map((name) => (
                 <button key={name} type="button" className={chip(provider === name)} onClick={() => setProvider(name)}>
-                  <span className="inline-flex items-center gap-1"><PackEmoji name={serviceEmojiName(name)} size={14} />{name}</span>
+                  <PackEmoji name={serviceEmojiName(name)} size={14} />
+                  {name}
                 </button>
               ))}
             </div>
@@ -140,13 +143,13 @@ export function PartnerServicesShelf({ compact = false }: { compact?: boolean })
           {filtered.length ? (
             <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
               {filtered.map((product) => (
-                <article key={product.slug} className="zurs-mobile-glass zurs-game-card flex h-full flex-col rounded-2xl p-3">
-                  <div className="flex items-center gap-2.5">
-                    <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-xl border border-line bg-white">
-                      <PackEmoji name={serviceEmojiName(`${product.providerName} ${product.name}`)} size={30} />
+                <article key={product.slug} className="zurs-mobile-glass zurs-game-card flex h-full min-h-[11.5rem] flex-col rounded-2xl p-3">
+                  <div className="flex items-start gap-2.5">
+                    <span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-2xl border border-line bg-white shadow-sm">
+                      <PackEmoji name={serviceEmojiName(`${product.providerName} ${product.name}`)} size={34} />
                     </span>
-                    <div className="min-w-0">
-                      <p className="truncate text-xs font-bold text-ink">{product.name}</p>
+                    <div className="min-w-0 pt-0.5">
+                      <p className="line-clamp-2 text-xs font-bold leading-snug text-ink">{product.name}</p>
                       <p className="mt-0.5 text-[10px] font-semibold text-ink-muted">{product.providerName}{product.durationDays ? ` · ${product.durationDays} ថ្ងៃ` : ""}</p>
                     </div>
                   </div>

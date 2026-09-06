@@ -4,9 +4,10 @@ import type { AnimationItem } from "lottie-web";
 /**
  * PackEmoji — Telegram-style animated icons.
  *
- * Real Noto Animated Emoji Lottie files are vendored in `/emoji-anim`.
- * A unicode glyph is always painted underneath, so the icon is never blank
- * while JSON loads, if Lottie fails, or if the visitor prefers reduced motion.
+ * Noto Animated Emoji Lottie files live in `/emoji-anim`. Brand marks
+ * (ChatGPT blossom, Gemini star) render as inline SVG / PNG so the real
+ * product logo is visible immediately — never a generic robot stacked on
+ * top of a unicode glyph.
  */
 
 export const PACK_EMOJI = {
@@ -46,7 +47,7 @@ export const PACK_EMOJI = {
   "gem-pink": { emoji: "💎", label: "Gem" },
   "telegram-plane": { emoji: "✈️", label: "Telegram" },
   bell: { emoji: "🔔", label: "Notification" },
-  "user-laptop": { emoji: "💻", label: "Account" },
+  "user-laptop": { emoji: "👋", label: "Account" },
   key: { emoji: "🔒", label: "API key" },
   gear: { emoji: "⚙️", label: "Settings" },
   "chat-smile": { emoji: "💬", label: "Chat" },
@@ -61,7 +62,7 @@ export const PACK_EMOJI = {
   confetti: { emoji: "🎊", label: "Confetti" },
   "gift-blue": { emoji: "🎁", label: "Reward" },
   "svc-gemini": { emoji: "✨", label: "Gemini" },
-  "svc-chatgpt": { emoji: "🤖", label: "ChatGPT" },
+  "svc-chatgpt": { emoji: "✳️", label: "ChatGPT" },
   "svc-netflix": { emoji: "🎬", label: "Netflix" },
   "svc-youtube": { emoji: "🎬", label: "YouTube" },
   "svc-tiktok": { emoji: "🎶", label: "TikTok" },
@@ -85,12 +86,15 @@ export const PACK_EMOJI = {
 
 export type PackEmojiName = keyof typeof PACK_EMOJI;
 
+const BRAND_PACKS = new Set<PackEmojiName>(["svc-chatgpt", "svc-gemini"]);
+
 export function isRealLottie(data: unknown): boolean {
   if (!data || typeof data !== "object") return false;
   const layers = (data as { layers?: unknown }).layers;
   if (!Array.isArray(layers) || layers.length === 0) return false;
+  const hasImageLayer = layers.some((layer) => layer && typeof layer === "object" && (layer as { ty?: number }).ty === 2);
   try {
-    return JSON.stringify(data).length >= 2000;
+    return hasImageLayer || JSON.stringify(data).length >= 2000;
   } catch {
     return false;
   }
@@ -133,6 +137,42 @@ export function prefersStaticEmoji() {
   return typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
+const CHATGPT_PETAL =
+  "M1107.3 299.1c-197.999 0-373.9 127.3-435.2 315.3L650 743.5v427.9c0 21.4 11 40.4 29.4 51.4l344.5 198.515V833.3h.1v-27.9L1372.7 604c33.715-19.52 70.44-32.857 108.47-39.828L1447.6 450.3C1361 353.5 1237.1 298.5 1107.3 299.1zm0 117.5-.6.6c79.699 0 156.3 27.5 217.6 78.4-2.5 1.2-7.4 4.3-11 6.1L952.8 709.3c-18.4 10.4-29.4 30-29.4 51.4V1248l-155.1-89.4V755.8c-.1-187.099 151.601-338.9 339-339.2z";
+
+function ChatGptLogo({ size, className, label }: { size: number; className: string; label: string }) {
+  return (
+    <span
+      role="img"
+      aria-label={label}
+      className={`pack-emoji pack-emoji--brand ${className}`}
+      style={{ width: size, height: size, position: "relative", display: "inline-grid", placeItems: "center", flex: "0 0 auto", overflow: "hidden", lineHeight: 1 }}
+    >
+      <svg viewBox="0 0 2406 2406" width={size} height={size} aria-hidden="true" focusable="false">
+        <path fill="#74aa9c" d="M1 578.4C1 259.5 259.5 1 578.4 1h1249.1c319 0 577.5 258.5 577.5 577.4V2406H578.4C259.5 2406 1 2147.5 1 1828.6V578.4z" />
+        <g className="pack-emoji__spin">
+          {[0, 60, 120, 180, 240, 300].map((deg) => (
+            <path key={deg} fill="#fff" d={CHATGPT_PETAL} transform={`rotate(${deg} 1203 1203)`} />
+          ))}
+        </g>
+      </svg>
+    </span>
+  );
+}
+
+function BrandPng({ src, size, className, label }: { src: string; size: number; className: string; label: string }) {
+  return (
+    <span
+      role="img"
+      aria-label={label}
+      className={`pack-emoji pack-emoji--brand ${className}`}
+      style={{ width: size, height: size, position: "relative", display: "inline-grid", placeItems: "center", flex: "0 0 auto", overflow: "hidden", lineHeight: 1 }}
+    >
+      <img src={src} width={size} height={size} alt="" className="pack-emoji__pulse pack-emoji__frame" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+    </span>
+  );
+}
+
 export const PackEmoji = memo(function PackEmoji({
   name,
   size = 20,
@@ -148,7 +188,9 @@ export const PackEmoji = memo(function PackEmoji({
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const meta = PACK_EMOJI[name];
+  const isBrand = BRAND_PACKS.has(name);
   const [staticFrame, setStaticFrame] = useState(false);
+  const [playing, setPlaying] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(prefersStaticEmoji);
   const [pngFailed, setPngFailed] = useState(false);
 
@@ -163,6 +205,8 @@ export const PackEmoji = memo(function PackEmoji({
 
   useEffect(() => {
     setPngFailed(false);
+    setPlaying(false);
+    if (isBrand) return;
     if (reduceMotion) {
       setStaticFrame(true);
       return;
@@ -193,6 +237,7 @@ export const PackEmoji = memo(function PackEmoji({
             animationData: data,
           });
           if (speed && speed > 0) animation.setSpeed(speed);
+          setPlaying(true);
         } catch {
           setStaticFrame(true);
         }
@@ -202,9 +247,15 @@ export const PackEmoji = memo(function PackEmoji({
       cancelled = true;
       animation?.destroy();
     };
-  }, [name, loop, speed, reduceMotion]);
+  }, [name, loop, speed, reduceMotion, isBrand]);
 
   if (!meta) return null;
+  if (name === "svc-chatgpt") return <ChatGptLogo size={size} className={className} label={meta.label} />;
+  if (name === "svc-gemini") return <BrandPng src="/emoji-anim/svc-gemini.png" size={size} className={className} label={meta.label} />;
+
+  const showLottie = !staticFrame;
+  const showPng = !pngFailed && (staticFrame || !playing);
+  const showGlyph = pngFailed && !playing;
 
   return (
     <span
@@ -213,10 +264,12 @@ export const PackEmoji = memo(function PackEmoji({
       className={`pack-emoji ${staticFrame ? "pack-emoji--static" : ""} ${className}`}
       style={{ width: size, height: size, position: "relative", display: "inline-grid", placeItems: "center", flex: "0 0 auto", overflow: "hidden", lineHeight: 1 }}
     >
-      <span aria-hidden="true" className="pack-emoji__glyph" style={{ fontSize: Math.round(size * 0.86), lineHeight: 1, zIndex: 0 }}>
-        {meta.emoji}
-      </span>
-      {staticFrame && !pngFailed ? (
+      {showGlyph ? (
+        <span aria-hidden="true" className="pack-emoji__glyph" style={{ fontSize: Math.round(size * 0.86), lineHeight: 1, zIndex: 0 }}>
+          {meta.emoji}
+        </span>
+      ) : null}
+      {showPng ? (
         <img
           src={`/emoji-anim/${encodeURIComponent(name)}.png`}
           width={size}
@@ -229,9 +282,9 @@ export const PackEmoji = memo(function PackEmoji({
           style={{ position: "absolute", inset: 0, zIndex: 1, width: "100%", height: "100%", objectFit: "contain" }}
         />
       ) : null}
-      {staticFrame ? null : (
+      {showLottie ? (
         <div ref={hostRef} aria-hidden="true" className="pack-emoji__lottie" style={{ position: "absolute", inset: 0, zIndex: 2, width: "100%", height: "100%" }} />
-      )}
+      ) : null}
     </span>
   );
 });
@@ -241,7 +294,7 @@ export function serviceEmojiName(text: string): PackEmojiName {
   const value = text.toLowerCase();
   const rules: Array<[RegExp, PackEmojiName]> = [
     [/gemini/, "svc-gemini"],
-    [/chatgpt|openai|gpt|claude|anthropic/, "svc-chatgpt"],
+    [/chatgpt|openai|\bgpt\b/, "svc-chatgpt"],
     [/netflix/, "svc-netflix"],
     [/capcut|cap cut/, "svc-netflix"],
     [/youtube|ytb/, "svc-youtube"],
