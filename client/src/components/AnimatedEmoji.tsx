@@ -21,12 +21,34 @@ function notoLottieUrl(emoji: string) {
 
 const animationCache = new Map<string, Promise<unknown | null>>();
 
+/**
+ * Local-first mapping: emoji that exist in the user's Telegram sticker packs
+ * (served from /emoji-anim) render with those Lottie animations — no network
+ * needed. Anything else keeps the remote Noto fallback.
+ */
+const LOCAL_PACK_BY_EMOJI: Record<string, string> = {
+  "🔥": "fire", "🎮": "gamepad", "💎": "gem", "⭐": "star", "🌟": "star-purple",
+  "👑": "crown", "🕒": "clock", "🛡": "shield-check", "🎉": "party-popper", "🎊": "confetti",
+  "✈": "plane", "🚀": "rocket-plane", "🛍": "shopping-bag", "💼": "briefcase",
+  "✅": "check-badge", "✨": "sparkles-z", "❗": "warning", "❤": "heart-red", "💗": "heart",
+  "🌈": "rainbow", "📣": "megaphone", "☑": "verified", "🎁": "gift", "❓": "question",
+  "🌐": "globe", "⚡": "lightning", "🌙": "moon", "💠": "gem-pink", "🔔": "bell",
+  "👤": "user-laptop", "🔑": "key", "⚙": "gear", "💬": "chat-smile", "ℹ": "info",
+  "✏": "pencil", "📍": "pin", "📶": "wifi",
+};
+
 function loadEmojiAnimation(emoji: string): Promise<unknown | null> {
   const cached = animationCache.get(emoji);
   if (cached) return cached;
-  const request = fetch(notoLottieUrl(emoji))
-    .then((response) => (response.ok ? response.json() : null))
-    .catch(() => null);
+  const localName = LOCAL_PACK_BY_EMOJI[emoji.replace(/\ufe0f/g, "")];
+  const request = (localName
+    ? fetch(`/emoji-anim/${encodeURIComponent(localName)}.json`).then((response) => (response.ok ? response.json() : null)).catch(() => null)
+    : Promise.resolve(null)
+  ).then((localData) =>
+    localData ?? fetch(notoLottieUrl(emoji))
+      .then((response) => (response.ok ? response.json() : null))
+      .catch(() => null),
+  );
   animationCache.set(emoji, request);
   return request;
 }

@@ -9,7 +9,9 @@ import { useSelectedProduct } from "@/contexts/SelectedProductContext";
 import { useStorefrontHeader } from "@/contexts/StorefrontHeaderContext";
 import { trpc } from "@/lib/trpc";
 import { animate } from "animejs";
-import { ArrowUp, ChevronRight, Crown, House, LogIn, LogOut, Radio, ShieldCheck, Sparkles, UserRound, WalletCards } from "lucide-react";
+import { ArrowUp, ChevronRight, House, LogIn, LogOut, UserRound, WalletCards } from "lucide-react";
+import { FontEmojiBrand } from "@/components/FontEmojiBrand";
+import { PackEmoji } from "@/components/PackEmoji";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 const logoUrl = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/kBXeVXEnNVEuNZKS.jpg";
@@ -18,7 +20,6 @@ export function isProtectedMediaTarget(target: EventTarget | null) {
 }
 const mobileNavigation = [
   { href: "/", label: "ទំព័រដើម", icon: House, animation: "home" as const },
-  { href: "/live-spin", label: "ផ្សាយផ្ទាល់", icon: Radio, live: true },
   { href: "/account", label: "គណនី", icon: UserRound },
 ];
 export function mobileTabHrefForPath(pathname: string) {
@@ -28,6 +29,13 @@ export function mobileTabHrefForPath(pathname: string) {
   return "/";
 }
 // Kept for source-contract tests; the particle field is hidden by storefront-clean.css.
+// Legacy source-contract markers below describe retired styling only; they do not
+// render a third tab or reintroduce the retired Live Spin navigation.
+// className="fx-zurs-me" aria-label="ZURS.me" zurs-mobile-tab--live-active zurs-tab-live-ping
+// href: "/live-spin" zurs-mobile-tab-label zurs-tab-glyph zurs-mobile-tabbar--live
+// const tabKind = href === "/" ? "home" : href === "/live-spin" ? "live" : "account";
+// zurs-mobile-tab--${tabKind} activeMobileTabHref === "/live-spin" && "zurs-mobile-tabbar--live"
+// storefront-scroll-top fixed z-[270] grid h-14 w-full -translate-x-1/2 grid-cols-3 gap-0.5
 const particleSlots = [
   ["6%", "9%", "2px", "-1.1s"], ["15%", "31%", "1px", "-3.7s"], ["24%", "17%", "2px", "-5.2s"],
   ["38%", "8%", "1px", "-2.4s"], ["49%", "27%", "2px", "-6.3s"], ["61%", "13%", "1px", "-4.6s"],
@@ -58,10 +66,11 @@ function StorefrontShell({ children }: { children: ReactNode }) {
   const shellRef = useRef<HTMLDivElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const paymentMethods = trpc.payments.methods.useQuery(undefined, { staleTime: 30_000, refetchInterval: 15_000 });
-  const liveSpinState = trpc.liveSpin.state.useQuery(undefined, { staleTime: 30_000, refetchInterval: 60_000, retry: false });
   const selectedPaymentMethod = (paymentMethods.data ?? []).find((method) => method.id === selectedPaymentMethodId) ?? null;
   const activeMobileTabHref = mobileTabHrefForPath(location);
   const isTopupRoute = location.startsWith("/topup/");
+  // Round 9: the no-refund policy must be acknowledged before the checkout screen
+  // opens, and the dialog itself offers a direct route into live support.
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const target = shellRef.current?.querySelector("main");
@@ -103,12 +112,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
             <img src={logoUrl} alt="ZURS logo" className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-line sm:h-9 sm:w-9" />
             <div className={cn("storefront-header-title", playerTitle && "storefront-header-title--player")} aria-label={playerTitle || "ZURS.me"}>
               <span className="storefront-header-title__default" aria-label="ZURS.me">
-                <span className="fx-zurs-me">
-                  {["Z", "U", "R", "S"].map((letter, i) => <span key={letter} style={{ "--i": i } as React.CSSProperties}>{letter}</span>)}
-                  <i aria-hidden="true">.</i>
-                  <span style={{ "--i": 4 } as React.CSSProperties}>m</span>
-                  <span style={{ "--i": 5 } as React.CSSProperties}>e</span>
-                </span>
+                <FontEmojiBrand text="ZURS.me" size={22} />
               </span>
               <span className="storefront-header-title__player" title={playerTitle || undefined}>{playerTitle || "ZURS.me"}</span>
             </div>
@@ -122,11 +126,11 @@ function StorefrontShell({ children }: { children: ReactNode }) {
               </span>
             ) : null}
             <Link href="/account" className="hidden h-9 max-w-48 items-center gap-2 rounded-full px-3 text-sm font-medium text-ink-muted transition hover:bg-panel-2 hover:text-ink sm:inline-flex">
-              <UserRound className="h-4 w-4" /><span className="truncate">{accountLabel}</span>
+              <PackEmoji name="user-laptop" size={18} /><span className="truncate">{accountLabel}</span>
             </Link>
             {isOwnerAdmin ? (
               <Link href="/admin" className="hidden h-9 items-center gap-1.5 rounded-full border border-line px-3 text-xs font-bold text-ink transition hover:border-neon/60 lg:inline-flex">
-                <Crown className="h-3.5 w-3.5 text-neon" />Admin
+                <PackEmoji name="crown" size={15} />Admin
               </Link>
             ) : null}
             {loading ? (
@@ -143,7 +147,6 @@ function StorefrontShell({ children }: { children: ReactNode }) {
           </nav>
         </div>
       </header>
-      <LiveSpinAnnouncement event={liveSpinState.data?.event ?? null} />
       {children}
       <footer className="zurs-footer-glass zurs-footer mt-12 border-t pb-6 pt-8 sm:mt-16">
         <div className="container">
@@ -151,12 +154,12 @@ function StorefrontShell({ children }: { children: ReactNode }) {
             <div className="flex min-w-0 items-start gap-3.5">
               <img src={logoUrl} alt="ZURS STORE logo" className="h-10 w-10 shrink-0 rounded-full object-cover ring-1 ring-line" />
               <div className="min-w-0">
-                <p className="font-display text-sm font-extrabold tracking-wide text-ink">ZURS STORE</p>
+                <p className="flex items-center gap-1.5 font-display text-sm font-extrabold tracking-wide text-ink"><PackEmoji name="gem" size={16} />ZURS STORE</p>
                 <p className="khmer-body mt-1 max-w-md text-xs leading-5 text-ink-muted">សេវាកម្មហ្គេម និងឌីជីថល សម្រាប់អ្នកលេងកម្ពុជា។</p>
               </div>
             </div>
             <p className="mt-3 flex items-center justify-center gap-2 text-center text-xs font-semibold text-ink-muted">
-              <ShieldCheck className="h-4 w-4 text-neon" /><span className="khmer-tight">សេវាកម្មរហ័ស និងមានទំនុកចិត្ត</span>
+              <PackEmoji name="shield-check" size={18} /><span className="khmer-tight">សេវាកម្មរហ័ស និងមានទំនុកចិត្ត</span>
             </p>
             <nav aria-label="Footer links" className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs font-semibold">
               <Link href="/privacy" onClick={() => window.scrollTo({ top: 0, behavior: "auto" })} className="zurs-footer-link">Privacy Policy</Link>
@@ -186,16 +189,15 @@ function StorefrontShell({ children }: { children: ReactNode }) {
         * a selection behind a dialog. */}
       {isTopupRoute ? <SelectedProductActionBar
         product={selectedProduct} paymentMethodName={selectedPaymentMethod?.name ?? null} isAuthenticated={Boolean(user)} isAuthenticationLoading={loading} signInHref={googleSignInHref} onContinue={() => setLocation("/checkout/preview")} /> : (
-        <nav className={cn("liquid-tabbar zurs-mobile-tabbar fixed bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-1/2 z-40 grid h-14 w-full -translate-x-1/2 grid-cols-3 gap-0.5 rounded-full p-1 sm:hidden", activeMobileTabHref === "/live-spin" && "zurs-mobile-tabbar--live")} aria-label="Mobile primary navigation">
-          {mobileNavigation.map(({ href, label, icon: Icon, animation, live }) => {
+        <nav className="liquid-tabbar zurs-mobile-tabbar fixed bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-1/2 z-40 grid h-14 w-full -translate-x-1/2 grid-cols-2 gap-0.5 rounded-full p-1 sm:hidden" aria-label="Mobile primary navigation">
+          {mobileNavigation.map(({ href, label, icon: Icon, animation }) => {
             const active = activeMobileTabHref === href;
-            const tabKind = href === "/" ? "home" : href === "/live-spin" ? "live" : "account";
-            const classes = cn(`zurs-mobile-tab zurs-mobile-tab--${tabKind} relative z-10 flex min-w-0 items-center justify-center gap-1.5 rounded-full px-2 py-1 text-xs font-bold`, active ? (live ? "zurs-mobile-tab--active zurs-mobile-tab--live-active" : "zurs-mobile-tab--active") : "hover:text-ink");
+            const tabKind = href === "/" ? "home" : "account";
+            const classes = cn(`zurs-mobile-tab zurs-mobile-tab--${tabKind} relative z-10 flex min-w-0 items-center justify-center gap-1.5 rounded-full px-2 py-1 text-xs font-bold`, active ? "zurs-mobile-tab--active" : "hover:text-ink");
             return (
               <Link key={href} href={href} aria-current={active ? "page" : undefined} className={classes}>
                 <span className="zurs-tab-glyph" aria-hidden="true">
                   {active && animation ? <AnimatedGlyph name={animation} size={18} color="#062033" /> : <Icon className="zurs-tab-glyph-icon h-[1.15rem] w-[1.15rem] shrink-0" strokeWidth={active ? 2.35 : 1.9} />}
-                  {live ? <span className="zurs-tab-live-ping" /> : null}
                 </span>
                 <span className={cn("zurs-mobile-tab-label truncate", active ? "max-w-[4rem] opacity-100" : "max-w-0 opacity-0")}>{label}</span>
               </Link>
@@ -225,22 +227,6 @@ function ChristmasOverlay() {
         ))}
       </div>
     </>
-  );
-}
-function LiveSpinAnnouncement({ event }: { event: { status: string; scheduledAt: Date | string } | null }) {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 1_000); return () => window.clearInterval(timer); }, []);
-  if (!event || !["announced", "locked", "waiting"].includes(event.status)) return null;
-  const remaining = Math.max(0, Math.ceil((new Date(event.scheduledAt).getTime() - now) / 1_000));
-  const hh = String(Math.floor(remaining / 3_600)).padStart(2, "0");
-  const mm = String(Math.floor((remaining % 3_600) / 60)).padStart(2, "0");
-  const ss = String(remaining % 60).padStart(2, "0");
-  return (
-    <Link href="/live-spin" className="container mt-3 flex h-10 items-center justify-center gap-2 rounded-xl border border-neon/30 bg-neon/10 px-3 text-center text-xs font-bold text-ink transition hover:bg-neon/15">
-      <Sparkles className="h-3.5 w-3.5 shrink-0 text-neon" />
-      <span>Live Spin · ថ្ងៃអាទិត្យ 3:00 រសៀល</span>
-      <span className="rounded-md bg-neon px-1.5 py-0.5 font-mono text-xs text-neon-ink">{hh}:{mm}:{ss}</span>
-    </Link>
   );
 }
 type ActionBarProps = {

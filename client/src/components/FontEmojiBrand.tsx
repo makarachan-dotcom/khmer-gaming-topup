@@ -1,16 +1,36 @@
-import { memo, useEffect, useState } from "react";
+import { memo } from "react";
+import { PackEmoji, type PackEmojiName } from "./PackEmoji";
 
 /**
- * FontEmojiBrand — renders the ZURS.me wordmark as Telegram "Font Emoji"
- * tiles (the animated aurora-burst letters from the
- * `Font Emoji · @StickersPackRobot by @EmojiSaverBot` pack, served locally
- * from `/emoji-anim/font`). Each letter sits on its own looping burst video,
- * like Telegram Premium font emoji. The plain wordmark stays in the DOM for
- * screen readers, and visitors who prefer reduced motion get the static poster
- * frame instead of the video.
+ * FontEmojiBrand - renders the ZURS.me wordmark as Telegram "Font Emoji"
+ * tiles, one animated burst per letter.
+ *
+ * The burst layer used to be a video element pointing at
+ * `/emoji-anim/font/burst-N` WebM files. That never actually played for most
+ * mobile visitors: iOS Low Power Mode and Android Data Saver both refuse to
+ * autoplay video, and the refusal fires no event, so every letter silently
+ * sat on its poster frame and the wordmark looked completely static.
+ *
+ * The tiles now use the same Lottie runtime as PackEmoji. Lottie is plain
+ * scripted animation, so no browser autoplay policy applies to it, and
+ * PackEmoji already carries every piece this needs: a lazy
+ * `import("lottie-web")`, a per-name cache, a live `prefers-reduced-motion`
+ * subscription, a crisp PNG fallback when the JSON cannot be fetched, and a
+ * jsdom guard for the test environment.
  */
 
-const BURST_COUNT = 7;
+// One burst animation per letter position, taken from the local sticker pack
+// in client/public/emoji-anim (every name there has a .json and a .png).
+const BURST_EMOJI: readonly PackEmojiName[] = [
+  "sparkles-z",
+  "fireworks",
+  "confetti",
+  "party-popper",
+  "star-purple",
+  "lightning",
+  "rainbow",
+];
+const BURST_COUNT = BURST_EMOJI.length;
 
 export const FontEmojiBrand = memo(function FontEmojiBrand({
   text = "ZURS.me",
@@ -21,24 +41,6 @@ export const FontEmojiBrand = memo(function FontEmojiBrand({
   size?: number;
   className?: string;
 }) {
-  const [reducedMotion, setReducedMotion] = useState(
-    () =>
-      typeof window !== "undefined" &&
-      typeof window.matchMedia === "function" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-  );
-
-  // Subscribe rather than sampling once at render: a browser that reports
-  // "reduce" while battery or data saver is on would otherwise leave every
-  // letter parked on its poster frame for the rest of the session.
-  useEffect(() => {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const update = () => setReducedMotion(media.matches);
-    update();
-    media.addEventListener("change", update);
-    return () => media.removeEventListener("change", update);
-  }, []);
   const chars = Array.from(text);
   let letterIndex = 0;
   return (
@@ -60,22 +62,7 @@ export const FontEmojiBrand = memo(function FontEmojiBrand({
             className="font-emoji-brand__letter"
             style={{ width: size, height: size, fontSize: Math.round(size * 0.6) }}
           >
-            {reducedMotion ? (
-              <img className="font-emoji-brand__media" src={`/emoji-anim/font/burst-${burst}.png`} alt="" loading="lazy" decoding="async" />
-            ) : (
-              <video
-                className="font-emoji-brand__media"
-                src={`/emoji-anim/font/burst-${burst}.webm`}
-                poster={`/emoji-anim/font/burst-${burst}.png`}
-                autoPlay
-                loop
-                muted
-                playsInline
-                disablePictureInPicture
-                preload="auto"
-                tabIndex={-1}
-              />
-            )}
+            <PackEmoji name={BURST_EMOJI[burst]} size={size} className="font-emoji-brand__media" />
             <span className="font-emoji-brand__char">{char}</span>
           </span>
         );

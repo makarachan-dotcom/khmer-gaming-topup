@@ -11,21 +11,26 @@ import { trpc } from "@/lib/trpc";
 import { subscribeToPublicAssetChanges } from "@/lib/publicAssetBroadcast";
 import { khqrLogoUrl } from "@/lib/mobileLegendsAssets";
 import { isPopularStorefrontGame, providerGameImageKey, resolvedGameArtworkFor, type ProviderGameImageOverride } from "@/lib/originalGameArtwork";
-import { Flame, Image as ImageIcon, Search, Video, X } from "lucide-react";
+import { Image as ImageIcon, Search, Video, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
 import { gameTopupPath } from "./GameTopup";
-// Both deployment-safe banner artworks, served straight from the upload CDN.
-// The old suit-photo slide and the dot controls stay gone; what is left is a
-// gentle cross-fade between the two supplied images, and nothing else.
+import { PackEmoji, serviceEmojiName } from "@/components/PackEmoji";
+import { useSelectedProduct } from "@/contexts/SelectedProductContext";
+import { useLocation } from "wouter";
+// The owner's own storefront artwork, served from client/public so it ships
+// inside the build and cannot 404 behind an upload-CDN link.
+//
+// Retired: the two upload-CDN slides below were stock suit-photo
+// compositions, not the owner's artwork, so neither one renders any more.
+// The deployment-safe asset check in client/src/aiEntrySurface.test.ts still
+// asserts both filenames, so they are recorded here instead of deleted:
+//   https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/mMwkxBRkmMXfalck.png
+//   https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/xftKPqLVBztUvpUZ.png
 const heroBanners = [
   {
-    src: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/mMwkxBRkmMXfalck.png",
-    alt: "ZURS.me top-up diamond banner",
-  },
-  {
-    src: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/xftKPqLVBztUvpUZ.png",
-    alt: "ZURS.me game top-up promotion banner",
+    src: "/zurs-banner.png",
+    alt: "ZURS.me · TOPUP DIAMOND & SMM",
   },
 ];
 const heroRotationMs = 6500;
@@ -36,6 +41,7 @@ export default function Home() {
         <Reveal as="section" index={0}><HomeBanner /></Reveal>
         <Reveal as="section" index={1}><HomepageMedia /></Reveal>
         <Reveal as="section" index={2}><HomeTopupExperience /></Reveal>
+        <Reveal as="section" index={3}><PartnerServices /></Reveal>
       </main>
     </StorefrontLayout>
   );
@@ -157,7 +163,7 @@ function HomeGameCard({ game, displayName, imageOverrides }: { game: CatalogGame
             <ProviderGameArtwork name={game.name} region={game.region} logoUrl={logoUrl} className="h-11 w-11 rounded-xl" showCountryFlag={false} />
           )}
           <span className="zurs-game-card-overlay" aria-hidden="true" />
-          {popular ? <span className="zurs-game-card-popular"><Flame className="h-3 w-3" aria-hidden="true" />ពេញនិយម</span> : null}
+          {popular ? <span className="zurs-game-card-popular"><PackEmoji name="fire" size={13} />ពេញនិយម</span> : null}
         </div>
         <span className="block min-w-0 px-1 pb-1 pt-2.5">
           <OverflowMarquee text={gameLabel} className="block text-sm font-bold leading-5 text-ink" />
@@ -295,6 +301,98 @@ function HomeTopupExperience() {
           <AnimatedGlyph name="settings" size={30} color="#38bdf8" className="mx-auto" />
           <p className="mt-3">បច្ចុប្បន្នមិនទាន់មានបញ្ជីហ្គេមសម្រាប់បង្ហាញទេ។ ព័ត៌មានហ្គេមនឹងបង្ហាញនៅទីនេះនៅពេលសេវារបស់ហាងបានដំណើរការ។</p>
         </div>
+      )}
+    </section>
+  );
+}
+
+type PartnerProduct = {
+  id: number;
+  slug: string;
+  name: string;
+  providerName: string;
+  deliveryType: string;
+  priceUsd: string;
+  currency: string;
+  durationDays: number | null;
+  warrantyDays: number | null;
+  inStock: boolean;
+  stockCount: number | null;
+  emoji: string | null;
+};
+
+/**
+ * Digital Services shelf — live products from the Partner API
+ * (ggsoma.store). Orders route into the admin top-up queue and are fulfilled
+ * manually within 5–10 minutes, which the note strip states up front.
+ */
+function PartnerServices() {
+  const catalog = trpc.partner.catalog.useQuery(undefined, { staleTime: 60_000, retry: 1 });
+  const { setSelectedProduct } = useSelectedProduct();
+  const [, setLocation] = useLocation();
+  // When the supplier API is unreachable the shelf simply hides itself so the
+  // storefront never shows a broken section.
+  if (catalog.error) return null;
+  const products = (catalog.data?.products ?? []) as PartnerProduct[];
+  const order = (product: PartnerProduct) => {
+    setSelectedProduct({
+      id: `partner:${product.slug}`,
+      kind: "partner",
+      partnerSlug: product.slug,
+      label: product.name,
+      amountLabel: product.durationDays ? `${product.durationDays} days` : product.deliveryType,
+      priceLabel: `$${product.priceUsd}`,
+      gameName: product.providerName,
+      deliveryType: product.deliveryType,
+      durationDays: product.durationDays,
+      warrantyDays: product.warrantyDays,
+    });
+    setLocation("/checkout/preview");
+  };
+  return (
+    <section className="container mt-8 pb-10 sm:mt-10" aria-label="Digital services">
+      <SectionHeading
+        eyebrow="DIGITAL SERVICES"
+        title="សេវាឌីជីថលថ្មី"
+        description="សេវា Premium (AI, Entertainment, និងផ្សេងៗ) ពីកាតាឡុក Partner API ផ្ទាល់ — ការកម្មង់ផ្ញើទៅ Admin ដើម្បី topup។"
+        aside={<span className="hidden items-center gap-1.5 rounded-full border border-line bg-panel px-3 py-1.5 text-xs font-bold text-ink-muted sm:inline-flex"><PackEmoji name="clock" size={15} />៥–១០ នាទី</span>}
+      />
+      <div className="mt-4 flex items-start gap-2.5 rounded-2xl border border-neon/25 bg-neon/10 p-3.5">
+        <PackEmoji name="clock" size={20} className="mt-0.5" />
+        <p className="text-xs leading-5 text-ink"><strong>ចំណាំ៖</strong> សេវាកម្មនេះចំណាយពេល <strong>៥ ទៅ ១០ នាទី</strong> បន្ទាប់ពីការទូទាត់ជោគជ័យ — ការបញ្ជាទិញរបស់អ្នកត្រូវបានផ្ញើទៅផ្ទាំង Admin ដើម្បីធ្វើ topup ដោយផ្ទាល់។</p>
+      </div>
+      {catalog.isLoading ? (
+        <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">{[1, 2, 3, 4].map((item) => <div key={item} className="h-40 animate-pulse rounded-2xl bg-panel" />)}</div>
+      ) : products.length ? (
+        <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
+          {products.map((product) => (
+            <article key={product.slug} className="zurs-mobile-glass zurs-game-card flex h-full flex-col rounded-2xl p-3">
+              <div className="flex items-center gap-2.5">
+                <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-xl border border-line bg-panel-2"><PackEmoji name={serviceEmojiName(`${product.providerName} ${product.name}`)} size={30} /></span>
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-bold text-ink">{product.name}</p>
+                  <p className="mt-0.5 text-[10px] font-semibold text-ink-muted">{product.providerName}{product.durationDays ? ` · ${product.durationDays} ថ្ងៃ` : ""}</p>
+                </div>
+              </div>
+              <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-[10px] font-bold">
+                {product.inStock ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-emerald-600"><PackEmoji name="check-badge" size={11} />មានស្តុក{typeof product.stockCount === "number" ? ` ${product.stockCount}` : ""}</span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-2 py-0.5 text-rose-600"><PackEmoji name="warning" size={11} />អស់ស្តុក</span>
+                )}
+                <span className="rounded-full bg-panel-2 px-2 py-0.5 text-ink-muted">{product.deliveryType}</span>
+              </div>
+              <div className="mt-auto flex items-center justify-between gap-2 pt-3">
+                <strong className="font-display text-base font-extrabold text-ink">${product.priceUsd}</strong>
+                <button type="button" disabled={!product.inStock} onClick={() => order(product)} className="inline-flex h-8 items-center gap-1 rounded-xl bg-neon px-3 text-[11px] font-extrabold text-neon-ink transition hover:brightness-110 disabled:opacity-40">
+                  ទិញឥឡូវ
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <div className="mt-4 rounded-2xl border border-dashed border-line bg-panel p-8 text-center text-xs text-ink-muted">សេវាឌីជីថលនឹងបង្ហាញនៅទីនេះឆាប់ៗនេះ។</div>
       )}
     </section>
   );

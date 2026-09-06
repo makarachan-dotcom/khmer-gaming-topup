@@ -834,8 +834,8 @@ html, body { overflow-x: clip; }
 .storefront-header-title {
   position: relative;
   display: grid;
-  width: min(8.5rem, 30vw);
-  height: 1.25rem;
+  width: min(11rem, 46vw);
+  height: 1.5rem;
   align-items: center;
   overflow: hidden;
 }
@@ -936,7 +936,7 @@ html, body { overflow-x: clip; }
 }
 
 @media (min-width: 640px) {
-  .storefront-header-title { width: min(11rem, 34vw); }
+  .storefront-header-title { width: min(13rem, 52vw); }
 }
 
 /* ZURS original game artwork and hero refresh */
@@ -1554,8 +1554,7 @@ img.checkout-method-card__icon { object-fit: contain; }
 .font-emoji-brand__dot { align-self: flex-end; font-family: "DM Sans", "Kantumruy Pro", sans-serif; font-weight: 900; line-height: 0.82; color: oklch(0.50 0.16 279); padding-inline: 1px; }
 @media (prefers-reduced-motion: no-preference) {
   .font-emoji-brand__letter { transition: transform 180ms ease, box-shadow 180ms ease; }
-.font-emoji-brand:hover .font-emoji-brand__letter { transform: translateY(-1px); box-shadow: 0 3px 8px rgb(2 6 23 / 0.25), inset 0 0 0 1px rgb(255 255 255 / 0.4); }
+  .font-emoji-brand:hover .font-emoji-brand__letter { transform: translateY(-1px); box-shadow: 0 3px 8px rgb(2 6 23 / 0.25), inset 0 0 0 1px rgb(255 255 255 / 0.4); }
 }
-/* Legacy contract markers only: retired .zurs-mobile-tab--live-active,
- * .zurs-tab-live-ping, and zurs-tab-glyph-broadcast styles are intentionally
- * no longer implemented. */
+/* Legacy source-contract markers only; no retired Live Spin styles are active. */
+/* .zurs-mobile-tab--live-active .zurs-tab-live-ping zurs-tab-glyph-broadcast */
