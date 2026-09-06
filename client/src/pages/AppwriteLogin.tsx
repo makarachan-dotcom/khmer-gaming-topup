@@ -214,7 +214,7 @@ export default function AppwriteLogin() {
    */
   const verify = async (value: string) => {
     if (!userId || value.length < OTP_LENGTH) {
-      setError("សូមបញ្ចូលលេខកូដ ៬ ខ្ទង់ពីអ៊ីមែល។");
+      setError("សូមបញ្ចូលលេខកូដ ៦ ខ្ទង់ពីអ៊ីមែល។");
       return;
     }
     const normalized = email.trim().toLowerCase();
@@ -282,7 +282,7 @@ export default function AppwriteLogin() {
   const saveName = async () => {
     const normalized = name.trim();
     if (normalized.length < 2) {
-      setError("សូមបញ្ចូលឈ្មោ��យ៉ាងតិច ២ តួអក្សរ។");
+      setError("សូមបញ្ចូលឈ្មោះយ៉ាងតិច ២ តួអក្សរ។");
       return;
     }
     setBusy(true);
@@ -423,7 +423,7 @@ export default function AppwriteLogin() {
                 <ShieldAlert className="h-6 w-6" strokeWidth={2} />
               </div>
               <h1 className="zl-title">បិទបណ្តោះអាសន្ន</h1>
-              <p className="zl-lock__meta">{lockMessage ?? "មានការព្យាយាមចូលខុសច្រើក្រនេពេក។ សូមព្យាយាមម្ដងទៀតក្រោយ។"}</p>
+              <p className="zl-lock__meta">{lockMessage ?? "មានការព្យាយាមចូលខុសច្រើនពេក។ សូមព្យាយាមម្ដងទៀតក្រោយ។"}</p>
               <p className="zl-lock__time" aria-live="polite">
                 {formatCountdownKh(lockLeft)}
               </p>
@@ -431,7 +431,7 @@ export default function AppwriteLogin() {
                 <span style={{ width: `${lockProgress}%` }} />
               </div>
               <p className="zl-lock__note">
-                ការផ្លាស់ប្ដូរឧបករណ៍ ចេញចូលគណនីថ្មី ឬប្ដូរអិនិទើណណេត មិនផ្លាស់ប្ដូររយៈពេលនេះទេ។ បើអ្នកគិតថានេះជាកំហុស សូមទាក់ទង Support ព្រមទាំងម៉ោងពេល។
+                ការផ្លាស់ប្ដូរឧបករណ៍ ចេញចូលគណនីថ្មី ឬប្ដូរអ៊ីនធឺណិត មិនផ្លាស់ប្ដូររយៈពេលនេះទេ។ បើអ្នកគិតថានេះជាកំហុស សូមទាក់ទង Support ព្រមទាំងម៉ោងពេល។
               </p>
             </motion.div>
           ) : phase === "email" ? (
@@ -439,7 +439,7 @@ export default function AppwriteLogin() {
               <h1 className="zl-title">
                 ចូលគណនី <span className="zl-title__accent">ZURS</span>
               </h1>
-              <p className="zl-subtitle">បញ្ចូលអ៊ីមែលរបស់អ្នក — យើងផ្ញើលេខកូដ ៬ ខ្ទង់ ដែលបញ្ជាក់ដោយស្វ័យប្រវត្តិ។</p>
+              <p className="zl-subtitle">បញ្ចូលអ៊ីមែលរបស់អ្នក — យើងផ្ញើលេខកូដ ៦ ខ្ទង់ ដែលបញ្ជាក់ដោយស្វ័យប្រវត្តិ។</p>
               <form
                 onSubmit={(event) => {
                   event.preventDefault();

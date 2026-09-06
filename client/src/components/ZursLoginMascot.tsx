@@ -1,5 +1,5 @@
 import { motion, useReducedMotion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 
 /**
  * ZURS login mascot — តុក្កតា​តាមមើល​កូដ.
@@ -56,6 +56,9 @@ export function ZursLoginMascot({ state, focusIndex = 0, filled = 0, total = 6 }
   const [blink, setBlink] = useState(false);
   const pupils = pupilTarget(state, focusIndex, total);
   const eyesOpen = state !== "banned" && state !== "success";
+  const uid = useId().replace(/:/g, "");
+  const shellId = `zlShell-${uid}`;
+  const clipId = `zlMouthClip-${uid}`;
 
   // Irregular blinking. A fixed CSS interval reads as mechanical; a random gap
   // between 2.4s and 6s is what makes the face feel alive.
@@ -82,7 +85,12 @@ export function ZursLoginMascot({ state, focusIndex = 0, filled = 0, total = 6 }
           ? { y: -8, rotate: 0, scale: 1.05 }
           : state === "peeking"
             ? { y: 5, rotate: 0, scale: 1.04 }
-            : { y: 0, rotate: 0, scale: 1 };
+            : { y: [0, -5, 0], rotate: 0, scale: 1 };
+
+  const bodyTransition =
+    state === "idle"
+      ? { duration: 5.2, repeat: Infinity, ease: "easeInOut" as const }
+      : SPRING;
 
   return (
     <div className={`zl-mascot zl-mascot--${state}`} aria-hidden="true">
@@ -90,19 +98,22 @@ export function ZursLoginMascot({ state, focusIndex = 0, filled = 0, total = 6 }
           emotional read works even before the face is parsed. */}
       <span className="zl-mascot__halo" />
 
-      <motion.svg
-        viewBox="0 0 120 120"
-        className="zl-mascot__svg"
+      {/* Framer owns transform on this wrapper. The SVG used to also run a CSS
+          `zl-float` animation — two transforms on one node is what painted the
+          stacked ghost robots on mobile /login. */}
+      <motion.div
+        className="zl-mascot__bob"
         initial={false}
         animate={reduce ? undefined : bodyAnimate}
-        transition={SPRING}
+        transition={reduce ? undefined : bodyTransition}
       >
+        <svg viewBox="0 0 120 120" className="zl-mascot__svg">
         <defs>
-          <linearGradient id="zlShell" x1="0" y1="0" x2="0" y2="1">
+          <linearGradient id={shellId} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#252a3f" />
             <stop offset="100%" stopColor="#171a29" />
           </linearGradient>
-          <clipPath id="zlMouthClip">
+          <clipPath id={clipId}>
             <rect x="40" y="70" width="40" height="26" rx="12" />
           </clipPath>
         </defs>
@@ -119,7 +130,7 @@ export function ZursLoginMascot({ state, focusIndex = 0, filled = 0, total = 6 }
         />
 
         {/* head shell */}
-        <rect x="20" y="26" width="80" height="70" rx="26" fill="url(#zlShell)" className="zl-mascot__shell" />
+        <rect x="20" y="26" width="80" height="70" rx="26" fill={`url(#${shellId})`} className="zl-mascot__shell" />
         {/* face screen */}
         <rect x="29" y="38" width="62" height="46" rx="20" className="zl-mascot__screen" />
 
@@ -172,7 +183,7 @@ export function ZursLoginMascot({ state, focusIndex = 0, filled = 0, total = 6 }
         )}
 
         {/* mouth + tongue */}
-        <g clipPath="url(#zlMouthClip)">
+        <g clipPath={`url(#${clipId})`}>
           <motion.path
             className="zl-mascot__mouth"
             initial={false}
@@ -233,7 +244,8 @@ export function ZursLoginMascot({ state, focusIndex = 0, filled = 0, total = 6 }
             />
           ))}
         </g>
-      </motion.svg>
+        </svg>
+      </motion.div>
     </div>
   );
 }

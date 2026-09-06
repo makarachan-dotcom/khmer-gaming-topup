@@ -12,15 +12,12 @@ import "./styles/buttons.css";
 import "./styles/zurs-polish.css";
 import "./styles/zurs-premium.css";
 import "./styles/zurs-fixes.css";
-// These two imports were MISSING. That is why the login redesign, the mascot
-// and every animation from the earlier rounds never appeared in the browser:
-// the stylesheets existed on disk but nothing ever loaded them. zurs-support.css
-// must stay LAST so its support-sheet and banner rules win over index.css.
 import "./styles/zurs-login.css";
 import "./styles/zurs-support.css";
-// Round 9 checkout/package styles load after everything else so they win the
-// cascade over the equivalent rules in index.css.
 import "./styles/zurs-checkout.css";
+// Login polish LAST. Three sheets describe the same .zl-* card; this one
+// stops the mobile overlap of mascot + lock chip + step-dot glow.
+import "./styles/zurs-login-refined.css";
 
 function loadOptionalAnalytics() {
   const endpoint = import.meta.env.VITE_ANALYTICS_ENDPOINT?.trim();

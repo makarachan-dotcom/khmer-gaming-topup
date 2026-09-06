@@ -733,6 +733,18 @@
   .zl-foot {
     justify-content: center;
   }
+
+  /* Lock chip used to hang outside its box and sit on the mascot. The robot
+     already shows login state, so the extra mark is hidden on phones. */
+  .zl-device {
+    display: none;
+  }
+
+  .zl-mascot {
+    width: min(5.75rem, 30vw);
+    height: auto;
+    aspect-ratio: 1;
+  }
 }
 
 /* --------------------------------------------------------- reduced motion */
@@ -802,8 +814,16 @@
   width: 118px;
   height: 118px;
   overflow: visible;
-  animation: zl-float 5.2s var(--zl-ease) infinite;
-  will-change: transform;
+  /* Framer Motion owns this node's transform. A CSS float on the same SVG
+     paints a second ghost copy on mobile GPUs (the stacked robots on /login). */
+  animation: none;
+  will-change: auto;
+}
+
+.zl-mascot__bob {
+  width: 100%;
+  display: block;
+  line-height: 0;
 }
 
 @keyframes zl-float {
@@ -1001,15 +1021,18 @@
   100% { left: 125%; }
 }
 
-/* Step dots fill in sequence, using the --d delay already set inline. */
+/* Step dots fill in sequence, using the --d delay already set inline.
+   Width change only — scale + a 4px glow ring used to overlap the next dot. */
 .zl-steps__dot {
-  transition: background-color 320ms var(--zl-ease), transform 320ms var(--zl-ease), box-shadow 320ms var(--zl-ease);
+  transition: background-color 320ms var(--zl-ease), width 320ms var(--zl-ease);
   transition-delay: var(--d, 0ms);
+  transform: none;
+  box-shadow: none;
 }
 
 .zl-steps__dot.is-active {
-  transform: scale(1.35);
-  box-shadow: 0 0 0 4px rgba(139, 147, 255, 0.16);
+  transform: none;
+  box-shadow: none;
 }
 
 /* Banned notice on the account page. */
@@ -1049,3 +1072,21 @@
     -webkit-text-fill-color: currentColor;
   }
 }
+
+/* Last so it beats the 132px mascot block above. */
+@media (max-width: 720px) {
+  .zl-device {
+    display: none !important;
+  }
+  .zl-mascot {
+    width: min(5.75rem, 30vw);
+    height: auto;
+    aspect-ratio: 1;
+  }
+  .zl-mascot__svg {
+    width: 100%;
+    height: auto;
+    animation: none !important;
+  }
+}
+
