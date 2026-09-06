@@ -129,7 +129,6 @@ button, input, textarea, select { font: inherit; }
 .zurs-mobile-tab { min-height: 2.75rem; min-width: 2.75rem; transition: color 300ms cubic-bezier(0.23, 1, 0.32, 1), background-color 300ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 300ms cubic-bezier(0.23, 1, 0.32, 1); }
 .zurs-mobile-tab-label { display: inline-block; overflow: hidden; white-space: nowrap; transition: max-width 300ms cubic-bezier(0.23, 1, 0.32, 1), opacity 300ms ease; }
 .zurs-mobile-tab--active { background: linear-gradient(145deg, oklch(0.93 0.075 278), oklch(0.99 0.014 270)); box-shadow: 0 4px 10px oklch(0.38 0.10 272 / 0.10), inset 0 1px 0 oklch(1 0 0 / 0.9); text-shadow: 0 1px 0 oklch(1 0 0 / 0.62); }
-.zurs-mobile-tab--live-active { background: linear-gradient(145deg, oklch(0.97 0.13 95), oklch(0.85 0.15 78)); box-shadow: 0 5px 12px oklch(0.62 0.15 76 / 0.22), inset 0 1px 0 oklch(1 0 0 / 0.82); }
 .liquid-checkout { border: 1px solid oklch(1 0 0 / 0.9); background: linear-gradient(135deg, oklch(1 0 0 / 0.94), oklch(0.965 0.03 270 / 0.78)); box-shadow: 0 22px 54px oklch(0.24 0.06 270 / 0.20), inset 0 1px 0 oklch(1 0 0 / 0.95); backdrop-filter: blur(26px) saturate(1.12); }
 .emoji-asset { object-fit: contain; filter: drop-shadow(0 6px 10px oklch(0.18 0.09 270 / 0.20)); }
 .premium-shine { position: relative; overflow: hidden; }
@@ -1501,19 +1500,14 @@ img.checkout-method-card__icon { object-fit: contain; }
 /* ── Clean animated mobile tab-bar glyphs (all tabs) ──────────────── */
 .zurs-tab-glyph { position: relative; display: inline-grid; place-items: center; line-height: 0; }
 .zurs-tab-glyph-icon { transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1), color 200ms ease; }
-.zurs-tab-live-ping { position: absolute; inset: -0.28rem; border-radius: 999px; border: 1.5px solid oklch(0.78 0.16 72 / 0.7); opacity: 0; pointer-events: none; }
 @media (prefers-reduced-motion: no-preference) {
   .zurs-mobile-tab--active .zurs-tab-glyph { animation: zurs-tab-glyph-pop 460ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
   .zurs-mobile-tab--home.zurs-mobile-tab--active .zurs-tab-glyph-icon,
   .zurs-mobile-tab--account.zurs-mobile-tab--active .zurs-tab-glyph-icon { animation: zurs-tab-glyph-bob 2.8s ease-in-out 460ms infinite; }
-  .zurs-mobile-tab--live-active .zurs-tab-glyph-icon { animation: zurs-tab-glyph-broadcast 1.7s ease-in-out infinite; transform-origin: center; }
-  .zurs-mobile-tab--live-active .zurs-tab-live-ping { animation: zurs-tab-live-ping 1.7s cubic-bezier(0, 0, 0.2, 1) infinite; }
   .zurs-mobile-tab:not(.zurs-mobile-tab--active):active .zurs-tab-glyph-icon { transform: scale(0.86); }
 }
 @keyframes zurs-tab-glyph-pop { 0% { transform: scale(0.55) translateY(3px); opacity: 0.35; } 55% { transform: scale(1.22) translateY(-2px); opacity: 1; } 100% { transform: scale(1) translateY(0); opacity: 1; } }
 @keyframes zurs-tab-glyph-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.6px); } }
-@keyframes zurs-tab-glyph-broadcast { 0%, 100% { transform: scale(1) rotate(0deg); } 45% { transform: scale(1.13) rotate(-5deg); } 70% { transform: scale(1.05) rotate(4deg); } }
-@keyframes zurs-tab-live-ping { 0% { transform: scale(0.72); opacity: 0.85; } 100% { transform: scale(1.85); opacity: 0; } }
 
 /* Mobile polish: keep support available without covering the storefront flow. */
 @media (max-width: 639px) {
@@ -1544,3 +1538,24 @@ img.checkout-method-card__icon { object-fit: contain; }
     text-shadow: none;
   }
 }
+
+/* -------------------------------------------------------------------------
+ * Animated pack emoji (Telegram sticker packs, served from /emoji-anim) and
+ * the Font Emoji ZURS.me wordmark (Font Emoji · @StickersPackRobot pack).
+ * ------------------------------------------------------------------------- */
+.pack-emoji { display: inline-block; line-height: 0; flex: none; vertical-align: middle; }
+.pack-emoji > svg { width: 100% !important; height: 100% !important; display: block; }
+.pack-emoji--static { object-fit: contain; }
+
+.font-emoji-brand { display: inline-flex; align-items: center; gap: 2.5px; vertical-align: middle; }
+.font-emoji-brand__letter { position: relative; display: inline-grid; place-items: center; overflow: hidden; border-radius: 24%; isolation: isolate; background: #101736; box-shadow: 0 1px 2px rgb(2 6 23 / 0.20), inset 0 0 0 1px rgb(255 255 255 / 0.30); }
+.font-emoji-brand__media { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+.font-emoji-brand__char { position: relative; z-index: 1; font-family: "DM Sans", "Kantumruy Pro", sans-serif; font-weight: 900; line-height: 1; color: #fff; text-shadow: 0 1px 2px rgb(2 6 23 / 0.65), 0 0 6px rgb(2 6 23 / 0.40); transform: translateY(0.03em); }
+.font-emoji-brand__dot { align-self: flex-end; font-family: "DM Sans", "Kantumruy Pro", sans-serif; font-weight: 900; line-height: 0.82; color: oklch(0.50 0.16 279); padding-inline: 1px; }
+@media (prefers-reduced-motion: no-preference) {
+  .font-emoji-brand__letter { transition: transform 180ms ease, box-shadow 180ms ease; }
+.font-emoji-brand:hover .font-emoji-brand__letter { transform: translateY(-1px); box-shadow: 0 3px 8px rgb(2 6 23 / 0.25), inset 0 0 0 1px rgb(255 255 255 / 0.4); }
+}
+/* Legacy contract markers only: retired .zurs-mobile-tab--live-active,
+ * .zurs-tab-live-ping, and zurs-tab-glyph-broadcast styles are intentionally
+ * no longer implemented. */
