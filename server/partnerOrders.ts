@@ -7,6 +7,7 @@ import { assessOrderVelocity } from "./paymentSecurity";
 import { buildPartnerQuote, getPartnerProduct } from "./partnerCatalog";
 import { countPendingKhqrPayments, getDb, getPublicPaymentAvailability, pendingKhqrPaymentLimit } from "./db";
 import { buildPartnerDelivery, publicPartnerDelivery, type DeliveryMethod } from "../shared/partnerDelivery";
+import { isCdkOrder, publicCdkStatus, tokenPreview, validateCdkToken } from "../shared/cdkToken";
 
 const orderVelocityMessageKh = "មានការបង្កើតការបញ្ជាទិញច្រើនពេកក្នុងមួយម៉ោង តែមិនមានការទូទាត់បានជោគជ័យ។ សូមបញ្ចប់ការទូទាត់មួយជាមុនសិន រើសូមទាកតុ Admin។";
 
@@ -131,4 +132,50 @@ export async function deliverPartnerService(input: {
     providerReference: null,
   });
   return { success: true as const, delivery: publicPartnerDelivery({ delivery }, "delivered") };
+}
+
+function sealCdkToken(token: string) {
+  return { t: "plain" as const, v: token };
+}
+
+export async function submitCdkToken(input: { userId: number; orderId: string; token: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const token = validateCdkToken(input.token);
+  const row = await db.select().from(orders).where(and(eq(orders.id, input.orderId), eq(orders.userId, input.userId))).limit(1);
+  const order = row[0];
+  if (!order) throw new Error("មិនរកឃើញការកម្មង់។");
+  const details = order.details && typeof order.details === "object" && !Array.isArray(order.details) ? order.details as Record<string, unknown> : {};
+  if (!isCdkOrder(details)) throw new Error("ការកម្មង់នេះមិនត្រូវការ token ទេ។");
+  if (order.status !== "paid") throw new Error("បង់ប្រាក់រួចទើប paste token។");
+  const submittedAt = new Date().toISOString();
+  await db.update(orders).set({
+    details: {
+      ...details,
+      cdkTokenSubmitted: true,
+      cdkTokenSubmittedAt: submittedAt,
+      cdkTokenPreview: tokenPreview(token),
+      cdkTokenSecret: sealCdkToken(token),
+    },
+  }).where(eq(orders.id, order.id));
+  await db.insert(orderStatusEvents).values({
+    id: nanoid(),
+    orderId: order.id,
+    eventType: "cdk_token_received",
+    status: "paid",
+    actorType: "customer",
+    messageKh: "បានទទួល token។ កំពុង upgrade plan — សូមរង់ចាំបន្តិច។",
+    providerReference: null,
+  });
+  return publicCdkStatus({ ...details, cdkTokenSubmitted: true, cdkTokenPreview: tokenPreview(token) }, "paid");
+}
+
+export async function confirmCdkUpgrade(input: { orderId: string; actorUserId: number }) {
+  return deliverPartnerService({
+    orderId: input.orderId,
+    actorUserId: input.actorUserId,
+    method: "NOTE",
+    note: "Plan បាន upgrade លើគណនីរបស់អ្នក។ សូម refresh ទំព័រសេវា។",
+    instructions: "បើ plan មិនទាន់ឃើញ សូមចេញ រួចចូលគណនីម្ដងទៀត។",
+  });
 }

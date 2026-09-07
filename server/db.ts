@@ -19,6 +19,7 @@ import { assertOrderAmountIntegrity, assertPackagePriceIntegrity, assessOrderVel
 import type { FzrProviderSyncSnapshot, SmmProviderCatalogResponse } from "./providerCatalog";
 import { submitSmmProviderOrder, submitFzrTopupOrder } from "./providerCatalog";
 import { publicPartnerDelivery } from "../shared/partnerDelivery";
+import { publicCdkStatus, redactCdkSecret } from "../shared/cdkToken";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -547,7 +548,7 @@ export async function getCustomerOrders(userId: number) {
   const customerOrders = await db.select().from(orders).where(eq(orders.userId, userId)).orderBy(desc(orders.createdAt));
   if (!customerOrders.length) return [];
   const events = await db.select().from(orderStatusEvents).where(inArray(orderStatusEvents.orderId, customerOrders.map((order) => order.id))).orderBy(asc(orderStatusEvents.createdAt));
-  return customerOrders.map((order) => ({ ...order, events: events.filter((event) => event.orderId === order.id), delivery: publicPartnerDelivery(order.details, order.status) }));
+  return customerOrders.map((order) => ({ ...order, details: redactCdkSecret(order.details), events: events.filter((event) => event.orderId === order.id), delivery: publicPartnerDelivery(order.details, order.status), cdk: publicCdkStatus(order.details, order.status) }));
 }
 
 export async function getCustomerPaymentHistory(userId: number) {
@@ -678,7 +679,7 @@ export async function getCustomerPaymentSession(input: { orderId: string; userId
   const payment = await db.select().from(paymentTransactions).where(eq(paymentTransactions.orderId, input.orderId)).orderBy(desc(paymentTransactions.createdAt)).limit(1);
   const current = payment[0];
   const payload = current?.callbackPayload && typeof current.callbackPayload === "object" ? current.callbackPayload as Record<string, unknown> : {};
-  return { order: order[0], payment: current ? { id: current.id, provider: current.provider, status: current.status, amount: current.amount, currency: current.currency, checkoutUrl: current.checkoutUrl, expiresAt: current.expiresAt, paidAt: current.paidAt, qrImageDataUrl: typeof payload.qrImageDataUrl === "string" ? payload.qrImageDataUrl : null, deeplink: typeof payload.deeplink === "string" ? payload.deeplink : null } : null };
+  return { order: { ...order[0], details: redactCdkSecret(order[0].details) }, payment: current ? { id: current.id, provider: current.provider, status: current.status, amount: current.amount, currency: current.currency, checkoutUrl: current.checkoutUrl, expiresAt: current.expiresAt, paidAt: current.paidAt, qrImageDataUrl: typeof payload.qrImageDataUrl === "string" ? payload.qrImageDataUrl : null, deeplink: typeof payload.deeplink === "string" ? payload.deeplink : null } : null };
 }
 
 export async function refreshBakongPayment(input: { orderId: string; userId: number }) {
@@ -853,7 +854,7 @@ export async function getCustomerOrderTracking(input: { userId: number; tracking
   if (!order) throw new Error("Purchase ID was not found in your account");
   const events = await db.select().from(orderStatusEvents).where(eq(orderStatusEvents.orderId, order.id)).orderBy(asc(orderStatusEvents.createdAt));
   const tickets = await db.select().from(orderSupportTickets).where(and(eq(orderSupportTickets.orderId, order.id), eq(orderSupportTickets.userId, input.userId))).orderBy(desc(orderSupportTickets.createdAt));
-  const visibleOrder = { id: order.id, orderNumber: order.orderNumber, trackingCode: order.trackingCode, orderType: order.orderType, status: order.status, productName: order.productName, subtotal: order.subtotal, currency: order.currency, createdAt: order.createdAt, updatedAt: order.updatedAt, delivery: publicPartnerDelivery(order.details, order.status) };
+  const visibleOrder = { id: order.id, orderNumber: order.orderNumber, trackingCode: order.trackingCode, orderType: order.orderType, status: order.status, productName: order.productName, subtotal: order.subtotal, currency: order.currency, createdAt: order.createdAt, updatedAt: order.updatedAt, delivery: publicPartnerDelivery(order.details, order.status), cdk: publicCdkStatus(order.details, order.status) };
   const fallback = events.length ? events : [{ id: `created-${order.id}`, orderId: order.id, eventType: "order_created", status: order.status, actorType: "system" as const, messageKh: statusMessageKh(order.status), providerReference: null, createdAt: order.createdAt }];
   return { order: visibleOrder, events: fallback, tickets };
 }

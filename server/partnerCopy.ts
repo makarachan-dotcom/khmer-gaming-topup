@@ -104,7 +104,7 @@ function factsKh(product: PartnerProduct) {
   const bits = [DELIVERY_KH[product.deliveryType]];
   if (product.durationDays) bits.push(`រយៈពេល ${product.durationDays} ថ្ងៃ`);
   if (product.warranty.enabled && product.warranty.days) bits.push(`Warranty ${product.warranty.days} ថ្ងៃ`);
-  bits.push("Admin បំពេញក្នុង ៥–១០ នាទី បន្ទាប់ពីបង់ប្រាក់។");
+  bits.push(product.deliveryType === "CDK" ? "Paste token បន្ទាប់ពីបង់ប្រាក់ · plan upgrade ក្នុងពេលបន្តិច។" : "Admin បំពេញក្នុង ៥–១០ នាទី បន្ទាប់ពីបង់ប្រាក់។");
   return bits.join(" · ");
 }
 
@@ -112,19 +112,19 @@ function factsEn(product: PartnerProduct) {
   const bits = [DELIVERY_EN[product.deliveryType]];
   if (product.durationDays) bits.push(`${product.durationDays}-day access`);
   if (product.warranty.enabled && product.warranty.days) bits.push(`${product.warranty.days}-day warranty`);
-  bits.push("Admin delivers 5–10 minutes after payment.");
+  bits.push(product.deliveryType === "CDK" ? "Paste your token after payment. The plan upgrades in a moment." : "Admin delivers 5–10 minutes after payment.");
   return bits.join(" · ");
 }
 
 function instructionsKh(type: DeliveryType) {
-  if (type === "CDK") return "អ្នកនឹងទទួលបានលេខកូដ CDK។ ប្រើកូដតាមការណែនាំដើម្បីបើកសេវាលើគណនីរបស់អ្នក។ កុំចែកកូដឲ្យអ្នកដទៃ។";
+  if (type === "CDK") return "បន្ទាប់ពីទូទាត់ KHQR រួច សូម paste token ក្នុងវេបសាយ ZURS.me។ រង់ចាំបន្តិច — plan នឹង upgrade លើគណនីរបស់អ្នក។ កុំចែក token ឲ្យអ្នកដទៃ។";
   if (type === "COUPON") return "អ្នកនឹងទទួលបានលេខកូដ។ បញ្ចូលកូដក្នុងគេហទំព័រផ្លូវការ។ កូដប្រើបានមួយដង — កុំចែកឲ្យអ្នកដទៃ។";
   if (type === "READY_ACCOUNT") return "អ្នកនឹងទទួលបានគណនីរួចរាល់។ ចូលភ្លាមៗ រួចប្តូរពាក្យសម្ងាត់។ កុំចែក email/password។";
   return "អ្នកនឹងទទួលបានតំណ Activation។ បើកតំណដើម្បីដំណើរការសេវា។ កុំចែកតំណឲ្យអ្នកដទៃ។";
 }
 
 function instructionsEn(type: DeliveryType) {
-  if (type === "CDK") return "You receive a CDK activation code. Redeem it as instructed on your own account. Do not share the code.";
+  if (type === "CDK") return "After KHQR payment, paste your token on ZURS.me. Wait a moment — the plan upgrades on your account. Do not share the token.";
   if (type === "COUPON") return "You receive a one-time coupon. Redeem it on the official site. Do not share the code.";
   if (type === "READY_ACCOUNT") return "You receive a ready account. Sign in and change the password immediately. Do not share the login.";
   return "You receive an activation link. Open it to start the service. Do not share the link.";

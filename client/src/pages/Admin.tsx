@@ -3,10 +3,11 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { AdminDigitalServices } from "@/components/AdminDigitalServices";
 import { AdminDeliveryForm } from "@/components/AdminDeliveryForm";
 import { ServiceLogo } from "@/components/BrandMark";
+import { isCdkOrder, readAdminCdkToken } from "@shared/cdkToken";
 import { formatUsd } from "@/lib/display";
 import { prepareAdminImage } from "@/lib/adminImageUpload";
 import { trpc } from "@/lib/trpc";
-import { CalendarClock, Check, CircleAlert, CreditCard, Gift, PackageCheck, Radio, ShieldAlert, ShieldCheck, ShoppingBag, SkipForward, Ticket, Trash2, Trophy, Upload, UsersRound, X } from "lucide-react";
+import { CalendarClock, Check, CircleAlert, Copy, CreditCard, Gift, PackageCheck, Radio, ShieldAlert, ShieldCheck, ShoppingBag, SkipForward, Ticket, Trash2, Trophy, Upload, UsersRound, X } from "lucide-react";
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useLocation } from "wouter";
 import { LoadingV2 } from "@/components/OutlineLoader";
@@ -61,6 +62,8 @@ function Orders() {
             const note = typeof details.customerNote === "string" ? details.customerNote : "";
             const delivery = typeof details.partnerDeliveryType === "string" ? details.partnerDeliveryType : "";
             const needsFulfillment = partner && order.status === "paid";
+            const cdkToken = readAdminCdkToken(details);
+            const cdk = isCdkOrder(details);
             return (
               <article key={order.id} className={`p-4 ${needsFulfillment ? "bg-amber-50/70" : ""}`}>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -81,6 +84,7 @@ function Orders() {
                   {["pending", "awaiting_payment", "paid", "delivered", "failed", "expired", "refunded"].map((status) => <option key={status}>{status}</option>)}
                 </select>
                 </div>
+                {cdk ? <AdminCdkPanel orderId={order.id} token={cdkToken} submitted={Boolean(details.cdkTokenSubmitted)} paid={order.status === "paid"} /> : null}
                 {partner && (order.status === "paid" || order.status === "delivered") ? (
                   <AdminDeliveryForm orderId={order.id} defaultMethod={delivery} productName={order.productName} />
                 ) : null}
@@ -90,6 +94,35 @@ function Orders() {
         </div>
       )}
     </section>
+  );
+}
+function AdminCdkPanel({ orderId, token, submitted, paid }: { orderId: string; token: string | null; submitted: boolean; paid: boolean }) {
+  const utils = trpc.useUtils();
+  const upgrade = trpc.admin.confirmCdkUpgrade.useMutation({ onSuccess: () => void utils.admin.orders.invalidate() });
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    if (!token) return;
+    try {
+      await navigator.clipboard.writeText(token);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1400);
+    } catch { /* clipboard can be blocked */ }
+  };
+  return (
+    <div className="zurs-cdk-admin">
+      <p>{submitted ? "Token ពីអតិថិជន" : "រង់ចាំ token ពីអតិថិជន"}</p>
+      {token ? (
+        <>
+          <code>{token}</code>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => void copy()}>{copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}Copy token</button>
+            {paid ? <button type="button" disabled={upgrade.isPending} onClick={() => upgrade.mutate({ orderId })}>Plan បាន upgrade</button> : null}
+          </div>
+        </>
+      ) : <p className="!font-semibold !text-amber-700">អតិថិជនមិនទាន់ paste token។</p>}
+      {upgrade.isSuccess ? <p className="mt-2 !font-semibold !text-emerald-700">Plan បាន upgrade។ អតិថិជនឃើញក្នុងគណនី។</p> : null}
+      {upgrade.error ? <p className="mt-2 !font-semibold !text-rose-700">{upgrade.error.message}</p> : null}
+    </div>
   );
 }
 function Listings() {

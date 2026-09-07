@@ -22,7 +22,7 @@ import { deriveLocationRisk, resolveLocationCountry } from "./marketplaceLocatio
 import { createZursSession, getZursSessionCookieOptions, ZURS_SESSION_COOKIE } from "./zursSession";
 import { enforceRateLimitOrThrow, rateLimitBuckets } from "./rateLimit";
 import { getPartnerCatalog, getPartnerProduct, getPartnerUsage, toPublicPartnerPreview, toPublicPartnerProduct, PartnerServiceError, getAdminPartnerCatalog, applyPartnerPriceOverride } from "./partnerCatalog";
-import { createPartnerServiceOrder, deliverPartnerService } from "./partnerOrders";
+import { createPartnerServiceOrder, deliverPartnerService, submitCdkToken, confirmCdkUpgrade } from "./partnerOrders";
 import { getPartnerOverride, listPartnerOverrides, savePartnerOverride } from "./partnerOverrides";
 
 const marketplaceType = z.enum(["sale", "swap", "wanted"]);
@@ -154,6 +154,10 @@ export const appRouter = router({
     paymentSession: protectedProcedure.input(z.object({ orderId: z.string().min(4).max(64) })).query(({ ctx, input }) => db.getCustomerPaymentSession({ userId: ctx.user.id, ...input })),
     refreshPayment: protectedProcedure.input(z.object({ orderId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => db.refreshBakongPayment({ userId: ctx.user.id, ...input })),
     tracking: protectedProcedure.input(z.object({ trackingCode: z.string().trim().min(12).max(48) })).query(({ ctx, input }) => db.getCustomerOrderTracking({ userId: ctx.user.id, ...input })),
+    submitCdkToken: protectedProcedure.input(z.object({ orderId: z.string().min(4).max(64), token: z.string().min(20).max(8000) })).mutation(async ({ ctx, input }) => {
+      await enforceRateLimitOrThrow({ bucket: rateLimitBuckets.createTopup, identifier: `user:cdk:${ctx.user.id}`, mode: "strict" });
+      return submitCdkToken({ userId: ctx.user.id, orderId: input.orderId, token: input.token });
+    }),
     createTicket: protectedProcedure.input(z.object({ trackingCode: z.string().trim().min(12).max(48), subject: z.string().trim().min(4).max(180), message: z.string().trim().min(10).max(5000) })).mutation(({ ctx, input }) => db.createOrderSupportTicket({ userId: ctx.user.id, ...input })),
     mine: protectedProcedure.query(({ ctx }) => db.getCustomerOrders(ctx.user.id)),
     paymentHistory: protectedProcedure.query(({ ctx }) => db.getCustomerPaymentHistory(ctx.user.id)),
@@ -176,6 +180,7 @@ export const appRouter = router({
       note: z.string().trim().max(2000).optional(),
       instructions: z.string().trim().max(4000).optional(),
     })).mutation(({ ctx, input }) => deliverPartnerService({ ...input, actorUserId: ctx.user.id })),
+    confirmCdkUpgrade: scopedAdminProcedure("orders").input(z.object({ orderId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => confirmCdkUpgrade({ orderId: input.orderId, actorUserId: ctx.user.id })),
     orderSupportTickets: scopedAdminProcedure("orders").query(() => db.getAdminOrderSupportTickets()),
     reviewOrderSupportTicket: scopedAdminProcedure("orders").input(z.object({ ticketId: z.string().min(4).max(64), status: z.enum(["open", "reviewing", "resolved", "closed"]), adminReply: z.string().trim().max(5000).optional() })).mutation(({ ctx, input }) => db.reviewOrderSupportTicket({ reviewerUserId: ctx.user.id, ...input })),
     listings: scopedAdminProcedure("marketplace").input(z.object({ status: z.enum(["draft", "pending", "approved", "rejected", "closed", "sold"]).optional() }).optional()).query(({ input }) => db.getAdminMarketplaceListings(input?.status)),
