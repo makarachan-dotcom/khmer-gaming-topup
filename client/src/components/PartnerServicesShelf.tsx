@@ -20,7 +20,12 @@ type PartnerProduct = {
   stockCount: number | null;
   emoji: string | null;
   description?: string;
+  descriptionKh?: string;
+  descriptionEn?: string;
   instructions?: string;
+  instructionsKh?: string;
+  instructionsEn?: string;
+  nameKh?: string;
 };
 
 const DELIVERY_LABEL: Record<string, string> = {
@@ -154,7 +159,7 @@ export function PartnerServicesShelf({ compact = false }: { compact?: boolean })
                         </span>
                       </span>
                     </span>
-                    {product.description ? <span className="mt-2 line-clamp-2 text-[10px] leading-4 text-ink-muted">{product.description}</span> : null}
+                    {product.descriptionKh || product.description ? <span className="mt-2 line-clamp-2 text-[10px] leading-4 text-ink-muted">{product.descriptionKh || product.description}</span> : null}
                     <span className="mt-auto flex items-end justify-between gap-2 pt-2">
                       <strong className="font-display text-sm font-extrabold text-ink">${product.priceUsd}</strong>
                       <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${product.inStock ? "bg-emerald-500/10 text-emerald-700" : "bg-rose-500/10 text-rose-600"}`}>
@@ -216,7 +221,8 @@ function ProductSheet({ product, onClose, onBuy }: { product: PartnerProduct; on
             </span>
             <div className="min-w-0 flex-1">
               <p className="text-[10px] font-bold uppercase tracking-wide text-ink-muted">{product.providerName}</p>
-              <h2 id="zurs-product-title" className="mt-0.5 font-display text-base font-extrabold leading-snug text-ink">{product.name}</h2>
+              <h2 id="zurs-product-title" className="mt-0.5 font-display text-base font-extrabold leading-snug text-ink">{product.nameKh || product.name}</h2>
+              {product.nameKh && product.nameKh !== product.name ? <p className="mt-0.5 text-[11px] text-ink-muted">{product.name}</p> : null}
               <p className="mt-1 text-xs font-semibold text-ink-muted">
                 {product.durationDays ? `${product.durationDays} ថ្ងៃ` : "—"} · {DELIVERY_LABEL[product.deliveryType] ?? product.deliveryType}
                 {product.warrantyDays ? ` · warranty ${product.warrantyDays} ថ្ងៃ` : ""}
@@ -234,16 +240,18 @@ function ProductSheet({ product, onClose, onBuy }: { product: PartnerProduct; on
             <span className="rounded-full bg-neon/15 px-2 py-0.5 text-ink">៥–១០ នាទី</span>
           </div>
           <p className="mt-3 font-display text-2xl font-extrabold text-ink">${product.priceUsd} <span className="text-sm font-bold text-ink-muted">USD</span></p>
-          {product.description ? (
+          {(product.descriptionKh || product.descriptionEn || product.description) ? (
             <section className="mt-4">
-              <h3 className="text-[10px] font-extrabold uppercase tracking-wide text-ink-muted">ព័ត៌មាន</h3>
-              <p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-ink">{product.description}</p>
+              <h3 className="text-[10px] font-extrabold uppercase tracking-wide text-ink-muted">ព័ត៌មាន / Info</h3>
+              {product.descriptionKh || product.description ? <p className="mt-1 text-xs leading-5 text-ink">{product.descriptionKh || product.description}</p> : null}
+              {product.descriptionEn && product.descriptionEn !== (product.descriptionKh || product.description) ? <p className="mt-1 text-[11px] leading-5 text-ink-muted">{product.descriptionEn}</p> : null}
             </section>
           ) : null}
-          {product.instructions ? (
+          {(product.instructionsKh || product.instructionsEn || product.instructions) ? (
             <section className="mt-4 rounded-2xl bg-panel-2/80 p-3">
-              <h3 className="text-[10px] font-extrabold uppercase tracking-wide text-ink-muted">វិធីប្រើ / Activation</h3>
-              <p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-ink">{product.instructions}</p>
+              <h3 className="text-[10px] font-extrabold uppercase tracking-wide text-ink-muted">វិធីប្រើ / How to use</h3>
+              {product.instructionsKh || product.instructions ? <p className="mt-1 text-xs leading-5 text-ink">{product.instructionsKh || product.instructions}</p> : null}
+              {product.instructionsEn && product.instructionsEn !== (product.instructionsKh || product.instructions) ? <p className="mt-1 text-[11px] leading-5 text-ink-muted">{product.instructionsEn}</p> : null}
             </section>
           ) : null}
           <section className="mt-4 rounded-2xl border border-line p-3">

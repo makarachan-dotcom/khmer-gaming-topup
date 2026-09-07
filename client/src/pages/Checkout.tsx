@@ -6,6 +6,7 @@ import { AnimatedBackButton } from "@/components/AnimatedBackButton";
 import { AnimatedGlyph } from "@/components/AnimatedGlyph";
 import { OutlineLoader } from "@/components/OutlineLoader";
 import { ProviderGameArtwork } from "@/components/ProviderGameIdentity";
+import { ServiceLogo } from "@/components/BrandMark";
 import { trpc } from "@/lib/trpc";
 import { khqrLogoUrl } from "@/lib/mobileLegendsAssets";
 import { BakongKhqrCard } from "@/components/BakongKhqrCard";
@@ -153,24 +154,15 @@ function PaymentPreview({ product }: { product: SelectedProduct | null }) {
     <section className="checkout-preview-hero"><p>ORDER SUMMARY</p><h1>ពិនិត្យ និងបញ្ជាក់ការបញ្ជាទិញ</h1><span>បញ្ជាក់ព័ត៌មានឲ្យបានត្រឹមត្រូវ មុននឹងបន្តទៅ Secure QR Payment — ការទូទាត់តាម KHQR តែប៉ុណ្ណោះ</span></section>
     <section className="checkout-order-summary">
       <div className="checkout-order-summary__eyebrow"><PackageCheck className="h-4 w-4" />ORDER SUMMARY</div>
-      <div className="checkout-order-summary__main"><ProviderGameArtwork name={product.gameName} logoUrl={product.gameLogoUrl} priority showCountryFlag={false} className="h-14 w-14 shrink-0 rounded-2xl" iconClassName="h-6 w-6" /><div className="min-w-0 flex-1"><h2 className="checkout-order-summary__title">{product.gameName}</h2><p className="checkout-order-summary__order">{product.label}</p></div><strong className="checkout-order-summary__amount">{product.priceLabel}</strong></div>
+      <div className="checkout-order-summary__main">{isPartner ? <span className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-line"><ServiceLogo text={`${product.gameName} ${product.label}`} size={40} /></span> : <ProviderGameArtwork name={product.gameName} logoUrl={product.gameLogoUrl} priority showCountryFlag={false} className="h-14 w-14 shrink-0 rounded-2xl" iconClassName="h-6 w-6" />}<div className="min-w-0 flex-1"><h2 className="checkout-order-summary__title">{product.gameName}</h2><p className="checkout-order-summary__order">{product.label}</p></div><strong className="checkout-order-summary__amount">{product.priceLabel}</strong></div>
       <div className="checkout-order-summary__details">{isPartner ? <><SummaryDetail label="កញ្ចប់" value={product.amountLabel} /><SummaryDetail label="ប្រភេទ" value="សេវាឌីជីថល" /><SummaryDetail label="Delivery" value={product.deliveryType || "Admin top-up"} />{product.durationDays ? <SummaryDetail label="រយៈពេល" value={`${product.durationDays} ថ្ងៃ`} /> : null}<SummaryDetail label="ពេលបំពេញ" value="៥–១០ នាទី" /><SummaryDetail label="Quantity" value="1" /></> : <><SummaryDetail label="កញ្ចប់" value={product.amountLabel} />{product.playerName ? <SummaryDetail label="Username" value={product.playerName} /> : <SummaryDetail label="Game ID" value={maskCustomerIdentifier(product.playerId ?? "បានការពារ")} />}<SummaryDetail label="Server ID" value={maskCustomerIdentifier(product.zoneId || "មិនទាមទារ")} /><SummaryDetail label="Quantity" value="1" /></>}</div>
       <p className="checkout-order-summary__note">{isPartner ? "បន្ទាប់ពីទូទាត់ KHQR រួច ការកម្មង់នឹងចូលផ្ទាំង Admin ហើយត្រូវបានបំពេញក្នុង ៥–១០ នាទី។" : "សូមពិនិត្យ ID និងកញ្ចប់ឲ្យបានត្រឹមត្រូវ។ បន្ទាប់ពីបញ្ជាក់ order និង QR ពិតនឹងត្រូវបង្កើត។"}</p>
     </section>
-    {isPartner && (partnerInfo.data?.description || partnerInfo.data?.instructions) ? (
-      <section className="mt-3 space-y-3 rounded-2xl border border-line bg-panel p-4">
-        {partnerInfo.data?.description ? (
-          <div>
-            <p className="text-[10px] font-extrabold uppercase tracking-wide text-ink-muted">ព័ត៌មានសេវា</p>
-            <p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-ink">{partnerInfo.data.description}</p>
-          </div>
-        ) : null}
-        {partnerInfo.data?.instructions ? (
-          <div className="rounded-xl bg-panel-2 p-3">
-            <p className="text-[10px] font-extrabold uppercase tracking-wide text-ink-muted">វិធីប្រើ / Activation</p>
-            <p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-ink">{partnerInfo.data.instructions}</p>
-          </div>
-        ) : null}
+    {isPartner && (partnerInfo.data?.descriptionKh || partnerInfo.data?.descriptionEn || partnerInfo.data?.description || partnerInfo.data?.instructionsKh || partnerInfo.data?.instructions) ? (
+      <section className="mt-3 space-y-2 rounded-2xl border border-line bg-panel p-4">
+        {partnerInfo.data?.descriptionKh || partnerInfo.data?.description ? <p className="text-xs leading-5 text-ink">{partnerInfo.data.descriptionKh || partnerInfo.data.description}</p> : null}
+        {partnerInfo.data?.descriptionEn && partnerInfo.data.descriptionEn !== (partnerInfo.data.descriptionKh || partnerInfo.data.description) ? <p className="text-[11px] leading-5 text-ink-muted">{partnerInfo.data.descriptionEn}</p> : null}
+        {partnerInfo.data?.instructionsKh || partnerInfo.data?.instructions ? <p className="rounded-xl bg-panel-2 p-3 text-xs leading-5 text-ink">{partnerInfo.data.instructionsKh || partnerInfo.data.instructions}</p> : null}
       </section>
     ) : null}
     <section className="checkout-preview-confirm">
@@ -209,7 +201,8 @@ function CheckoutUnavailable() {
 function OrderSummaryCard({ order, details }: { order: LedgerOrder; details: Record<string, unknown> }) {
   const customer = accountLabels(details);
   const isAdminTestPurchase = isAdminKhqrTestPurchase(details);
-  return <section className="checkout-order-summary" aria-labelledby="checkout-order-title"><div className="checkout-order-summary__eyebrow"><PackageCheck className="h-4 w-4" />ORDER SUMMARY</div><div className="checkout-order-summary__main"><ProviderGameArtwork name={order.productName} priority showCountryFlag={false} className="h-14 w-14 shrink-0 rounded-2xl" iconClassName="h-6 w-6" /><div className="min-w-0 flex-1"><h1 id="checkout-order-title" className="checkout-order-summary__title">{order.productName}</h1><p className="checkout-order-summary__order">#{order.orderNumber}</p></div><strong className="checkout-order-summary__amount">{formatMoney(order.subtotal, order.currency)}</strong></div><div className="checkout-order-summary__details"><SummaryDetail label="Purchase ID" value={order.trackingCode} mono />{isAdminTestPurchase ? <><SummaryDetail label="Product type" value="Admin Test Product" /><SummaryDetail label="Test status" value="Test completed" /></> : <><SummaryDetail label="Game ID" value={customer.playerId} /><SummaryDetail label="Server ID" value={customer.zoneId} /><SummaryDetail label="Quantity" value={customer.quantity} /></>}<SummaryDetail label="USD" value={order.currency === "USD" ? formatMoney(order.subtotal, "USD") : "—"} /><SummaryDetail label="KHR" value={order.currency === "KHR" ? formatMoney(order.subtotal, "KHR") : "តម្លៃ KHR មិនមានក្នុង session នេះ"} /></div><p className="checkout-order-summary__note">ចំនួនទឹកប្រាក់ក្នុង QR និង receipt ត្រូវយកពី payment ledger ដែលបានបង្កើតសម្រាប់ order នេះ។</p></section>;
+  const partner = details.kind === "partner_service" || details.adminQueue === "partner_service";
+  return <section className="checkout-order-summary" aria-labelledby="checkout-order-title"><div className="checkout-order-summary__eyebrow"><PackageCheck className="h-4 w-4" />ORDER SUMMARY</div><div className="checkout-order-summary__main">{partner ? <span className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-line"><ServiceLogo text={order.productName} size={40} /></span> : <ProviderGameArtwork name={order.productName} priority showCountryFlag={false} className="h-14 w-14 shrink-0 rounded-2xl" iconClassName="h-6 w-6" />}<div className="min-w-0 flex-1"><h1 id="checkout-order-title" className="checkout-order-summary__title">{order.productName}</h1><p className="checkout-order-summary__order">#{order.orderNumber}</p></div><strong className="checkout-order-summary__amount">{formatMoney(order.subtotal, order.currency)}</strong></div><div className="checkout-order-summary__details"><SummaryDetail label="Purchase ID" value={order.trackingCode} mono />{isAdminTestPurchase ? <><SummaryDetail label="Product type" value="Admin Test Product" /><SummaryDetail label="Test status" value="Test completed" /></> : partner ? <><SummaryDetail label="ប្រភេទ" value="សេវាឌីជីថល" /><SummaryDetail label="Delivery" value={String(details.partnerDeliveryType || "Admin")} /><SummaryDetail label="ពេលបំពេញ" value="៥–១០ នាទី" /><SummaryDetail label="Quantity" value={customer.quantity} /></> : <><SummaryDetail label="Game ID" value={customer.playerId} /><SummaryDetail label="Server ID" value={customer.zoneId} /><SummaryDetail label="Quantity" value={customer.quantity} /></>}<SummaryDetail label="USD" value={order.currency === "USD" ? formatMoney(order.subtotal, "USD") : "—"} /><SummaryDetail label="KHR" value={order.currency === "KHR" ? formatMoney(order.subtotal, "KHR") : "តម្លៃ KHR មិនមានក្នុង session នេះ"} /></div><p className="checkout-order-summary__note">{partner ? "បន្ទាប់ពីទូទាត់ Admin បំពេញសេវាក្នុង ៥–១០ នាទី។" : "ចំនួនទឹកប្រាក់ក្នុង QR និង receipt ត្រូវយកពី payment ledger ដែលបានបង្កើតសម្រាប់ order នេះ។"}</p></section>;
 }
 
 function SummaryDetail({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {

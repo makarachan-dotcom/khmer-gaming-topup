@@ -1,5 +1,7 @@
 import {createHash} from "node:crypto";
 import type {PartnerProduct,PartnerQuote} from "../shared/partnerService";
+import { resolvePartnerCopy } from "./partnerCopy";
+import { getPartnerOverride, listPartnerOverrides, type PartnerServiceOverride } from "./partnerOverrides";
 export const PARTNER_API_BASE="https://ggsoma.store/api/partner/v1";
 export class PartnerServiceError extends Error{constructor(public code:string,message:string){super(message);}}
 const record=(v:unknown):Record<string,unknown>=>v&&typeof v==="object"&&!Array.isArray(v)?v as Record<string,unknown>:{};
@@ -15,16 +17,26 @@ export function buildPartnerQuote(product:PartnerProduct,quantity:number):Partne
 const cache=new Map<string,{expires:number;value:unknown}>(),pending=new Map<string,Promise<unknown>>();let credential="";export function resetPartnerCache(){cache.clear();pending.clear();credential="";}
 async function partnerGet(path:string,fresh=false):Promise<unknown>{const key=process.env.GGSOMA_PARTNER_API_KEY?.trim();if(!key)throw new PartnerServiceError("NOT_CONFIGURED","សេវាឌីជីដាលកំពុងរីបចំ។ សូមព្យាយាម្ដងទ័តឹងឦប់។");const fingerprint=createHash("sha256").update(key).digest("hex");if(fingerprint!==credential){resetPartnerCache();credential=fingerprint;}const saved=cache.get(path);if(!fresh&&saved&&saved.expires>Date.now())return saved.value;const id=fingerprint+path+fresh,running=pending.get(id);if(running)return running;
 const request=(async()=>{let r:Response;try{r=await fetch(PARTNER_API_BASE+path,{method:"GET",headers:{Authorization:`Bearer ${key}`,Accept:"application/json"},redirect:"error",signal:AbortSignal.timeout(10000)});}catch{throw new PartnerServiceError("UNAVAILABLE","មិនអាចភ្ជាប់សេវាបាននៅពេលនេះ។");}let raw:unknown;try{if(Number(r.headers.get("content-length")??0)>2000000)throw new Error();const reader=r.body?.getReader();if(!reader)throw new Error();let length=0;const chunks:Uint8Array[]=[];try{while(true){const part=await reader.read();if(part.done)break;length+=part.value.byteLength;if(length>2000000){await reader.cancel();throw new Error();}chunks.push(part.value);}}finally{reader.releaseLock();}raw=JSON.parse(Buffer.concat(chunks).toString("utf8"));}catch{throw new PartnerServiceError("INVALID_RESPONSE","ព័ត្រមានសេវាមិនទាន់អាចបង្ហាយបាន។");}if(!r.ok||record(raw).ok===false){const code=r.status===429?"RATE_LIMIT_EXCEEDED":r.status===404?"PRODUCT_NOT_FOUND":"UNAVAILABLE";throw new PartnerServiceError(code,code==="RATE_LIMIT_EXCEEDED"?"សូមរង់ចាំមួយនាទី មុនសាកម្ដងទ័តឹង។":"សេវាមិនទាន់អាចប្រើបាន។ សូមទាកតុ Admin។");}if(credential===fingerprint){if(cache.size>=120)cache.delete(cache.keys().next().value!);cache.set(path,{expires:Date.now()+60000,value:raw});}return raw;})().finally(()=>pending.delete(id));pending.set(id,request);return request;}
-export async function getPartnerCatalog(){const raw=record(await partnerGet("/catalog/products"));if(!Array.isArray(raw.data))throw new PartnerServiceError("INVALID_RESPONSE","Catalog មិនត្រឹមត្រួវ។");const b=markupBasisPoints();const products=[];for(const item of raw.data){try{products.push(normalizePartnerProduct(item,b));}catch{/* one bad SKU must not hide the rest of the shelf */}}return products;}
-export async function getPartnerProduct(slug:string,fresh=false){if(!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,119}$/.test(slug))throw new PartnerServiceError("PRODUCT_NOT_FOUND","មិនរកឮញសេវា។");const raw=record(await partnerGet("/catalog/products/"+encodeURIComponent(slug),fresh)),p=normalizePartnerProduct(raw.data??raw);if(p.slug!==slug)throw new PartnerServiceError("INVALID_RESPONSE","ព័ត្រមានមិនត្រួវនឹងសេវាដែលបានែជ្រើស។");return p;}
+export function applyPartnerPriceOverride(product:PartnerProduct,override?:PartnerServiceOverride|null):PartnerProduct{
+  if(!override)return product;
+  let next=product;
+  if(override.priceUsd){try{moneyCents(override.priceUsd);next={...next,priceUsd:override.priceUsd};}catch{/* keep API retail if the override is malformed */}}
+  if(override.nameEn?.trim())next={...next,name:override.nameEn.trim().slice(0,180)};
+  return next;
+}
+export async function getPartnerCatalog(){const raw=record(await partnerGet("/catalog/products"));if(!Array.isArray(raw.data))throw new PartnerServiceError("INVALID_RESPONSE","Catalog មិនត្រឹមត្រួវ។");const b=markupBasisPoints();const overrides=await listPartnerOverrides();const products=[];for(const item of raw.data){try{const product=normalizePartnerProduct(item,b);const override=overrides.get(product.slug);if(override?.hidden)continue;products.push(applyPartnerPriceOverride(product,override));}catch{/* one bad SKU must not hide the rest of the shelf */}}return products;}
+export async function getAdminPartnerCatalog(){const raw=record(await partnerGet("/catalog/products"));if(!Array.isArray(raw.data))throw new PartnerServiceError("INVALID_RESPONSE","Catalog មិនត្រឹមត្រួវ។");const b=markupBasisPoints();const overrides=await listPartnerOverrides();const products=[];for(const item of raw.data){try{const product=normalizePartnerProduct(item,b);products.push({product,override:overrides.get(product.slug)??null});}catch{/* keep the rest of the admin shelf */}}return products;}
+export async function getPartnerProduct(slug:string,fresh=false){if(!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,119}$/.test(slug))throw new PartnerServiceError("PRODUCT_NOT_FOUND","មិនរកឮញសេវា។");const raw=record(await partnerGet("/catalog/products/"+encodeURIComponent(slug),fresh)),p=normalizePartnerProduct(raw.data??raw);if(p.slug!==slug)throw new PartnerServiceError("INVALID_RESPONSE","ព័ត្រមានមិនត្រួវនឹងសេវាដែលបានែជ្រើស។");const override=await getPartnerOverride(slug);if(override?.hidden)throw new PartnerServiceError("PRODUCT_NOT_FOUND","មិនរកឮញសេវា។");return applyPartnerPriceOverride(p,override);}
 export async function getPartnerUsage(){const r=record(await partnerGet("/usage"));if(r.currency!=="USD")throw new PartnerServiceError("INVALID_RESPONSE","Unsupported currency.");return {balance:text(r.balance,24),currency:"USD" as const,apiOrdersTotal:integer(r.apiOrdersTotal),apiOrders24h:integer(r.apiOrders24h),apiSpendTotal:text(r.apiSpendTotal,24),apiSpend24h:text(r.apiSpend24h,24),requestCountToday:integer(r.requestCountToday),errorCountToday:integer(r.errorCountToday)};}
 
 /** Public storefront card — never exposes supplier cost, balance, or raw HTML. */
-export function toPublicPartnerProduct(product:PartnerProduct){
+export function toPublicPartnerProduct(product:PartnerProduct,override?:PartnerServiceOverride|null){
+  const copy=resolvePartnerCopy(product,override);
   return {
     id: product.id,
     slug: product.slug,
-    name: product.name,
+    name: copy.nameEn,
+    nameKh: copy.nameKh,
     providerName: product.provider.name,
     deliveryType: product.deliveryType,
     priceUsd: product.priceUsd,
@@ -35,21 +47,25 @@ export function toPublicPartnerProduct(product:PartnerProduct){
     stockCount: product.stock.inStock ? product.stock.count : 0,
     maxQuantity: product.stock.maxQuantity,
     emoji: product.emoji,
-    description: product.description.slice(0, 1500),
-    instructions: product.instructions.slice(0, 2500),
+    description: copy.descriptionKh,
+    descriptionKh: copy.descriptionKh,
+    descriptionEn: copy.descriptionEn,
+    instructions: copy.instructionsKh,
+    instructionsKh: copy.instructionsKh,
+    instructionsEn: copy.instructionsEn,
     etaMinutes: { min: 5, max: 10 },
     fulfillment: "admin_manual" as const,
   };
 }
 
-export function toPublicPartnerPreview(product:PartnerProduct,quantity=1){
+export function toPublicPartnerPreview(product:PartnerProduct,quantity=1,override?:PartnerServiceOverride|null){
   const quote=buildPartnerQuote(product,quantity);
   return {
-    ...toPublicPartnerProduct(product),
+    ...toPublicPartnerProduct(product,override),
     quantity: quote.quantity,
     unitPriceUsd: quote.unitPriceUsd,
     totalUsd: quote.totalUsd,
     quoteVersion: quote.quoteVersion,
-    noteKh: "សេវានេះត្រូវការ ៥ ទៅ ១០ នាទី បន្ទាប់ពីការទូទាត់។ Admin នឹងបំពេញការកម្មង់នៅងនៅផ្ទាំគ្រូបគ្រី។",
+    noteKh: "សេវានេះត្រូវការ ៥ ទៅ ១០ នាទី បន្ទាប់ពីការទូទាត់។ Admin នឹងបំពេញការកម្មង់នៅផ្ទាំងគ្រប់គ្រង។",
   };
 }

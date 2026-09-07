@@ -1,5 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
+import { AdminDigitalServices } from "@/components/AdminDigitalServices";
+import { ServiceLogo } from "@/components/BrandMark";
 import { formatUsd } from "@/lib/display";
 import { prepareAdminImage } from "@/lib/adminImageUpload";
 import { trpc } from "@/lib/trpc";
@@ -9,14 +11,81 @@ import { useLocation } from "wouter";
 import { LoadingV2 } from "@/components/OutlineLoader";
 
 const adminEmail = "chanmakara672@gmail.com";
-const tabs = ["overview", "orders", "listings", "catalog", "operations"] as const;
+const tabs = ["overview", "orders", "listings", "catalog", "digital", "operations"] as const;
 type Tab = (typeof tabs)[number];
-const tabPermissions: Record<Tab, "dashboard" | "orders" | "catalog" | "marketplace" | "operations"> = { overview: "dashboard", orders: "orders", listings: "marketplace", catalog: "catalog", operations: "operations" };
+const tabPermissions: Record<Tab, "dashboard" | "orders" | "catalog" | "marketplace" | "operations"> = { overview: "dashboard", orders: "orders", listings: "marketplace", catalog: "catalog", digital: "catalog", operations: "operations" };
 export default function Admin() { const { loading, user } = useAuth(); const [location] = useLocation(); const requestedTab = new URLSearchParams(location.split("?")[1] ?? "").get("tab"); const [tab, setTab] = useState<Tab>(() => tabs.includes(requestedTab as Tab) ? requestedTab as Tab : "overview"); useEffect(() => { if (tabs.includes(requestedTab as Tab)) setTab(requestedTab as Tab); }, [requestedTab]); const isOwner = user?.email?.toLowerCase() === adminEmail; const isAdmin = isOwner || user?.role === "admin"; if (loading) return <div className="min-h-screen bg-slate-50" />; if (!isAdmin) return <AdminDenied />; return <DashboardLayout><AdminWorkspace tab={tab} onTab={setTab} isOwner={isOwner} /></DashboardLayout>; }
 function AdminDenied() { return <div className="grid min-h-screen place-items-center bg-slate-50 p-4"><div className="max-w-md rounded-2xl border border-rose-100 bg-white p-6 text-center shadow-xl shadow-slate-200/50"><ShieldAlert className="mx-auto h-8 w-8 text-rose-600" /><h1 className="mt-3 font-display text-xl font-bold text-slate-950">Admin access only</h1><p className="mt-2 text-sm leading-6 text-slate-600">This workspace is restricted to the designated administrator account.</p></div></div>; }
-function AdminWorkspace({ tab, onTab, isOwner }: { tab: Tab; onTab: (tab: Tab) => void; isOwner: boolean }) { const access = trpc.admin.myPermissions.useQuery(); const allowedTabs = tabs.filter((item) => Boolean(access.data?.isOwner || access.data?.permissions.includes(tabPermissions[item]))); const visibleTab = allowedTabs.includes(tab) ? tab : (allowedTabs[0] ?? "overview"); useEffect(() => { if (!access.isLoading && !allowedTabs.includes(tab) && allowedTabs[0]) onTab(allowedTabs[0]); }, [access.isLoading, allowedTabs.join(","), onTab, tab]); const overview = trpc.admin.overview.useQuery(undefined, { enabled: visibleTab === "overview" }); return <div className="mx-auto max-w-7xl pb-10"><div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="text-xs font-bold tracking-[0.14em] text-indigo-700">ADMINISTRATION</p><h1 className="mt-1 font-display text-3xl font-bold tracking-tight text-slate-950">ផ្ទាំងគ្រប់គ្រងហាង</h1><p className="mt-2 text-sm text-slate-500">គ្រប់គ្រងការកម្មង់, ទីផ្សារគណនី, តម្លៃសេវា និងប្រតិបត្តិការហាង។</p></div><div className="flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800"><ShieldCheck className="h-4 w-4" />{isOwner ? "Owner admin mode" : "Administrator mode"}</div></div><div className="mt-6 flex gap-1 overflow-x-auto rounded-xl bg-slate-100 p-1">{allowedTabs.map((item) => <button key={item} onClick={() => onTab(item)} className={`whitespace-nowrap rounded-lg px-3 py-2 text-xs font-bold ${visibleTab === item ? "bg-white text-indigo-700 shadow-sm" : "text-slate-500"}`}>{labelForTab(item)}</button>)}</div>{overview.error ? <div className="mt-4 flex items-start gap-2 rounded-xl border border-rose-100 bg-rose-50 p-3 text-xs leading-5 text-rose-900"><ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />មិនអាចទាញទិន្នន័យ Admin បានទេ។ សូម refresh ឬពិនិត្យការភ្ជាប់ server រួចព្យាយាមម្ដងទៀត។</div> : null}{visibleTab === "overview" && <><Overview data={overview.data} loading={overview.isLoading} /><SalesTrend data={overview.data?.salesTrend ?? []} /></>}{visibleTab === "orders" && <Orders />}{visibleTab === "listings" && <Listings />}{visibleTab === "catalog" && <Catalog isOwner={isOwner} />}{visibleTab === "operations" && <Operations />}</div>; }
+function AdminWorkspace({ tab, onTab, isOwner }: { tab: Tab; onTab: (tab: Tab) => void; isOwner: boolean }) { const access = trpc.admin.myPermissions.useQuery(); const allowedTabs = tabs.filter((item) => Boolean(access.data?.isOwner || access.data?.permissions.includes(tabPermissions[item]))); const visibleTab = allowedTabs.includes(tab) ? tab : (allowedTabs[0] ?? "overview"); useEffect(() => { if (!access.isLoading && !allowedTabs.includes(tab) && allowedTabs[0]) onTab(allowedTabs[0]); }, [access.isLoading, allowedTabs.join(","), onTab, tab]); const overview = trpc.admin.overview.useQuery(undefined, { enabled: visibleTab === "overview" }); return <div className="mx-auto max-w-7xl pb-10"><div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="text-xs font-bold tracking-[0.14em] text-indigo-700">ADMINISTRATION</p><h1 className="mt-1 font-display text-3xl font-bold tracking-tight text-slate-950">ផ្ទាំងគ្រប់គ្រងហាង</h1><p className="mt-2 text-sm text-slate-500">គ្រប់គ្រងការកម្មង់, ទីផ្សារគណនី, តម្លៃសេវា និងប្រតិបត្តិការហាង។</p></div><div className="flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800"><ShieldCheck className="h-4 w-4" />{isOwner ? "Owner admin mode" : "Administrator mode"}</div></div><div className="mt-6 flex gap-1 overflow-x-auto rounded-xl bg-slate-100 p-1">{allowedTabs.map((item) => <button key={item} onClick={() => onTab(item)} className={`whitespace-nowrap rounded-lg px-3 py-2 text-xs font-bold ${visibleTab === item ? "bg-white text-indigo-700 shadow-sm" : "text-slate-500"}`}>{labelForTab(item)}</button>)}</div>{overview.error ? <div className="mt-4 flex items-start gap-2 rounded-xl border border-rose-100 bg-rose-50 p-3 text-xs leading-5 text-rose-900"><ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />មិនអាចទាញទិន្នន័យ Admin បានទេ។ សូម refresh ឬពិនិត្យការភ្ជាប់ server រួចព្យាយាមម្ដងទៀត។</div> : null}{visibleTab === "overview" && <><Overview data={overview.data} loading={overview.isLoading} /><SalesTrend data={overview.data?.salesTrend ?? []} /></>}{visibleTab === "orders" && <Orders />}{visibleTab === "listings" && <Listings />}{visibleTab === "catalog" && <Catalog isOwner={isOwner} />}{visibleTab === "digital" && <AdminDigitalServices />}{visibleTab === "operations" && <Operations />}</div>; }
 function Overview({ data, loading }: { data: { orders: number; pendingOrders: number; paidOrders: number; revenue: string; pendingListings: number; totalUsers: number } | undefined; loading: boolean }) { const cards = [{ label: "ការកម្មង់សរុប", value: data?.orders ?? 0, icon: ShoppingBag, style: "bg-indigo-50 text-indigo-700" }, { label: "រង់ចាំទូទាត់", value: data?.pendingOrders ?? 0, icon: CreditCard, style: "bg-amber-50 text-amber-700" }, { label: "ការផ្សាយរង់ចាំ", value: data?.pendingListings ?? 0, icon: CircleAlert, style: "bg-fuchsia-50 text-fuchsia-700" }, { label: "ចំណូលបានបង់", value: formatUsd(data?.revenue ?? "0"), icon: PackageCheck, style: "bg-emerald-50 text-emerald-700" }]; return <section className="mt-6">{loading ? <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{[1,2,3,4].map((item) => <div key={item} className="h-28 animate-pulse rounded-2xl bg-slate-200" />)}</div> : <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{cards.map(({ label, value, icon: Icon, style }) => <div key={label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"><div className={`grid h-9 w-9 place-items-center rounded-xl ${style}`}><Icon className="h-4 w-4" /></div><p className="mt-4 font-display text-2xl font-bold text-slate-950">{value}</p><p className="mt-1 text-xs text-slate-500">{label}</p></div>)}</div>}<div className="mt-5 grid gap-5 lg:grid-cols-[1.2fr_0.8fr]"><div className="rounded-2xl border border-slate-200 bg-white p-5"><h2 className="text-sm font-bold text-slate-900">ស្ថានភាពហាង</h2><p className="mt-2 text-sm leading-7 text-slate-600">កាតាឡុក, ការកម្មង់ និងទីផ្សារគណនីត្រូវបានភ្ជាប់ទៅទិន្នន័យហាង។ ការផ្សាយថ្មីបង្ហាញភ្លាមៗ ហើយអ្នកអាច Hold ឬលុបវាពីផ្ទាំងការផ្សាយបាន។</p></div><div className="rounded-2xl bg-slate-950 p-5 text-white"><p className="text-xs font-bold tracking-[0.13em] text-indigo-300">PAYMENT STATUS</p><p className="mt-3 font-display text-lg font-bold">ACLEDA ToanChetPay</p><p className="mt-2 text-xs leading-6 text-slate-400">នៅស្ថានភាពរង់ចាំការកំណត់ Merchant sandbox credentials។ គ្មាន order ណាមួយត្រូវបានសម្គាល់ថាបង់រួចដោយគ្មានការបញ្ជាក់ពីអ្នកផ្តល់សេវាទេ។</p></div></div></section>; }
-function Orders() { const orders = trpc.admin.orders.useQuery(); const utils = trpc.useUtils(); const update = trpc.admin.updateOrderStatus.useMutation({ onSuccess: () => utils.admin.orders.invalidate() }); return <section className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white"><div className="border-b border-slate-100 p-4"><h2 className="text-sm font-bold text-slate-900">ការកម្មង់ទាំងអស់</h2><p className="mt-1 text-xs text-slate-500">កែប្រែស្ថានភាពបន្ទាប់ពីអ្នកពិនិត្យការទូទាត់ ឬការបំពេញសេវា។</p></div>{orders.isLoading ? <div className="p-8 text-center"><LoadingV2 size={20} color="#4f46e5" className="mx-auto h-5 w-5 text-indigo-600" /></div> : !orders.data?.length ? <Empty text="មិនទាន់មានការកម្មង់ទេ។" /> : <div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead className="bg-slate-50 text-slate-500"><tr><th className="px-4 py-3 font-semibold">Order</th><th className="px-4 py-3 font-semibold">Customer</th><th className="px-4 py-3 font-semibold">Amount</th><th className="px-4 py-3 font-semibold">Status</th></tr></thead><tbody className="divide-y divide-slate-100">{orders.data.map(({ order, user }) => <tr key={order.id}><td className="px-4 py-3"><p className="font-bold text-slate-800">{order.orderNumber}</p><p className="mt-1 max-w-52 truncate text-slate-500">{order.productName}</p></td><td className="px-4 py-3 text-slate-600">{user?.email ?? user?.name ?? "—"}</td><td className="px-4 py-3 font-bold text-slate-800">{formatUsd(order.subtotal)}</td><td className="px-4 py-3"><select value={order.status} disabled={update.isPending} onChange={(event) => update.mutate({ orderId: order.id, status: event.target.value as "pending" | "awaiting_payment" | "paid" | "delivered" | "failed" | "expired" | "refunded" })} className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-[11px] font-bold text-slate-700">{["pending", "awaiting_payment", "paid", "delivered", "failed", "expired", "refunded"].map((status) => <option key={status}>{status}</option>)}</select></td></tr>)}</tbody></table></div>}</section>; }
+function isPartnerOrder(details: unknown) {
+  if (!details || typeof details !== "object") return false;
+  const row = details as Record<string, unknown>;
+  return row.kind === "partner_service" || row.adminQueue === "partner_service";
+}
+
+function Orders() {
+  const orders = trpc.admin.orders.useQuery();
+  const utils = trpc.useUtils();
+  const update = trpc.admin.updateOrderStatus.useMutation({ onSuccess: () => utils.admin.orders.invalidate() });
+  const [filter, setFilter] = useState<"all" | "game" | "digital">("digital");
+  const all = orders.data ?? [];
+  const digitalPending = all.filter(({ order }) => isPartnerOrder(order.details) && order.status === "paid").length;
+  const rows = all.filter(({ order }) => {
+    const partner = isPartnerOrder(order.details);
+    if (filter === "digital") return partner;
+    if (filter === "game") return !partner;
+    return true;
+  }).sort((a, b) => {
+    const rank = (row: typeof a) => (isPartnerOrder(row.order.details) && row.order.status === "paid" ? 0 : 1);
+    return rank(a) - rank(b);
+  });
+  const chip = (id: typeof filter, label: string) => (
+    <button type="button" onClick={() => setFilter(id)} className={`h-8 rounded-full px-3 text-[11px] font-bold ${filter === id ? "bg-slate-950 text-white" : "bg-slate-100 text-slate-600"}`}>{label}</button>
+  );
+  return (
+    <section className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      <div className="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-sm font-bold text-slate-900">ការកម្មង់</h2>
+          <p className="mt-1 text-xs text-slate-500">សេវាឌីជីថលដែលបានបង់ ត្រូវបំពេញដោយដៃក្នុង ៥–១០ នាទី។</p>
+        </div>
+        <div className="flex flex-wrap gap-1">{chip("digital", digitalPending ? `សេវាឌីជីថល · ${digitalPending}` : "សេវាឌីជីថល")}{chip("game", "ហ្គេម")}{chip("all", "ទាំងអស់")}</div>
+      </div>
+      {orders.isLoading ? <div className="p-8 text-center"><LoadingV2 size={20} color="#4f46e5" className="mx-auto h-5 w-5 text-indigo-600" /></div> : !rows.length ? <Empty text="មិនទាន់មានការកម្មង់ទេ។" /> : (
+        <div className="divide-y divide-slate-100">
+          {rows.map(({ order, user }) => {
+            const partner = isPartnerOrder(order.details);
+            const details = (order.details && typeof order.details === "object" ? order.details : {}) as Record<string, unknown>;
+            const note = typeof details.customerNote === "string" ? details.customerNote : "";
+            const delivery = typeof details.partnerDeliveryType === "string" ? details.partnerDeliveryType : "";
+            const needsFulfillment = partner && order.status === "paid";
+            return (
+              <article key={order.id} className={`flex flex-col gap-3 p-4 sm:flex-row sm:items-center ${needsFulfillment ? "bg-amber-50/70" : ""}`}>
+                <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-slate-50 ring-1 ring-slate-200">
+                  {partner ? <ServiceLogo text={order.productName} size={28} /> : <ShoppingBag className="h-4 w-4 text-slate-500" />}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-mono text-[10px] font-bold text-indigo-700">{order.orderNumber}</p>
+                  <p className="mt-0.5 truncate text-sm font-bold text-slate-900">{order.productName}</p>
+                  <p className="mt-0.5 text-[11px] text-slate-500">{user?.email ?? user?.name ?? "—"}{partner ? ` · ${delivery || "Digital"}` : ""}{needsFulfillment ? " · ត្រូវបំពេញ" : ""}</p>
+                  {note ? <p className="mt-1 line-clamp-2 text-[11px] text-slate-600">{note}</p> : null}
+                </div>
+                <strong className="text-sm font-extrabold text-slate-950">{formatUsd(order.subtotal)}</strong>
+                {needsFulfillment ? (
+                  <button type="button" disabled={update.isPending} onClick={() => update.mutate({ orderId: order.id, status: "delivered" })} className="h-8 rounded-lg bg-emerald-600 px-2.5 text-[10px] font-bold text-white disabled:opacity-40">បំពេញហើយ</button>
+                ) : null}
+                <select value={order.status} disabled={update.isPending} onChange={(event) => update.mutate({ orderId: order.id, status: event.target.value as "pending" | "awaiting_payment" | "paid" | "delivered" | "failed" | "expired" | "refunded" })} className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-[11px] font-bold text-slate-700">
+                  {["pending", "awaiting_payment", "paid", "delivered", "failed", "expired", "refunded"].map((status) => <option key={status}>{status}</option>)}
+                </select>
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
 function Listings() {
   const listings = trpc.admin.listings.useQuery();
   const utils = trpc.useUtils();
@@ -66,7 +135,7 @@ function ConsolationGiftEditor({ eventId, initial, disabled, onSaved }: { eventI
 function PriceRow({ label, price, active, onSave }: { label: string; price: string; active: boolean; onSave: (price: string, active: boolean) => void }) { const [value, setValue] = useState(price); const [isActive, setIsActive] = useState(active); return <div className="flex items-center gap-2 rounded-xl bg-slate-50 p-2"><p className="min-w-0 flex-1 truncate text-xs font-semibold text-slate-700">{label}</p><input value={value} onChange={(event) => setValue(event.target.value)} className="h-8 w-20 rounded-lg border border-slate-200 bg-white px-2 text-xs" /><label className="flex items-center gap-1 text-[10px] text-slate-500"><input checked={isActive} onChange={(event) => setIsActive(event.target.checked)} type="checkbox" />Live</label><button onClick={() => onSave(value, isActive)} className="h-8 rounded-lg bg-slate-900 px-2 text-[10px] font-bold text-white">Save</button></div>; }
 function Empty({ text }: { text: string }) { return <div className="p-8 text-center text-xs text-slate-500">{text}</div>; }
 function SalesTrend({ data }: { data: { day: string; revenue: string; orders: number }[] }) { const peak = Math.max(1, ...data.map((item) => Number(item.revenue))); return <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-5"><div className="flex items-end justify-between"><div><h2 className="text-sm font-bold text-slate-900">ចំណូល 7 ថ្ងៃចុងក្រោយ</h2><p className="mt-1 text-xs text-slate-500">ផ្អែកលើការកម្មង់ដែលបានបង់ប្រាក់ ឬបញ្ចប់។</p></div><span className="text-xs font-bold text-indigo-700">Live data</span></div><div className="mt-5 grid h-32 grid-cols-7 items-end gap-2">{data.map((item) => <div className="flex h-full flex-col justify-end" key={item.day}><div className="rounded-t-md bg-gradient-to-t from-indigo-600 to-violet-400" style={{ height: `${Math.max(5, (Number(item.revenue) / peak) * 100)}%` }} title={`${item.day}: ${formatUsd(item.revenue)}`} /><p className="mt-2 text-center text-[9px] text-slate-500">{item.day.slice(5)}</p></div>)}</div></section>; }
-function labelForTab(tab: Tab) { return ({ overview: "ទិដ្ឋភាពទូទៅ", orders: "ការកម្មង់", listings: "ការផ្សាយ", catalog: "កាតាឡុក", operations: "ប្រតិបត្តិការ" })[tab]; }
+function labelForTab(tab: Tab) { return ({ overview: "ទិដ្ឋភាពទូទៅ", orders: "ការកម្មង់", listings: "ការផ្សាយ", catalog: "កាតាឡុក", digital: "សេវាឌីជីថល", operations: "ប្រតិបត្តិការ" })[tab]; }
 
 function nextSundayThreePm() {
   const now = new Date();

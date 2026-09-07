@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/sidebar";
 import { startLogin } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { Boxes, CircleDollarSign, ContactRound, CreditCard, ImagePlus, Images, LayoutDashboard, LogOut, MessagesSquare, PanelLeft, ReceiptText, ShieldCheck, Users } from "lucide-react";
+import { Boxes, CircleDollarSign, ContactRound, CreditCard, ImagePlus, Images, LayoutDashboard, LogOut, MessagesSquare, PanelLeft, ReceiptText, ShieldCheck, Sparkles, Users } from "lucide-react";
 import { type ComponentType, CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -29,6 +29,7 @@ type AdminMenuItem = { icon: ComponentType<{ className?: string }>; label: strin
 const menuItems: AdminMenuItem[] = [
   { icon: LayoutDashboard, label: "ផ្ទាំងគ្រប់គ្រង", path: "/admin", permission: "dashboard" },
   { icon: ReceiptText, label: "ការកម្មង់", path: "/admin?tab=orders", permission: "orders" },
+  { icon: Sparkles, label: "សេវាឌីជីថល", path: "/admin?tab=digital", permission: "catalog" },
   { icon: Boxes, label: "កាតាឡុក", path: "/admin?tab=catalog", permission: "catalog" },
   { icon: ImagePlus, label: "Banner & Promo", path: "/admin/media", permission: "media" },
   { icon: ImagePlus, label: "រូបភាពកញ្ចប់", path: "/admin/package-artwork", permission: "media" },

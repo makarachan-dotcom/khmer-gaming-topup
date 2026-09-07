@@ -21,8 +21,9 @@ import { disclosureRequestStatuses, fraudReportStatuses } from "./marketplaceSaf
 import { deriveLocationRisk, resolveLocationCountry } from "./marketplaceLocation";
 import { createZursSession, getZursSessionCookieOptions, ZURS_SESSION_COOKIE } from "./zursSession";
 import { enforceRateLimitOrThrow, rateLimitBuckets } from "./rateLimit";
-import { getPartnerCatalog, getPartnerProduct, getPartnerUsage, toPublicPartnerPreview, toPublicPartnerProduct, PartnerServiceError } from "./partnerCatalog";
+import { getPartnerCatalog, getPartnerProduct, getPartnerUsage, toPublicPartnerPreview, toPublicPartnerProduct, PartnerServiceError, getAdminPartnerCatalog, applyPartnerPriceOverride } from "./partnerCatalog";
 import { createPartnerServiceOrder } from "./partnerOrders";
+import { getPartnerOverride, listPartnerOverrides, savePartnerOverride } from "./partnerOverrides";
 
 const marketplaceType = z.enum(["sale", "swap", "wanted"]);
 
@@ -79,7 +80,8 @@ export const appRouter = router({
     catalog: publicProcedure.query(async () => {
       try {
         const products = await getPartnerCatalog();
-        return { products: products.map(toPublicPartnerProduct), etaMinutes: { min: 5, max: 10 }, configured: true as const };
+        const overrides = await listPartnerOverrides();
+        return { products: products.map((product) => toPublicPartnerProduct(product, overrides.get(product.slug) ?? null)), etaMinutes: { min: 5, max: 10 }, configured: true as const };
       } catch (error) {
         if (error instanceof PartnerServiceError && error.code === "NOT_CONFIGURED") return { products: [], etaMinutes: { min: 5, max: 10 }, configured: false as const };
         throw error;
@@ -87,7 +89,8 @@ export const appRouter = router({
     }),
     preview: publicProcedure.input(z.object({ slug: z.string().trim().min(2).max(120), quantity: z.number().int().min(1).max(50).optional() })).query(async ({ input }) => {
       const product = await getPartnerProduct(input.slug);
-      return toPublicPartnerPreview(product, input.quantity ?? 1);
+      const override = await getPartnerOverride(input.slug);
+      return toPublicPartnerPreview(product, input.quantity ?? 1, override);
     }),
     usage: ownerProcedure.query(() => getPartnerUsage()),
   }),
@@ -180,6 +183,39 @@ export const appRouter = router({
     reviewDisclosureRequest: scopedAdminProcedure("marketplace").input(z.object({ requestId: z.string().min(4).max(64), status: z.enum(disclosureRequestStatuses), reviewNote: z.string().trim().max(5000).optional() })).mutation(({ ctx, input }) => db.reviewMarketplaceDisclosureRequest({ reviewerUserId: ctx.user.id, ...input })),
     evidenceAccessLogs: scopedAdminProcedure("marketplace").query(() => db.getAdminMarketplaceEvidenceAccessLogs()),
     catalog: scopedAdminProcedure("catalog").query(async () => ({ games: await db.getGameCatalog() })),
+    partnerCatalog: scopedAdminProcedure("catalog").query(async () => {
+      try {
+        const rows = await getAdminPartnerCatalog();
+        return {
+          configured: true as const,
+          products: rows.map(({ product, override }) => {
+            const live = applyPartnerPriceOverride(product, override);
+            const publicProduct = toPublicPartnerProduct(live, override);
+            return {
+              ...publicProduct,
+              apiPriceUsd: product.priceUsd,
+              hidden: Boolean(override?.hidden),
+              sourceDescription: product.description.slice(0, 280),
+              sourceInstructions: product.instructions.slice(0, 280),
+            };
+          }),
+        };
+      } catch (error) {
+        if (error instanceof PartnerServiceError && error.code === "NOT_CONFIGURED") return { configured: false as const, products: [] };
+        throw error;
+      }
+    }),
+    savePartnerService: scopedAdminProcedure("catalog").input(z.object({
+      slug: z.string().trim().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,89}$/),
+      priceUsd: z.string().regex(/^\d{1,6}(?:\.\d{1,2})?$/).optional(),
+      nameEn: z.string().trim().max(180).optional(),
+      nameKh: z.string().trim().max(180).optional(),
+      descriptionEn: z.string().trim().max(800).optional(),
+      descriptionKh: z.string().trim().max(800).optional(),
+      instructionsEn: z.string().trim().max(800).optional(),
+      instructionsKh: z.string().trim().max(800).optional(),
+      hidden: z.boolean().optional(),
+    })).mutation(({ ctx, input }) => savePartnerOverride({ slug: input.slug, override: input, updatedByUserId: ctx.user.id })),
     fullCatalog: scopedAdminProcedure("catalog").query(() => db.getAdminCatalog()),
     providerCatalogStatus: scopedAdminProcedure("catalog").query(() => getProviderCatalogStatus()),
     previewGamePackages: scopedAdminProcedure("catalog").input(z.object({ gameId: z.string().trim().min(1).max(120) })).query(({ input }) => fetchProviderPreviewPackages(input.gameId)),

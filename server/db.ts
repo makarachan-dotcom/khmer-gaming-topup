@@ -1058,7 +1058,7 @@ export async function createMarketplaceFraudReport(input: { listingId: string; r
 export async function getPublicSiteContent() {
   const db = await getDb();
   if (!db) return [];
-  return (await db.select().from(siteContent).where(eq(siteContent.isActive, true)).orderBy(desc(siteContent.updatedAt))).filter((content) => content.contentKey !== paymentControlContentKey);
+  return (await db.select().from(siteContent).where(eq(siteContent.isActive, true)).orderBy(desc(siteContent.updatedAt))).filter((content) => content.contentKey !== paymentControlContentKey && !content.contentKey.startsWith("psvc:"));
 }
 
 export async function getAdminOverview() {
