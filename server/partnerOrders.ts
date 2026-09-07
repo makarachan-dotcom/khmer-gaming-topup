@@ -77,6 +77,7 @@ export async function createPartnerServiceOrder(input: { userId: number; slug: s
 }
 
 const DELIVERED_EVENT: Record<DeliveryMethod, string> = {
+  CDK: "Admin បានផ្ញើលេខកូដ CDK ទៅគណនីរបស់អ្នក។",
   COUPON: "Admin បានផ្ញើលេខកូដ Coupon ទៅគណនីរបស់អ្នក។",
   LINK: "Admin បានផ្ញើតំណ Activation ទៅគណនីរបស់អ្នក។",
   READY_ACCOUNT: "Admin បានផ្ញើ email និងពាក្យសម្ងាត់ទៅគណនីរបស់អ្នក។",

@@ -168,7 +168,7 @@ export const appRouter = router({
     updateOrderStatus: scopedAdminProcedure("orders").input(z.object({ orderId: z.string().min(4).max(64), status: z.enum(["pending", "awaiting_payment", "paid", "delivered", "failed", "expired", "refunded"]) })).mutation(({ ctx, input }) => db.updateOrderStatus({ ...input, actorUserId: ctx.user.id })),
     deliverPartnerService: scopedAdminProcedure("orders").input(z.object({
       orderId: z.string().min(4).max(64),
-      method: z.enum(["COUPON", "LINK", "READY_ACCOUNT", "NOTE"]),
+      method: z.enum(["CDK", "COUPON", "LINK", "READY_ACCOUNT", "NOTE"]),
       coupon: z.string().trim().max(400).optional(),
       link: z.string().trim().max(2000).optional(),
       accountEmail: z.string().trim().max(320).optional(),

@@ -20,12 +20,42 @@ const DELIVERY_KH: Record<DeliveryType, string> = {
   LINK: "តំណ Activation",
   COUPON: "លេខកូដ Coupon",
   READY_ACCOUNT: "គណនីរួចរាល់",
+  CDK: "កូដ CDK",
 };
 const DELIVERY_EN: Record<DeliveryType, string> = {
   LINK: "Activation link",
   COUPON: "Coupon code",
   READY_ACCOUNT: "Ready account",
+  CDK: "CDK code",
 };
+
+export function coerceApiDeliveryType(value: unknown): DeliveryType | null {
+  const raw = String(value ?? "").trim().toUpperCase().replace(/[\s-]+/g, "_");
+  if (raw === "LINK" || raw === "INVITE" || raw === "INVITE_LINK" || raw === "ACTIVATION_LINK") return "LINK";
+  if (raw === "CDK" || raw === "KEY" || raw === "CARD" || raw === "CARD_KEY" || raw === "REDEEM" || raw === "REDEEM_CODE" || raw === "ACTIVATION_CODE") return "CDK";
+  if (raw === "COUPON" || raw === "VOUCHER" || raw === "GIFT" || raw === "GIFT_CODE" || raw === "GIFT_CARD") return "COUPON";
+  if (raw === "READY_ACCOUNT" || raw === "ACCOUNT" || raw === "LOGIN" || raw === "CREDENTIALS" || raw === "READY") return "READY_ACCOUNT";
+  return null;
+}
+
+function hintDelivery(text: string, allowPrivate = false): DeliveryType | null {
+  if (/\bcdk\b|卡密|card\s*key|activation\s*code|redeem(?:s|ing)?\s*code/i.test(text)) return "CDK";
+  if (/\b(?:invite|activation|redeem(?:s|ing)?)\s*links?\b|\binvite\s*url\b|兑换链接/i.test(text)) return "LINK";
+  if (/\bready\s*accounts?\b|\bshared\s*(?:acc(?:ount)?s?)\b|成品号|email\s*(?:and|\+|\/)\s*pass(?:word)?|\blogin\s*pass/i.test(text) || (allowPrivate && /\bprivate\b/i.test(text))) return "READY_ACCOUNT";
+  if (/\bcoupons?\b|\bvouchers?\b|\bgift\s*(?:codes?|cards?|keys?)\b/i.test(text)) return "COUPON";
+  return null;
+}
+
+export function resolveDeliveryType(input: {
+  apiType?: unknown;
+  name?: string;
+  productCode?: string;
+  description?: string;
+  instructions?: string;
+}): DeliveryType | null {
+  const title = `${input.name ?? ""} ${input.productCode ?? ""}`;
+  return hintDelivery(title, true) || hintDelivery(`${input.description ?? ""} ${input.instructions ?? ""}`) || coerceApiDeliveryType(input.apiType);
+}
 
 type Blurb = { kh: string; en: string };
 const PROVIDER_BLURB: Array<[RegExp, Blurb]> = [
@@ -87,12 +117,14 @@ function factsEn(product: PartnerProduct) {
 }
 
 function instructionsKh(type: DeliveryType) {
+  if (type === "CDK") return "អ្នកនឹងទទួលបានលេខកូដ CDK។ ប្រើកូដតាមការណែនាំដើម្បីបើកសេវាលើគណនីរបស់អ្នក។ កុំចែកកូដឲ្យអ្នកដទៃ។";
   if (type === "COUPON") return "អ្នកនឹងទទួលបានលេខកូដ។ បញ្ចូលកូដក្នុងគេហទំព័រផ្លូវការ។ កូដប្រើបានមួយដង — កុំចែកឲ្យអ្នកដទៃ។";
   if (type === "READY_ACCOUNT") return "អ្នកនឹងទទួលបានគណនីរួចរាល់។ ចូលភ្លាមៗ រួចប្តូរពាក្យសម្ងាត់។ កុំចែក email/password។";
   return "អ្នកនឹងទទួលបានតំណ Activation។ បើកតំណដើម្បីដំណើរការសេវា។ កុំចែកតំណឲ្យអ្នកដទៃ។";
 }
 
 function instructionsEn(type: DeliveryType) {
+  if (type === "CDK") return "You receive a CDK activation code. Redeem it as instructed on your own account. Do not share the code.";
   if (type === "COUPON") return "You receive a one-time coupon. Redeem it on the official site. Do not share the code.";
   if (type === "READY_ACCOUNT") return "You receive a ready account. Sign in and change the password immediately. Do not share the login.";
   return "You receive an activation link. Open it to start the service. Do not share the link.";

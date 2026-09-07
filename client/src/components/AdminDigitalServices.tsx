@@ -33,7 +33,7 @@ type EditorValues = {
   hidden: boolean;
 };
 
-const DELIVERY: Record<string, string> = { LINK: "តំណ", COUPON: "Coupon", READY_ACCOUNT: "គណនី" };
+const DELIVERY: Record<string, string> = { LINK: "តំណ", COUPON: "Coupon", READY_ACCOUNT: "គណនី", CDK: "CDK" };
 
 export function AdminDigitalServices() {
   const catalog = trpc.admin.partnerCatalog.useQuery();

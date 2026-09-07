@@ -6,6 +6,9 @@ describe("partner delivery payload", () => {
     expect(() => buildPartnerDelivery({ method: "COUPON", deliveredByUserId: 1 })).toThrow(/Coupon/);
     const coupon = buildPartnerDelivery({ method: "COUPON", coupon: "ABCD-1234", deliveredByUserId: 7 });
     expect(coupon.coupon).toBe("ABCD-1234");
+    const cdk = buildPartnerDelivery({ method: "CDK", coupon: "CDK-9988", deliveredByUserId: 7 });
+    expect(cdk.method).toBe("CDK");
+    expect(cdk.coupon).toBe("CDK-9988");
     const link = buildPartnerDelivery({ method: "LINK", link: "https://chat.openai.com/invite/x", deliveredByUserId: 7 });
     expect(link.link).toContain("https://");
     const account = buildPartnerDelivery({ method: "READY_ACCOUNT", accountEmail: "a@b.com", accountPassword: "secret1", deliveredByUserId: 7 });

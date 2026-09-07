@@ -18,6 +18,13 @@ import { AlertTriangle, BadgeCheck, CheckCircle2, ChevronRight, Clock3, CreditCa
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 
+const DELIVERY_SUMMARY: Record<string, string> = {
+  CDK: "CDK",
+  COUPON: "Coupon",
+  LINK: "តំណ Activation",
+  READY_ACCOUNT: "គណនី",
+};
+
 type LedgerPayment = {
   provider: string;
   status: string;
@@ -157,7 +164,7 @@ function PaymentPreview({ product }: { product: SelectedProduct | null }) {
     <section className="checkout-order-summary">
       <div className="checkout-order-summary__eyebrow"><PackageCheck className="h-4 w-4" />ORDER SUMMARY</div>
       <div className="checkout-order-summary__main">{isPartner ? <span className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-line"><ServiceLogo text={`${product.gameName} ${product.label}`} size={40} /></span> : <ProviderGameArtwork name={product.gameName} logoUrl={product.gameLogoUrl} priority showCountryFlag={false} className="h-14 w-14 shrink-0 rounded-2xl" iconClassName="h-6 w-6" />}<div className="min-w-0 flex-1"><h2 className="checkout-order-summary__title">{product.gameName}</h2><p className="checkout-order-summary__order">{product.label}</p></div><strong className="checkout-order-summary__amount">{product.priceLabel}</strong></div>
-      <div className="checkout-order-summary__details">{isPartner ? <><SummaryDetail label="កញ្ចប់" value={product.amountLabel} /><SummaryDetail label="ប្រភេទ" value="សេវាឌីជីថល" /><SummaryDetail label="Delivery" value={product.deliveryType || "Admin top-up"} />{product.durationDays ? <SummaryDetail label="រយៈពេល" value={`${product.durationDays} ថ្ងៃ`} /> : null}<SummaryDetail label="ពេលបំពេញ" value="៥–១០ នាទី" /><SummaryDetail label="Quantity" value="1" /></> : <><SummaryDetail label="កញ្ចប់" value={product.amountLabel} />{product.playerName ? <SummaryDetail label="Username" value={product.playerName} /> : <SummaryDetail label="Game ID" value={maskCustomerIdentifier(product.playerId ?? "បានការពារ")} />}<SummaryDetail label="Server ID" value={maskCustomerIdentifier(product.zoneId || "មិនទាមទារ")} /><SummaryDetail label="Quantity" value="1" /></>}</div>
+      <div className="checkout-order-summary__details">{isPartner ? <><SummaryDetail label="កញ្ចប់" value={product.amountLabel} /><SummaryDetail label="ប្រភេទ" value="សេវាឌីជីថល" /><SummaryDetail label="Delivery" value={DELIVERY_SUMMARY[product.deliveryType || ""] || product.deliveryType || "Admin top-up"} />{product.durationDays ? <SummaryDetail label="រយៈពេល" value={`${product.durationDays} ថ្ងៃ`} /> : null}<SummaryDetail label="ពេលបំពេញ" value="៥–១០ នាទី" /><SummaryDetail label="Quantity" value="1" /></> : <><SummaryDetail label="កញ្ចប់" value={product.amountLabel} />{product.playerName ? <SummaryDetail label="Username" value={product.playerName} /> : <SummaryDetail label="Game ID" value={maskCustomerIdentifier(product.playerId ?? "បានការពារ")} />}<SummaryDetail label="Server ID" value={maskCustomerIdentifier(product.zoneId || "មិនទាមទារ")} /><SummaryDetail label="Quantity" value="1" /></>}</div>
       <p className="checkout-order-summary__note">{isPartner ? "បន្ទាប់ពីទូទាត់ KHQR រួច ការកម្មង់នឹងចូលផ្ទាំង Admin ហើយត្រូវបានបំពេញក្នុង ៥–១០ នាទី។" : "សូមពិនិត្យ ID និងកញ្ចប់ឲ្យបានត្រឹមត្រូវ។ បន្ទាប់ពីបញ្ជាក់ order និង QR ពិតនឹងត្រូវបង្កើត។"}</p>
     </section>
     {isPartner && (partnerInfo.data?.descriptionKh || partnerInfo.data?.descriptionEn || partnerInfo.data?.description || partnerInfo.data?.instructionsKh || partnerInfo.data?.instructions) ? (

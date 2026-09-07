@@ -5,6 +5,7 @@ import { methodIcon } from "@/components/DeliveryVault";
 import type { DeliveryMethod } from "@shared/partnerDelivery";
 
 const METHODS: Array<{ id: DeliveryMethod; label: string }> = [
+  { id: "CDK", label: "CDK" },
   { id: "COUPON", label: "Coupon" },
   { id: "LINK", label: "Link" },
   { id: "READY_ACCOUNT", label: "Email + password" },
@@ -17,7 +18,7 @@ export function AdminDeliveryForm({ orderId, defaultMethod, productName }: { ord
     onSuccess: () => void utils.admin.orders.invalidate(),
   });
   const [method, setMethod] = useState<DeliveryMethod>(
-    defaultMethod === "LINK" || defaultMethod === "READY_ACCOUNT" || defaultMethod === "COUPON" ? defaultMethod : "COUPON",
+    defaultMethod === "CDK" || defaultMethod === "LINK" || defaultMethod === "READY_ACCOUNT" || defaultMethod === "COUPON" ? defaultMethod : "COUPON",
   );
   const [coupon, setCoupon] = useState("");
   const [link, setLink] = useState("");
@@ -43,6 +44,7 @@ export function AdminDeliveryForm({ orderId, defaultMethod, productName }: { ord
           </button>
         ))}
       </div>
+      {method === "CDK" ? <input value={coupon} onChange={(event) => setCoupon(event.target.value)} placeholder="លេខកូដ CDK" className="zurs-deliver__input" /> : null}
       {method === "COUPON" ? <input value={coupon} onChange={(event) => setCoupon(event.target.value)} placeholder="លេខកូដ Coupon" className="zurs-deliver__input" /> : null}
       {method === "LINK" ? <input value={link} onChange={(event) => setLink(event.target.value)} placeholder="https://…" className="zurs-deliver__input" /> : null}
       {method === "READY_ACCOUNT" ? (

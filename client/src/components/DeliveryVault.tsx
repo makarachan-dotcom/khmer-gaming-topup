@@ -4,6 +4,7 @@ import { ServiceLogo } from "@/components/BrandMark";
 import type { PartnerDelivery } from "@shared/partnerDelivery";
 
 const METHOD: Record<PartnerDelivery["method"], { kh: string; en: string }> = {
+  CDK: { kh: "កូដ CDK", en: "CDK code" },
   COUPON: { kh: "លេខកូដ Coupon", en: "Coupon code" },
   LINK: { kh: "តំណ Activation", en: "Activation link" },
   READY_ACCOUNT: { kh: "គណនីរួចរាល់", en: "Ready account" },
@@ -54,6 +55,9 @@ export function DeliveryVault({ delivery, productName }: { delivery: PartnerDeli
           <p>{meta.kh} · {meta.en}</p>
         </div>
       </header>
+      {delivery.method === "CDK" && delivery.coupon ? (
+        <CopyRow label="CDK" value={delivery.coupon} />
+      ) : null}
       {delivery.method === "COUPON" && delivery.coupon ? (
         <CopyRow label="Coupon" value={delivery.coupon} />
       ) : null}
@@ -79,6 +83,7 @@ export function DeliveryVault({ delivery, productName }: { delivery: PartnerDeli
 }
 
 export function methodIcon(method: PartnerDelivery["method"]) {
+  if (method === "CDK") return <KeyRound className="h-4 w-4" />;
   if (method === "COUPON") return <Ticket className="h-4 w-4" />;
   if (method === "LINK") return <Link2 className="h-4 w-4" />;
   if (method === "READY_ACCOUNT") return <Mail className="h-4 w-4" />;
@@ -95,7 +100,7 @@ export function WaitingDelivery({ productName }: { productName?: string }) {
         <div className="min-w-0">
           <p className="zurs-vault__kicker">កំពុងបំពេញ</p>
           <h3>{productName || "សេវាឌីជីថល"}</h3>
-          <p>Admin នឹងផ្ញើ Coupon / Link / គណនី ក្នុង ៥–១០ នាទី។</p>
+          <p>Admin នឹងផ្ញើ CDK / Coupon / តំណ / គណនី ក្នុង ៥–១០ នាទី។</p>
         </div>
       </header>
     </section>

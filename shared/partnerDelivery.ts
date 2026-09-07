@@ -1,4 +1,4 @@
-export const DELIVERY_METHODS = ["COUPON", "LINK", "READY_ACCOUNT", "NOTE"] as const;
+export const DELIVERY_METHODS = ["CDK", "COUPON", "LINK", "READY_ACCOUNT", "NOTE"] as const;
 export type DeliveryMethod = (typeof DELIVERY_METHODS)[number];
 
 export type PartnerDelivery = {
@@ -21,7 +21,7 @@ export function parsePartnerDelivery(raw: unknown): PartnerDelivery | null {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
   const row = raw as Record<string, unknown>;
   const method = row.method;
-  if (method !== "COUPON" && method !== "LINK" && method !== "READY_ACCOUNT" && method !== "NOTE") return null;
+  if (method !== "CDK" && method !== "COUPON" && method !== "LINK" && method !== "READY_ACCOUNT" && method !== "NOTE") return null;
   const deliveredAt = typeof row.deliveredAt === "string" ? row.deliveredAt : "";
   const deliveredByUserId = typeof row.deliveredByUserId === "number" ? row.deliveredByUserId : 0;
   return {
@@ -60,7 +60,7 @@ export function buildPartnerDelivery(input: {
   const accountPassword = clip(input.accountPassword, 400);
   const note = clip(input.note, 2000);
   const instructions = clip(input.instructions, 4000);
-  if (method === "COUPON" && coupon.length < 2) throw new Error("សូមបញ្ចូលលេខកូដ Coupon។");
+  if ((method === "CDK" || method === "COUPON") && coupon.length < 2) throw new Error(method === "CDK" ? "សូមបញ្ចូលលេខកូដ CDK។" : "សូមបញ្ចូលលេខកូដ Coupon។");
   if (method === "LINK") {
     let parsed: URL;
     try { parsed = new URL(link); } catch { throw new Error("សូមបញ្ចូលតំណ HTTPS។"); }

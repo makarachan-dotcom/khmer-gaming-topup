@@ -33,6 +33,7 @@ const DELIVERY_LABEL: Record<string, string> = {
   LINK: "Link",
   COUPON: "Coupon",
   READY_ACCOUNT: "Account",
+  CDK: "CDK",
 };
 
 export function PartnerServicesShelf({ compact = false }: { compact?: boolean }) {
