@@ -64,7 +64,7 @@ export function AdminDigitalServices() {
 
   if (catalog.isLoading) return <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-8 text-center"><LoadingV2 size={20} color="#4f46e5" className="mx-auto" /></div>;
   if (catalog.data?.configured === false) {
-    return <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-600">ដាក់ <b>GGSOMA_PARTNER_API_KEY</b> លើ Vercel ដើម្បីផ្ទុកសេវាឌីជីថល។</div>;
+    return <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-600">ដាក់ <b>ZURS_PARTNER_API_KEY</b> លើ Vercel ដើម្បីផ្ទុកសេវាឌីជីថល ZURS.me។</div>;
   }
 
   return (

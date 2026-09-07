@@ -289,7 +289,7 @@ export const PackEmoji = memo(function PackEmoji({
   );
 });
 
-/** Maps a free-text provider/product name from the Partner API to a pack logo. */
+/** Maps a free-text provider/product name from the ZURS.me digital catalog to a pack logo. */
 export function serviceEmojiName(text: string): PackEmojiName {
   const value = text.toLowerCase();
   const rules: Array<[RegExp, PackEmojiName]> = [

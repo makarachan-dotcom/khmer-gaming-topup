@@ -176,7 +176,7 @@ export function PartnerServicesShelf({ compact = false }: { compact?: boolean })
           )}
         </>
       ) : (
-        <div className="mt-4 rounded-2xl border border-dashed border-line bg-panel p-8 text-center text-xs text-ink-muted">{catalog.data?.configured === false ? "សេវាឌីជីថលនឹងបង្ហាញពេល Admin ដាក់ Partner API key លើ Vercel។" : "មិនទាន់មានសេវាឌីជីថលនៅពេលនេះទេ។"}</div>
+        <div className="mt-4 rounded-2xl border border-dashed border-line bg-panel p-8 text-center text-xs text-ink-muted">{catalog.data?.configured === false ? "សេវាឌីជីថល ZURS.me នឹងបង្ហាញពេល Admin ដាក់ API key លើ Vercel។" : "មិនទាន់មានសេវាឌីជីថលនៅពេលនេះទេ។"}</div>
       )}
 
       {openProduct ? (

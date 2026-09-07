@@ -9,6 +9,13 @@ type CopyOverride = {
   instructionsKh?: string;
 };
 
+export function brandAsZurs(value: string) {
+  return value
+    .replace(/https?:\/\/(?:www\.)?ggsoma\.store[^\s]*/gi, "https://zurs.me")
+    .replace(/\bggsoma\.store\b/gi, "zurs.me")
+    .replace(/\bggsoma\b/gi, "ZURS.me");
+}
+
 const DELIVERY_KH: Record<DeliveryType, string> = {
   LINK: "តំណ Activation",
   COUPON: "លេខកូដ Coupon",
@@ -108,11 +115,11 @@ export function resolvePartnerCopy(product: PartnerProduct, override?: CopyOverr
   const khInst = override?.instructionsKh?.trim() || (hasKhmer(sourceInst) ? sourceInst : [instructionsKh(product.deliveryType), sourceInst].filter(Boolean).join("\n\n"));
   const enInst = override?.instructionsEn?.trim() || sourceInst || instructionsEn(product.deliveryType);
   return {
-    nameKh: clip(override?.nameKh?.trim() || `${product.provider.name} · ${product.name}`, 180),
-    nameEn: clip(override?.nameEn?.trim() || product.name, 180),
-    descriptionKh: clip(khDesc, 6000),
-    descriptionEn: clip(enDesc, 6000),
-    instructionsKh: clip(khInst, 6000),
-    instructionsEn: clip(enInst, 6000),
+    nameKh: clip(brandAsZurs(override?.nameKh?.trim() || `${product.provider.name} · ${product.name}`), 180),
+    nameEn: clip(brandAsZurs(override?.nameEn?.trim() || product.name), 180),
+    descriptionKh: clip(brandAsZurs(khDesc), 6000),
+    descriptionEn: clip(brandAsZurs(enDesc), 6000),
+    instructionsKh: clip(brandAsZurs(khInst), 6000),
+    instructionsEn: clip(brandAsZurs(enInst), 6000),
   };
 }

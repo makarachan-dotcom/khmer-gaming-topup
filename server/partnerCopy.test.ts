@@ -41,4 +41,17 @@ describe("partner bilingual copy", () => {
     expect(copy.descriptionEn).toBe("Edited EN");
     expect(copy.nameKh).toBe("ឈ្មោះខ្មែរ");
   });
+
+  it("rebrands supplier copy as ZURS.me", () => {
+    const copy = resolvePartnerCopy(product({
+      name: "GGSoma ChatGPT Plus",
+      description: "Sold on https://ggsoma.store/chatgpt by ggsoma",
+      instructions: "Open ggsoma.store to redeem",
+    }));
+    expect(copy.nameEn).toBe("ZURS.me ChatGPT Plus");
+    expect(copy.descriptionEn).not.toMatch(/ggsoma/i);
+    expect(copy.descriptionEn).toContain("zurs.me");
+    expect(copy.instructionsEn).toContain("zurs.me");
+    expect(copy.descriptionKh).not.toMatch(/ggsoma/i);
+  });
 });

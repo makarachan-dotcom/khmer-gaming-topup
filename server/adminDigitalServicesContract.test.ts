@@ -28,5 +28,8 @@ describe("admin digital services workspace", () => {
     expect(checkout).toContain("<ServiceLogo text={`${product.gameName} ${product.label}`}");
     expect(checkout).toContain('details.kind === "partner_service"');
     expect(checkout).toContain("<ServiceLogo text={order.productName}");
+    expect(digital).not.toMatch(/GGSOMA|ggsoma/i);
+    expect(admin).not.toMatch(/GGSOMA|ggsoma/i);
+    expect(checkout).not.toMatch(/GGSOMA|ggsoma/i);
   });
 });
