@@ -14,12 +14,14 @@ describe("admin digital services workspace", () => {
     expect(admin).toContain("សេវាឌីជីថល");
     expect(admin).toContain("isPartnerOrder");
     expect(admin).toContain("<ServiceLogo");
-    expect(admin).toContain("បំពេញហើយ");
+    expect(admin).toContain("<AdminDigitalServices");
+    expect(admin).toContain("<AdminDeliveryForm");
     expect(admin).toContain('useState<"all" | "game" | "digital">("digital")');
     expect(digital).toContain("trpc.admin.partnerCatalog");
     expect(digital).toContain("savePartnerService");
     expect(digital).toContain("ព័ត៌មានខ្មែរ");
     expect(digital).toContain("Info EN");
+    expect(router).toContain("deliverPartnerService: scopedAdminProcedure");
     expect(router).toContain("partnerCatalog: scopedAdminProcedure");
     expect(router).toContain("savePartnerService: scopedAdminProcedure");
     expect(nav).toContain('path: "/admin?tab=digital"');

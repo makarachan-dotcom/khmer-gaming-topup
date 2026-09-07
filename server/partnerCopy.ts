@@ -46,8 +46,12 @@ const PROVIDER_BLURB: Array<[RegExp, Blurb]> = [
 ];
 
 function clip(value: string, max: number) {
-  const text = value.replace(/\s+/g, " ").trim();
+  const text = value.replace(/\r\n/g, "\n").trim();
   return text.length <= max ? text : `${text.slice(0, max - 1).trim()}…`;
+}
+
+function hasKhmer(value: string) {
+  return /[\u1780-\u17FF]/.test(value);
 }
 
 function matchBlurb(product: PartnerProduct): Blurb {
@@ -97,12 +101,18 @@ export function deliveryLabelEn(type: string) {
 
 export function resolvePartnerCopy(product: PartnerProduct, override?: CopyOverride | null) {
   const blurb = matchBlurb(product);
+  const sourceDesc = product.description.trim();
+  const sourceInst = product.instructions.trim();
+  const khDesc = override?.descriptionKh?.trim() || (hasKhmer(sourceDesc) ? sourceDesc : [blurb.kh, factsKh(product), sourceDesc].filter(Boolean).join("\n\n"));
+  const enDesc = override?.descriptionEn?.trim() || sourceDesc || `${blurb.en} ${factsEn(product)}`;
+  const khInst = override?.instructionsKh?.trim() || (hasKhmer(sourceInst) ? sourceInst : [instructionsKh(product.deliveryType), sourceInst].filter(Boolean).join("\n\n"));
+  const enInst = override?.instructionsEn?.trim() || sourceInst || instructionsEn(product.deliveryType);
   return {
     nameKh: clip(override?.nameKh?.trim() || `${product.provider.name} · ${product.name}`, 180),
     nameEn: clip(override?.nameEn?.trim() || product.name, 180),
-    descriptionKh: clip(override?.descriptionKh?.trim() || `${blurb.kh} ${factsKh(product)}`, 800),
-    descriptionEn: clip(override?.descriptionEn?.trim() || `${blurb.en} ${factsEn(product)}`, 800),
-    instructionsKh: clip(override?.instructionsKh?.trim() || instructionsKh(product.deliveryType), 800),
-    instructionsEn: clip(override?.instructionsEn?.trim() || instructionsEn(product.deliveryType), 800),
+    descriptionKh: clip(khDesc, 6000),
+    descriptionEn: clip(enDesc, 6000),
+    instructionsKh: clip(khInst, 6000),
+    instructionsEn: clip(enInst, 6000),
   };
 }

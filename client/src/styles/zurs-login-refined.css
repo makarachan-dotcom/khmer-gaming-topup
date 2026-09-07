@@ -445,8 +445,13 @@
   .zl-device {
     display: none !important;
   }
+  .zl-mascot__halo {
+    display: none !important;
+  }
   .zl-card {
     padding: 1.25rem 1rem 1.4rem;
+    overflow-x: clip;
+    overflow-y: visible;
   }
   .zl-mascot {
     width: min(5.75rem, 30vw);

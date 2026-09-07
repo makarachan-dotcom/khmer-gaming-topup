@@ -200,7 +200,7 @@ function Area({ label, value, onChange }: { label: string; value: string; onChan
   return (
     <label className="block">
       <span className="mb-1 block text-[10px] font-bold text-slate-500">{label}</span>
-      <textarea value={value} onChange={(event) => onChange(event.target.value)} rows={3} maxLength={800} className="w-full resize-none rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs leading-5" />
+      <textarea value={value} onChange={(event) => onChange(event.target.value)} rows={8} maxLength={6000} className="w-full resize-y rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs leading-5" />
     </label>
   );
 }

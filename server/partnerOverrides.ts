@@ -35,10 +35,10 @@ export function parsePartnerOverride(raw: unknown): PartnerServiceOverride | nul
     priceUsd: MONEY.test(priceUsd) && Number(priceUsd) >= 0.01 && Number(priceUsd) <= 100000 ? priceUsd : undefined,
     nameEn: clip(row.nameEn, 180) || undefined,
     nameKh: clip(row.nameKh, 180) || undefined,
-    descriptionEn: clip(row.descriptionEn, 800) || undefined,
-    descriptionKh: clip(row.descriptionKh, 800) || undefined,
-    instructionsEn: clip(row.instructionsEn, 800) || undefined,
-    instructionsKh: clip(row.instructionsKh, 800) || undefined,
+    descriptionEn: clip(row.descriptionEn, 6000) || undefined,
+    descriptionKh: clip(row.descriptionKh, 6000) || undefined,
+    instructionsEn: clip(row.instructionsEn, 6000) || undefined,
+    instructionsKh: clip(row.instructionsKh, 6000) || undefined,
     hidden: row.hidden === true,
   };
   return Object.values(parsed).some((value) => value !== undefined && value !== false) || parsed.hidden ? parsed : {};

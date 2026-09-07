@@ -22,7 +22,7 @@ import { deriveLocationRisk, resolveLocationCountry } from "./marketplaceLocatio
 import { createZursSession, getZursSessionCookieOptions, ZURS_SESSION_COOKIE } from "./zursSession";
 import { enforceRateLimitOrThrow, rateLimitBuckets } from "./rateLimit";
 import { getPartnerCatalog, getPartnerProduct, getPartnerUsage, toPublicPartnerPreview, toPublicPartnerProduct, PartnerServiceError, getAdminPartnerCatalog, applyPartnerPriceOverride } from "./partnerCatalog";
-import { createPartnerServiceOrder } from "./partnerOrders";
+import { createPartnerServiceOrder, deliverPartnerService } from "./partnerOrders";
 import { getPartnerOverride, listPartnerOverrides, savePartnerOverride } from "./partnerOverrides";
 
 const marketplaceType = z.enum(["sale", "swap", "wanted"]);
@@ -166,6 +166,16 @@ export const appRouter = router({
     overview: scopedAdminProcedure("dashboard").query(() => db.getAdminOverview()),
     orders: scopedAdminProcedure("orders").query(() => db.getAdminOrders()),
     updateOrderStatus: scopedAdminProcedure("orders").input(z.object({ orderId: z.string().min(4).max(64), status: z.enum(["pending", "awaiting_payment", "paid", "delivered", "failed", "expired", "refunded"]) })).mutation(({ ctx, input }) => db.updateOrderStatus({ ...input, actorUserId: ctx.user.id })),
+    deliverPartnerService: scopedAdminProcedure("orders").input(z.object({
+      orderId: z.string().min(4).max(64),
+      method: z.enum(["COUPON", "LINK", "READY_ACCOUNT", "NOTE"]),
+      coupon: z.string().trim().max(400).optional(),
+      link: z.string().trim().max(2000).optional(),
+      accountEmail: z.string().trim().max(320).optional(),
+      accountPassword: z.string().trim().max(400).optional(),
+      note: z.string().trim().max(2000).optional(),
+      instructions: z.string().trim().max(4000).optional(),
+    })).mutation(({ ctx, input }) => deliverPartnerService({ ...input, actorUserId: ctx.user.id })),
     orderSupportTickets: scopedAdminProcedure("orders").query(() => db.getAdminOrderSupportTickets()),
     reviewOrderSupportTicket: scopedAdminProcedure("orders").input(z.object({ ticketId: z.string().min(4).max(64), status: z.enum(["open", "reviewing", "resolved", "closed"]), adminReply: z.string().trim().max(5000).optional() })).mutation(({ ctx, input }) => db.reviewOrderSupportTicket({ reviewerUserId: ctx.user.id, ...input })),
     listings: scopedAdminProcedure("marketplace").input(z.object({ status: z.enum(["draft", "pending", "approved", "rejected", "closed", "sold"]).optional() }).optional()).query(({ input }) => db.getAdminMarketplaceListings(input?.status)),
@@ -195,8 +205,8 @@ export const appRouter = router({
               ...publicProduct,
               apiPriceUsd: product.priceUsd,
               hidden: Boolean(override?.hidden),
-              sourceDescription: product.description.slice(0, 280),
-              sourceInstructions: product.instructions.slice(0, 280),
+              sourceDescription: product.description.slice(0, 4000),
+              sourceInstructions: product.instructions.slice(0, 4000),
             };
           }),
         };
@@ -210,10 +220,10 @@ export const appRouter = router({
       priceUsd: z.string().regex(/^\d{1,6}(?:\.\d{1,2})?$/).optional(),
       nameEn: z.string().trim().max(180).optional(),
       nameKh: z.string().trim().max(180).optional(),
-      descriptionEn: z.string().trim().max(800).optional(),
-      descriptionKh: z.string().trim().max(800).optional(),
-      instructionsEn: z.string().trim().max(800).optional(),
-      instructionsKh: z.string().trim().max(800).optional(),
+      descriptionEn: z.string().trim().max(6000).optional(),
+      descriptionKh: z.string().trim().max(6000).optional(),
+      instructionsEn: z.string().trim().max(6000).optional(),
+      instructionsKh: z.string().trim().max(6000).optional(),
       hidden: z.boolean().optional(),
     })).mutation(({ ctx, input }) => savePartnerOverride({ slug: input.slug, override: input, updatedByUserId: ctx.user.id })),
     fullCatalog: scopedAdminProcedure("catalog").query(() => db.getAdminCatalog()),

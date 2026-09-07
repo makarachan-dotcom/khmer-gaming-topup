@@ -6,6 +6,7 @@ import { buildOrderNumber } from "./storefrontDomain";
 import { assessOrderVelocity } from "./paymentSecurity";
 import { buildPartnerQuote, getPartnerProduct } from "./partnerCatalog";
 import { countPendingKhqrPayments, getDb, getPublicPaymentAvailability, pendingKhqrPaymentLimit } from "./db";
+import { buildPartnerDelivery, publicPartnerDelivery, type DeliveryMethod } from "../shared/partnerDelivery";
 
 const orderVelocityMessageKh = "មានការបង្កើតការបញ្ជាទិញច្រើនពេកក្នុងមួយម៉ោង តែមិនមានការទូទាត់បានជោគជ័យ។ សូមបញ្ចប់ការទូទាត់មួយជាមុនសិន រើសូមទាកតុ Admin។";
 
@@ -73,4 +74,60 @@ export async function createPartnerServiceOrder(input: { userId: number; slug: s
     providerReference: null,
   });
   return { id, orderNumber, trackingCode, amount: quote.totalUsd, status: "pending" as const };
+}
+
+const DELIVERED_EVENT: Record<DeliveryMethod, string> = {
+  COUPON: "Admin បានផ្ញើលេខកូដ Coupon ទៅគណនីរបស់អ្នក។",
+  LINK: "Admin បានផ្ញើតំណ Activation ទៅគណនីរបស់អ្នក។",
+  READY_ACCOUNT: "Admin បានផ្ញើ email និងពាក្យសម្ងាត់ទៅគណនីរបស់អ្នក។",
+  NOTE: "Admin បានផ្ញើព័ត៌មានសេវាទៅគណនីរបស់អ្នក។",
+};
+
+export async function deliverPartnerService(input: {
+  orderId: string;
+  actorUserId: number;
+  method: DeliveryMethod;
+  coupon?: string;
+  link?: string;
+  accountEmail?: string;
+  accountPassword?: string;
+  note?: string;
+  instructions?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const row = await db.select().from(orders).where(eq(orders.id, input.orderId)).limit(1);
+  const order = row[0];
+  if (!order) throw new Error("មិនរកឃើញការកម្មង់។");
+  const details = order.details && typeof order.details === "object" && !Array.isArray(order.details) ? order.details as Record<string, unknown> : {};
+  if (details.kind !== "partner_service" && details.adminQueue !== "partner_service") {
+    throw new Error("ការកម្មង់នេះមិនមែនសេវាឌីជីថលទេ។");
+  }
+  if (!["paid", "delivered"].includes(order.status)) {
+    throw new Error("បង់ប្រាក់រួចទើបផ្ញើសេវា។");
+  }
+  const delivery = buildPartnerDelivery({
+    method: input.method,
+    coupon: input.coupon,
+    link: input.link,
+    accountEmail: input.accountEmail,
+    accountPassword: input.accountPassword,
+    note: input.note,
+    instructions: input.instructions,
+    deliveredByUserId: input.actorUserId,
+  });
+  await db.update(orders).set({
+    status: "delivered",
+    details: { ...details, delivery, fulfilledAt: delivery.deliveredAt },
+  }).where(eq(orders.id, order.id));
+  await db.insert(orderStatusEvents).values({
+    id: nanoid(),
+    orderId: order.id,
+    eventType: "partner_delivered",
+    status: "delivered",
+    actorType: "admin",
+    messageKh: DELIVERED_EVENT[delivery.method],
+    providerReference: null,
+  });
+  return { success: true as const, delivery: publicPartnerDelivery({ delivery }, "delivered") };
 }

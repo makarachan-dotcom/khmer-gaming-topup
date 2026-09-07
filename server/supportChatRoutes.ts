@@ -11,11 +11,19 @@ import {
   closeSupportSession,
   getActiveSessionForUser,
   getSession,
+  listRecentSessions,
+  markAdminSeen,
   openSupportSession,
+  setAdminTyping,
   supportDailyLimit,
+  supportMaxTextLength,
   supportQuotaState,
+  supportStoreReady,
   type SupportSession,
 } from "./supportChat";
+import { getDelegatedAdminPermissions } from "./db";
+import { hasDelegatedAdminPermission } from "./adminPermissions";
+import { isSingleAdminEmail } from "./storefrontDomain";
 import { escapeHtml, notifyAdmins, notifyAdminsPhoto, notifyAdminsVoice } from "./telegramBot";
 
 /**
@@ -345,5 +353,175 @@ export function registerSupportChatRoutes(app: Express) {
     }
     const quota = await supportQuotaState(actor.id);
     return res.json({ closed: result.closed, quota });
+  });
+
+  /* ------------------------------------------------------- admin inbox -- */
+
+  const sendNotAdmin = (res: Response, actor: Actor | null) => {
+    if (!actor) return res.status(401).json({ code: "SIGN_IN_REQUIRED" });
+    return res.status(403).json({ code: "FORBIDDEN", signedInAs: actor.email ?? actor.displayName ?? `#${actor.id}` });
+  };
+
+  const requireSupportAdmin = async (req: Request, res: Response): Promise<Actor | null> => {
+    const actor = await resolveActor(req);
+    if (!actor) {
+      sendNotAdmin(res, null);
+      return null;
+    }
+    if (!isSingleAdminEmail(actor.email) && actor.role !== "admin") {
+      sendNotAdmin(res, actor);
+      return null;
+    }
+    if (!isSingleAdminEmail(actor.email)) {
+      const permissions = await getDelegatedAdminPermissions(actor.id);
+      if (!hasDelegatedAdminPermission(permissions, "support")) {
+        sendNotAdmin(res, actor);
+        return null;
+      }
+    }
+    return actor;
+  };
+
+  const waitingSeconds = (session: SupportSession) => {
+    if (session.status === "closed") return 0;
+    const lastUser = [...session.messages].reverse().find((message) => message.role === "user");
+    const start = Date.parse(lastUser?.at ?? session.openedAt);
+    if (!Number.isFinite(start)) return 0;
+    return Math.max(0, Math.floor((Date.now() - start) / 1000));
+  };
+
+  const unreadCount = (session: SupportSession) => {
+    const seen = Date.parse(session.adminSeenAt ?? "0");
+    return session.messages.filter((message) => message.role === "user" && Date.parse(message.at) > (Number.isFinite(seen) ? seen : 0)).length;
+  };
+
+  const lastMessage = (session: SupportSession) => {
+    const message = session.messages[session.messages.length - 1];
+    if (!message) return null;
+    return { role: message.role, kind: message.kind, text: message.text };
+  };
+
+  const adminChatView = (session: SupportSession) => ({
+    id: session.id,
+    status: session.status,
+    topic: session.topic,
+    orderRef: session.orderRef,
+    openedAt: session.openedAt,
+    closedAt: session.closedAt,
+    adminTyping: session.adminTypingUntil ? Date.parse(session.adminTypingUntil) > Date.now() : false,
+    userId: session.userId,
+    email: session.email,
+    displayName: session.displayName,
+    ip: session.ip,
+    device: session.device,
+    closedBy: session.closedBy,
+    adminSeenAt: session.adminSeenAt ?? null,
+    unread: unreadCount(session),
+    lastMessageAt: session.messages[session.messages.length - 1]?.at ?? session.openedAt,
+    lastMessage: lastMessage(session),
+    waitingSeconds: waitingSeconds(session),
+    messages: session.messages.map((message) => ({
+      id: message.id,
+      role: message.role,
+      kind: message.kind,
+      text: message.text,
+      mediaUrl: message.mediaUrl,
+      at: message.at,
+    })),
+    messageCount: session.messages.length,
+  });
+
+  app.get("/api/admin/support/health", async (req, res) => {
+    secureHeaders(res);
+    const actor = await requireSupportAdmin(req, res);
+    if (!actor) return;
+    return res.json({ ok: true, storeReady: await supportStoreReady() });
+  });
+
+  app.get("/api/admin/support/chats", async (req, res) => {
+    secureHeaders(res);
+    const actor = await requireSupportAdmin(req, res);
+    if (!actor) return;
+    const probe = await consumeRateLimit({ bucket: rateLimitBuckets.adminSupportPoll, identifier: String(actor.id), mode: "lenient" });
+    if (!probe.allowed) return sendRateLimited(res, probe.retryAfterSeconds);
+
+    const sessions = await listRecentSessions();
+    const rank = (session: SupportSession) => (session.status === "waiting" ? 0 : session.status === "active" ? 1 : 2);
+    sessions.sort((a, b) => rank(a) - rank(b) || unreadCount(b) - unreadCount(a) || Date.parse(b.messages[b.messages.length - 1]?.at ?? b.openedAt) - Date.parse(a.messages[a.messages.length - 1]?.at ?? a.openedAt));
+    const chats = sessions.map((session) => {
+      const view = adminChatView(session);
+      const { messages, ...summary } = view;
+      return summary;
+    });
+    return res.json({
+      chats,
+      waiting: chats.filter((chat) => chat.status === "waiting").length,
+      open: chats.filter((chat) => chat.status !== "closed").length,
+      unread: chats.reduce((sum, chat) => sum + chat.unread, 0),
+      storeReady: await supportStoreReady(),
+      viewer: { email: actor.email, role: actor.role },
+      at: new Date().toISOString(),
+    });
+  });
+
+  app.get("/api/admin/support/chats/:id", async (req, res) => {
+    secureHeaders(res);
+    const actor = await requireSupportAdmin(req, res);
+    if (!actor) return;
+    const probe = await consumeRateLimit({ bucket: rateLimitBuckets.adminSupportPoll, identifier: String(actor.id), mode: "lenient" });
+    if (!probe.allowed) return sendRateLimited(res, probe.retryAfterSeconds);
+    let session = await getSession(String(req.params.id ?? ""));
+    if (!session) return res.status(404).json({ code: "SESSION_NOT_FOUND" });
+    if (req.query.seen === "1") session = (await markAdminSeen(session.id)) ?? session;
+    return res.json({ chat: adminChatView(session) });
+  });
+
+  app.post("/api/admin/support/reply", async (req, res) => {
+    secureHeaders(res);
+    const actor = await requireSupportAdmin(req, res);
+    if (!actor) return;
+    const limit = await consumeRateLimit({ bucket: rateLimitBuckets.adminSupportSend, identifier: String(actor.id), mode: "strict" });
+    if (!limit.allowed) return sendRateLimited(res, limit.retryAfterSeconds);
+    const text = typeof req.body?.text === "string" ? req.body.text.trim() : "";
+    if (!text) return res.status(400).json({ code: "EMPTY_MESSAGE" });
+    if (text.length > supportMaxTextLength) return res.status(413).json({ code: "TOO_LONG" });
+    const session = await getSession(String(req.body?.sessionId ?? ""));
+    if (!session) return res.status(404).json({ code: "SESSION_NOT_FOUND" });
+    if (session.status === "closed") return res.status(409).json({ code: "SESSION_CLOSED" });
+    const updated = await appendMessage({ sessionId: session.id, role: "admin", kind: "text", text });
+    if (!updated) return res.status(409).json({ code: "SESSION_CLOSED" });
+    await markAdminSeen(updated.id);
+    return res.json({ chat: adminChatView(updated) });
+  });
+
+  app.post("/api/admin/support/typing", async (req, res) => {
+    secureHeaders(res);
+    const actor = await requireSupportAdmin(req, res);
+    if (!actor) return;
+    const sessionId = String(req.body?.sessionId ?? "");
+    const seconds = Number(req.body?.seconds ?? 8);
+    await setAdminTyping(sessionId, Number.isFinite(seconds) ? seconds : 8);
+    return res.json({ ok: true });
+  });
+
+  app.post("/api/admin/support/seen", async (req, res) => {
+    secureHeaders(res);
+    const actor = await requireSupportAdmin(req, res);
+    if (!actor) return;
+    const session = await markAdminSeen(String(req.body?.sessionId ?? ""));
+    if (!session) return res.status(404).json({ code: "SESSION_NOT_FOUND" });
+    return res.json({ chat: adminChatView(session) });
+  });
+
+  app.post("/api/admin/support/close", async (req, res) => {
+    secureHeaders(res);
+    const actor = await requireSupportAdmin(req, res);
+    if (!actor) return;
+    const result = await closeSupportSession({
+      sessionId: String(req.body?.sessionId ?? ""),
+      closedBy: actor.email ?? actor.displayName ?? `admin:${actor.id}`,
+    });
+    if (!result.session) return res.status(404).json({ code: "SESSION_NOT_FOUND" });
+    return res.json({ chat: adminChatView(result.session) });
   });
 }

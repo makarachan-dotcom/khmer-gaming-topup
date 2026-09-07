@@ -1,6 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
 import { AdminDigitalServices } from "@/components/AdminDigitalServices";
+import { AdminDeliveryForm } from "@/components/AdminDeliveryForm";
 import { ServiceLogo } from "@/components/BrandMark";
 import { formatUsd } from "@/lib/display";
 import { prepareAdminImage } from "@/lib/adminImageUpload";
@@ -61,7 +62,8 @@ function Orders() {
             const delivery = typeof details.partnerDeliveryType === "string" ? details.partnerDeliveryType : "";
             const needsFulfillment = partner && order.status === "paid";
             return (
-              <article key={order.id} className={`flex flex-col gap-3 p-4 sm:flex-row sm:items-center ${needsFulfillment ? "bg-amber-50/70" : ""}`}>
+              <article key={order.id} className={`p-4 ${needsFulfillment ? "bg-amber-50/70" : ""}`}>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-slate-50 ring-1 ring-slate-200">
                   {partner ? <ServiceLogo text={order.productName} size={28} /> : <ShoppingBag className="h-4 w-4 text-slate-500" />}
                 </span>
@@ -72,12 +74,16 @@ function Orders() {
                   {note ? <p className="mt-1 line-clamp-2 text-[11px] text-slate-600">{note}</p> : null}
                 </div>
                 <strong className="text-sm font-extrabold text-slate-950">{formatUsd(order.subtotal)}</strong>
-                {needsFulfillment ? (
+                {!partner && needsFulfillment ? (
                   <button type="button" disabled={update.isPending} onClick={() => update.mutate({ orderId: order.id, status: "delivered" })} className="h-8 rounded-lg bg-emerald-600 px-2.5 text-[10px] font-bold text-white disabled:opacity-40">បំពេញហើយ</button>
                 ) : null}
                 <select value={order.status} disabled={update.isPending} onChange={(event) => update.mutate({ orderId: order.id, status: event.target.value as "pending" | "awaiting_payment" | "paid" | "delivered" | "failed" | "expired" | "refunded" })} className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-[11px] font-bold text-slate-700">
                   {["pending", "awaiting_payment", "paid", "delivered", "failed", "expired", "refunded"].map((status) => <option key={status}>{status}</option>)}
                 </select>
+                </div>
+                {partner && (order.status === "paid" || order.status === "delivered") ? (
+                  <AdminDeliveryForm orderId={order.id} defaultMethod={delivery} productName={order.productName} />
+                ) : null}
               </article>
             );
           })}

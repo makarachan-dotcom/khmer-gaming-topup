@@ -7,6 +7,7 @@ import { AnimatedGlyph } from "@/components/AnimatedGlyph";
 import { OutlineLoader } from "@/components/OutlineLoader";
 import { ProviderGameArtwork } from "@/components/ProviderGameIdentity";
 import { ServiceLogo } from "@/components/BrandMark";
+import { LangCopy, useLangCopy } from "@/components/LangCopy";
 import { trpc } from "@/lib/trpc";
 import { khqrLogoUrl } from "@/lib/mobileLegendsAssets";
 import { BakongKhqrCard } from "@/components/BakongKhqrCard";
@@ -119,6 +120,7 @@ function PaymentPreview({ product }: { product: SelectedProduct | null }) {
   // here, one tap before the QR and the order actually exist.
   const [refundConsentOpen, setRefundConsentOpen] = useState(false);
   const isPartner = product?.kind === "partner";
+  const { lang, setLang } = useLangCopy();
   const partnerInfo = trpc.partner.preview.useQuery(
     { slug: product?.partnerSlug ?? "none", quantity: 1 },
     { enabled: isPartner && Boolean(product?.partnerSlug), staleTime: 60_000, retry: 1 },
@@ -159,10 +161,9 @@ function PaymentPreview({ product }: { product: SelectedProduct | null }) {
       <p className="checkout-order-summary__note">{isPartner ? "បន្ទាប់ពីទូទាត់ KHQR រួច ការកម្មង់នឹងចូលផ្ទាំង Admin ហើយត្រូវបានបំពេញក្នុង ៥–១០ នាទី។" : "សូមពិនិត្យ ID និងកញ្ចប់ឲ្យបានត្រឹមត្រូវ។ បន្ទាប់ពីបញ្ជាក់ order និង QR ពិតនឹងត្រូវបង្កើត។"}</p>
     </section>
     {isPartner && (partnerInfo.data?.descriptionKh || partnerInfo.data?.descriptionEn || partnerInfo.data?.description || partnerInfo.data?.instructionsKh || partnerInfo.data?.instructions) ? (
-      <section className="mt-3 space-y-2 rounded-2xl border border-line bg-panel p-4">
-        {partnerInfo.data?.descriptionKh || partnerInfo.data?.description ? <p className="text-xs leading-5 text-ink">{partnerInfo.data.descriptionKh || partnerInfo.data.description}</p> : null}
-        {partnerInfo.data?.descriptionEn && partnerInfo.data.descriptionEn !== (partnerInfo.data.descriptionKh || partnerInfo.data.description) ? <p className="text-[11px] leading-5 text-ink-muted">{partnerInfo.data.descriptionEn}</p> : null}
-        {partnerInfo.data?.instructionsKh || partnerInfo.data?.instructions ? <p className="rounded-xl bg-panel-2 p-3 text-xs leading-5 text-ink">{partnerInfo.data.instructionsKh || partnerInfo.data.instructions}</p> : null}
+      <section className="mt-3 rounded-2xl border border-line bg-panel p-4">
+        <LangCopy kh={partnerInfo.data?.descriptionKh || partnerInfo.data?.description} en={partnerInfo.data?.descriptionEn || partnerInfo.data?.description} labelKh="ព័ត៌មាន" labelEn="Info" lang={lang} onLang={setLang} />
+        <LangCopy kh={partnerInfo.data?.instructionsKh || partnerInfo.data?.instructions} en={partnerInfo.data?.instructionsEn || partnerInfo.data?.instructions} labelKh="វិធីប្រើ" labelEn="How to use" lang={lang} onLang={setLang} />
       </section>
     ) : null}
     <section className="checkout-preview-confirm">

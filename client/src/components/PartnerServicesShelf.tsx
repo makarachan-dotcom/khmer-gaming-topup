@@ -5,6 +5,7 @@ import { BrandMark, ServiceLogo, matchBrand } from "@/components/BrandMark";
 import { useSelectedProduct } from "@/contexts/SelectedProductContext";
 import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
+import { LangCopy, LangToggle, useLangCopy } from "@/components/LangCopy";
 
 type PartnerProduct = {
   id: number;
@@ -187,6 +188,7 @@ export function PartnerServicesShelf({ compact = false }: { compact?: boolean })
 
 function ProductSheet({ product, onClose, onBuy }: { product: PartnerProduct; onClose: () => void; onBuy: () => void }) {
   const brandText = `${product.providerName} ${product.name}`;
+  const { lang, setLang } = useLangCopy();
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -221,14 +223,16 @@ function ProductSheet({ product, onClose, onBuy }: { product: PartnerProduct; on
             </span>
             <div className="min-w-0 flex-1">
               <p className="text-[10px] font-bold uppercase tracking-wide text-ink-muted">{product.providerName}</p>
-              <h2 id="zurs-product-title" className="mt-0.5 font-display text-base font-extrabold leading-snug text-ink">{product.nameKh || product.name}</h2>
-              {product.nameKh && product.nameKh !== product.name ? <p className="mt-0.5 text-[11px] text-ink-muted">{product.name}</p> : null}
+              <h2 id="zurs-product-title" className="mt-0.5 font-display text-base font-extrabold leading-snug text-ink">{lang === "en" ? product.name : (product.nameKh || product.name)}</h2>
               <p className="mt-1 text-xs font-semibold text-ink-muted">
                 {product.durationDays ? `${product.durationDays} ថ្ងៃ` : "—"} · {DELIVERY_LABEL[product.deliveryType] ?? product.deliveryType}
                 {product.warrantyDays ? ` · warranty ${product.warrantyDays} ថ្ងៃ` : ""}
               </p>
             </div>
-            <button type="button" onClick={onClose} className="grid h-8 w-8 place-items-center rounded-full bg-panel-2 text-lg leading-none text-ink-muted" aria-label="បិទ">×</button>
+            <div className="flex shrink-0 flex-col items-end gap-2">
+              <button type="button" onClick={onClose} className="grid h-8 w-8 place-items-center rounded-full bg-panel-2 text-lg leading-none text-ink-muted" aria-label="បិទ">×</button>
+              <LangToggle lang={lang} onChange={setLang} />
+            </div>
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[10px] font-bold">
             {product.inStock ? (
@@ -240,20 +244,8 @@ function ProductSheet({ product, onClose, onBuy }: { product: PartnerProduct; on
             <span className="rounded-full bg-neon/15 px-2 py-0.5 text-ink">៥–១០ នាទី</span>
           </div>
           <p className="mt-3 font-display text-2xl font-extrabold text-ink">${product.priceUsd} <span className="text-sm font-bold text-ink-muted">USD</span></p>
-          {(product.descriptionKh || product.descriptionEn || product.description) ? (
-            <section className="mt-4">
-              <h3 className="text-[10px] font-extrabold uppercase tracking-wide text-ink-muted">ព័ត៌មាន / Info</h3>
-              {product.descriptionKh || product.description ? <p className="mt-1 text-xs leading-5 text-ink">{product.descriptionKh || product.description}</p> : null}
-              {product.descriptionEn && product.descriptionEn !== (product.descriptionKh || product.description) ? <p className="mt-1 text-[11px] leading-5 text-ink-muted">{product.descriptionEn}</p> : null}
-            </section>
-          ) : null}
-          {(product.instructionsKh || product.instructionsEn || product.instructions) ? (
-            <section className="mt-4 rounded-2xl bg-panel-2/80 p-3">
-              <h3 className="text-[10px] font-extrabold uppercase tracking-wide text-ink-muted">វិធីប្រើ / How to use</h3>
-              {product.instructionsKh || product.instructions ? <p className="mt-1 text-xs leading-5 text-ink">{product.instructionsKh || product.instructions}</p> : null}
-              {product.instructionsEn && product.instructionsEn !== (product.instructionsKh || product.instructions) ? <p className="mt-1 text-[11px] leading-5 text-ink-muted">{product.instructionsEn}</p> : null}
-            </section>
-          ) : null}
+          <LangCopy kh={product.descriptionKh || product.description} en={product.descriptionEn || product.description} labelKh="ព័ត៌មាន" labelEn="Info" lang={lang} onLang={setLang} />
+          <LangCopy kh={product.instructionsKh || product.instructions} en={product.instructionsEn || product.instructions} labelKh="វិធីប្រើ" labelEn="How to use" lang={lang} onLang={setLang} />
           <section className="mt-4 rounded-2xl border border-line p-3">
             <h3 className="text-[10px] font-extrabold uppercase tracking-wide text-ink-muted">ចំណាំ</h3>
             <ul className="mt-1 list-disc space-y-1 pl-4 text-xs leading-5 text-ink">

@@ -35,6 +35,7 @@ import {
 export const supportDailyLimit = 1;
 export const supportQuotaWindowSeconds = 24 * 60 * 60;
 export const supportSessionTtlSeconds = 12 * 60 * 60;
+export const supportLogTtlSeconds = 7 * 24 * 60 * 60;
 export const supportMaxMessages = 120;
 export const supportMaxTextLength = 2000;
 
@@ -66,6 +67,7 @@ export type SupportSession = {
   adminTypingUntil: string | null;
   ip: string | null;
   device: string | null;
+  adminSeenAt: string | null;
   messages: SupportMessage[];
 };
 
@@ -80,6 +82,8 @@ const sessionKey = (id: string) => `sc:sess:${id}`;
 const userKey = (userId: number) => `sc:user:${userId}`;
 const quotaKey = (userId: number) => `sc:quota:${userId}`;
 const openIndexKey = "sc:open";
+const logIndexKey = "sc:log";
+const logKey = (id: string) => `sc:log:${id}`;
 
 const memorySessions = new Map<string, { session: SupportSession; expiresAt: number }>();
 const memoryUserActive = new Map<number, string>();
@@ -149,17 +153,13 @@ const store = {
   },
 
   async writeSession(session: SupportSession): Promise<boolean> {
+    const ttl = session.status === "closed" ? supportLogTtlSeconds : supportSessionTtlSeconds;
     if (await usingDb()) {
       try {
-        const stored = await supportKvWrite(
-          sessionKey(session.id),
-          JSON.stringify(session),
-          supportSessionTtlSeconds,
-        );
-        // The user pointer is what lets a customer resume, and what lists open
-        // chats for the operator. Closing a chat retires it.
+        const stored = await supportKvWrite(sessionKey(session.id), JSON.stringify(session), ttl);
         if (session.status === "closed") await supportKvDelete(userKey(session.userId));
-        else await supportKvWrite(userKey(session.userId), session.id, supportSessionTtlSeconds);
+        else await supportKvWrite(userKey(session.userId), session.id, ttl);
+        await supportKvWrite(logKey(session.id), session.id, supportLogTtlSeconds);
         return stored;
       } catch {
         return false;
@@ -168,7 +168,7 @@ const store = {
     if (!rateLimitBackendConfigured) {
       memorySessions.set(session.id, {
         session,
-        expiresAt: now() + supportSessionTtlSeconds * 1000,
+        expiresAt: now() + ttl * 1000,
       });
       if (session.status === "closed") memoryUserActive.delete(session.userId);
       else memoryUserActive.set(session.userId, session.id);
@@ -176,13 +176,15 @@ const store = {
     }
     const payload = JSON.stringify(session);
     const commands: (string | number)[][] = [
-      ["SET", sessionKey(session.id), payload, "EX", supportSessionTtlSeconds],
+      ["SET", sessionKey(session.id), payload, "EX", ttl],
+      ["ZADD", logIndexKey, Date.parse(session.openedAt) || now(), session.id],
+      ["EXPIRE", logIndexKey, supportLogTtlSeconds],
     ];
     if (session.status === "closed") {
       commands.push(["DEL", userKey(session.userId)]);
       commands.push(["ZREM", openIndexKey, session.id]);
     } else {
-      commands.push(["SET", userKey(session.userId), session.id, "EX", supportSessionTtlSeconds]);
+      commands.push(["SET", userKey(session.userId), session.id, "EX", ttl]);
       commands.push(["ZADD", openIndexKey, Date.parse(session.openedAt), session.id]);
       commands.push(["EXPIRE", openIndexKey, supportSessionTtlSeconds * 2]);
     }
@@ -190,8 +192,6 @@ const store = {
       await redisPipeline(commands);
       return true;
     } catch {
-      // Reported, never swallowed: a caller that believes a session was stored
-      // when it was not is precisely what created the dead-end chat.
       return false;
     }
   },
@@ -231,6 +231,27 @@ const store = {
     }
     try {
       const [raw] = await redisPipeline([["ZRANGE", openIndexKey, 0, 100]]);
+      const value = (raw as { result?: string[] } | null)?.result;
+      return Array.isArray(value) ? value : [];
+    } catch {
+      return [];
+    }
+  },
+
+  async readLogIds(): Promise<string[]> {
+    if (await usingDb()) {
+      try {
+        return (await supportKvList("sc:log:", 80)).map((entry) => entry.value);
+      } catch {
+        return [];
+      }
+    }
+    if (!rateLimitBackendConfigured) {
+      sweepMemory();
+      return Array.from(memorySessions.keys());
+    }
+    try {
+      const [raw] = await redisPipeline([["ZREVRANGE", logIndexKey, 0, 80]]);
       const value = (raw as { result?: string[] } | null)?.result;
       return Array.isArray(value) ? value : [];
     } catch {
@@ -363,6 +384,7 @@ export async function openSupportSession(input: {
     adminTypingUntil: null,
     ip: input.ip ?? null,
     device: input.device ?? null,
+    adminSeenAt: null,
     messages: [],
   };
   // Never report success for a session we could not store. Doing so is what
@@ -437,6 +459,29 @@ export async function listOpenSessions(): Promise<SupportSession[]> {
     if (session && session.status !== "closed") sessions.push(session);
   }
   return sessions;
+}
+
+export async function listRecentSessions(): Promise<SupportSession[]> {
+  const ids = [...new Set([...(await store.readLogIds()), ...(await store.readOpenIds())])];
+  const sessions: SupportSession[] = [];
+  for (const id of ids) {
+    if (!id) continue;
+    const session = await store.readSession(id);
+    if (session) sessions.push(session);
+  }
+  return sessions;
+}
+
+export async function markAdminSeen(sessionId: string): Promise<SupportSession | null> {
+  const session = await getSession(sessionId);
+  if (!session) return null;
+  session.adminSeenAt = new Date().toISOString();
+  await store.writeSession(session);
+  return session;
+}
+
+export async function supportStoreReady(): Promise<boolean> {
+  return (await resolveStore()) !== "memory";
 }
 
 export function resetSupportChatForTests() {

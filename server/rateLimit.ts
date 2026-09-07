@@ -92,6 +92,8 @@ export const rateLimitBuckets = {
   supportChatSend: { name: "supportsend", limit: 30, windowSeconds: 300 },
   supportChatUpload: { name: "supportup", limit: 10, windowSeconds: 600 },
   supportChatOpen: { name: "supportopen", limit: 6, windowSeconds: 3600 },
+  adminSupportPoll: { name: "adminsupp", limit: 600, windowSeconds: 300 },
+  adminSupportSend: { name: "adminsuppsend", limit: 300, windowSeconds: 300 },
   // Session exchange: the one endpoint that actually mints a ZURS cookie.
   loginSessionExchange: { name: "loginsess", limit: 20, windowSeconds: 600 },
 } as const satisfies Record<string, RateLimitBucket>;

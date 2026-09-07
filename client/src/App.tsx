@@ -26,6 +26,7 @@ const AdminProviderSecurity = lazy(() => import("@/pages/AdminProviderSecurity")
 const AdminContactAdmins = lazy(() => import("@/pages/AdminContactAdmins"));
 const AdminGameImages = lazy(() => import("@/pages/AdminGameImages"));
 const AdminLoginBans = lazy(() => import("@/pages/AdminLoginBans"));
+const AdminSupportChat = lazy(() => import("@/pages/AdminSupportChat"));
 import AppwriteLogin from "@/pages/AppwriteLogin";
 import SupportChatPage from "@/pages/SupportChatPage";
 import Legal from "./pages/Legal";
@@ -68,6 +69,7 @@ function Router() {
       <Route path={"/admin/game-images"} component={AdminGameImages} />
       <Route path={"/admin/provider-security"} component={AdminProviderSecurity} />
       <Route path={"/admin/login-bans"} component={AdminLoginBans} />
+      <Route path="/admin/support-chat" component={AdminSupportChat} />
       <Route path="/privacy" component={() => <Legal kind="privacy" />} />
       <Route path="/terms" component={() => <Legal kind="terms" />} />
       <Route path={"/404"} component={NotFound} />

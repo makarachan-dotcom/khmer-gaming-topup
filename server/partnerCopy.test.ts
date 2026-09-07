@@ -25,14 +25,14 @@ function product(over: Partial<PartnerProduct> = {}): PartnerProduct {
 }
 
 describe("partner bilingual copy", () => {
-  it("keeps ChatGPT copy short in both Khmer and English", () => {
+  it("keeps the full provider text and a Khmer lead-in", () => {
     const copy = resolvePartnerCopy(product());
     expect(copy.descriptionKh).toContain("ChatGPT");
     expect(copy.descriptionKh).toContain("Coupon");
-    expect(copy.descriptionKh.length).toBeLessThan(280);
-    expect(copy.descriptionEn).toContain("Official ChatGPT");
+    expect(copy.descriptionKh).toContain("long english dump from provider");
+    expect(copy.descriptionEn).toBe("long english dump from provider");
     expect(copy.instructionsKh).toContain("លេខកូដ");
-    expect(copy.instructionsEn).toContain("coupon");
+    expect(copy.instructionsEn).toContain("long english how-to");
   });
 
   it("uses admin overrides when provided", () => {
