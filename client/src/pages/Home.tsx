@@ -16,6 +16,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
 import { gameTopupPath } from "./GameTopup";
 import { PackEmoji } from "@/components/PackEmoji";
+import { TrustStrip } from "@/components/TrustStrip";
 // The owner's own storefront artwork, served from client/public so it ships
 // inside the build and cannot 404 behind an upload-CDN link.
 //
@@ -230,10 +231,7 @@ function HomeTopupExperience() {
           </div>
         }
       />
-      <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-line bg-panel px-4 py-3 sm:hidden">
-        <p className="text-xs font-bold tracking-[0.14em] text-ink-muted">ACCEPT PAYMENT</p>
-        <span className="rounded-lg bg-ink p-1.5"><img src={khqrLogoUrl} alt="KHQR" className="h-6 w-auto object-contain" loading="eager" decoding="async" /></span>
-      </div>
+      <TrustStrip />
       {gamesQuery.isLoading ? (
         <div className="mt-5 grid min-h-36 place-items-center rounded-2xl border border-line bg-panel text-xs text-ink-muted">
           <OutlineLoader size={30} color="#38bdf8" />

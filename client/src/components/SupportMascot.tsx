@@ -37,37 +37,23 @@ function greetingFor(date: Date) {
 export default function SupportMascot() {
   const [phase, setPhase] = useState<"greeting" | "prompt">("greeting");
   const [bubbleShown, setBubbleShown] = useState(true);
-  const [bubbleKey, setBubbleKey] = useState(0);
   const greeting = useMemo(() => greetingFor(new Date()), []);
 
-  /* Greet on arrival, then settle into the recurring help prompt. */
+  /* Greet once on arrival, then stay quiet. Repeating every 10s crowded the
+   * header and made the storefront feel noisy on a phone. */
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setPhase("prompt");
-      setBubbleKey((key) => key + 1);
-    }, 6500);
-    return () => window.clearTimeout(timer);
-  }, []);
-
-  /* Ask again every 10 seconds, then fade the bubble back out. */
-  useEffect(() => {
-    let hideTimer = 0;
-    const tick = () => {
-      setBubbleKey((key) => key + 1);
-      setBubbleShown(true);
-      hideTimer = window.setTimeout(() => setBubbleShown(false), 4200);
-    };
-    const interval = window.setInterval(tick, 10000);
+    const hide = window.setTimeout(() => setBubbleShown(false), 4800);
+    const settle = window.setTimeout(() => setPhase("prompt"), 4800);
     return () => {
-      window.clearInterval(interval);
-      window.clearTimeout(hideTimer);
+      window.clearTimeout(hide);
+      window.clearTimeout(settle);
     };
   }, []);
 
   return (
     <div className="zs-mascot">
       {bubbleShown ? (
-        <span key={bubbleKey} className={`zs-mascot__bubble zs-mascot__bubble--${phase}`}>
+        <span className={`zs-mascot__bubble zs-mascot__bubble--${phase}`}>
           {phase === "greeting" ? greeting : "ត្រូវការជំនួយ?"}
         </span>
       ) : null}

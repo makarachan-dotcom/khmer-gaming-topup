@@ -12,6 +12,7 @@ import { animate } from "animejs";
 import { ArrowUp, ChevronRight, LogIn, LogOut, WalletCards } from "lucide-react";
 import { FontEmojiBrand } from "@/components/FontEmojiBrand";
 import { PackEmoji } from "@/components/PackEmoji";
+import { TrustStrip } from "@/components/TrustStrip";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 const logoUrl = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/kBXeVXEnNVEuNZKS.jpg";
@@ -156,9 +157,10 @@ function StorefrontShell({ children }: { children: ReactNode }) {
               <img src={logoUrl} alt="ZURS STORE logo" className="h-10 w-10 shrink-0 rounded-full object-cover ring-1 ring-line" />
               <div className="min-w-0">
                 <p className="flex items-center gap-1.5 font-display text-sm font-extrabold tracking-wide text-ink"><PackEmoji name="diamond-blue" size={16} />ZURS STORE</p>
-                <p className="khmer-body mt-1 max-w-md text-xs leading-5 text-ink-muted">សេវាកម្មហ្គេម និងឌីជីថល សម្រាប់អ្នកលេងកម្ពុជា។</p>
+                <p className="khmer-body mt-1 max-w-md text-xs leading-5 text-ink-muted">សេវាកម្មហ្គេម និងឌីជីថល សម្រាប់អ្នកលេងកម្ពុជា។ ទូទាត់តាម KHQR ផ្លូវការ។</p>
               </div>
             </div>
+            <TrustStrip compact />
             <p className="mt-3 flex items-center justify-center gap-2 text-center text-xs font-semibold text-ink-muted">
               <PackEmoji name="shield-check" size={18} /><span className="khmer-tight">សេវាកម្មរហ័ស និងមានទំនុកចិត្ត</span>
             </p>

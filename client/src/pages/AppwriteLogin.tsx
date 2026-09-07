@@ -440,6 +440,7 @@ export default function AppwriteLogin() {
                 ចូលគណនី <span className="zl-title__accent">ZURS</span>
               </h1>
               <p className="zl-subtitle">បញ្ចូលអ៊ីមែលរបស់អ្នក — យើងផ្ញើលេខកូដ ៦ ខ្ទង់ ដែលបញ្ជាក់ដោយស្វ័យប្រវត្តិ។</p>
+              <p className="zl-trust">KHQR ផ្លូវការ · គណនីមានសុវត្ថិភាព</p>
               <form
                 onSubmit={(event) => {
                   event.preventDefault();

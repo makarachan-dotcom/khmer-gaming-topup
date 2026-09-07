@@ -6,6 +6,7 @@ import { useSelectedProduct } from "@/contexts/SelectedProductContext";
 import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import { LangCopy, LangToggle, useLangCopy } from "@/components/LangCopy";
+import { TrustStrip } from "@/components/TrustStrip";
 
 type PartnerProduct = {
   id: number;
@@ -99,6 +100,7 @@ export function PartnerServicesShelf({ compact = false }: { compact?: boolean })
         <h1 className="mt-1 font-display text-xl font-bold text-ink sm:text-3xl" style={{ lineHeight: 1.45 }}>សេវាឌីជីថល</h1>
         <p className="mt-1.5 text-sm text-ink-muted" style={{ lineHeight: 1.65 }}>Premium AI និង subscription — បន្ទាប់ពីបង់ប្រាក់ Admin បំពេញក្នុង ៥–១០ នាទី។</p>
       </div>
+      <TrustStrip />
 
       {catalog.isLoading ? (
         <div className="mt-4 grid grid-cols-2 gap-2.5 md:grid-cols-3 xl:grid-cols-4">
@@ -149,24 +151,19 @@ export function PartnerServicesShelf({ compact = false }: { compact?: boolean })
             <div className="mt-3 grid grid-cols-2 gap-2.5 md:grid-cols-3 xl:grid-cols-4">
               {filtered.map((product) => (
                 <article key={product.slug}>
-                  <button type="button" onClick={() => setOpenSlug(product.slug)} className="zurs-mobile-glass zurs-game-card flex h-full min-h-[9.75rem] w-full flex-col rounded-2xl p-2.5 text-left">
-                    <span className="flex items-start gap-2">
-                      <span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-line">
-                        <ServiceLogo text={`${product.providerName} ${product.name}`} size={28} />
-                      </span>
-                      <span className="min-w-0">
-                        <span className="line-clamp-2 text-[11px] font-bold leading-snug text-ink">{product.name}</span>
-                        <span className="mt-0.5 block text-[10px] font-semibold text-ink-muted">
-                          {product.durationDays ? `${product.durationDays} ថ្ងៃ` : DELIVERY_LABEL[product.deliveryType] ?? product.deliveryType}
-                        </span>
-                      </span>
+                  <button type="button" onClick={() => setOpenSlug(product.slug)} className="zurs-svc-card">
+                    <span className="zurs-svc-card__logo">
+                      <ServiceLogo text={`${product.providerName} ${product.name}`} size={32} />
                     </span>
-                    {product.descriptionKh || product.description ? <span className="mt-2 line-clamp-2 text-[10px] leading-4 text-ink-muted">{product.descriptionKh || product.description}</span> : null}
-                    <span className="mt-auto flex items-end justify-between gap-2 pt-2">
-                      <strong className="font-display text-sm font-extrabold text-ink">${product.priceUsd}</strong>
-                      <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${product.inStock ? "bg-emerald-500/10 text-emerald-700" : "bg-rose-500/10 text-rose-600"}`}>
-                        {product.inStock ? "មានស្តុក" : "អស់ស្តុក"}
-                      </span>
+                    <span className="zurs-svc-card__provider">{product.providerName}</span>
+                    <span className="zurs-svc-card__name">{product.name}</span>
+                    <span className="zurs-svc-card__meta">
+                      <span>{DELIVERY_LABEL[product.deliveryType] ?? product.deliveryType}</span>
+                      {product.durationDays ? <span>{product.durationDays} ថ្ងៃ</span> : null}
+                    </span>
+                    <span className="zurs-svc-card__foot">
+                      <strong>${product.priceUsd}</strong>
+                      <span className={product.inStock ? "is-in" : "is-out"}>{product.inStock ? "មានស្តុក" : "អស់ស្តុក"}</span>
                     </span>
                   </button>
                 </article>
