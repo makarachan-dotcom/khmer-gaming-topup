@@ -122,6 +122,13 @@ describe("dedicated game top-up routes", () => {
     expect(source).toContain("artworkUrlWithRevision(toWebsiteMediaUrl(item.mediaUrl), item.updatedAt)");
   });
 
+  it("fills missing or broken package pictures without replacing admin artwork", () => {
+    const source = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
+    expect(source).toContain("function SafePackageArt");
+    expect(source).toContain("isMissingStaticArtwork");
+    expect(source).toContain("suppliedProductArtworkForPackage(gameId, item.amountLabel, item.label)");
+  });
+
   it("collapses to a verified username card and restores ID editing with an observer-driven title handoff", () => {
     const source = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
     expect(source).toContain("identityCollapsed");

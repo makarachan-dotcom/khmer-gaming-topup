@@ -23,6 +23,12 @@ describe("supplied product artwork", () => {
     expect(suppliedProductArtworkForPackage("mobile_legends", "250 + 25 Diamonds (First Top-Up Bonus)")).toBeNull();
   });
 
+  it("uses Free Fire family artwork and Weekly Membership without replacing exact x2 matches", () => {
+    expect(suppliedProductArtworkForPackage("free_fire", "100 Diamonds")).toContain("01K4C2V60CSQZ51C4VRVEZG6Z5.png");
+    expect(suppliedProductArtworkForPackage("free_fire", "Weekly Membership", "Weekly Membership")).toContain("01K4C7X5BCBNFGFW4Q7AMFT4S1.png");
+    expect(suppliedProductArtworkForPackage("free_fire_my_sg", "Weekly Pass x2")).toContain("01K4C807HPN25T50TN8Y8AFJT0.png");
+  });
+
   it("contains only the product image entries supplied by the owner", () => {
     expect(suppliedProductArtworkAmountCount()).toBe(79);
   });

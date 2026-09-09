@@ -95,19 +95,54 @@ export type SuppliedArtworkGameId = keyof typeof suppliedArtworkByGameAndAmount;
 const suppliedArtworkGameAliases: Record<string, SuppliedArtworkGameId> = {
   pubg_mobile_auto: "pubg_mobile",
   pubg_mobile_fast: "pubg_mobile",
+  free_fire: "free_fire_my_sg",
+  free_fire_sg: "free_fire_my_sg",
+  free_fire_bd: "free_fire_my_sg",
+  free_fire_cis: "free_fire_my_sg",
+  free_fire_latam: "free_fire_my_sg",
+  free_fire_mena: "free_fire_my_sg",
+  mobile_legends_global: "mobile_legends",
+  mobile_legends_promo: "mobile_legends",
+  mobile_legends_special: "mobile_legends",
 };
 
 export function normalizeSuppliedPackageAmount(value: string) {
   return value.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
-export function suppliedProductArtworkForPackage(gameId: string, amountLabel: string) {
-  const sourceGameId = suppliedArtworkGameAliases[gameId] ?? gameId;
-  const game = suppliedArtworkByGameAndAmount[sourceGameId as SuppliedArtworkGameId];
+function artworkGameForId(gameId: string) {
+  const normalized = gameId.trim().toLowerCase();
+  const aliased = suppliedArtworkGameAliases[normalized] ?? normalized;
+  if (aliased in suppliedArtworkByGameAndAmount) return suppliedArtworkByGameAndAmount[aliased as SuppliedArtworkGameId];
+  const family = Object.keys(suppliedArtworkByGameAndAmount).find((key) => normalized === key || normalized.startsWith(`${key}_`));
+  return family ? suppliedArtworkByGameAndAmount[family as SuppliedArtworkGameId] : null;
+}
+
+export function suppliedProductArtworkForPackage(gameId: string, amountLabel: string, label = "") {
+  const game = artworkGameForId(gameId);
   if (!game) return null;
-  const expected = normalizeSuppliedPackageAmount(amountLabel);
-  const match = Object.entries(game).find(([amount]) => normalizeSuppliedPackageAmount(amount) === expected);
-  return match?.[1] ?? null;
+  const candidates = [amountLabel, label].map((value) => value.trim()).filter(Boolean);
+  for (const candidate of candidates) {
+    const expected = normalizeSuppliedPackageAmount(candidate);
+    const match = Object.entries(game).find(([amount]) => normalizeSuppliedPackageAmount(amount) === expected);
+    if (match) return match[1];
+  }
+  const blob = `${label} ${amountLabel}`.toLowerCase();
+  const numberedBundle = /\bx(?:[2-9]|\d{2,})\b/.test(blob);
+  const number = (blob.match(/\d[\d,]*/)?.[0] ?? "").replace(/,/g, "");
+  const entries = Object.entries(game);
+  if (!numberedBundle && /weekly\s*lite/.test(blob)) return entries.find(([key]) => /weekly lite x1/i.test(key))?.[1] ?? null;
+  if (!numberedBundle && /weekly/.test(blob) && /pass|membership|card/.test(blob)) return entries.find(([key]) => /weekly (?:pass|card)(?: x1)?$/i.test(key))?.[1] ?? null;
+  if (!numberedBundle && /monthly/.test(blob) && /pass|membership|card/.test(blob)) return entries.find(([key]) => /monthly pass(?: x1)?$/i.test(key))?.[1] ?? null;
+  if (number) {
+    const numbered = entries.find(([key]) => {
+      const normalized = normalizeSuppliedPackageAmount(key);
+      const keyNumber = (key.match(/\d[\d,]*/)?.[0] ?? "").replace(/,/g, "");
+      return keyNumber === number && /diamond|token|\buc\b/.test(normalized);
+    });
+    if (numbered) return numbered[1];
+  }
+  return null;
 }
 
 export function suppliedProductArtworkAmountCount() {

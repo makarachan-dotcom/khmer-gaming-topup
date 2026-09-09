@@ -384,3 +384,60 @@ body:has(.zl-shell) .zs-mascot__bubble {
   .zurs-svc-card:hover { transform: none; }
 }
 
+.pkg-art {
+  position: relative;
+  display: block;
+  height: 4.2rem;
+  overflow: hidden;
+  border-radius: 0.7rem;
+  background: linear-gradient(145deg, #1e293b, #0f172a);
+}
+.pkg-art__image {
+  display: block;
+  height: 100%;
+  width: 100%;
+  object-fit: cover !important;
+  object-position: center;
+}
+.pkg-art__amount {
+  position: absolute;
+  z-index: 2;
+  inset-inline: 0.32rem;
+  bottom: 0.28rem;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.28);
+  border-radius: 0.4rem;
+  background: rgba(15, 23, 42, 0.78);
+  color: #fff7d6;
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 1.2rem;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.package-choice-surface { position: relative; }
+.package-choice-check { position: absolute; top: 0.4rem; right: 0.4rem; z-index: 5; }
+.package-choice--clean .package-choice-surface { min-height: 0; }
+.package-choice .package-badge { display: inline-flex; margin-top: 0.35rem; }
+
+@media (min-width: 768px) {
+  .container { max-width: 980px !important; }
+  .game-topup-container { max-width: 920px !important; }
+  .game-detail-hero { min-height: 8.25rem !important; }
+  .game-detail-hero__title { font-size: 1.32rem !important; }
+  .package-category-grid {
+    gap: 0.7rem !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+  .package-category-grid > article { height: auto !important; }
+  .package-choice-surface,
+  .package-choice--clean .package-choice-surface { min-height: 0 !important; }
+  .pkg-art { height: 4.55rem; }
+  .zurs-game-card { max-width: none; }
+}
+@media (min-width: 1100px) {
+  .package-category-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+}
+
+
