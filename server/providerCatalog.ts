@@ -620,14 +620,43 @@ export async function resolveLiveProviderOffer(packageId: string) {
   return null;
 }
 
+const ADMIN_CATALOG_CACHE_MS = 20_000;
+let adminCatalogCache: { expiresAt: number; value: Promise<{ games: Array<{ id: string; packages: Array<{ id: string; amountLabel: string; priceUsd: string; isActive: boolean; providerSource?: string | null }> }> }> } | null = null;
+
+async function adminCatalogForStorefront() {
+  const now = Date.now();
+  if (adminCatalogCache && now < adminCatalogCache.expiresAt) return adminCatalogCache.value;
+  const { getAdminCatalog } = await import("./db");
+  const value = getAdminCatalog();
+  adminCatalogCache = { expiresAt: now + ADMIN_CATALOG_CACHE_MS, value };
+  return value;
+}
+
+const FZR_OFFERS_CACHE_MS = 45_000;
+const fzrOffersCache = new Map<string, { expiresAt: number; value: unknown }>();
+const fzrOffersInFlight = new Map<string, Promise<unknown>>();
+
+async function fzrOffersByCategory(categoryId: string) {
+  const cached = fzrOffersCache.get(categoryId);
+  if (cached && Date.now() < cached.expiresAt) return cached.value;
+  const inflight = fzrOffersInFlight.get(categoryId);
+  if (inflight) return inflight;
+  const request = fzrRequest(`/api/v2/topups/offers?category_id=${encodeURIComponent(categoryId)}&include_ui=1`)
+    .then((value) => {
+      if (value) fzrOffersCache.set(categoryId, { expiresAt: Date.now() + FZR_OFFERS_CACHE_MS, value });
+      return value;
+    })
+    .finally(() => {
+      if (fzrOffersInFlight.get(categoryId) === request) fzrOffersInFlight.delete(categoryId);
+    });
+  fzrOffersInFlight.set(categoryId, request);
+  return request;
+}
+
 async function providerPackages(categoryId: string, offers: z.infer<typeof fzrOffersSchema>["offers"]) {
   const livePackages = offers.filter((offer) => Boolean(offer.offer_id)).map((offer) => ({ id: providerPackageRecordId(categoryId, offer.offer_id!), label: offer.name, amountLabel: offer.name, priceLabel: `$${Number(offer.price_usd).toFixed(2)}`, provider: "FZR Cards", paymentMethods: ["khqr", "bank"] as ("khqr" | "bank")[] }));
   try {
-    // Checkout validates the primary catalog, so the storefront must expose the
-    // same active rows and admin-controlled sale prices instead of every live
-    // provider offer. This keeps displayed package IDs purchasable.
-    const { getAdminCatalog } = await import("./db");
-    const adminCatalog = await getAdminCatalog();
+    const adminCatalog = await adminCatalogForStorefront();
     const productId = `fzr-game-${createHash("sha256").update(categoryId).digest("hex").slice(0, 40)}`;
     const product = adminCatalog.games.find((item) => item.id === productId || item.packages.some((pkg: { providerSource?: string | null }) => String(pkg.providerSource ?? "").startsWith(`fzr_cards:${categoryId}:`)));
     if (!product) return livePackages;
@@ -900,6 +929,11 @@ export async function fetchProviderGameDetails(gameId: string, options: { includ
     if (isMobileLegendsFamilyGame(gameId)) {
       const activeVariants = availableGames.games.filter((game) => game.id !== mobileLegendsFamilyGameId && /^mobile_legends(?:_|$)/i.test(game.id)).map((game) => game.id);
       if (!activeVariants.length) return { status: "unavailable", game: null, packages: [] };
+      const syncedPackages = options.includeInactive ? await getAdminSyncedProviderPackages(activeVariants) : await getPublicSyncedProviderPackages(activeVariants);
+      if (syncedPackages?.length) {
+        const primary = availableGames.games.find((game) => game.id === "mobile_legends_global") ?? availableGames.games.find((game) => activeVariants.includes(game.id))!;
+        return { status: "ready", game: { ...primary, id: mobileLegendsFamilyGameId, name: "Mobile Legends" }, packages: syncedPackages };
+      }
       const variantDetails = await Promise.all(activeVariants.map((variantId) => fetchProviderGameDetails(variantId, options)));
       const readyVariants = variantDetails.filter((details): details is Extract<ProviderGameDetailsResponse, { status: "ready" }> => details.status === "ready");
       if (!readyVariants.length) return { status: variantDetails.some((details) => details.status === "error") ? "error" : "unavailable", game: null, packages: [] };
@@ -916,6 +950,11 @@ export async function fetchProviderGameDetails(gameId: string, options: { includ
       // original provider category and package ID untouched.
       const activeVariants = availableGames.games.filter((game) => game.id !== freeFireFamilyGameId && /^free_fire(?:_|$)/i.test(game.id)).map((game) => game.id);
       if (!activeVariants.length) return { status: "unavailable", game: null, packages: [] };
+      const syncedPackages = options.includeInactive ? await getAdminSyncedProviderPackages(activeVariants) : await getPublicSyncedProviderPackages(activeVariants);
+      if (syncedPackages?.length) {
+        const primary = availableGames.games.find((game) => game.id === "free_fire_my_sg") ?? availableGames.games.find((game) => activeVariants.includes(game.id))!;
+        return { status: "ready", game: { ...primary, id: freeFireFamilyGameId, name: "Free Fire", requiredFields: freeFireIdentityFields(primary.requiredFields) }, packages: syncedPackages };
+      }
       const variantDetails = await Promise.all(activeVariants.map((variantId) => fetchProviderGameDetails(variantId, options)));
       const readyVariants = variantDetails.filter((details): details is Extract<ProviderGameDetailsResponse, { status: "ready" }> => details.status === "ready");
       if (!readyVariants.length) return { status: variantDetails.some((details) => details.status === "error") ? "error" : "unavailable", game: null, packages: [] };
@@ -929,6 +968,11 @@ export async function fetchProviderGameDetails(gameId: string, options: { includ
     if (isPubgMobileFamilyGame(gameId)) {
       const activeVariants = availableGames.games.filter((game) => game.id !== pubgMobileFamilyGameId && /^pubg_mobile(?:_|$)/i.test(game.id)).map((game) => game.id);
       if (!activeVariants.length) return { status: "unavailable", game: null, packages: [] };
+      const syncedPackages = options.includeInactive ? await getAdminSyncedProviderPackages(activeVariants) : await getPublicSyncedProviderPackages(activeVariants);
+      if (syncedPackages?.length) {
+        const primary = availableGames.games.find((game) => game.id === "pubg_mobile_auto") ?? availableGames.games.find((game) => activeVariants.includes(game.id))!;
+        return { status: "ready", game: { ...primary, id: pubgMobileFamilyGameId, name: "PUBG Mobile" }, packages: syncedPackages };
+      }
       const variantDetails = await Promise.all(activeVariants.map((variantId) => fetchProviderGameDetails(variantId, options)));
       const readyVariants = variantDetails.filter((details): details is Extract<ProviderGameDetailsResponse, { status: "ready" }> => details.status === "ready");
       if (!readyVariants.length) return { status: variantDetails.some((details) => details.status === "error") ? "error" : "unavailable", game: null, packages: [] };
@@ -940,7 +984,7 @@ export async function fetchProviderGameDetails(gameId: string, options: { includ
       };
     }
     if (!availableGames.games.some((game) => game.id === gameId)) return { status: "unavailable", game: null, packages: [] };
-    const response = await fzrRequest(`/api/v2/topups/offers?category_id=${encodeURIComponent(gameId)}&include_ui=1`);
+    const response = await fzrOffersByCategory(gameId);
     if (!response) return (await cachedProviderGameDetails(gameId, options.includeInactive)) ?? { status: "unavailable", game: null, packages: [] };
     const payload = fzrOffersSchema.safeParse(response);
     // Only treat an unparseable response as an error. The provider sometimes echoes a
@@ -967,17 +1011,14 @@ export async function fetchProviderGameDetails(gameId: string, options: { includ
 /** Public browsing exposes only package labels and prices from active provider catalog entries; it never accepts a customer identity or initiates an order. */
 export async function fetchPublicProviderPackagePreview(gameId: string): Promise<ProviderPackageResponse> {
   if (!isWantedProviderGameId(gameId) && !isBuiltInProviderGameId(gameId)) return { status: "unavailable", packages: [] };
+  const providerGameIds = await providerGameIdVariants(gameId);
+  const syncedPackages = await getPublicSyncedProviderPackages(providerGameIds);
+  if (syncedPackages?.length) return { status: "ready", packages: syncedPackages };
   const details = await fetchProviderGameDetails(gameId);
   if (details.status === "ready") {
     const packages = await filterOrderableProviderPackages(details.packages);
     if (packages.length) return { status: "ready", packages };
   }
-
-  // Keep public browsing usable during a provider outage or missing live offer
-  // response, but only expose database rows that are active and authorized.
-  const providerGameIds = await providerGameIdVariants(gameId);
-  const fallbackPackages = await getPublicSyncedProviderPackages(providerGameIds);
-  if (fallbackPackages?.length) return { status: "ready", packages: fallbackPackages };
   return { status: details.status, packages: [] };
 }
 
@@ -1040,6 +1081,8 @@ export async function fetchProviderPackages(input: ProviderPackageRequest): Prom
   if (identity.status === "unavailable") return { status: "unavailable", packages: [] };
   if (identity.status === "error") return { status: "error", packages: [] };
   if (identity.status !== "verified" && !(identity.status === "not_supported" && input.idAccuracyConfirmed)) return { status: "verification_required", packages: [] };
+  const syncedPackages = await getPublicSyncedProviderPackages(await providerGameIdVariants(input.gameId));
+  if (syncedPackages?.length) return { status: "ready", packages: syncedPackages };
   const details = await fetchProviderGameDetails(input.gameId);
   if (details.status === "ready") {
     const orderablePackages = await filterOrderableProviderPackages(details.packages);

@@ -129,6 +129,13 @@ describe("dedicated game top-up routes", () => {
     expect(source).toContain("suppliedProductArtworkForPackage(gameId, item.amountLabel, item.label)");
   });
 
+  it("does not block the identity form behind a full-page package overlay", () => {
+    const source = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
+    expect(source).toContain('LoadingOverlay open={gameQuery.isLoading}');
+    expect(source).toContain("packagesLoading");
+    expect(source).not.toContain("providerPackages.isPending || adminPreview.isLoading || (showPackages && publicPackagePreview.isLoading)");
+  });
+
   it("collapses to a verified username card and restores ID editing with an observer-driven title handoff", () => {
     const source = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
     expect(source).toContain("identityCollapsed");
