@@ -715,6 +715,7 @@ export const initialApprovedPublicGameIds = [
 export const mobileLegendsFamilyGameId = "mobile_legends";
 const mobileLegendsFamilyVariantIds = ["mobile_legends_global", "mobile_legends_promo", "mobile_legends_special"] as const;
 export const freeFireFamilyGameId = "free_fire";
+const freeFireFamilyVariantIds = ["free_fire_my_sg", "free_fire_sg", "free_fire_bd", "free_fire_cis", "free_fire_latam", "free_fire_mena"] as const;
 export const pubgMobileFamilyGameId = "pubg_mobile";
 const pubgMobileFamilyVariantIds = ["pubg_mobile_auto", "pubg_mobile_fast"] as const;
 
@@ -724,6 +725,21 @@ function isMobileLegendsFamilyGame(gameId: string) {
 
 function isFreeFireFamilyGame(gameId: string) {
   return gameId.trim().toLowerCase() === freeFireFamilyGameId;
+}
+
+function isFreeFireGame(gameId: string) {
+  return /^free_fire(?:_|$)/i.test(gameId.trim());
+}
+
+function freeFireIdentityFields(fields: z.infer<typeof providerFieldSchema>[]) {
+  const withoutZone = fields.filter((field) => !/(?:server|zone)/i.test(`${field.key} ${field.label}`));
+  const normalized = withoutZone.map((field) => (
+    /(?:player|user|account|uid|\bid\b)/i.test(`${field.key} ${field.label}`)
+      ? { ...field, required: true, kind: "text" as const, placeholder: field.placeholder || "UID Free Fire" }
+      : field
+  ));
+  if (normalized.some((field) => /(?:player|user|account|uid|\bid\b)/i.test(`${field.key} ${field.label}`))) return normalized;
+  return [{ key: "player_id", label: "Player ID", placeholder: "UID Free Fire", required: true, kind: "text" as const }];
 }
 
 function isPubgMobileFamilyGame(gameId: string) {
@@ -865,7 +881,7 @@ export async function fetchProviderGameDetails(gameId: string, options: { includ
       // FazerCards publishes Free Fire by regional fulfillment route. Present all
       // owner-enabled routes as a single Free Fire game while leaving each offer's
       // original provider category and package ID untouched.
-      const activeVariants = availableGames.games.filter((game) => /^free_fire(?:_|$)/i.test(game.id)).map((game) => game.id);
+      const activeVariants = availableGames.games.filter((game) => game.id !== freeFireFamilyGameId && /^free_fire(?:_|$)/i.test(game.id)).map((game) => game.id);
       if (!activeVariants.length) return { status: "unavailable", game: null, packages: [] };
       const variantDetails = await Promise.all(activeVariants.map((variantId) => fetchProviderGameDetails(variantId, options)));
       const readyVariants = variantDetails.filter((details): details is Extract<ProviderGameDetailsResponse, { status: "ready" }> => details.status === "ready");
@@ -873,7 +889,7 @@ export async function fetchProviderGameDetails(gameId: string, options: { includ
       const primary = readyVariants.find((details) => details.game.id === "free_fire_my_sg") ?? readyVariants[0]!;
       return {
         status: "ready",
-        game: { ...primary.game, id: freeFireFamilyGameId, name: "Free Fire" },
+        game: { ...primary.game, id: freeFireFamilyGameId, name: "Free Fire", requiredFields: freeFireIdentityFields(primary.game.requiredFields) },
         packages: readyVariants.flatMap((details) => details.packages),
       };
     }
@@ -909,7 +925,7 @@ export async function fetchProviderGameDetails(gameId: string, options: { includ
       const cached = await cachedProviderGameDetails(gameId, options.includeInactive);
       if (cached && cached.status === "ready" && cached.packages.length) return cached;
     }
-    return { status: "ready", game: { id: gameId, name: resolvedName, region: providerGameRegion(resolvedName), logoUrl: payload.data.imageurl, provider: "FZR Cards", requiredFields: fields }, packages: livePackages };
+    return { status: "ready", game: { id: gameId, name: resolvedName, region: providerGameRegion(resolvedName), logoUrl: payload.data.imageurl, provider: "FZR Cards", requiredFields: /^free_fire(?:_|$)/i.test(gameId) ? freeFireIdentityFields(fields) : fields }, packages: livePackages };
   } catch {
     return (await cachedProviderGameDetails(gameId, options.includeInactive)) ?? { status: "error", game: null, packages: [] };
   }
@@ -969,6 +985,7 @@ async function providerGameIdVariants(gameId: string): Promise<string[]> {
     .map((game) => game.id);
   if (variants.length) return variants;
   if (normalizedGameId === mobileLegendsFamilyGameId) return [...mobileLegendsFamilyVariantIds];
+  if (normalizedGameId === freeFireFamilyGameId) return [...freeFireFamilyVariantIds];
   if (normalizedGameId === pubgMobileFamilyGameId) return [...pubgMobileFamilyVariantIds];
   return [];
 }
@@ -1009,7 +1026,11 @@ const fzrPlayerIdentitySchema = z.object({
   region: z.string().trim().min(1).max(120).nullable().optional(),
 });
 
-const isanPlayerNameSchema = z.object({ success: z.literal(true), name: z.string().trim().min(1).max(180), country: z.string().trim().min(1).max(120).optional() });
+const isanPlayerNameSchema = z.preprocess((raw) => {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
+  const row = raw as Record<string, unknown>;
+  return { ...row, name: row.name ?? row.nickname ?? row.username ?? row.player_name };
+}, z.object({ success: z.literal(true), name: z.string().trim().min(1).max(180), country: z.string().trim().min(1).max(120).optional() }));
 const eightBallPoolPlayerNameSchema = z.object({ status: z.literal(true), nickname: z.string().trim().min(1).max(180) });
 const bridgePlayerNameSchema = z.object({ success: z.literal(true), username: z.string().trim().min(1).max(180) });
 
@@ -1042,9 +1063,32 @@ function isMagicChessGame(gameId: string) {
 
 type OwnerApprovedFreeIdentityRequest = { kind: "isan" | "eight_ball_pool"; url: string; playerId: string } | { kind: "invalid" };
 
+function numericAccountId(raw: string, minDigits = 4, maxDigits = 20) {
+  const compact = raw.replace(/\D/g, "");
+  if (compact.length >= minDigits && compact.length <= maxDigits) return compact;
+  const match = raw.match(new RegExp(`\\d{${minDigits},${maxDigits}}`));
+  return match?.[0] ?? "";
+}
+
+function readNumericAccountId(fields: Record<string, string>, keys: string[], minDigits = 4, maxDigits = 20) {
+  for (const key of keys) {
+    const value = fields[key];
+    if (typeof value !== "string") continue;
+    const id = numericAccountId(value, minDigits, maxDigits);
+    if (id) return id;
+  }
+  for (const [key, value] of Object.entries(fields)) {
+    if (!/(?:player|user|account|uid|\bid\b|server|zone)/i.test(key)) continue;
+    if (keys.some((item) => /(?:server|zone)/i.test(item)) !== /(?:server|zone)/i.test(key)) continue;
+    const id = numericAccountId(value, minDigits, maxDigits);
+    if (id) return id;
+  }
+  return "";
+}
+
 function ownerApprovedFreeIdentityRequest(input: ProviderPackageRequest): OwnerApprovedFreeIdentityRequest | null {
   const gameId = input.gameId.trim().toLowerCase();
-  const game = /^free_fire(?:_|$)/.test(gameId) ? "ff" as const
+  const game = isFreeFireGame(gameId) ? "ff" as const
     : isMobileLegendsGame(gameId) ? "ml" as const
       : /^magic_chess(?:_|$)/.test(gameId) ? "mcgg" as const
         : /^call_of_duty(?:_|$)/.test(gameId) ? "cod" as const
@@ -1052,11 +1096,11 @@ function ownerApprovedFreeIdentityRequest(input: ProviderPackageRequest): OwnerA
             : /^8_ball_pool(?:_|$)/.test(gameId) ? "eight_ball_pool" as const
               : null;
   if (!game) return null;
-  const playerId = (input.fields.player_id ?? input.fields.user_id ?? input.fields.account_id ?? input.fields.id ?? "").trim();
-  const serverId = (input.fields.server_id ?? input.fields.zone_id ?? input.fields.server ?? "").trim();
-  if (!/^\d{4,20}$/.test(playerId)) return { kind: "invalid" };
+  const playerId = readNumericAccountId(input.fields, ["player_id", "user_id", "account_id", "id", "uid", "userid"]);
+  const serverId = readNumericAccountId(input.fields, ["server_id", "zone_id", "server"], 1, 12);
+  if (!playerId) return { kind: "invalid" };
   const isanUrl = (game: "ff" | "ml" | "mcgg" | "cod" | "aov", requiresServer = false) => {
-    if (requiresServer && !/^\d{1,12}$/.test(serverId)) return { kind: "invalid" } as const;
+    if (requiresServer && !serverId) return { kind: "invalid" } as const;
     const query = new URLSearchParams({ id: playerId });
     if (requiresServer) query.set("server", serverId);
     return { kind: "isan" as const, url: `https://api.isan.eu.org/nickname/${game}?${query.toString()}`, playerId };
@@ -1078,7 +1122,10 @@ async function validateWithOwnerApprovedFreeApi(input: ProviderPackageRequest): 
   if (!request) return null;
   if (request.kind === "invalid") return emptyIdentity("invalid");
   try {
-    const response = await fetch(request.url, { signal: AbortSignal.timeout(8_000) });
+    const response = await fetch(request.url, {
+      headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0 (compatible; ZURS.me Check-ID)" },
+      signal: AbortSignal.timeout(12_000),
+    });
     const payload = await response.json().catch(() => null);
     if (request.kind === "isan") {
       const success = isanPlayerNameSchema.safeParse(payload);

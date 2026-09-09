@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 vi.mock("streamdown", () => ({ Streamdown: () => null }));
-import { canBrowseTopupPackages, canBrowseVerifiedPackages, canCreateTopupPurchaseContext, gameIdFromTopupPath, gameThemedArtworkForPackage, gameTopupPath, groupProviderPackagesByMeaning, initialDiamondPackageLimit, partitionProviderPackagesForFullTicketEvent, readVerifiedPlayerEntries, requiresPlayerIdentityCheck, requiresVerifiedUsername, saveVerifiedPlayerEntry, sortProviderPackagesByPrice, usesLegacyMobileLegendsArtwork, usesMobileLegendsDiamondChestArtwork, visibleDiamondPackageItems } from "./GameTopup";
+import { canBrowseTopupPackages, canBrowseVerifiedPackages, canCreateTopupPurchaseContext, gameIdFromTopupPath, gameThemedArtworkForPackage, gameTopupPath, groupProviderPackagesByMeaning, identityFieldsForGame, initialDiamondPackageLimit, partitionProviderPackagesForFullTicketEvent, readVerifiedPlayerEntries, requiresPlayerIdentityCheck, requiresVerifiedUsername, saveVerifiedPlayerEntry, sortProviderPackagesByPrice, usesLegacyMobileLegendsArtwork, usesMobileLegendsDiamondChestArtwork, visibleDiamondPackageItems } from "./GameTopup";
 
 describe("dedicated game top-up routes", () => {
   it("creates and reads an encoded provider game route", () => {
@@ -207,10 +207,15 @@ describe("dedicated game top-up routes", () => {
   });
 
   it("requires a verified username for the supported game families before payment preview", () => {
-    ["mobile_legends", "mobile_legends_global", "free_fire_my_sg", "pubg_mobile", "pubg_mobile_auto", "blood_strike", "honor_of_kings", "magic_chess_gogo_global"].forEach((gameId) => {
+    ["mobile_legends", "mobile_legends_global", "free_fire", "free_fire_my_sg", "pubg_mobile", "pubg_mobile_auto", "blood_strike", "honor_of_kings", "magic_chess_gogo_global"].forEach((gameId) => {
       expect(requiresVerifiedUsername(gameId)).toBe(true);
     });
     expect(requiresVerifiedUsername("call_of_duty_mobile")).toBe(false);
+  });
+
+  it("always shows a text Player ID field for Free Fire Check ID", () => {
+    expect(identityFieldsForGame("free_fire", [])).toEqual([{ key: "player_id", label: "Player ID", placeholder: "UID Free Fire", required: true, kind: "text" }]);
+    expect(identityFieldsForGame("free_fire_my_sg", [{ key: "user_id", label: "User ID", required: true, kind: "number" }, { key: "server_id", label: "Server ID", required: true, kind: "text" }])).toEqual([{ key: "user_id", label: "User ID", required: true, kind: "text", placeholder: "UID Free Fire" }]);
   });
 
   it("keeps the selected package during the route handoff to checkout preview", () => {

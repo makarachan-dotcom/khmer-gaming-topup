@@ -1,6 +1,6 @@
 export const defaultGames = [
   { id: "game-mlbb", slug: "mlbb", titleKh: "Mobile Legends", titleEn: "Mobile Legends", currencyLabel: "Diamonds", iconLabel: "ML", accent: "indigo", requiresZone: true, sortOrder: 10 },
-  { id: "game-free-fire", slug: "free-fire", titleKh: "Free Fire", titleEn: "Free Fire", currencyLabel: "Diamonds", iconLabel: "FF", accent: "orange", requiresZone: true, sortOrder: 20 },
+  { id: "game-free-fire", slug: "free-fire", titleKh: "Free Fire", titleEn: "Free Fire", currencyLabel: "Diamonds", iconLabel: "FF", accent: "orange", requiresZone: false, sortOrder: 20 },
   { id: "game-pubg", slug: "pubg", titleKh: "PUBG Mobile", titleEn: "PUBG Mobile", currencyLabel: "UC", iconLabel: "UC", accent: "teal", requiresZone: true, sortOrder: 30 },
   { id: "game-blox", slug: "blox", titleKh: "Blox Fruits", titleEn: "Blox Fruits", currencyLabel: "Robux", iconLabel: "BX", accent: "fuchsia", requiresZone: false, sortOrder: 40 },
 ] as const;
