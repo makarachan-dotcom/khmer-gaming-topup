@@ -144,7 +144,7 @@ export const appRouter = router({
       await enforceRateLimitOrThrow({ bucket: rateLimitBuckets.createTopup, identifier: `user:service:${ctx.user.id}`, mode: "strict" });
       return createPartnerServiceOrder({ userId: ctx.user.id, slug: input.slug, quantity: input.quantity, customerNote: input.customerNote });
     }),
-    createTopup: protectedProcedure.input(z.object({ packageId: z.string().min(4).max(64), playerId: z.string().trim().min(2).max(128), zoneId: z.string().trim().min(1).max(128).optional(), quantity: z.number().int().min(1).max(9) })).mutation(async ({ ctx, input }) => {
+    createTopup: protectedProcedure.input(z.object({ packageId: z.string().min(4).max(64), playerId: z.string().trim().min(2).max(128), zoneId: z.string().trim().min(1).max(128).optional(), accountPassword: z.string().trim().min(4).max(200).optional(), quantity: z.number().int().min(1).max(9) })).mutation(async ({ ctx, input }) => {
       // Ten orders per hour per account. Checked before the order is written so
       // an abusive account cannot flood the provider queue.
       await enforceRateLimitOrThrow({ bucket: rateLimitBuckets.createTopup, identifier: `user:${ctx.user.id}`, mode: "strict" });

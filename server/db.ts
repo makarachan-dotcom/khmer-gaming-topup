@@ -538,7 +538,7 @@ async function resolvePurchasableTopupPackage(packageId: string) {
   return (await loadSqlTopupPackage(packageId)) ?? (await materializeLiveTopupPackage(packageId));
 }
 
-export async function createTopupOrder(input: { userId: number; packageId: string; playerId: string; zoneId?: string | null; quantity: number }) {
+export async function createTopupOrder(input: { userId: number; packageId: string; playerId: string; zoneId?: string | null; accountPassword?: string | null; quantity: number }) {
   await requirePublicPaymentEnabled();
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
@@ -549,7 +549,9 @@ export async function createTopupOrder(input: { userId: number; packageId: strin
   if (!item) throw new Error("Selected game package is unavailable");
   const providerSource = String(item.package.providerSource ?? "");
   const isFreeFirePackage = /^fzr_cards:free_fire(?:_|:|$)/i.test(providerSource) || /free[\s_-]*fire/i.test(`${item.game.titleEn} ${item.game.titleKh}`);
-  if (item.game.requiresZone && !isFreeFirePackage && !input.zoneId?.trim()) throw new Error("Server or zone ID is required for this game");
+  const isRobloxPackage = /roblox|robux/i.test(`${providerSource} ${item.game.titleEn} ${item.game.titleKh}`);
+  if (item.game.requiresZone && !isFreeFirePackage && !isRobloxPackage && !input.zoneId?.trim()) throw new Error("Server or zone ID is required for this game");
+  if (isRobloxPackage && !input.accountPassword?.trim()) throw new Error("Roblox username and password are required");
   // Anti-tamper. The storefront never sends a price, but the catalog row is
   // still untrusted input: it can be edited directly, left stale by a failed
   // provider sync, or zeroed by a half-applied margin change. Recompute the
@@ -567,7 +569,7 @@ export async function createTopupOrder(input: { userId: number; packageId: strin
   if (assessOrderVelocity(recentOrders).blocked) throw Object.assign(new Error(orderVelocityMessageKh), { code: "ORDER_VELOCITY_BLOCKED" });
   const subtotal = priceCheck.subtotal;
   const id = nanoid(); const orderNumber = buildOrderNumber(); const trackingCode = buildTrackingCode();
-  await db.insert(orders).values({ id, orderNumber, trackingCode, userId: input.userId, orderType: "topup", status: "pending", subtotal, productName: `${item.game.titleEn} • ${item.package.amountLabel} ${item.game.currencyLabel}`, details: { packageId: item.package.id, gameProductId: item.game.id, playerId: input.playerId.trim(), zoneId: input.zoneId?.trim() ?? null, quantity: input.quantity } });
+  await db.insert(orders).values({ id, orderNumber, trackingCode, userId: input.userId, orderType: "topup", status: "pending", subtotal, productName: `${item.game.titleEn} • ${item.package.amountLabel} ${item.game.currencyLabel}`, details: { packageId: item.package.id, gameProductId: item.game.id, playerId: input.playerId.trim(), zoneId: input.zoneId?.trim() ?? null, accountPassword: input.accountPassword?.trim() || null, quantity: input.quantity } });
   await appendOrderStatusEvent({ orderId: id, eventType: "order_created", status: "pending", actorType: "customer", messageKh: statusMessageKh("pending") });
   return { id, orderNumber, trackingCode, amount: subtotal, status: "pending" as const };
 }
@@ -1194,9 +1196,11 @@ export async function fulfillTopupOrder(orderId: string): Promise<{ delivered: b
   if (!parsed) { await flagManualReview("unmapped_provider_package"); return { delivered: false, reason: "unmapped_provider_package" }; }
   const categoryId = parsed[1]!;
   const offerId = parsed[2]!;
-  const result = await submitFzrTopupOrder({ categoryId, offerId, playerId, serverId: zoneId || null });
+  const accountPassword = typeof details.accountPassword === "string" ? details.accountPassword : "";
+  const result = await submitFzrTopupOrder({ categoryId, offerId, playerId, serverId: zoneId || null, password: accountPassword || null });
   if (result.status === "submitted") {
-    await db.update(orders).set({ status: "delivered", details: { ...details, providerOrderId: result.providerOrderId, providerFulfillment: "submitted", providerFulfillmentAt: new Date().toISOString() } }).where(eq(orders.id, orderId));
+    const { accountPassword: _secret, ...safeDetails } = details;
+    await db.update(orders).set({ status: "delivered", details: { ...safeDetails, providerOrderId: result.providerOrderId, providerFulfillment: "submitted", providerFulfillmentAt: new Date().toISOString() } }).where(eq(orders.id, orderId));
     await appendOrderStatusEvent({ orderId, eventType: "provider_submitted", status: "delivered", actorType: "provider", providerReference: result.providerOrderId, messageKh: "កញ្ចប់ត្រូវបានបញ្ជូន និងដឹកជញ្ជូនទៅគណនីហ្គេមរបស់អ្នកដោយស្វ័យប្រវត្តិ។" });
     return { delivered: true };
   }

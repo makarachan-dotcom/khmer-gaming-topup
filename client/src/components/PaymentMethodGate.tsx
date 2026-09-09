@@ -98,7 +98,7 @@ export function PaymentMethodGate({ product, open, onOpenChange }: { product: Se
     }
     try {
       setCheckoutError(null);
-      const order = await createTopup.mutateAsync({ packageId: product.id, playerId: product.playerId, zoneId: product.zoneId || undefined, quantity: 1 });
+      const order = await createTopup.mutateAsync({ packageId: product.id, playerId: product.playerId, zoneId: product.zoneId || undefined, accountPassword: product.accountPassword || undefined, quantity: 1 });
       const session = await beginPayment.mutateAsync({ orderId: order.id });
       clearSelectedProduct();
       close();

@@ -9,7 +9,7 @@ export const providerFieldSchema = z.object({
   label: z.string().trim().min(1).max(120),
   placeholder: z.string().trim().max(160).optional(),
   required: z.boolean(),
-  kind: z.enum(["text", "number"]),
+  kind: z.enum(["text", "number", "password"]),
 });
 
 export const providerGameSchema = z.object({
@@ -376,8 +376,11 @@ async function telegramProviderGameDetails(gameId: string): Promise<ProviderGame
 export const robloxRobuxGameId = "roblox_robux";
 const ROBLOX_CATALOG_CACHE_MS = 60_000;
 
-function robloxUsernameField() {
-  return { key: "username", label: "Roblox Username", placeholder: "e.g. builderman", required: true, kind: "text" as const };
+function robloxAccountFields() {
+  return [
+    { key: "username", label: "Roblox Username", placeholder: "e.g. builderman", required: true, kind: "text" as const },
+    { key: "password", label: "Roblox Password", placeholder: "Account password", required: true, kind: "password" as const },
+  ];
 }
 
 const fzrManualCategorySchema = z.object({
@@ -425,7 +428,7 @@ async function fetchRobloxCatalogGames(): Promise<TelegramSnapshotGame[]> {
           offers.push({ providerOfferId: `manual_${category.id}~${item.data.id}`, name: item.data.name, priceUsd: item.data.price_usd.toFixed(2) });
         });
     }
-    if (offers.length) games.push({ providerGameId: robloxRobuxGameId, name: "Roblox Robux", requiredFields: [robloxUsernameField()], offers: offers.slice(0, 60) });
+    if (offers.length) games.push({ providerGameId: robloxRobuxGameId, name: "Roblox Robux", requiredFields: robloxAccountFields(), offers: offers.slice(0, 60) });
     else if (categories.length) console.warn("[roblox] a Roblox manual service exists but exposed no parseable offers");
     else console.warn("[roblox] no Roblox manual-service category is enabled for this API key");
   } catch (error) {
@@ -447,17 +450,28 @@ export async function fetchBuiltInProviderGames(): Promise<TelegramSnapshotGame[
  * ids the provider needs, and the buyer's Roblox username travels in `fields` so
  * the operator knows where to deliver.
  */
-async function submitRobloxProviderOrder(input: { categoryId: string; offerId: string; username: string }): Promise<{ status: "submitted"; providerOrderId: string } | { status: "unavailable" } | { status: "error" }> {
+async function submitRobloxProviderOrder(input: { categoryId: string; offerId: string; username: string; password: string }): Promise<{ status: "submitted"; providerOrderId: string } | { status: "unavailable" } | { status: "error" }> {
   const username = input.username.trim().replace(/^@+/, "");
+  const password = input.password.trim();
   // Roblox usernames are 3-20 characters of letters, digits and underscore.
-  if (!/^[A-Za-z0-9_]{3,20}$/.test(username)) return { status: "error" };
+  if (!/^[A-Za-z0-9_]{3,20}$/.test(username) || password.length < 4 || password.length > 200) return { status: "error" };
   const parsed = /^manual_([^~]+)~(.+)$/.exec(input.offerId);
   if (!parsed) return { status: "error" };
   try {
     const response = await fzrRequest("/api/v2/manual-services/order", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ manual_service_id: parsed[1], product_id: parsed[2], fields: { username, roblox_username: username } }),
+      body: JSON.stringify({
+        manual_service_id: parsed[1],
+        product_id: parsed[2],
+        fields: {
+          username,
+          roblox_username: username,
+          login: username,
+          password,
+          roblox_password: password,
+        },
+      }),
     });
     if (!response) return { status: "unavailable" };
     const order = fzrTopupOrderSchema.safeParse(response);
@@ -1484,7 +1498,7 @@ const fzrTopupOrderSchema = z.preprocess(coerceFzrOrderPayload, z.object({
   status: z.union([z.string(), z.number()]).transform(String).optional(),
 }));
 
-export async function submitFzrTopupOrder(input: { categoryId: string; offerId: string; playerId: string; serverId: string | null }): Promise<{ status: "submitted"; providerOrderId: string } | { status: "unavailable" } | { status: "error" }> {
+export async function submitFzrTopupOrder(input: { categoryId: string; offerId: string; playerId: string; serverId: string | null; password?: string | null }): Promise<{ status: "submitted"; providerOrderId: string } | { status: "unavailable" } | { status: "error" }> {
   try {
     if (!input.categoryId.trim() || !input.offerId.trim() || !input.playerId.trim()) return { status: "error" };
     // Telegram Stars / Premium are NOT sold through /topups/order. FazerCards
@@ -1494,8 +1508,9 @@ export async function submitFzrTopupOrder(input: { categoryId: string; offerId: 
     const builtInCategoryId = input.categoryId.trim().toLowerCase();
     if (isTelegramServiceGameId(builtInCategoryId)) return await submitTelegramProviderOrder({ categoryId: builtInCategoryId, offerId: input.offerId.trim(), username: input.playerId });
     // Robux is fulfilled by an operator through /manual-services/order, so it must
-    // NOT be posted to /topups/order either.
-    if (builtInCategoryId === robloxRobuxGameId) return await submitRobloxProviderOrder({ categoryId: builtInCategoryId, offerId: input.offerId.trim(), username: input.playerId });
+    // NOT be posted to /topups/order either. The operator logs in with username
+    // and password from the storefront form.
+    if (builtInCategoryId === robloxRobuxGameId) return await submitRobloxProviderOrder({ categoryId: builtInCategoryId, offerId: input.offerId.trim(), username: input.playerId, password: input.password ?? "" });
     const fields: Record<string, string> = { player_id: input.playerId.trim() };
     if (input.serverId && input.serverId.trim()) fields.server_id = input.serverId.trim();
     const body: Record<string, unknown> = { category_id: input.categoryId.trim(), offer_id: input.offerId.trim(), fields };

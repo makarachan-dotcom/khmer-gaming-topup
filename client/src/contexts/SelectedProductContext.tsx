@@ -9,6 +9,7 @@ export type SelectedProduct = {
   gameLogoUrl?: string;
   playerId?: string;
   zoneId?: string | null;
+  accountPassword?: string;
   playerName?: string;
   requiresVerifiedPlayerName?: boolean;
   kind?: "game" | "partner";
