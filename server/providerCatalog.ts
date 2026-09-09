@@ -799,10 +799,6 @@ function isMobileLegendsFamilyGame(gameId: string) {
   return gameId.trim().toLowerCase() === mobileLegendsFamilyGameId;
 }
 
-function isMobileLegendsGame(gameId: string) {
-  return /^mobile_legends(?:_|$)/i.test(gameId.trim());
-}
-
 function mobileLegendsAccountFields(fields: z.infer<typeof providerFieldSchema>[] = []) {
   const player = fields.find((field) => /(?:player|user|account|uid|\bid\b)/i.test(`${field.key} ${field.label}`) && !/(?:server|zone)/i.test(`${field.key} ${field.label}`));
   const server = fields.find((field) => /(?:server|zone)/i.test(`${field.key} ${field.label}`));
