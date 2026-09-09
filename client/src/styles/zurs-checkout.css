@@ -9,22 +9,32 @@
 
 /* --- 1. Account info: player id full width, server id short and right ----- */
 .identity-fields--single { display: block; }
-/* Round 10: Player ID and Server ID share ONE row on every game. The secondary
-   field (server / zone) stays deliberately short because it is never as long as
-   a player id. The old "flex: 1 1 100%" forced the first field to consume the
-   whole row, pushing Server ID onto a second line. */
-.identity-fields--pair { display: flex !important; flex-wrap: nowrap !important; align-items: flex-end; gap: 0.5rem; }
-.identity-fields--pair > label { min-width: 0; margin: 0; }
-.identity-fields--pair > label:first-child { flex: 1 1 auto !important; width: auto !important; min-width: 0; margin-left: 0 !important; }
-.identity-fields--pair > label + label { flex: 0 0 7.25rem !important; width: 7.25rem !important; max-width: 7.25rem; margin-left: 0 !important; }
-.identity-fields--pair > label:nth-child(n+3) { flex-basis: 5.5rem !important; width: 5.5rem !important; max-width: 5.5rem; }
-.identity-fields--pair > label + label input { text-align: center; letter-spacing: 0.04em; }
-.identity-fields--pair > label > span:first-child { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.identity-fields input { height: 2.65rem; }
-.identity-fields label > span:first-child { font-size: 0.68rem; }
-@media (max-width: 22.5rem) {
-  .identity-fields--pair { gap: 0.4rem; }
-  .identity-fields--pair > label + label { flex-basis: 5.9rem !important; width: 5.9rem !important; max-width: 5.9rem; }
+/* Player ID and Server ID / Zone ID each get a full-width row on phones so the
+   second field can never be clipped off-screen. Desktop keeps a 2-column grid. */
+.identity-fields--pair {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 0.7rem !important;
+  align-items: stretch !important;
+  flex-wrap: wrap !important;
+}
+.identity-fields--pair > label,
+.identity-fields--pair > label:first-child,
+.identity-fields--pair > label + label,
+.identity-fields--pair > label:nth-child(n+3) {
+  display: block !important;
+  flex: 1 1 100% !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+}
+.identity-fields--pair > label + label input { text-align: left; letter-spacing: 0; }
+.identity-fields--pair > label > span:first-child { overflow: visible; white-space: normal; text-overflow: unset; }
+.identity-fields input { height: 2.75rem; }
+.identity-fields label > span:first-child { font-size: 0.72rem; }
+@media (min-width: 640px) {
+  .identity-fields--pair { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) !important; gap: 0.75rem !important; }
 }
 
 /* --- 2. Previously confirmed IDs: one compact line, hidden once filled ---- */

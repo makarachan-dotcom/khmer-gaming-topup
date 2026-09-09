@@ -59,6 +59,7 @@ describe("dedicated game top-up routes", () => {
     const source = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
     expect(source).toContain("package-choice package-choice--clean package-choice--gold");
     expect(source).toContain('className="package-choice-surface block rounded-[0.7rem] p-2.5"');
+    expect(source).toContain("Server ID / Zone ID");
     expect(source).toContain('className="package-category-grid grid grid-cols-2 gap-2 sm:grid-cols-3"');
     expect(source).toContain('<PackageCard key={item.id} item={item}');
     expect(source).toContain('OverflowMarquee text={item.label}');
@@ -247,11 +248,11 @@ describe("dedicated game top-up routes", () => {
   it("always asks Mobile Legends shoppers for Player ID and Server ID", () => {
     expect(identityFieldsForGame("mobile_legends", [])).toEqual([
       { key: "player_id", label: "Player ID", placeholder: "User ID", required: true, kind: "text" },
-      { key: "server_id", label: "Server ID", placeholder: "Zone ID", required: true, kind: "text" },
+      { key: "server_id", label: "Server ID / Zone ID", placeholder: "Zone ID", required: true, kind: "text" },
     ]);
     expect(identityFieldsForGame("mobile_legends_global", [{ key: "user_id", label: "User ID", required: true, kind: "number" }])).toEqual([
       { key: "user_id", label: "User ID", placeholder: "User ID", required: true, kind: "text" },
-      { key: "server_id", label: "Server ID", placeholder: "Zone ID", required: true, kind: "text" },
+      { key: "server_id", label: "Server ID / Zone ID", placeholder: "Zone ID", required: true, kind: "text" },
     ]);
   });
 
