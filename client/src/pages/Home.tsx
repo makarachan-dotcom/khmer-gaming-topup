@@ -16,7 +16,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
 import { gameTopupPath } from "./GameTopup";
 import { PackEmoji } from "@/components/PackEmoji";
-import { TrustStrip } from "@/components/TrustStrip";
 // The owner's own storefront artwork, served from client/public so it ships
 // inside the build and cannot 404 behind an upload-CDN link.
 //
@@ -231,7 +230,6 @@ function HomeTopupExperience() {
           </div>
         }
       />
-      <TrustStrip />
       {gamesQuery.isLoading ? (
         <div className="mt-5 grid min-h-36 place-items-center rounded-2xl border border-line bg-panel text-xs text-ink-muted">
           <OutlineLoader size={30} color="#38bdf8" />
@@ -269,7 +267,9 @@ function HomeTopupExperience() {
               ))}
             </div>
           </div>
-          <GameLogoTicker logos={storeTickerLogos} />
+          <div className="mt-4 hidden overflow-hidden sm:block">
+            <GameLogoTicker logos={storeTickerLogos} />
+          </div>
           {visibleGames.length ? (
             <div className="zp-game-grid mt-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
               {catalogGroups.map((group) =>

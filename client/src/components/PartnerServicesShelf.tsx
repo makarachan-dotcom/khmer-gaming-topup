@@ -6,7 +6,6 @@ import { useSelectedProduct } from "@/contexts/SelectedProductContext";
 import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import { LangCopy, LangToggle, useLangCopy } from "@/components/LangCopy";
-import { TrustStrip } from "@/components/TrustStrip";
 
 type PartnerProduct = {
   id: number;
@@ -100,7 +99,6 @@ export function PartnerServicesShelf({ compact = false }: { compact?: boolean })
         <h1 className="mt-1 font-display text-xl font-bold text-ink sm:text-3xl" style={{ lineHeight: 1.45 }}>សេវាឌីជីថល</h1>
         <p className="mt-1.5 text-sm text-ink-muted" style={{ lineHeight: 1.65 }}>Premium AI និង subscription — បន្ទាប់ពីបង់ប្រាក់ Admin បំពេញក្នុង ៥–១០ នាទី។</p>
       </div>
-      <TrustStrip />
 
       {catalog.isLoading ? (
         <div className="mt-4 grid grid-cols-2 gap-2.5 md:grid-cols-3 xl:grid-cols-4">
