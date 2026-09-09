@@ -471,6 +471,14 @@ describe("provider catalog", () => {
     expect(String((fetch as ReturnType<typeof vi.fn>).mock.calls[1]?.[1]?.body)).toContain('"category_id":"free_fire"');
   });
 
+  it("hashes Free Fire live offers with the same id checkout uses to create KHQR", async () => {
+    const { providerPackageRecordId } = await import("./providerCatalog");
+    const id = providerPackageRecordId("free_fire_my_sg", "weekly");
+    expect(id.startsWith("fzr-offer-")).toBe(true);
+    expect(id.length).toBeLessThanOrEqual(64);
+    expect(providerPackageRecordId("free_fire_my_sg", "weekly")).toBe(id);
+  });
+
   it("checks Free Fire family IDs and pasted UID labels through the same nickname endpoint", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "server-only-key";

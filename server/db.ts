@@ -461,6 +461,83 @@ async function assertPendingKhqrPaymentCapacity(userId: number, excludeOrderId?:
   if (await countPendingKhqrPayments(userId, excludeOrderId) >= pendingKhqrPaymentLimit) throw Object.assign(new Error(pendingPaymentLimitMessageKh), { code: "PENDING_PAYMENT_LIMIT" });
 }
 
+async function loadSqlTopupPackage(packageId: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const active = await db.select({ game: gameProducts, package: gamePackages }).from(gamePackages).innerJoin(gameProducts, eq(gamePackages.productId, gameProducts.id)).where(and(eq(gamePackages.id, packageId), eq(gamePackages.isActive, true), eq(gameProducts.isActive, true))).limit(1);
+  if (active[0]) return active[0];
+  // Family storefronts can keep regional packages live after the parent game row
+  // is hidden. Still sell the authorized active package so KHQR can be created.
+  const packageActive = await db.select({ game: gameProducts, package: gamePackages }).from(gamePackages).innerJoin(gameProducts, eq(gamePackages.productId, gameProducts.id)).where(and(eq(gamePackages.id, packageId), eq(gamePackages.isActive, true), eq(gamePackages.providerAuthorized, true))).limit(1);
+  return packageActive[0] ?? null;
+}
+
+async function materializeLiveTopupPackage(packageId: string) {
+  const { resolveLiveProviderOffer } = await import("./providerCatalog");
+  const offer = await resolveLiveProviderOffer(packageId);
+  if (!offer) return null;
+  const db = await getDb();
+  if (!db) return null;
+  const gameId = providerRecordId("fzr-game", offer.categoryId);
+  const source = `fzr_cards:${offer.categoryId}:${offer.offerId}`;
+  const existingGame = await db.select().from(gameProducts).where(eq(gameProducts.id, gameId)).limit(1);
+  if (!existingGame[0]) {
+    await db.insert(gameProducts).values({
+      id: gameId,
+      slug: `fzr-${createHash("sha256").update(offer.categoryId).digest("hex").slice(0, 32)}`,
+      titleKh: offer.gameName,
+      titleEn: offer.gameName,
+      currencyLabel: "Top-up",
+      iconLabel: "G",
+      accent: "#ef6037",
+      requiresZone: offer.requiresZone && !/^free_fire(?:_|$)/i.test(offer.categoryId),
+      isActive: true,
+      sortOrder: 20,
+    });
+  }
+  const existingPackage = await db.select().from(gamePackages).where(eq(gamePackages.id, packageId)).limit(1);
+  if (!existingPackage[0]) {
+    await db.insert(gamePackages).values({
+      id: packageId,
+      productId: gameId,
+      amountLabel: offer.name,
+      providerAuthorized: true,
+      providerSource: source,
+      basePriceUsd: offer.priceUsd,
+      profitMarginPercent: "0.00",
+      priceUsd: offer.priceUsd,
+      featured: false,
+      isActive: true,
+      sortOrder: 0,
+    });
+  } else {
+    const parentId = existingPackage[0].productId || gameId;
+    const parent = await db.select({ id: gameProducts.id }).from(gameProducts).where(eq(gameProducts.id, parentId)).limit(1);
+    if (!parent[0]) {
+      await db.insert(gameProducts).values({
+        id: parentId,
+        slug: `fzr-${createHash("sha256").update(`${offer.categoryId}:${parentId}`).digest("hex").slice(0, 32)}`,
+        titleKh: offer.gameName,
+        titleEn: offer.gameName,
+        currencyLabel: "Top-up",
+        iconLabel: "G",
+        accent: "#ef6037",
+        requiresZone: false,
+        isActive: true,
+        sortOrder: 20,
+      });
+    }
+    if (!existingPackage[0].isActive && existingPackage[0].providerAuthorized) {
+      await db.update(gamePackages).set({ isActive: true, providerSource: source || existingPackage[0].providerSource, amountLabel: offer.name, basePriceUsd: offer.priceUsd, priceUsd: salePriceFromMargin(offer.priceUsd, String(existingPackage[0].profitMarginPercent ?? "0.00")) }).where(eq(gamePackages.id, packageId));
+    }
+  }
+  return loadSqlTopupPackage(packageId);
+}
+
+async function resolvePurchasableTopupPackage(packageId: string) {
+  return (await loadSqlTopupPackage(packageId)) ?? (await materializeLiveTopupPackage(packageId));
+}
+
 export async function createTopupOrder(input: { userId: number; packageId: string; playerId: string; zoneId?: string | null; quantity: number }) {
   await requirePublicPaymentEnabled();
   const db = await getDb();
@@ -468,10 +545,11 @@ export async function createTopupOrder(input: { userId: number; packageId: strin
   // No more than two concurrent pending KHQR payments per account. Checked at
   // order creation so a customer cannot stack unpaid QR sessions.
   await assertPendingKhqrPaymentCapacity(input.userId);
-  const result = await db.select({ game: gameProducts, package: gamePackages }).from(gamePackages).innerJoin(gameProducts, eq(gamePackages.productId, gameProducts.id)).where(and(eq(gamePackages.id, input.packageId), eq(gamePackages.isActive, true), eq(gameProducts.isActive, true))).limit(1);
-  const item = result[0];
+  const item = await resolvePurchasableTopupPackage(input.packageId);
   if (!item) throw new Error("Selected game package is unavailable");
-  if (item.game.requiresZone && !input.zoneId?.trim()) throw new Error("Server or zone ID is required for this game");
+  const providerSource = String(item.package.providerSource ?? "");
+  const isFreeFirePackage = /^fzr_cards:free_fire(?:_|:|$)/i.test(providerSource) || /free[\s_-]*fire/i.test(`${item.game.titleEn} ${item.game.titleKh}`);
+  if (item.game.requiresZone && !isFreeFirePackage && !input.zoneId?.trim()) throw new Error("Server or zone ID is required for this game");
   // Anti-tamper. The storefront never sends a price, but the catalog row is
   // still untrusted input: it can be edited directly, left stale by a failed
   // provider sync, or zeroed by a half-applied margin change. Recompute the

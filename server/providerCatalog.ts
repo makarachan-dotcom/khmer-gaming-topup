@@ -587,6 +587,39 @@ export function providerPackageRecordId(categoryId: string, offerId: string) {
   return `fzr-offer-${createHash("sha256").update(source).digest("hex").slice(0, 40)}`;
 }
 
+export async function resolveLiveProviderOffer(packageId: string) {
+  const variantIds: string[] = [...freeFireFamilyVariantIds];
+  try {
+    const catalog = await fetchFzrTopupCatalog();
+    if (catalog.status === "ready") {
+      for (const item of catalog.items) {
+        if (/^free_fire(?:_|$)/i.test(item.category_id) && !variantIds.includes(item.category_id)) variantIds.push(item.category_id);
+      }
+    }
+  } catch { /* Use the known Free Fire routes even if the catalog page is down. */ }
+  for (const categoryId of variantIds) {
+    try {
+      const response = await fzrRequest(`/api/v2/topups/offers?category_id=${encodeURIComponent(categoryId)}&include_ui=1`);
+      const payload = fzrOffersSchema.safeParse(response);
+      if (!payload.success) continue;
+      for (const offer of payload.data.offers) {
+        if (!offer.offer_id) continue;
+        if (providerPackageRecordId(categoryId, offer.offer_id) !== packageId) continue;
+        const fields = providerFields(payload.data.fields);
+        return {
+          categoryId,
+          offerId: offer.offer_id,
+          name: offer.name,
+          priceUsd: offer.price_usd,
+          requiresZone: fields.some((field) => /zone|server|region/i.test(field.key)),
+          gameName: payload.data.name ?? "Free Fire",
+        };
+      }
+    } catch { /* Try the next Free Fire route. */ }
+  }
+  return null;
+}
+
 async function providerPackages(categoryId: string, offers: z.infer<typeof fzrOffersSchema>["offers"]) {
   const livePackages = offers.filter((offer) => Boolean(offer.offer_id)).map((offer) => ({ id: providerPackageRecordId(categoryId, offer.offer_id!), label: offer.name, amountLabel: offer.name, priceLabel: `$${Number(offer.price_usd).toFixed(2)}`, provider: "FZR Cards", paymentMethods: ["khqr", "bank"] as ("khqr" | "bank")[] }));
   try {
