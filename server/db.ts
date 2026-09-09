@@ -550,7 +550,8 @@ export async function createTopupOrder(input: { userId: number; packageId: strin
   const providerSource = String(item.package.providerSource ?? "");
   const isFreeFirePackage = /^fzr_cards:free_fire(?:_|:|$)/i.test(providerSource) || /free[\s_-]*fire/i.test(`${item.game.titleEn} ${item.game.titleKh}`);
   const isRobloxPackage = /roblox|robux/i.test(`${providerSource} ${item.game.titleEn} ${item.game.titleKh}`);
-  if (item.game.requiresZone && !isFreeFirePackage && !isRobloxPackage && !input.zoneId?.trim()) throw new Error("Server or zone ID is required for this game");
+  const isMobileLegendsPackage = /mobile[\s_-]*legends/i.test(`${providerSource} ${item.game.titleEn} ${item.game.titleKh}`);
+  if ((item.game.requiresZone || isMobileLegendsPackage) && !isFreeFirePackage && !isRobloxPackage && !input.zoneId?.trim()) throw new Error("Server or zone ID is required for this game");
   if (isRobloxPackage && !input.accountPassword?.trim()) throw new Error("Roblox username and password are required");
   // Anti-tamper. The storefront never sends a price, but the catalog row is
   // still untrusted input: it can be edited directly, left stale by a failed

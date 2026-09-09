@@ -388,9 +388,9 @@ body:has(.zl-shell) .zs-mascot__bubble {
   position: relative;
   display: grid;
   place-items: center;
-  height: 5.5rem;
+  height: 4.65rem;
   overflow: hidden;
-  border-radius: 0.7rem;
+  border-radius: 0.65rem;
   background:
     radial-gradient(circle at 50% 20%, rgba(255,255,255,0.08), transparent 48%),
     linear-gradient(180deg, #1c2438, #101626);
@@ -401,13 +401,13 @@ body:has(.zl-shell) .zs-mascot__bubble {
   width: 100%;
   object-fit: contain !important;
   object-position: center;
-  padding: 0.2rem;
+  padding: 0.15rem;
 }
 .pkg-art__amount { display: none; }
 .package-choice-surface { position: relative; }
-.package-choice-check { position: absolute; top: 0.4rem; right: 0.4rem; z-index: 5; }
-.package-choice--clean .package-choice-surface { min-height: 0; }
-.package-choice .package-badge { display: inline-flex; margin-top: 0.35rem; }
+.package-choice-check { position: absolute; top: 0.32rem; right: 0.32rem; z-index: 5; }
+.package-choice--clean .package-choice-surface { min-height: 0; padding: 0.5rem; }
+.package-choice .package-badge { display: inline-flex; margin-top: 0.28rem; }
 
 @media (min-width: 768px) {
   .container { max-width: 980px !important; }
@@ -415,13 +415,13 @@ body:has(.zl-shell) .zs-mascot__bubble {
   .game-detail-hero { min-height: 8.25rem !important; }
   .game-detail-hero__title { font-size: 1.32rem !important; }
   .package-category-grid {
-    gap: 0.7rem !important;
+    gap: 0.6rem !important;
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
   }
   .package-category-grid > article { height: auto !important; }
   .package-choice-surface,
   .package-choice--clean .package-choice-surface { min-height: 0 !important; }
-  .pkg-art { height: 6rem; }
+  .pkg-art { height: 5.35rem; }
   .zurs-game-card { max-width: none; }
 }
 @media (min-width: 1100px) {

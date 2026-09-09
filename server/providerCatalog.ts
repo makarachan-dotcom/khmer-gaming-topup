@@ -799,6 +799,19 @@ function isMobileLegendsFamilyGame(gameId: string) {
   return gameId.trim().toLowerCase() === mobileLegendsFamilyGameId;
 }
 
+function isMobileLegendsGame(gameId: string) {
+  return /^mobile_legends(?:_|$)/i.test(gameId.trim());
+}
+
+function mobileLegendsAccountFields(fields: z.infer<typeof providerFieldSchema>[] = []) {
+  const player = fields.find((field) => /(?:player|user|account|uid|\bid\b)/i.test(`${field.key} ${field.label}`) && !/(?:server|zone)/i.test(`${field.key} ${field.label}`));
+  const server = fields.find((field) => /(?:server|zone)/i.test(`${field.key} ${field.label}`));
+  return [
+    { key: player?.key ?? "player_id", label: player?.label ?? "Player ID", placeholder: player?.placeholder || "User ID", required: true, kind: "text" as const },
+    { key: server?.key ?? "server_id", label: server?.label ?? "Server ID", placeholder: server?.placeholder || "Zone ID", required: true, kind: "text" as const },
+  ];
+}
+
 function isFreeFireFamilyGame(gameId: string) {
   return gameId.trim().toLowerCase() === freeFireFamilyGameId;
 }
@@ -892,7 +905,11 @@ async function cachedProviderGameDetails(gameId: string, includeInactive = false
     if (!packages.length) return null;
     // A Telegram top-up asks for one @username and never for a server/zone.
     const telegramService = isTelegramProviderProduct(`${gameId} ${product.titleEn ?? ""} ${product.titleKh ?? ""}`);
-    const requiredFields = telegramService ? [telegramUsernameField()] : [{ key: "player_id", label: "Player ID", placeholder: "Enter Player ID", required: true, kind: "text" as const }, ...(product.requiresZone ? [{ key: "server_id", label: "Server ID", placeholder: "Enter Server ID", required: true, kind: "text" as const }] : [])];
+    const requiredFields = telegramService
+      ? [telegramUsernameField()]
+      : isMobileLegendsGame(gameId)
+        ? mobileLegendsAccountFields()
+        : [{ key: "player_id", label: "Player ID", placeholder: "Enter Player ID", required: true, kind: "text" as const }, ...(product.requiresZone ? [{ key: "server_id", label: "Server ID", placeholder: "Enter Server ID", required: true, kind: "text" as const }] : [])];
     return { status: "ready", game: { id: gameId, name: product.titleEn || product.titleKh, region: providerGameRegion(product.titleEn || product.titleKh), provider: "FZR Cards", requiredFields }, packages };
   } catch { return null; }
 }
@@ -946,7 +963,7 @@ export async function fetchProviderGameDetails(gameId: string, options: { includ
       const syncedPackages = options.includeInactive ? await getAdminSyncedProviderPackages(activeVariants) : await getPublicSyncedProviderPackages(activeVariants);
       if (syncedPackages?.length) {
         const primary = availableGames.games.find((game) => game.id === "mobile_legends_global") ?? availableGames.games.find((game) => activeVariants.includes(game.id))!;
-        return { status: "ready", game: { ...primary, id: mobileLegendsFamilyGameId, name: "Mobile Legends" }, packages: syncedPackages };
+        return { status: "ready", game: { ...primary, id: mobileLegendsFamilyGameId, name: "Mobile Legends", requiredFields: mobileLegendsAccountFields(primary.requiredFields) }, packages: syncedPackages };
       }
       const variantDetails = await Promise.all(activeVariants.map((variantId) => fetchProviderGameDetails(variantId, options)));
       const readyVariants = variantDetails.filter((details): details is Extract<ProviderGameDetailsResponse, { status: "ready" }> => details.status === "ready");
@@ -954,7 +971,7 @@ export async function fetchProviderGameDetails(gameId: string, options: { includ
       const primary = readyVariants.find((details) => details.game.id === "mobile_legends_global") ?? readyVariants[0]!;
       return {
         status: "ready",
-        game: { ...primary.game, id: mobileLegendsFamilyGameId, name: "Mobile Legends" },
+        game: { ...primary.game, id: mobileLegendsFamilyGameId, name: "Mobile Legends", requiredFields: mobileLegendsAccountFields(primary.game.requiredFields) },
         packages: readyVariants.flatMap((details) => details.packages),
       };
     }
@@ -1016,7 +1033,7 @@ export async function fetchProviderGameDetails(gameId: string, options: { includ
       const cached = await cachedProviderGameDetails(gameId, options.includeInactive);
       if (cached && cached.status === "ready" && cached.packages.length) return cached;
     }
-    return { status: "ready", game: { id: gameId, name: resolvedName, region: providerGameRegion(resolvedName), logoUrl: payload.data.imageurl, provider: "FZR Cards", requiredFields: /^free_fire(?:_|$)/i.test(gameId) ? freeFireIdentityFields(fields) : fields }, packages: livePackages };
+    return { status: "ready", game: { id: gameId, name: resolvedName, region: providerGameRegion(resolvedName), logoUrl: payload.data.imageurl, provider: "FZR Cards", requiredFields: /^free_fire(?:_|$)/i.test(gameId) ? freeFireIdentityFields(fields) : isMobileLegendsGame(gameId) ? mobileLegendsAccountFields(fields) : fields }, packages: livePackages };
   } catch {
     return (await cachedProviderGameDetails(gameId, options.includeInactive)) ?? { status: "error", game: null, packages: [] };
   }
