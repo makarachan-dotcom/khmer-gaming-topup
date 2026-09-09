@@ -450,10 +450,25 @@ describe("provider catalog", () => {
   it("treats a malformed successful Free Fire response without a username as invalid", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "server-only-key";
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ success: true, game: "Garena Free Fire" }) }));
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, game: "Garena Free Fire" }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, category_id: "free_fire", valid: false, player_name: null }) }));
 
     await expect(validateProviderPlayerIdentity({ gameId: "free_fire_my_sg", fields: { player_id: "12345678" } })).resolves.toEqual({ status: "invalid", playerName: null, playerId: null, region: null });
-    expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1);
+    expect(String((fetch as ReturnType<typeof vi.fn>).mock.calls[1]?.[0])).toContain("/topups/validate-id");
+  });
+
+  it("uses FazerCards validate-id when Free Fire Isan confirms the UID without a nickname", async () => {
+    process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
+    process.env.FZR_CARDS_API_KEY = "server-only-key";
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, game: "Garena Free Fire", id: 1665022166 }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, category_id: "free_fire", valid: true, player_name: "KH Player", region: "KH" }) }));
+
+    await expect(validateProviderPlayerIdentity({ gameId: "free_fire", fields: { player_id: "1665022166" } })).resolves.toEqual({ status: "verified", playerName: "KH Player", playerId: "1665022166", region: "KH" });
+    expect(String((fetch as ReturnType<typeof vi.fn>).mock.calls[0]?.[0])).toContain("/nickname/ff?");
+    expect(String((fetch as ReturnType<typeof vi.fn>).mock.calls[1]?.[0])).toContain("/api/v2/topups/validate-id");
+    expect(String((fetch as ReturnType<typeof vi.fn>).mock.calls[1]?.[1]?.body)).toContain('"category_id":"free_fire"');
   });
 
   it("checks Free Fire family IDs and pasted UID labels through the same nickname endpoint", async () => {

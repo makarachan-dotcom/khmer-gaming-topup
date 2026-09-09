@@ -1021,7 +1021,7 @@ const fzrPlayerIdentitySchema = z.object({
   ok: z.literal(true),
   category_id: z.string().trim().min(1).max(120),
   valid: z.boolean(),
-  player_name: z.string().trim().min(1).max(180).nullable(),
+  player_name: z.preprocess((value) => (typeof value === "string" && !value.trim() ? null : value), z.string().trim().min(1).max(180).nullable()),
   player_id: z.string().trim().min(1).max(180).nullable().optional(),
   region: z.string().trim().min(1).max(120).nullable().optional(),
 });
@@ -1059,6 +1059,36 @@ function isBloodStrikeGame(gameId: string) {
 
 function isMagicChessGame(gameId: string) {
   return /^magic_chess(?:_|$)/i.test(gameId);
+}
+
+function fzrValidateIdCategory(gameId: string) {
+  if (isFreeFireGame(gameId)) return "free_fire";
+  return null;
+}
+
+async function validateWithFzrPlayerIdentity(input: ProviderPackageRequest, playerId: string): Promise<ProviderPlayerIdentityResponse | null> {
+  const categoryId = fzrValidateIdCategory(input.gameId);
+  if (!categoryId) return null;
+  try {
+    const payload = await fzrRequest("/api/v2/topups/validate-id", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ category_id: categoryId, fields: { player_id: playerId, user_id: playerId } }),
+    });
+    if (!payload) return emptyIdentity("unavailable");
+    const parsed = fzrPlayerIdentitySchema.safeParse(payload);
+    if (!parsed.success) return emptyIdentity("unavailable");
+    if (!parsed.data.valid) return emptyIdentity("invalid");
+    return {
+      status: "verified",
+      playerName: parsed.data.player_name ?? `UID ${playerId}`,
+      playerId,
+      region: parsed.data.region ?? "Global",
+    };
+  } catch (error) {
+    if (error instanceof FzrRequestError && (error.status === 400 || error.status === 404 || error.status === 422)) return emptyIdentity("invalid");
+    return emptyIdentity("unavailable");
+  }
 }
 
 type OwnerApprovedFreeIdentityRequest = { kind: "isan" | "eight_ball_pool"; url: string; playerId: string } | { kind: "invalid" };
@@ -1131,7 +1161,14 @@ async function validateWithOwnerApprovedFreeApi(input: ProviderPackageRequest): 
       const success = isanPlayerNameSchema.safeParse(payload);
       if (response.ok && success.success) return { status: "verified", playerName: success.data.name, playerId: request.playerId, region: success.data.country ?? "Global" };
       if (response.ok && payload && typeof payload === "object" && "success" in payload && (payload as { success?: unknown }).success === false) return emptyIdentity("invalid");
-      if (response.ok && payload && typeof payload === "object" && "success" in payload && (payload as { success?: unknown }).success === true) return emptyIdentity("invalid");
+      if (response.ok && payload && typeof payload === "object" && "success" in payload && (payload as { success?: unknown }).success === true) {
+        // Isan often confirms KH Free Fire IDs with success:true but no nickname.
+        if (isFreeFireGame(input.gameId)) {
+          const providerIdentity = await validateWithFzrPlayerIdentity(input, request.playerId);
+          if (providerIdentity) return providerIdentity;
+        }
+        return emptyIdentity("invalid");
+      }
     } else {
       const success = eightBallPoolPlayerNameSchema.safeParse(payload);
       if (response.ok && success.success) return { status: "verified", playerName: success.data.nickname, playerId: request.playerId, region: "Global" };
@@ -1229,6 +1266,14 @@ export async function validateProviderPlayerIdentity(input: ProviderPackageReque
   if (isTelegramServiceGameId(input.gameId)) return await validateTelegramHandleIdentity(input);
   const freeApiResult = await validateWithOwnerApprovedFreeApi(input);
   if (freeApiResult && freeApiResult.status !== "unavailable") return freeApiResult;
+  if (isFreeFireGame(input.gameId)) {
+    const playerId = readNumericAccountId(input.fields, ["player_id", "user_id", "account_id", "id", "uid", "userid"]);
+    const providerIdentity = playerId ? await validateWithFzrPlayerIdentity(input, playerId) : emptyIdentity("invalid");
+    if (providerIdentity && providerIdentity.status !== "unavailable") return providerIdentity;
+    const bridgeResult = await validateWithAuthorizedPlayerBridge(input);
+    if (bridgeResult) return bridgeResult;
+    if (providerIdentity) return providerIdentity;
+  }
   const bridgeResult = await validateWithAuthorizedPlayerBridge(input);
   if (bridgeResult) return bridgeResult;
   if (freeApiResult) return freeApiResult;
