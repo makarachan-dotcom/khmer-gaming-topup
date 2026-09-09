@@ -127,6 +127,7 @@ describe("dedicated game top-up routes", () => {
     expect(source).toContain("function SafePackageArt");
     expect(source).toContain("isMissingStaticArtwork");
     expect(source).toContain("suppliedProductArtworkForPackage(gameId, item.amountLabel, item.label)");
+    expect(source).toContain("officialPackageArtFor");
   });
 
   it("does not block the identity form behind a full-page package overlay", () => {

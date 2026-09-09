@@ -386,36 +386,24 @@ body:has(.zl-shell) .zs-mascot__bubble {
 
 .pkg-art {
   position: relative;
-  display: block;
-  height: 4.2rem;
+  display: grid;
+  place-items: center;
+  height: 5.5rem;
   overflow: hidden;
   border-radius: 0.7rem;
-  background: linear-gradient(145deg, #1e293b, #0f172a);
+  background:
+    radial-gradient(circle at 50% 20%, rgba(255,255,255,0.08), transparent 48%),
+    linear-gradient(180deg, #1c2438, #101626);
 }
 .pkg-art__image {
   display: block;
   height: 100%;
   width: 100%;
-  object-fit: cover !important;
+  object-fit: contain !important;
   object-position: center;
+  padding: 0.2rem;
 }
-.pkg-art__amount {
-  position: absolute;
-  z-index: 2;
-  inset-inline: 0.32rem;
-  bottom: 0.28rem;
-  overflow: hidden;
-  border: 1px solid rgba(255,255,255,0.28);
-  border-radius: 0.4rem;
-  background: rgba(15, 23, 42, 0.78);
-  color: #fff7d6;
-  font-size: 0.62rem;
-  font-weight: 800;
-  line-height: 1.2rem;
-  text-align: center;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+.pkg-art__amount { display: none; }
 .package-choice-surface { position: relative; }
 .package-choice-check { position: absolute; top: 0.4rem; right: 0.4rem; z-index: 5; }
 .package-choice--clean .package-choice-surface { min-height: 0; }
@@ -433,7 +421,7 @@ body:has(.zl-shell) .zs-mascot__bubble {
   .package-category-grid > article { height: auto !important; }
   .package-choice-surface,
   .package-choice--clean .package-choice-surface { min-height: 0 !important; }
-  .pkg-art { height: 4.55rem; }
+  .pkg-art { height: 6rem; }
   .zurs-game-card { max-width: none; }
 }
 @media (min-width: 1100px) {

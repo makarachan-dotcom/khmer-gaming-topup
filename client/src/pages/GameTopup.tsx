@@ -22,7 +22,7 @@ import { toWebsiteMediaUrl } from "@/lib/mediaUrl";
 import { trpc } from "@/lib/trpc";
 import { subscribeToPackageArtworkChanges } from "@/lib/packageArtworkBroadcast";
 import { subscribeToPublicAssetChanges } from "@/lib/publicAssetBroadcast";
-import { meaningfulPackageArtwork } from "@/lib/meaningfulPackageArtwork";
+import { officialPackageArtFor } from "@/lib/officialPackageArt";
 import { ArrowLeft, BadgePercent, Box, CalendarClock, CheckCircle2, ChevronDown, ChevronRight, CircleAlert, Crown, Eye, Gem, Gift, History, Search, ShieldAlert, Sparkles, TrendingUp, UserRound, WalletCards } from "lucide-react";
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
@@ -467,11 +467,11 @@ function isMissingStaticArtwork(url?: string | null) {
   return Boolean(url && /\/manus-storage\/zurs-(?:package|bloodstrike)-/.test(url));
 }
 
-function SafePackageArt({ src, fallbackSrc, alt, amount, showLogo, gameName, gameLogoUrl }: { src?: string | null; fallbackSrc: string; alt: string; amount: string; showLogo?: boolean; gameName: string; gameLogoUrl?: string }) {
+function SafePackageArt({ src, fallbackSrc, alt, showLogo, gameName, gameLogoUrl }: { src?: string | null; fallbackSrc: string; alt: string; showLogo?: boolean; gameName: string; gameLogoUrl?: string }) {
   const [failed, setFailed] = useState(false);
   const preferred = src && !isMissingStaticArtwork(src) ? src : fallbackSrc;
   const url = failed ? fallbackSrc : preferred;
-  return <span className="pkg-art supplied-package-art mt-1.5 block"><img src={url} alt={alt} className="pkg-art__image supplied-package-art__image" loading="lazy" decoding="async" draggable={false} onError={() => setFailed(true)} />{showLogo ? <ProviderGameArtwork name={gameName} logoUrl={gameLogoUrl} priority showCountryFlag={false} className="supplied-package-art__logo h-8 w-8 rounded-full" iconClassName="h-4 w-4" /> : null}<span className="pkg-art__amount">{amount}</span></span>;
+  return <span className="pkg-art supplied-package-art mt-1.5 block"><img src={url} alt={alt} className="pkg-art__image supplied-package-art__image" loading="lazy" decoding="async" draggable={false} onError={() => setFailed(true)} />{showLogo ? <ProviderGameArtwork name={gameName} logoUrl={gameLogoUrl} priority showCountryFlag={false} className="supplied-package-art__logo h-7 w-7 rounded-full" iconClassName="h-3.5 w-3.5" /> : null}</span>;
 }
 
 function PackageCard({ item, selected, onSelect, gameId, gameName, gameLogoUrl }: { item: ProviderPackage; selected: boolean; onSelect: () => void; gameId: string; gameName: string; gameLogoUrl?: string }) {
@@ -481,12 +481,10 @@ function PackageCard({ item, selected, onSelect, gameId, gameName, gameLogoUrl }
   const pubg = isPubgTopupGame(gameId, gameName);
   const diamondLabel = mobileLegendsDiamondLabel(item.label, item.amountLabel);
   const mobileLegendsTone = mobileLegends ? mobileLegendsPackageTone(item.label, item.amountLabel) : null;
+  const officialArt = officialPackageArtFor(gameId, gameName, item.label, item.amountLabel);
   const suppliedArtwork = artworkOverrides[item.id] ?? suppliedProductArtworkForPackage(gameId, item.amountLabel, item.label);
-  const pubgArtwork = pubg ? pubgUcArtworkForAmount(item.amountLabel) : null;
-  const fallbackArt = meaningfulPackageArtwork(gameId, gameName, item.label, item.amountLabel);
   const packageAmount = mobileLegends ? diamondLabel : pubg ? pubgUcDisplayAmount(item.amountLabel) : item.amountLabel;
-  const preferredArt = suppliedArtwork ?? pubgArtwork ?? (usesMobileLegendsDiamondChestArtwork(gameId, item.label, item.amountLabel, Boolean(suppliedArtwork)) ? goldDiamondChestArtworkUrl : null);
-  return <article className="min-w-0"><button type="button" aria-pressed={selected} onClick={onSelect} className={`package-choice package-choice--clean package-choice--gold ${mobileLegendsTone ? `package-choice--mlbb-${mobileLegendsTone}` : ""} w-full text-left ${selected ? "package-choice--selected" : ""}`}><span className="package-choice-surface block rounded-[0.7rem] p-2"><PackageRibbonBadge offerId={item.id} />{selected ? <SelectedPackageCheck size={18} className="package-choice-check" /> : null}<SafePackageArt src={preferredArt} fallbackSrc={fallbackArt.url} alt={`${gameName} ${item.amountLabel}`} amount={packageAmount} showLogo={mobileLegends} gameName={gameName} gameLogoUrl={gameLogoUrl} /><OverflowMarquee text={item.label} className="mt-1.5 text-xs font-extrabold leading-4 text-slate-950" /><span className="mt-1 block text-sm font-extrabold text-amber-800">{item.priceLabel}</span>{badge ? <span className={`package-badge package-badge--${badge.tone} mt-1`}>{badge.label}</span> : null}</span></button></article>;
+  return <article className="min-w-0"><button type="button" aria-pressed={selected} onClick={onSelect} className={`package-choice package-choice--clean package-choice--gold ${mobileLegendsTone ? `package-choice--mlbb-${mobileLegendsTone}` : ""} w-full text-left ${selected ? "package-choice--selected" : ""}`}><span className="package-choice-surface block rounded-[0.7rem] p-2"><PackageRibbonBadge offerId={item.id} />{selected ? <SelectedPackageCheck size={18} className="package-choice-check" /> : null}<SafePackageArt src={suppliedArtwork} fallbackSrc={officialArt} alt={`${gameName} ${item.amountLabel}`} showLogo={mobileLegends} gameName={gameName} gameLogoUrl={gameLogoUrl} /><OverflowMarquee text={item.label} className="mt-1.5 text-xs font-extrabold leading-4 text-slate-950" /><p className="mt-0.5 text-[10px] font-medium text-slate-500">{packageAmount}</p><span className="mt-1 block text-sm font-extrabold text-amber-800">{item.priceLabel}</span>{badge ? <span className={`package-badge package-badge--${badge.tone} mt-1`}>{badge.label}</span> : null}</span></button></article>;
 }
 
 /** The owner-customisable banner that sits on top of a single package card. */

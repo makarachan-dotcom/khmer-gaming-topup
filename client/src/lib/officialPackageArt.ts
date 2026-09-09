@@ -1,0 +1,47 @@
+const art = {
+  ffDiamondXs: "/package-art/ff-diamond-xs.jpg",
+  ffDiamondS: "/package-art/ff-diamond-s.jpg",
+  ffDiamondM: "/package-art/ff-diamond-m.jpg",
+  ffDiamondL: "/package-art/ff-diamond-l.jpg",
+  ffDiamondXl: "/package-art/ff-diamond-xl.jpg",
+  ffWeekly: "/package-art/ff-weekly.jpg",
+  ffMonthly: "/package-art/ff-monthly.jpg",
+  mlbbDiamonds: "/package-art/mlbb-diamonds.jpg",
+  mlbbChest: "/package-art/mlbb-chest.jpg",
+  mlbbWeekly: "/package-art/mlbb-weekly.jpg",
+  mlbbTwilight: "/package-art/mlbb-twilight.jpg",
+  pubgUc: "/package-art/pubg-uc.jpg",
+  hokTokens: "/package-art/hok-tokens.jpg",
+  specialCrate: "/package-art/special-crate.jpg",
+} as const;
+
+function packageCopy(gameId: string, gameName: string, label: string, amountLabel: string) {
+  return `${gameId} ${gameName} ${label} ${amountLabel}`.toLowerCase();
+}
+
+function largestAmount(label: string, amountLabel: string) {
+  const values = `${label} ${amountLabel}`.match(/\d[\d,]*/g) ?? [];
+  return values.map((value) => Number(value.replace(/,/g, ""))).filter(Number.isFinite).sort((left, right) => right - left)[0] ?? 0;
+}
+
+export function officialPackageArtFor(gameId: string, gameName: string, label: string, amountLabel: string) {
+  const text = packageCopy(gameId, gameName, label, amountLabel);
+  const amount = largestAmount(label, amountLabel);
+  const isMlbb = /mobile[\s_-]*legends|\bmlbb\b/.test(text);
+  const isPubg = /pubg|\buc\b/.test(text);
+  const isHok = /honor[\s_-]*of[\s_-]*kings/.test(text);
+
+  if (/twilight/.test(text)) return art.mlbbTwilight;
+  if (/weekly\s*lite/.test(text)) return art.ffWeekly;
+  if (/weekly/.test(text) && /pass|membership|card/.test(text)) return isMlbb ? art.mlbbWeekly : art.ffWeekly;
+  if (/monthly|vip\s*pass|elite\s*pass|season\s*pass|premium\s*pass/.test(text)) return art.ffMonthly;
+  if (/\b(?:crate|lucky\s*bag|chest|bundle|event pack|promo)\b/.test(text) && !/\bdiamonds?\b/.test(text)) return art.specialCrate;
+  if (isPubg) return art.pubgUc;
+  if (isHok) return art.hokTokens;
+  if (isMlbb) return amount >= 500 ? art.mlbbChest : art.mlbbDiamonds;
+  if (amount >= 4000) return art.ffDiamondXl;
+  if (amount >= 1000) return art.ffDiamondL;
+  if (amount >= 300) return art.ffDiamondM;
+  if (amount >= 80) return art.ffDiamondS;
+  return art.ffDiamondXs;
+}
