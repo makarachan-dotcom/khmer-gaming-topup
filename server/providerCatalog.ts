@@ -804,7 +804,7 @@ function mobileLegendsAccountFields(fields: z.infer<typeof providerFieldSchema>[
   const server = fields.find((field) => /(?:server|zone)/i.test(`${field.key} ${field.label}`));
   return [
     { key: player?.key ?? "player_id", label: player?.label ?? "Player ID", placeholder: player?.placeholder || "User ID", required: true, kind: "text" as const },
-    { key: server?.key ?? "server_id", label: "Server ID / Zone ID", placeholder: server?.placeholder || "Zone ID", required: true, kind: "text" as const },
+    { key: server?.key ?? "server_id", label: "Server ID", placeholder: server?.placeholder || "Zone ID", required: true, kind: "text" as const },
   ];
 }
 

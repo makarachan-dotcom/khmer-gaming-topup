@@ -9,32 +9,41 @@
 
 /* --- 1. Account info: player id full width, server id short and right ----- */
 .identity-fields--single { display: block; }
-/* Player ID and Server ID / Zone ID each get a full-width row on phones so the
-   second field can never be clipped off-screen. Desktop keeps a 2-column grid. */
+/* Player ID + Server ID always share one row. Player ID stretches; Server ID
+   stays a compact Zone column so it cannot wrap under or clip off-screen. */
 .identity-fields--pair {
   display: grid !important;
-  grid-template-columns: 1fr !important;
-  gap: 0.7rem !important;
-  align-items: stretch !important;
-  flex-wrap: wrap !important;
+  grid-template-columns: minmax(0, 1fr) 6.75rem !important;
+  gap: 0.45rem !important;
+  align-items: end !important;
 }
 .identity-fields--pair > label,
 .identity-fields--pair > label:first-child,
 .identity-fields--pair > label + label,
 .identity-fields--pair > label:nth-child(n+3) {
   display: block !important;
-  flex: 1 1 100% !important;
-  width: 100% !important;
-  max-width: none !important;
   min-width: 0 !important;
   margin: 0 !important;
+  width: auto !important;
+  max-width: none !important;
+  flex: none !important;
 }
-.identity-fields--pair > label + label input { text-align: left; letter-spacing: 0; }
-.identity-fields--pair > label > span:first-child { overflow: visible; white-space: normal; text-overflow: unset; }
-.identity-fields input { height: 2.75rem; }
-.identity-fields label > span:first-child { font-size: 0.72rem; }
-@media (min-width: 640px) {
-  .identity-fields--pair { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) !important; gap: 0.75rem !important; }
+.identity-fields--pair > label + label { width: 6.75rem !important; }
+.identity-fields--pair > label + label input {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.03em;
+}
+.identity-fields--pair > label > span:first-child {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.identity-fields input { height: 2.7rem; }
+.identity-fields label > span:first-child { font-size: 0.7rem; }
+@media (min-width: 480px) {
+  .identity-fields--pair { grid-template-columns: minmax(0, 1fr) 7.5rem !important; gap: 0.55rem !important; }
+  .identity-fields--pair > label + label { width: 7.5rem !important; }
 }
 
 /* --- 2. Previously confirmed IDs: one compact line, hidden once filled ---- */
