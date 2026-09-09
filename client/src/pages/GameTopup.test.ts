@@ -60,6 +60,8 @@ describe("dedicated game top-up routes", () => {
     expect(source).toContain("package-choice package-choice--clean package-choice--gold");
     expect(source).toContain('className="package-choice-surface block rounded-[0.7rem] p-2.5"');
     expect(source).toContain("Server ID / Zone ID");
+    expect(source).toContain("identityFields.length ? <><div className={`identity-fields");
+    expect(source).toContain("</p> : null}</> : <div");
     expect(source).toContain('className="package-category-grid grid grid-cols-2 gap-2 sm:grid-cols-3"');
     expect(source).toContain('<PackageCard key={item.id} item={item}');
     expect(source).toContain('OverflowMarquee text={item.label}');
