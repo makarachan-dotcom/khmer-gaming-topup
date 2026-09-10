@@ -386,8 +386,7 @@ body:has(.zl-shell) .zs-mascot__bubble {
 
 .pkg-art {
   position: relative;
-  display: grid;
-  place-items: center;
+  display: block;
   height: 4.65rem;
   overflow: hidden;
   border-radius: 0.65rem;
@@ -396,12 +395,14 @@ body:has(.zl-shell) .zs-mascot__bubble {
     linear-gradient(180deg, #1c2438, #101626);
 }
 .pkg-art__image {
+  position: absolute;
+  inset: 0;
   display: block;
   height: 100%;
   width: 100%;
-  object-fit: contain !important;
+  object-fit: cover !important;
   object-position: center;
-  padding: 0.15rem;
+  padding: 0;
 }
 .pkg-art__amount { display: none; }
 .package-choice-surface { position: relative; }
@@ -427,7 +428,8 @@ body:has(.zl-shell) .zs-mascot__bubble {
   .package-category-grid > article { height: auto !important; }
   .package-choice-surface,
   .package-choice--clean .package-choice-surface { min-height: 0 !important; }
-  .pkg-art { height: 5.35rem; }
+  .pkg-art,
+  .supplied-package-art { height: 5.35rem; }
   .zurs-game-card { max-width: none; }
 }
 @media (min-width: 1100px) {

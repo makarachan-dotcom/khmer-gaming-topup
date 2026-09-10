@@ -539,22 +539,25 @@ video {
 .supplied-package-art {
   position: relative;
   display: block;
-  height: 3.35rem;
+  height: 4.65rem;
   overflow: hidden;
-  border-radius: 0.75rem;
+  border-radius: 0.65rem;
   background: linear-gradient(135deg, #fff8dc, #f2c34e 52%, #8a5a11);
 }
 
 .supplied-package-art__image {
+  position: absolute;
+  inset: 0;
   display: block;
   height: 100%;
   width: 100%;
-  object-fit: contain;
+  object-fit: cover;
+  object-position: center;
 }
 
 .supplied-package-art--mlbb-pass { background: radial-gradient(circle at 72% 18%, oklch(0.88 0.14 231 / 0.58), transparent 40%), linear-gradient(135deg, oklch(0.27 0.11 266), oklch(0.48 0.15 245), oklch(0.66 0.13 225)); }
 .supplied-package-art--mlbb-special { background: radial-gradient(circle at 72% 18%, oklch(0.88 0.14 328 / 0.52), transparent 40%), linear-gradient(135deg, oklch(0.34 0.12 315), oklch(0.58 0.15 329), oklch(0.73 0.14 72)); }
-.supplied-package-art__logo { position: absolute; left: 0.42rem; top: 0.42rem; overflow: hidden; border: 1px solid oklch(1 0 0 / 0.55); background: oklch(1 0 0 / 0.16); box-shadow: 0 3px 8px oklch(0.10 0.03 268 / 0.38); }
+.supplied-package-art__logo { position: absolute; left: 0.42rem; top: 0.42rem; z-index: 2; overflow: hidden; border: 1px solid oklch(1 0 0 / 0.55); background: oklch(1 0 0 / 0.16); box-shadow: 0 3px 8px oklch(0.10 0.03 268 / 0.38); }
 
 /* Storefront refinement — high-contrast, mobile-first catalog and footer. */
 html, body { overflow-x: clip; }
@@ -972,7 +975,7 @@ body { font-family: "Kantumruy Pro", "Noto Sans Khmer", "DM Sans", sans-serif; l
 .game-detail-hero .game-logo-frame { border-color: color-mix(in oklab, var(--hero-accent, #46d8ff) 44%, white 36%); background: oklch(0.98 0.01 260 / 0.93); box-shadow: 0 0 0 5px color-mix(in oklab, var(--hero-accent, #46d8ff) 16%, transparent), 0 12px 28px oklch(0.02 0.02 260 / 0.38); }
 
 .mobile-legends-diamond-art__image { width: auto; height: 3.5rem; object-fit: contain; object-position: center; }
-.supplied-package-art__image, .pubg-uc-art__image, .generated-package-art__scene { object-fit: contain; object-position: center; }
+.supplied-package-art__image, .generated-package-art__scene { object-fit: cover; object-position: center; }
 
 @media (max-width: 639px) {
   /* Round 8: the fill-in-info banner was taller than the form itself on a phone. */
