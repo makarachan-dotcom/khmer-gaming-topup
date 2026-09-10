@@ -416,75 +416,6 @@ body:has(.zl-shell) .zs-mascot__bubble {
 .package-choice--recommended:hover { border-color: #f5c518 !important; }
 .package-choice-badges .package-badge { margin-top: 0; }
 
-.package-category-grid {
-  align-items: stretch;
-}
-.package-category-grid > article {
-  display: flex;
-  min-width: 0;
-}
-.package-category-grid > article > .package-choice {
-  display: flex;
-  width: 100%;
-  height: 100%;
-}
-.package-choice-surface {
-  display: flex !important;
-  flex-direction: column;
-  width: 100%;
-  height: 100%;
-}
-.package-choice .pkg-art,
-.package-choice .supplied-package-art {
-  flex: 0 0 auto;
-  width: 100%;
-}
-.package-choice__title,
-.package-choice .overflow-marquee {
-  display: -webkit-box !important;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
-  min-height: 2.05rem;
-  max-height: 2.05rem;
-  line-height: 1.02rem;
-}
-.package-choice .overflow-marquee__track,
-.package-choice .overflow-marquee__track--active {
-  display: block;
-  animation: none !important;
-  transform: none !important;
-  width: auto !important;
-}
-.package-choice .overflow-marquee__track [aria-hidden] { display: none; }
-.package-choice__amount {
-  overflow: hidden;
-  min-height: 0.9rem;
-  max-height: 0.9rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.package-choice__amount--empty { visibility: hidden; }
-.package-choice__price {
-  margin-top: auto !important;
-}
-.package-choice-badges {
-  display: flex !important;
-  min-height: 1.15rem;
-  margin-top: 0.2rem;
-}
-.package-choice-badges:empty {
-  visibility: hidden;
-}
-.package-category-browser__kicker {
-  color: #64748b !important;
-  letter-spacing: 0.14em;
-}
-.package-category-browser__note { display: none; }
-.package-toolbar { gap: 0.4rem !important; }
-.package-category-tab { height: 2.2rem !important; font-size: 0.68rem !important; }
-.package-sort { width: 100%; overflow-x: auto; }
-
 @media (min-width: 768px) {
   .container { max-width: 980px !important; }
   .game-topup-container { max-width: 1100px !important; }
@@ -500,7 +431,6 @@ body:has(.zl-shell) .zs-mascot__bubble {
   .pkg-art,
   .supplied-package-art { height: 5.35rem; }
   .zurs-game-card { max-width: none; }
-  .package-category-browser__note { display: block; }
 }
 @media (min-width: 1100px) {
   .package-category-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
