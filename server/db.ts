@@ -16,6 +16,7 @@ import { getPublicPaymentReadiness } from "./paymentReadiness";
 import { checkBakongKhqrPayment, createBakongKhqrPayment, registerBakongKhqrWorkerWatch } from "./bakongKhqr";
 import { getKhqrReconciliationDisposition, getKhqrWalletReconciliationDisposition } from "./khqrReconciliation";
 import { assertOrderAmountIntegrity, assertPackagePriceIntegrity, assessOrderVelocity, moneyEquals } from "./paymentSecurity";
+import { applyShopPriceLadder, shopLadderUnitPrice } from "@shared/packagePriceLadder";
 import type { FzrProviderSyncSnapshot, SmmProviderCatalogResponse } from "./providerCatalog";
 import { submitSmmProviderOrder, submitFzrTopupOrder } from "./providerCatalog";
 import { publicPartnerDelivery } from "../shared/partnerDelivery";
@@ -334,7 +335,7 @@ export async function getAdminSyncedProviderPackages(providerGameIds: string[]) 
   const products = await db.select({ id: gameProducts.id }).from(gameProducts).where(inArray(gameProducts.id, productIds));
   if (!products.length) return [];
   const packages = await db.select({ id: gamePackages.id, amountLabel: gamePackages.amountLabel, priceUsd: gamePackages.priceUsd, providerSource: gamePackages.providerSource, sortOrder: gamePackages.sortOrder }).from(gamePackages).where(and(inArray(gamePackages.productId, products.map((product) => product.id)), eq(gamePackages.providerAuthorized, true))).orderBy(asc(gamePackages.sortOrder));
-  return packages.map((item) => ({ id: item.id, label: item.amountLabel, amountLabel: item.amountLabel, priceLabel: `$${Number(item.priceUsd).toFixed(2)}`, provider: "FZR Cards", paymentMethods: ["khqr", "bank"] as ("khqr" | "bank")[] }));
+  return applyShopPriceLadder(packages.map((item) => ({ id: item.id, label: item.amountLabel, amountLabel: item.amountLabel, priceLabel: `$${Number(item.priceUsd).toFixed(2)}`, provider: "FZR Cards", paymentMethods: ["khqr", "bank"] as ("khqr" | "bank")[] })));
 }
 
 /** Public fallback for an authorized synced catalog: inactive rows never reach the storefront. */
@@ -347,7 +348,7 @@ export async function getPublicSyncedProviderPackages(providerGameIds: string[])
   const products = await db.select({ id: gameProducts.id }).from(gameProducts).where(and(inArray(gameProducts.id, productIds), eq(gameProducts.isActive, true)));
   if (!products.length) return [];
   const packages = await db.select({ id: gamePackages.id, amountLabel: gamePackages.amountLabel, priceUsd: gamePackages.priceUsd, providerSource: gamePackages.providerSource, sortOrder: gamePackages.sortOrder }).from(gamePackages).where(and(inArray(gamePackages.productId, products.map((product) => product.id)), eq(gamePackages.isActive, true), eq(gamePackages.providerAuthorized, true))).orderBy(asc(gamePackages.sortOrder));
-  return packages.map((item) => ({ id: item.id, label: item.amountLabel, amountLabel: item.amountLabel, priceLabel: `$${Number(item.priceUsd).toFixed(2)}`, provider: "FZR Cards", paymentMethods: ["khqr", "bank"] as ("khqr" | "bank")[] }));
+  return applyShopPriceLadder(packages.map((item) => ({ id: item.id, label: item.amountLabel, amountLabel: item.amountLabel, priceLabel: `$${Number(item.priceUsd).toFixed(2)}`, provider: "FZR Cards", paymentMethods: ["khqr", "bank"] as ("khqr" | "bank")[] })));
 }
 
 type OrderStatus = "pending" | "awaiting_payment" | "paid" | "delivered" | "failed" | "expired" | "refunded";
@@ -538,6 +539,17 @@ async function resolvePurchasableTopupPackage(packageId: string) {
   return (await loadSqlTopupPackage(packageId)) ?? (await materializeLiveTopupPackage(packageId));
 }
 
+async function shopLadderUnitPriceForPackage(item: { game: { id: string }; package: { id: string; amountLabel: string; priceUsd: string; providerSource?: string | null } }) {
+  const db = await getDb();
+  if (!db) return Number(item.package.priceUsd);
+  const source = String(item.package.providerSource ?? "");
+  const family = source.match(/^fzr_cards:(?:free_fire|mobile_legends|pubg_mobile)/i)?.[0];
+  const siblings = family
+    ? await db.select({ id: gamePackages.id, amountLabel: gamePackages.amountLabel, priceUsd: gamePackages.priceUsd }).from(gamePackages).where(and(like(gamePackages.providerSource, `${family}%`), eq(gamePackages.isActive, true), eq(gamePackages.providerAuthorized, true)))
+    : await db.select({ id: gamePackages.id, amountLabel: gamePackages.amountLabel, priceUsd: gamePackages.priceUsd }).from(gamePackages).where(and(eq(gamePackages.productId, item.game.id), eq(gamePackages.isActive, true), eq(gamePackages.providerAuthorized, true)));
+  return shopLadderUnitPrice(siblings.map((row) => ({ id: row.id, label: row.amountLabel, amountLabel: row.amountLabel, priceUsd: row.priceUsd })), item.package.id) ?? Number(item.package.priceUsd);
+}
+
 export async function createTopupOrder(input: { userId: number; packageId: string; playerId: string; zoneId?: string | null; accountPassword?: string | null; quantity: number }) {
   await requirePublicPaymentEnabled();
   const db = await getDb();
@@ -568,7 +580,11 @@ export async function createTopupOrder(input: { userId: number; packageId: strin
   // settled is farming sessions, not shopping.
   const recentOrders = await db.select({ createdAt: orders.createdAt, status: orders.status }).from(orders).where(and(eq(orders.userId, input.userId), gt(orders.createdAt, new Date(Date.now() - 60 * 60 * 1000))));
   if (assessOrderVelocity(recentOrders).blocked) throw Object.assign(new Error(orderVelocityMessageKh), { code: "ORDER_VELOCITY_BLOCKED" });
-  const subtotal = priceCheck.subtotal;
+  const catalogMinor = Math.round(Number(priceCheck.subtotal) / input.quantity * 100);
+  const ladderMinor = Math.round((await shopLadderUnitPriceForPackage(item)) * 100);
+  const unitMinor = Math.max(catalogMinor, ladderMinor);
+  const subtotal = ((unitMinor * input.quantity) / 100).toFixed(2);
+  assertOrderAmountIntegrity({ amount: subtotal, currency: "USD" });
   const id = nanoid(); const orderNumber = buildOrderNumber(); const trackingCode = buildTrackingCode();
   await db.insert(orders).values({ id, orderNumber, trackingCode, userId: input.userId, orderType: "topup", status: "pending", subtotal, productName: `${item.game.titleEn} • ${item.package.amountLabel} ${item.game.currencyLabel}`, details: { packageId: item.package.id, gameProductId: item.game.id, playerId: input.playerId.trim(), zoneId: input.zoneId?.trim() ?? null, accountPassword: input.accountPassword?.trim() || null, quantity: input.quantity } });
   await appendOrderStatusEvent({ orderId: id, eventType: "order_created", status: "pending", actorType: "customer", messageKh: statusMessageKh("pending") });

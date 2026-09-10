@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { automaticPackageCategoryLabel, buildPackageCategories, categoryLabelForPackage, filterPackagesByCategory } from "./packageCategories";
+import { automaticPackageCategoryLabel, buildPackageCategories, categoryLabelForPackage, filterPackagesByCategory, isDiamondPackage } from "./packageCategories";
 
 const packages = [
   { id: "token", label: "86 Diamonds", amountLabel: "86 Diamonds" },
@@ -10,7 +10,7 @@ const packages = [
 
 describe("package category presentation", () => {
   it("derives useful default categories from package data", () => {
-    expect(packages.map(automaticPackageCategoryLabel)).toEqual(["Token", "Weekly Card", "Super Offer", "កញ្ចប់ពិសេស"]);
+    expect(packages.map(automaticPackageCategoryLabel)).toEqual(["Diamond", "Weekly Card", "Super Offer", "កញ្ចប់ពិសេស"]);
   });
 
   it("automatically separates monthly and elite packages into useful filters", () => {
@@ -35,5 +35,14 @@ describe("package category presentation", () => {
     expect(filterPackagesByCategory(packages, "ពេញនិយម", overrides).map((item) => item.id)).toEqual(["token", "special"]);
     expect(filterPackagesByCategory(packages, "all", overrides)).toBe(packages);
     expect(packages.map((item) => item.id)).toEqual(["token", "weekly", "bonus", "special"]);
+  });
+
+  it("shows only diamond packs when the Diamond filter is selected", () => {
+    const mixed = [
+      ...packages,
+      { id: "weekly-named-diamond", label: "Weekly Diamond Pass", amountLabel: "Weekly Diamond Pass" },
+    ];
+    expect(isDiamondPackage(packages[0]!)).toBe(true);
+    expect(filterPackagesByCategory(mixed, "diamond").map((item) => item.id)).toEqual(["token"]);
   });
 });

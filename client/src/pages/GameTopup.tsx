@@ -24,6 +24,7 @@ import { subscribeToPackageArtworkChanges } from "@/lib/packageArtworkBroadcast"
 import { subscribeToPackagePricingChanges } from "@/lib/packagePricingBroadcast";
 import { subscribeToPublicAssetChanges } from "@/lib/publicAssetBroadcast";
 import { officialPackageArtFor } from "@/lib/officialPackageArt";
+import { applyShopPriceLadder } from "@shared/packagePriceLadder";
 import { ArrowDownUp, ArrowLeft, BadgePercent, Box, CalendarClock, Check, CheckCircle2, ChevronDown, ChevronRight, CircleAlert, Crown, Eye, Flame, Gem, Gift, History, Search, ShieldAlert, Sparkles, TrendingUp, UserRound, WalletCards } from "lucide-react";
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
@@ -616,7 +617,7 @@ function DiamondPackages({ packages, status, selectedPackageId, onSelect, gameId
   useEffect(() => subscribeToPackageArtworkChanges((changedGameId) => { if (changedGameId === gameId) void refetchPackageArtwork(); }), [gameId, refetchPackageArtwork]);
   const fullTicketEvent = (eventContent.data ?? []).find((item) => item.contentKey === "topup-event-full-ticket");
   const { eventPackages: fullTicketPackages, storefrontPackages } = partitionProviderPackagesForFullTicketEvent(packages, Boolean(fullTicketEvent));
-  const gamePackages = useMemo(() => keepCheapestUniqueProviderPackages([...storefrontPackages, ...fullTicketPackages]), [fullTicketPackages, storefrontPackages]);
+  const gamePackages = useMemo(() => applyShopPriceLadder(keepCheapestUniqueProviderPackages([...storefrontPackages, ...fullTicketPackages])), [fullTicketPackages, storefrontPackages]);
   const [packageSort, setPackageSort] = useState<PackageSortKey>("recommended");
   const categoryTabs = useMemo<PackageCategory[]>(() => buildPackageCategories(gamePackages, categoryOverrides), [categoryOverrides, gamePackages]);
   // One package is suggested so the most common purchase is the first card the

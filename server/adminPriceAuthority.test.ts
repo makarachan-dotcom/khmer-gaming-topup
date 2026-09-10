@@ -51,7 +51,8 @@ describe("admin price authority", () => {
     expect(create).toContain("const item = await resolvePurchasableTopupPackage(input.packageId);");
     expect(create).toContain("const priceCheck = assertPackagePriceIntegrity({");
     expect(create).toContain("priceUsd: item.package.priceUsd,");
-    expect(create).toContain("const subtotal = priceCheck.subtotal;");
+    expect(create).toContain("shopLadderUnitPriceForPackage");
+    expect(create).toContain("const subtotal = ((unitMinor * input.quantity) / 100).toFixed(2);");
     expect(create).toContain("subtotal,");
     // The client can never post its own price.
     expect(read("server/routers.ts")).toContain("createTopup: protectedProcedure.input(z.object({ packageId: z.string().min(4).max(64), playerId: z.string().trim().min(2).max(128)");

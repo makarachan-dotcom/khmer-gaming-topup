@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { resolveProviderCredential } from "./providerCredentialResolver";
 import { getAppwriteProviderAvailability, getAppwriteProviderCatalog, isAppwriteStoreConfigured, type AppwriteProviderCatalog, updateAppwriteProviderAvailability } from "./appwriteStore";
 import { getActiveProviderPackageIds, getAdminSyncedProviderPackages, getPublicSyncedProviderPackages } from "./db";
+import { applyShopPriceLadder } from "@shared/packagePriceLadder";
 
 export const providerFieldSchema = z.object({
   key: z.string().trim().regex(/^[a-z][a-zA-Z0-9_]{0,63}$/),
@@ -336,13 +337,13 @@ async function telegramProviderPackages(game: TelegramSnapshotGame) {
         if (item.isActive && String(item.providerSource ?? "").startsWith(`fzr_cards:${game.providerGameId}:`)) rows.set(item.id, { amountLabel: item.amountLabel, priceUsd: item.priceUsd });
       });
     });
-    if (!rows.size) return livePackages;
-    return livePackages.map((item) => {
+    if (!rows.size) return applyShopPriceLadder(livePackages);
+    return applyShopPriceLadder(livePackages.map((item) => {
       const row = rows.get(item.id);
       return row ? { ...item, label: row.amountLabel, amountLabel: row.amountLabel, priceLabel: `$${Number(row.priceUsd).toFixed(2)}` } : item;
-    });
+    }));
   } catch {
-    return livePackages;
+    return applyShopPriceLadder(livePackages);
   }
 }
 
@@ -673,18 +674,18 @@ async function providerPackages(categoryId: string, offers: z.infer<typeof fzrOf
     const adminCatalog = await adminCatalogForStorefront();
     const productId = `fzr-game-${createHash("sha256").update(categoryId).digest("hex").slice(0, 40)}`;
     const product = adminCatalog.games.find((item) => item.id === productId || item.packages.some((pkg: { providerSource?: string | null }) => String(pkg.providerSource ?? "").startsWith(`fzr_cards:${categoryId}:`)));
-    if (!product) return livePackages;
+    if (!product) return applyShopPriceLadder(livePackages);
     const activePackages = product.packages.filter((item: { isActive: boolean }) => item.isActive);
     const activeById = new Map<string, { id: string; amountLabel: string; priceUsd: string }>(activePackages.map((item: { id: string; amountLabel: string; priceUsd: string }) => [item.id, item]));
     const matchedLivePackages = livePackages.flatMap((item) => {
       const catalogItem = activeById.get(item.id);
       return catalogItem ? [{ ...item, label: catalogItem.amountLabel, amountLabel: catalogItem.amountLabel, priceLabel: `$${Number(catalogItem.priceUsd).toFixed(2)}` }] : [];
     });
-    if (matchedLivePackages.length) return matchedLivePackages;
+    if (matchedLivePackages.length) return applyShopPriceLadder(matchedLivePackages);
     // If the live offer response uses a temporarily different shape, expose the
     // already-synchronized active package IDs so checkout still receives rows
     // that the order validator can resolve.
-    return activePackages.map((item: { id: string; amountLabel: string; priceUsd: string }) => ({ id: item.id, label: item.amountLabel, amountLabel: item.amountLabel, priceLabel: `$${Number(item.priceUsd).toFixed(2)}`, provider: "FZR Cards", paymentMethods: ["khqr", "bank"] as ("khqr" | "bank")[] }));
+    return applyShopPriceLadder(activePackages.map((item: { id: string; amountLabel: string; priceUsd: string }) => ({ id: item.id, label: item.amountLabel, amountLabel: item.amountLabel, priceLabel: `$${Number(item.priceUsd).toFixed(2)}`, provider: "FZR Cards", paymentMethods: ["khqr", "bank"] as ("khqr" | "bank")[] })));
   } catch {
     return [];
   }
@@ -912,7 +913,7 @@ async function cachedProviderGameDetails(gameId: string, includeInactive = false
     const catalog = await getGameCatalog();
     const product = catalog.find((game) => game.packages.some((item) => String(item.providerSource ?? "").startsWith(`fzr_cards:${gameId}:`)));
     if (!product) return null;
-    const packages = product.packages.filter((item) => includeInactive || item.isActive).map((item) => ({ id: item.id, label: item.amountLabel, amountLabel: item.amountLabel, priceLabel: `$${Number(item.priceUsd).toFixed(2)}`, provider: "FZR Cards", paymentMethods: ["khqr", "bank"] as ("khqr" | "bank")[] }));
+    const packages = applyShopPriceLadder(product.packages.filter((item) => includeInactive || item.isActive).map((item) => ({ id: item.id, label: item.amountLabel, amountLabel: item.amountLabel, priceLabel: `$${Number(item.priceUsd).toFixed(2)}`, provider: "FZR Cards", paymentMethods: ["khqr", "bank"] as ("khqr" | "bank")[] })));
     if (!packages.length) return null;
     // A Telegram top-up asks for one @username and never for a server/zone.
     const telegramService = isTelegramProviderProduct(`${gameId} ${product.titleEn ?? ""} ${product.titleKh ?? ""}`);
@@ -983,7 +984,7 @@ export async function fetchProviderGameDetails(gameId: string, options: { includ
       return {
         status: "ready",
         game: { ...primary.game, id: mobileLegendsFamilyGameId, name: "Mobile Legends", requiredFields: mobileLegendsAccountFields(primary.game.requiredFields) },
-        packages: readyVariants.flatMap((details) => details.packages),
+        packages: applyShopPriceLadder(readyVariants.flatMap((details) => details.packages)),
       };
     }
     if (isFreeFireFamilyGame(gameId)) {
@@ -1004,7 +1005,7 @@ export async function fetchProviderGameDetails(gameId: string, options: { includ
       return {
         status: "ready",
         game: { ...primary.game, id: freeFireFamilyGameId, name: "Free Fire", requiredFields: freeFireIdentityFields(primary.game.requiredFields) },
-        packages: readyVariants.flatMap((details) => details.packages),
+        packages: applyShopPriceLadder(readyVariants.flatMap((details) => details.packages)),
       };
     }
     if (isPubgMobileFamilyGame(gameId)) {
@@ -1022,7 +1023,7 @@ export async function fetchProviderGameDetails(gameId: string, options: { includ
       return {
         status: "ready",
         game: { ...primary.game, id: pubgMobileFamilyGameId, name: "PUBG Mobile" },
-        packages: readyVariants.flatMap((details) => details.packages),
+        packages: applyShopPriceLadder(readyVariants.flatMap((details) => details.packages)),
       };
     }
     if (!availableGames.games.some((game) => game.id === gameId)) return { status: "unavailable", game: null, packages: [] };
