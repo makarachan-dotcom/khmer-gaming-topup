@@ -45,4 +45,30 @@ describe("package category presentation", () => {
     expect(isDiamondPackage(packages[0]!)).toBe(true);
     expect(filterPackagesByCategory(mixed, "diamond").map((item) => item.id)).toEqual(["token"]);
   });
+
+  it("keeps Mobile Legends filters exclusive to the selected pack type", () => {
+    const mlbb = [
+      { id: "d10", label: "10 + 1 Diamonds", amountLabel: "10 Diamonds" },
+      { id: "d86", label: "86 Diamonds", amountLabel: "86 Diamonds" },
+      { id: "limited", label: "Limited-Time Value Pack", amountLabel: "Limited-Time Value Pack" },
+      { id: "weekly", label: "Weekly Pass", amountLabel: "Weekly Pass" },
+      { id: "twilight", label: "Twilight Pass", amountLabel: "Twilight Pass" },
+    ];
+    expect(mlbb.map(automaticPackageCategoryLabel)).toEqual(["Diamond", "Diamond", "Super Offer", "Weekly Card", "Twilight Pass"]);
+    expect(filterPackagesByCategory(mlbb, "diamond").map((item) => item.id)).toEqual(["d10", "d86"]);
+    expect(filterPackagesByCategory(mlbb, "weekly card").map((item) => item.id)).toEqual(["weekly"]);
+    expect(filterPackagesByCategory(mlbb, "twilight pass").map((item) => item.id)).toEqual(["twilight"]);
+    expect(filterPackagesByCategory(mlbb, "super offer").map((item) => item.id)).toEqual(["limited"]);
+  });
+
+  it("keeps Token filter on currency packs that are not diamonds", () => {
+    const items = [
+      { id: "uc", label: "60 UC", amountLabel: "60 UC" },
+      { id: "robux", label: "800 Robux", amountLabel: "800 Robux" },
+      { id: "stars", label: "500 Stars", amountLabel: "500 Stars" },
+      { id: "diamonds", label: "100 Diamonds", amountLabel: "100 Diamonds" },
+    ];
+    expect(filterPackagesByCategory(items, "token").map((item) => item.id)).toEqual(["uc", "robux", "stars"]);
+    expect(filterPackagesByCategory(items, "diamond").map((item) => item.id)).toEqual(["diamonds"]);
+  });
 });

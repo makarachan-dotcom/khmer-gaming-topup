@@ -10,7 +10,7 @@ export type PackageCategory = {
   count: number;
 };
 
-const automaticCategoryOrder = ["Diamond", "Token", "Weekly Card", "Monthly Pack", "Elite Pack", "Super Offer", "កញ្ចប់ពិសេស"];
+const automaticCategoryOrder = ["Diamond", "Token", "Weekly Card", "Twilight Pass", "Monthly Pack", "Elite Pack", "Super Offer", "កញ្ចប់ពិសេស"];
 
 function packageWords(item: Pick<CategoryPackage, "label" | "amountLabel">) {
   return `${item.label} ${item.amountLabel}`.toLowerCase();
@@ -20,29 +20,59 @@ export function normalizePackageCategoryLabel(value: string) {
   return value.trim().replace(/\s+/g, " ").slice(0, 80);
 }
 
+function isWeeklyPackage(item: Pick<CategoryPackage, "label" | "amountLabel">) {
+  const copy = packageWords(item);
+  return /\bweekly\b/.test(copy) && !/\btwilight\b/.test(copy);
+}
+
+function isMonthlyPackage(item: Pick<CategoryPackage, "label" | "amountLabel">) {
+  return /\bmonthly\b/.test(packageWords(item));
+}
+
+function isTwilightPackage(item: Pick<CategoryPackage, "label" | "amountLabel">) {
+  return /\btwilight\b/.test(packageWords(item));
+}
+
+function isElitePackage(item: Pick<CategoryPackage, "label" | "amountLabel">) {
+  const copy = packageWords(item);
+  if (isWeeklyPackage(item) || isMonthlyPackage(item) || isTwilightPackage(item)) return false;
+  return /\b(?:elite|premium|starlight)\b/.test(copy);
+}
+
 export function isDiamondPackage(item: Pick<CategoryPackage, "label" | "amountLabel">) {
   const copy = packageWords(item);
-  if (/\b(?:weekly|daily|monthly|membership|subscription|pass)\b/.test(copy)) return false;
+  if (/\b(?:weekly|daily|monthly|membership|subscription|pass|twilight|starlight)\b/.test(copy)) return false;
   return /\bdiamonds?\b/.test(copy);
+}
+
+function isTokenCurrencyPackage(item: Pick<CategoryPackage, "label" | "amountLabel">) {
+  const copy = packageWords(item);
+  if (isDiamondPackage(item) || isWeeklyPackage(item) || isMonthlyPackage(item) || isTwilightPackage(item) || isElitePackage(item)) return false;
+  return /\b(?:uc|robux|stars?|tokens?|coins?)\b/.test(copy);
 }
 
 /** A readable fallback until an Admin assigns a category to the individual offer. */
 export function automaticPackageCategoryLabel(item: Pick<CategoryPackage, "label" | "amountLabel">) {
   const copy = packageWords(item);
-  if (/\bmonthly\b/.test(copy)) return "Monthly Pack";
-  if (/\bweekly\b/.test(copy)) return "Weekly Card";
-  if (/\b(?:elite|premium)\b/.test(copy)) return "Elite Pack";
-  if (/\b(?:daily|membership|subscription|pass)\b/.test(copy)) return "Weekly Card";
+  if (isMonthlyPackage(item)) return "Monthly Pack";
+  if (isWeeklyPackage(item)) return "Weekly Card";
+  if (isTwilightPackage(item)) return "Twilight Pass";
+  if (isElitePackage(item)) return "Elite Pack";
   if (isDiamondPackage(item)) return "Diamond";
-  if (/\b(?:bonus|first\s*top[\s-]*up|extra)\b|\+\s*\d[\d,]*(?:\s*[a-z]+)?\b/.test(copy)) return "Super Offer";
+  if (/\b(?:bonus|first\s*top[\s-]*up|extra|limited|value\s*pack|bundle)\b/.test(copy) || /\+\s*\d[\d,]*(?:\s*[a-z]+)?\b/.test(copy)) return "Super Offer";
   if (/\b(?:promo|special|discount|sale|event|exclusive|full\s*ticket)\b/.test(copy)) return "កញ្ចប់ពិសេស";
-  return "Token";
+  if (isTokenCurrencyPackage(item)) return "Token";
+  return "Super Offer";
 }
 
 export function categoryLabelForPackage(item: CategoryPackage, overrides: ReadonlyMap<string, string> | Record<string, string> = {}) {
   const categoryMap = overrides as ReadonlyMap<string, string>;
   const candidate = typeof categoryMap.get === "function" ? categoryMap.get(item.id) : (overrides as Record<string, string>)[item.id];
-  return normalizePackageCategoryLabel(candidate ?? "") || automaticPackageCategoryLabel(item);
+  const override = normalizePackageCategoryLabel(candidate ?? "");
+  const automatic = automaticPackageCategoryLabel(item);
+  if (!override) return automatic;
+  if (override.toLocaleLowerCase() === "diamond" && !isDiamondPackage(item)) return automatic;
+  return override;
 }
 
 export function buildPackageCategories(items: CategoryPackage[], overrides: ReadonlyMap<string, string> | Record<string, string> = {}) {
@@ -63,6 +93,13 @@ export function buildPackageCategories(items: CategoryPackage[], overrides: Read
 
 export function filterPackagesByCategory<T extends CategoryPackage>(items: T[], categoryId: string, overrides: ReadonlyMap<string, string> | Record<string, string> = {}) {
   if (!categoryId || categoryId === "all") return items;
-  if (/diamond/.test(categoryId)) return items.filter((item) => isDiamondPackage(item));
-  return items.filter((item) => categoryLabelForPackage(item, overrides).toLocaleLowerCase() === categoryId);
+  const selected = categoryId.trim().toLocaleLowerCase();
+  return items.filter((item) => {
+    const label = categoryLabelForPackage(item, overrides).toLocaleLowerCase();
+    if (label !== selected) return false;
+    if (selected === "diamond") return isDiamondPackage(item);
+    if (selected === "weekly card") return isWeeklyPackage(item);
+    if (selected === "twilight pass") return isTwilightPackage(item);
+    return true;
+  });
 }
