@@ -148,6 +148,99 @@ function gameLabelOf(group: GameGroup) {
   return group.titleKh?.trim() || group.titleEn?.trim() || "Provider product";
 }
 
+/** Same families the storefront shows as one game, instead of regional FazerCards splits. */
+export function storefrontCatalogFamily(source: {
+  id?: string;
+  name?: string;
+  titleEn?: string | null;
+  titleKh?: string | null;
+}) {
+  const hay = `${source.id ?? ""} ${source.name ?? ""} ${source.titleEn ?? ""} ${source.titleKh ?? ""}`.toLowerCase();
+  if (/free[\s_-]*fire/.test(hay)) return { id: "free_fire", titleEn: "Free Fire", titleKh: "Free Fire" };
+  if (/mobile[\s_-]*legends/.test(hay)) return { id: "mobile_legends", titleEn: "Mobile Legends", titleKh: "Mobile Legends" };
+  if (/pubg/.test(hay)) return { id: "pubg_mobile", titleEn: "PUBG Mobile", titleKh: "PUBG Mobile" };
+  return null;
+}
+
+function offerIdentityKey(offer: Offer) {
+  const amount = String(offer.amountLabel ?? "").toLowerCase().replace(/[^a-z0-9.]+/g, " ").replace(/\s+/g, " ").trim();
+  const numbers = (amount.match(/\d+(?:\.\d+)?/g) ?? []).join("-");
+  const unit = (amount.match(/[a-z]+/g) ?? []).join("");
+  if (numbers) return `${numbers}:${unit}`;
+  return amount || offer.id;
+}
+
+export function keepCheapestAdminOffers(offers: Offer[]) {
+  const cheapest = new Map<string, Offer>();
+  for (const offer of [...offers].sort((left, right) => toNumber(left.priceUsd) - toNumber(right.priceUsd) || left.id.localeCompare(right.id))) {
+    const key = offerIdentityKey(offer);
+    if (!cheapest.has(key)) cheapest.set(key, offer);
+  }
+  return [...cheapest.values()];
+}
+
+export function groupCatalogGamesLikeStorefront(games: GameGroup[]) {
+  const families = new Map<string, GameGroup>();
+  const singles: GameGroup[] = [];
+  for (const game of games) {
+    const family = storefrontCatalogFamily(game);
+    if (!family) {
+      singles.push(game);
+      continue;
+    }
+    const existing = families.get(family.id);
+    if (!existing) {
+      families.set(family.id, {
+        ...game,
+        id: family.id,
+        titleEn: family.titleEn,
+        titleKh: family.titleKh,
+        packages: [...(game.packages ?? [])],
+      });
+      continue;
+    }
+    existing.packages = [...(existing.packages ?? []), ...(game.packages ?? [])];
+    existing.isActive = Boolean(existing.isActive || game.isActive);
+  }
+  return [...families.values(), ...singles].map((game) => ({
+    ...game,
+    packages: keepCheapestAdminOffers(game.packages ?? []),
+  }));
+}
+
+export function groupAvailabilityLikeStorefront(games: AvailabilityItem[]) {
+  const families = new Map<string, AvailabilityItem & { variantIds: string[] }>();
+  const singles: Array<AvailabilityItem & { variantIds: string[] }> = [];
+  for (const game of games) {
+    const family = storefrontCatalogFamily(game);
+    if (!family) {
+      singles.push({ ...game, variantIds: [game.id] });
+      continue;
+    }
+    const existing = families.get(family.id);
+    if (!existing) {
+      families.set(family.id, {
+        id: family.id,
+        name: family.titleEn,
+        category: game.category,
+        isActive: game.isActive,
+        variantIds: [game.id],
+      });
+      continue;
+    }
+    existing.variantIds.push(game.id);
+    existing.isActive = existing.isActive || game.isActive;
+  }
+  return [...families.values(), ...singles];
+}
+
+export function expandStorefrontProviderIds(providerId: string, games: AvailabilityItem[]) {
+  const family = storefrontCatalogFamily({ id: providerId, name: providerId });
+  if (!family) return [providerId];
+  const variants = games.filter((item) => storefrontCatalogFamily(item)?.id === family.id).map((item) => item.id);
+  return variants.length ? variants : [providerId];
+}
+
 /** A margin string the storefront policy accepts: 0-7 with at most two decimals; 0 is reserved for no-profit packages. */
 function sanitizeMargin(value: string) {
   const numeric = Math.min(7, Math.max(0, toNumber(value)));
@@ -324,9 +417,11 @@ function PricingWorkspace() {
   const setSelectedVisibility = async (isActive: boolean) => {
     const selected = Array.from(selectedCatalogIds).filter(Boolean);
     if (!selected.length) return;
+    const rawGames = availability.data?.games ?? [];
+    const expanded = Array.from(new Set(selected.flatMap((providerId) => expandStorefrontProviderIds(providerId, rawGames))));
     setBatchBusy(true);
     try {
-      for (const providerId of selected)
+      for (const providerId of expanded)
         await toggleAvailability.mutateAsync({
           kind: "game",
           providerId,
@@ -338,25 +433,41 @@ function PricingWorkspace() {
     }
   };
 
+  const toggleStorefrontGame = async (providerId: string, isActive: boolean) => {
+    const expanded = expandStorefrontProviderIds(providerId, availability.data?.games ?? []);
+    for (const id of expanded) {
+      await toggleAvailability.mutateAsync({ kind: "game", providerId: id, isActive });
+    }
+  };
+
   /** Games the storefront actually shows. Pricing only needs these. */
+  const rawAvailabilityGames = availability.data?.games ?? [];
+  const storefrontAvailabilityGames = useMemo(
+    () => groupAvailabilityLikeStorefront(rawAvailabilityGames),
+    [rawAvailabilityGames]
+  );
   const publicGameNames = useMemo(
     () =>
       new Set(
-        (availability.data?.games ?? [])
+        rawAvailabilityGames
           .filter(item => item.isActive)
           .map(item => normalizedName(item.name))
       ),
-    [availability.data]
+    [rawAvailabilityGames]
   );
   const allGames = (catalog.data?.games ?? []) as GameGroup[];
+  const storefrontCatalogGames = useMemo(
+    () => groupCatalogGamesLikeStorefront(allGames),
+    [allGames]
+  );
   const publicGames = useMemo(
     () =>
-      allGames.filter(
-        game =>
-          publicGameNames.has(normalizedName(game.titleEn)) ||
-          publicGameNames.has(normalizedName(game.titleKh))
-      ),
-    [allGames, publicGameNames]
+      storefrontCatalogGames.filter(game => {
+        const family = storefrontCatalogFamily(game);
+        if (family) return rawAvailabilityGames.some(item => item.isActive && storefrontCatalogFamily(item)?.id === family.id);
+        return publicGameNames.has(normalizedName(game.titleEn)) || publicGameNames.has(normalizedName(game.titleKh));
+      }),
+    [storefrontCatalogGames, publicGameNames, rawAvailabilityGames]
   );
   const pricingQuery = pricingSearch.trim().toLowerCase();
   const pricingGames = useMemo(
@@ -377,14 +488,17 @@ function PricingWorkspace() {
   );
   const gameReadiness = useMemo<GameReadiness[]>(() => {
     const catalogByName = new Map<string, GameGroup>();
-    for (const game of allGames) {
+    for (const game of storefrontCatalogGames) {
       const en = normalizedName(game.titleEn);
       const kh = normalizedName(game.titleKh);
       if (en) catalogByName.set(en, game);
       if (kh) catalogByName.set(kh, game);
     }
-    return (availability.data?.games ?? []).map(item => {
-      const matched = catalogByName.get(normalizedName(item.name));
+    return storefrontAvailabilityGames.map(item => {
+      const family = storefrontCatalogFamily(item);
+      const matched = family
+        ? storefrontCatalogGames.find(game => storefrontCatalogFamily(game)?.id === family.id)
+        : catalogByName.get(normalizedName(item.name));
       const authorized = (matched?.packages ?? []).filter(
         offer => offer.providerAuthorized
       );
@@ -406,7 +520,7 @@ function PricingWorkspace() {
         status,
       };
     });
-  }, [availability.data, allGames]);
+  }, [storefrontAvailabilityGames, storefrontCatalogGames]);
   const liveOffers = editableOffers.filter(offer => offer.isActive);
   const averageMargin = editableOffers.length
     ? editableOffers.reduce(
@@ -649,7 +763,7 @@ function PricingWorkspace() {
 
       <CatalogInventoryControls
         loading={availability.isLoading}
-        games={availability.data?.games}
+        games={storefrontAvailabilityGames}
         search={catalogSearch}
         visibilityFilter={catalogVisibility}
         selectedIds={selectedCatalogIds}
@@ -657,7 +771,7 @@ function PricingWorkspace() {
         onSearch={setCatalogSearch}
         onVisibilityFilter={setCatalogVisibility}
         onToggle={(providerId, isActive) =>
-          toggleAvailability.mutate({ kind: "game", providerId, isActive })
+          void toggleStorefrontGame(providerId, isActive)
         }
         onToggleSelected={providerId =>
           setSelectedCatalogIds(current => {
@@ -680,21 +794,9 @@ function PricingWorkspace() {
         readiness={gameReadiness}
         loading={catalog.isLoading || availability.isLoading}
         busy={bulkBusy || toggleAvailability.isPending}
-        onAddToShop={providerId =>
-          toggleAvailability.mutate({
-            kind: "game",
-            providerId,
-            isActive: true,
-          })
-        }
+        onAddToShop={providerId => void toggleStorefrontGame(providerId, true)}
         onActivateGame={item => void activateGamePackages(item)}
-        onRemoveFromShop={providerId =>
-          toggleAvailability.mutate({
-            kind: "game",
-            providerId,
-            isActive: false,
-          })
-        }
+        onRemoveFromShop={providerId => void toggleStorefrontGame(providerId, false)}
       />
 
       <section className="mt-6">

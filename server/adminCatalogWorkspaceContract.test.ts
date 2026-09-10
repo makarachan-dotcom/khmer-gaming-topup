@@ -20,6 +20,9 @@ describe("admin catalog workspace", () => {
     expect(pricing).toContain("មិនទាន់ Add");
     expect(pricing).toContain("topup-event-full-ticket");
     expect(pricing).toContain("តម្លៃ និង Margin តាមហ្គេម");
+    expect(pricing).toContain("groupCatalogGamesLikeStorefront");
+    expect(pricing).toContain("groupAvailabilityLikeStorefront");
+    expect(pricing).toContain("keepCheapestAdminOffers");
     expect(pricing).not.toContain("slice(0, 60)");
     expect(topup).toContain("isFullTicketPackage");
     expect(topup).toContain("OverflowMarquee");
