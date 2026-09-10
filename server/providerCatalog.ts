@@ -766,6 +766,21 @@ export function resetProviderCatalogCacheForTests() {
   fzrTopupCatalogInFlight = null;
   providerAvailabilitySnapshot = null;
   providerAvailabilityRetryAt = 0;
+  adminCatalogCache = null;
+}
+
+/**
+ * Drops the storefront's cached projection of the admin catalogue.
+ *
+ * The sale price a shopper sees and the amount the KHQR worker will accept both
+ * come from `gamePackages.priceUsd`. That projection is memoized for
+ * `ADMIN_CATALOG_CACHE_MS`, so without this the storefront could keep serving
+ * the previous amount for up to 20 seconds after the owner saves a new one.
+ * Called by every admin price write; only the catalogue view is dropped (the
+ * provider cost caches are left alone, so no extra provider traffic is caused).
+ */
+export function invalidateProviderStorefrontCaches() {
+  adminCatalogCache = null;
 }
 
 /** Initial storefront baseline from the owner-approved public catalog before the Admin allowlist was persisted. */

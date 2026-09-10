@@ -1373,15 +1373,33 @@ function salePriceFromMargin(basePriceUsd: string, profitMarginPercent: string) 
   return (Number(basePriceUsd) * (1 + Number(profitMarginPercent) / 100)).toFixed(2);
 }
 
+/**
+ * The admin-set price is the only sale price. Every write to it therefore drops
+ * the storefront's cached catalogue projection, so the label a shopper reads and
+ * the amount `createTopupOrder` writes (and Bakong later mints into a KHQR) can
+ * never disagree. Best-effort: the cache expires on its own within 20 seconds.
+ */
+async function invalidateStorefrontPriceCaches() {
+  try {
+    const { invalidateProviderStorefrontCaches } = await import("./providerCatalog");
+    invalidateProviderStorefrontCaches();
+  } catch {
+    /* The projection refreshes by itself; a failed purge must not fail the edit. */
+  }
+}
+
 export async function updateGamePackage(input: { packageId: string; basePriceUsd: string; profitMarginPercent: string; isActive: boolean; featured: boolean }) {
   const db = await getDb();
   if (!db) {
     if (!isAppwriteStoreConfigured()) throw new Error("Provider catalog storage is unavailable");
-    return updateAppwriteProviderOffer({ kind: "game", offerId: input.packageId, basePriceUsd: input.basePriceUsd, profitMarginPercent: input.profitMarginPercent, isActive: input.isActive, featured: input.featured });
+    const saved = await updateAppwriteProviderOffer({ kind: "game", offerId: input.packageId, basePriceUsd: input.basePriceUsd, profitMarginPercent: input.profitMarginPercent, isActive: input.isActive, featured: input.featured });
+    await invalidateStorefrontPriceCaches();
+    return saved;
   }
   const existing = await db.select({ providerAuthorized: gamePackages.providerAuthorized }).from(gamePackages).where(eq(gamePackages.id, input.packageId)).limit(1);
   if (!existing[0]?.providerAuthorized) throw new Error("Only provider-authorized offers can be activated or repriced.");
   await db.update(gamePackages).set({ basePriceUsd: input.basePriceUsd, profitMarginPercent: input.profitMarginPercent, priceUsd: salePriceFromMargin(input.basePriceUsd, input.profitMarginPercent), isActive: input.isActive, featured: input.featured }).where(eq(gamePackages.id, input.packageId));
+  await invalidateStorefrontPriceCaches();
   return { success: true };
 }
 
@@ -1394,6 +1412,7 @@ export async function updateSmmTier(input: { tierId: string; basePriceUsd: strin
   const existing = await db.select({ providerAuthorized: smmTiers.providerAuthorized }).from(smmTiers).where(eq(smmTiers.id, input.tierId)).limit(1);
   if (!existing[0]?.providerAuthorized) throw new Error("Only provider-authorized offers can be activated or repriced.");
   await db.update(smmTiers).set({ basePriceUsd: input.basePriceUsd, profitMarginPercent: input.profitMarginPercent, priceUsd: salePriceFromMargin(input.basePriceUsd, input.profitMarginPercent), isActive: input.isActive }).where(eq(smmTiers.id, input.tierId));
+  await invalidateStorefrontPriceCaches();
   return { success: true };
 }
 

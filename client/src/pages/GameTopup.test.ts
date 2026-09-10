@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 vi.mock("streamdown", () => ({ Streamdown: () => null }));
-import { canBrowseTopupPackages, canBrowseVerifiedPackages, canCreateTopupPurchaseContext, gameIdFromTopupPath, gameThemedArtworkForPackage, gameTopupPath, groupProviderPackagesByMeaning, identityFieldsForGame, initialDiamondPackageLimit, partitionProviderPackagesForFullTicketEvent, readVerifiedPlayerEntries, requiresPlayerIdentityCheck, requiresVerifiedUsername, saveVerifiedPlayerEntry, sortProviderPackagesByPrice, usesLegacyMobileLegendsArtwork, usesMobileLegendsDiamondChestArtwork, visibleDiamondPackageItems } from "./GameTopup";
+import { canBrowseTopupPackages, canBrowseVerifiedPackages, canCreateTopupPurchaseContext, gameIdFromTopupPath, gameThemedArtworkForPackage, gameTopupPath, groupProviderPackagesByMeaning, identityFieldsForGame, initialDiamondPackageLimit, packageSortOptions, partitionProviderPackagesForFullTicketEvent, readVerifiedPlayerEntries, recommendedProviderPackage, requiresPlayerIdentityCheck, requiresVerifiedUsername, saveVerifiedPlayerEntry, sortProviderPackagesByPrice, sortProviderPackagesForDisplay, usesLegacyMobileLegendsArtwork, usesMobileLegendsDiamondChestArtwork, visibleDiamondPackageItems } from "./GameTopup";
 
 describe("dedicated game top-up routes", () => {
   it("creates and reads an encoded provider game route", () => {
@@ -59,7 +59,7 @@ describe("dedicated game top-up routes", () => {
     const source = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
     expect(source).toContain("package-choice package-choice--clean package-choice--gold");
     expect(source).toContain('className="package-choice-surface block rounded-[0.7rem] p-2.5"');
-    expect(source).toContain('className="package-category-grid grid grid-cols-2 gap-2 sm:grid-cols-3"');
+    expect(source).toContain('className="package-category-grid grid grid-cols-2 gap-2.5 sm:grid-cols-3"');
     expect(source).toContain('<PackageCard key={item.id} item={item}');
     expect(source).toContain('OverflowMarquee text={item.label}');
     expect(source).not.toContain("function CategoryPackageCard(");
@@ -74,8 +74,8 @@ describe("dedicated game top-up routes", () => {
     expect(css).toContain("Game top-up package layout: sizing and grid geometry only; existing package-card presentation is preserved.");
     expect(css).toContain(".package-category-grid { gap: 1rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }");
     expect(css).toContain("@media (min-width: 992px) {\n  .package-category-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }");
-    expect(css).toContain("@media (min-width: 1200px) {\n  .game-topup-container { max-width: 1180px; }\n  .package-category-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }");
-    expect(css).toContain(".package-category-grid > article { height: 10.55rem; }");
+    expect(css).toContain("@media (min-width: 1200px) {\n  .game-topup-container { max-width: 1240px; }\n  .package-category-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }");
+    expect(css).toContain(".package-category-grid > article { height: auto; min-height: 12.6rem; }");
     expect(css).toContain(".package-category-grid > article > .package-choice,");
     expect(css).toContain(".package-choice-surface { min-height: 0; }");
   });
@@ -260,6 +260,63 @@ describe("dedicated game top-up routes", () => {
     expect(source).toContain("Keep the selected package while navigating to /checkout/preview");
     expect(source).toContain("useEffect(() => () => { setPlayerTitle(null); }, [setPlayerTitle]);");
     expect(source).not.toContain("useEffect(() => () => { clearSelectedProduct(); setPlayerTitle(null); }");
+  });
+
+  it("sorts the package grid by the buyer's choice and never invents a price", () => {
+    const packages = [
+      { id: "mid", label: "Mid", amountLabel: "Mid", priceLabel: "$7.35" },
+      { id: "low", label: "Low", amountLabel: "Low", priceLabel: "$0.23" },
+      { id: "high", label: "High", amountLabel: "High", priceLabel: "$17.41" },
+    ];
+    expect(sortProviderPackagesForDisplay(packages, "price-asc").map((item) => item.id)).toEqual(["low", "mid", "high"]);
+    expect(sortProviderPackagesForDisplay(packages, "price-desc").map((item) => item.id)).toEqual(["high", "mid", "low"]);
+    expect(sortProviderPackagesForDisplay(packages, "recommended", "high").map((item) => item.id)).toEqual(["high", "low", "mid"]);
+    // An id that is not in the filtered list must not reorder anything.
+    expect(sortProviderPackagesForDisplay(packages, "recommended", "missing").map((item) => item.id)).toEqual(["low", "mid", "high"]);
+    expect(packageSortOptions.map((option) => option.key)).toEqual(["recommended", "price-asc", "price-desc"]);
+    expect(recommendedProviderPackage(packages)?.id).toBe("mid");
+    // A promo crate or pass is never the headline suggestion while a plain
+    // currency package exists.
+    const mixed = [
+      { id: "crate", label: "Promo Crate", amountLabel: "1 Crate", priceLabel: "$1.10" },
+      { id: "weekly", label: "Weekly Membership", amountLabel: "Weekly Membership", priceLabel: "$2.99" },
+      { id: "diamonds", label: "86 Diamonds", amountLabel: "86 Diamonds", priceLabel: "$1.10" },
+      { id: "diamonds-big", label: "172 Diamonds", amountLabel: "172 Diamonds", priceLabel: "$2.10" },
+    ];
+    expect(recommendedProviderPackage(mixed)?.id).toBe("diamonds");
+  });
+
+  it("shows every price straight from the admin catalogue label", () => {
+    const source = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
+    expect(source).toContain("{item.priceLabel}");
+    expect(source).toContain("{selectedPackage.priceLabel}");
+    // No client-side markup maths: the price string is rendered verbatim.
+    expect(source).not.toContain("priceUsd *");
+    expect(source).not.toContain("providerPackagePrice(item) *");
+  });
+
+  it("renders the new package-picking experience with a lazy price refresh", () => {
+    const source = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
+    expect(source).toContain("package-category-browser__note");
+    expect(source).toContain("តម្លៃផ្លូវការពី Admin");
+    expect(source).toContain('className="package-toolbar mt-3"');
+    expect(source).toContain("package-sort__option");
+    expect(source).toContain("sortProviderPackagesForDisplay(");
+    expect(source).toContain("package-choice--recommended");
+    expect(source).toContain("package-choice-recommendation");
+    expect(source).toContain("package-selection-summary");
+    expect(source).toContain("package-grid-skeleton");
+    expect(source).toContain("<PackageGridSkeleton />");
+    expect(source).toContain("refetchInterval: 15_000");
+    expect(source).toContain("subscribeToPackagePricingChanges");
+  });
+
+  it("always prefers the freshest auto-refreshing package source so admin prices win", () => {
+    const source = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
+    const publicQuery = source.indexOf("publicPackagePreview.data?.packages?.length ? publicPackagePreview.data.packages : verified?.packages");
+    expect(publicQuery).toBeGreaterThan(-1);
+    // The identity gate still locks browsing on a negative check.
+    expect(source).toContain('if (verified && verified.status !== "ready") return verified.packages;');
   });
 
   it("places payment-method preselection before the package list without blocking public preview", () => {
