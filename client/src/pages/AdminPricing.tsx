@@ -3,6 +3,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { AnimatedBackButton } from "@/components/AnimatedBackButton";
 import { OutlineLoader } from "@/components/OutlineLoader";
 import { notifyPackagePricingChanged } from "@/lib/packagePricingBroadcast";
+import { withoutMlbbAdventurePackages } from "@shared/mlbbAdventure";
 import { trpc } from "@/lib/trpc";
 import {
   CalendarDays,
@@ -157,7 +158,7 @@ export function storefrontCatalogFamily(source: {
 }) {
   const hay = `${source.id ?? ""} ${source.name ?? ""} ${source.titleEn ?? ""} ${source.titleKh ?? ""}`.toLowerCase();
   if (/free[\s_-]*fire/.test(hay)) return { id: "free_fire", titleEn: "Free Fire", titleKh: "Free Fire" };
-  if (/mobile[\s_-]*legends/.test(hay)) return { id: "mobile_legends", titleEn: "Mobile Legends", titleKh: "Mobile Legends" };
+  if (/mobile[\s_-]*legends/.test(hay) && !/adventure/.test(hay) && !/m[\s_-]*cash/.test(hay)) return { id: "mobile_legends", titleEn: "Mobile Legends", titleKh: "Mobile Legends" };
   if (/pubg/.test(hay)) return { id: "pubg_mobile", titleEn: "PUBG Mobile", titleKh: "PUBG Mobile" };
   return null;
 }
@@ -204,7 +205,7 @@ export function groupCatalogGamesLikeStorefront(games: GameGroup[]) {
   }
   return [...families.values(), ...singles].map((game) => ({
     ...game,
-    packages: keepCheapestAdminOffers(game.packages ?? []),
+    packages: keepCheapestAdminOffers(game.id === "mobile_legends" ? withoutMlbbAdventurePackages(game.packages ?? []) : (game.packages ?? [])),
   }));
 }
 

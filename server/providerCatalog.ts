@@ -4,6 +4,7 @@ import { resolveProviderCredential } from "./providerCredentialResolver";
 import { getAppwriteProviderAvailability, getAppwriteProviderCatalog, isAppwriteStoreConfigured, type AppwriteProviderCatalog, updateAppwriteProviderAvailability } from "./appwriteStore";
 import { getActiveProviderPackageIds, getAdminSyncedProviderPackages, getPublicSyncedProviderPackages } from "./db";
 import { applyShopPriceLadder } from "@shared/packagePriceLadder";
+import { isMobileLegendsAdventureGame, isRegularMobileLegendsVariant, withoutMlbbAdventurePackages } from "@shared/mlbbAdventure";
 
 export const providerFieldSchema = z.object({
   key: z.string().trim().regex(/^[a-z][a-zA-Z0-9_]{0,63}$/),
@@ -674,18 +675,18 @@ async function providerPackages(categoryId: string, offers: z.infer<typeof fzrOf
     const adminCatalog = await adminCatalogForStorefront();
     const productId = `fzr-game-${createHash("sha256").update(categoryId).digest("hex").slice(0, 40)}`;
     const product = adminCatalog.games.find((item) => item.id === productId || item.packages.some((pkg: { providerSource?: string | null }) => String(pkg.providerSource ?? "").startsWith(`fzr_cards:${categoryId}:`)));
-    if (!product) return applyShopPriceLadder(livePackages);
+    if (!product) return regularMobileLegendsPackages(categoryId, applyShopPriceLadder(livePackages));
     const activePackages = product.packages.filter((item: { isActive: boolean }) => item.isActive);
     const activeById = new Map<string, { id: string; amountLabel: string; priceUsd: string }>(activePackages.map((item: { id: string; amountLabel: string; priceUsd: string }) => [item.id, item]));
     const matchedLivePackages = livePackages.flatMap((item) => {
       const catalogItem = activeById.get(item.id);
       return catalogItem ? [{ ...item, label: catalogItem.amountLabel, amountLabel: catalogItem.amountLabel, priceLabel: `$${Number(catalogItem.priceUsd).toFixed(2)}` }] : [];
     });
-    if (matchedLivePackages.length) return applyShopPriceLadder(matchedLivePackages);
+    if (matchedLivePackages.length) return regularMobileLegendsPackages(categoryId, applyShopPriceLadder(matchedLivePackages));
     // If the live offer response uses a temporarily different shape, expose the
     // already-synchronized active package IDs so checkout still receives rows
     // that the order validator can resolve.
-    return applyShopPriceLadder(activePackages.map((item: { id: string; amountLabel: string; priceUsd: string }) => ({ id: item.id, label: item.amountLabel, amountLabel: item.amountLabel, priceLabel: `$${Number(item.priceUsd).toFixed(2)}`, provider: "FZR Cards", paymentMethods: ["khqr", "bank"] as ("khqr" | "bank")[] })));
+    return regularMobileLegendsPackages(categoryId, applyShopPriceLadder(activePackages.map((item: { id: string; amountLabel: string; priceUsd: string }) => ({ id: item.id, label: item.amountLabel, amountLabel: item.amountLabel, priceLabel: `$${Number(item.priceUsd).toFixed(2)}`, provider: "FZR Cards", paymentMethods: ["khqr", "bank"] as ("khqr" | "bank")[] }))));
   } catch {
     return [];
   }
@@ -813,6 +814,16 @@ const pubgMobileFamilyVariantIds = ["pubg_mobile_auto", "pubg_mobile_fast"] as c
 
 function isMobileLegendsFamilyGame(gameId: string) {
   return gameId.trim().toLowerCase() === mobileLegendsFamilyGameId;
+}
+
+function regularMobileLegendsPackages<T extends { id?: string; label?: string; amountLabel?: string; name?: string }>(gameId: string, packages: T[]) {
+  if (isMobileLegendsAdventureGame(gameId)) return packages;
+  if (isMobileLegendsFamilyGame(gameId) || isRegularMobileLegendsVariant(gameId)) return withoutMlbbAdventurePackages(packages);
+  return packages;
+}
+
+function isRegularMobileLegendsFamilyVariant(game: { id: string; name?: string }) {
+  return game.id !== mobileLegendsFamilyGameId && isRegularMobileLegendsVariant(game.id, game.name);
 }
 
 function mobileLegendsAccountFields(fields: z.infer<typeof providerFieldSchema>[] = []) {
@@ -970,12 +981,12 @@ export async function fetchProviderGameDetails(gameId: string, options: { includ
     const availableGames = await fetchProviderGames({ includeInactive: options.includeInactive });
     if (availableGames.status !== "ready") return { status: availableGames.status === "error" ? "error" : "unavailable", game: null, packages: [] };
     if (isMobileLegendsFamilyGame(gameId)) {
-      const activeVariants = availableGames.games.filter((game) => game.id !== mobileLegendsFamilyGameId && /^mobile_legends(?:_|$)/i.test(game.id)).map((game) => game.id);
+      const activeVariants = availableGames.games.filter((game) => isRegularMobileLegendsFamilyVariant(game)).map((game) => game.id);
       if (!activeVariants.length) return { status: "unavailable", game: null, packages: [] };
       const syncedPackages = options.includeInactive ? await getAdminSyncedProviderPackages(activeVariants) : await getPublicSyncedProviderPackages(activeVariants);
       if (syncedPackages?.length) {
         const primary = availableGames.games.find((game) => game.id === "mobile_legends_global") ?? availableGames.games.find((game) => activeVariants.includes(game.id))!;
-        return { status: "ready", game: { ...primary, id: mobileLegendsFamilyGameId, name: "Mobile Legends", requiredFields: mobileLegendsAccountFields(primary.requiredFields) }, packages: syncedPackages };
+        return { status: "ready", game: { ...primary, id: mobileLegendsFamilyGameId, name: "Mobile Legends", requiredFields: mobileLegendsAccountFields(primary.requiredFields) }, packages: regularMobileLegendsPackages(mobileLegendsFamilyGameId, syncedPackages) };
       }
       const variantDetails = await Promise.all(activeVariants.map((variantId) => fetchProviderGameDetails(variantId, options)));
       const readyVariants = variantDetails.filter((details): details is Extract<ProviderGameDetailsResponse, { status: "ready" }> => details.status === "ready");
@@ -984,7 +995,7 @@ export async function fetchProviderGameDetails(gameId: string, options: { includ
       return {
         status: "ready",
         game: { ...primary.game, id: mobileLegendsFamilyGameId, name: "Mobile Legends", requiredFields: mobileLegendsAccountFields(primary.game.requiredFields) },
-        packages: applyShopPriceLadder(readyVariants.flatMap((details) => details.packages)),
+        packages: regularMobileLegendsPackages(mobileLegendsFamilyGameId, applyShopPriceLadder(readyVariants.flatMap((details) => details.packages))),
       };
     }
     if (isFreeFireFamilyGame(gameId)) {
@@ -1045,7 +1056,7 @@ export async function fetchProviderGameDetails(gameId: string, options: { includ
       const cached = await cachedProviderGameDetails(gameId, options.includeInactive);
       if (cached && cached.status === "ready" && cached.packages.length) return cached;
     }
-    return { status: "ready", game: { id: gameId, name: resolvedName, region: providerGameRegion(resolvedName), logoUrl: payload.data.imageurl, provider: "FZR Cards", requiredFields: /^free_fire(?:_|$)/i.test(gameId) ? freeFireIdentityFields(fields) : isMobileLegendsGame(gameId) ? mobileLegendsAccountFields(fields) : fields }, packages: livePackages };
+    return { status: "ready", game: { id: gameId, name: resolvedName, region: providerGameRegion(resolvedName), logoUrl: payload.data.imageurl, provider: "FZR Cards", requiredFields: /^free_fire(?:_|$)/i.test(gameId) ? freeFireIdentityFields(fields) : isMobileLegendsGame(gameId) ? mobileLegendsAccountFields(fields) : fields }, packages: regularMobileLegendsPackages(gameId, livePackages) };
   } catch {
     return (await cachedProviderGameDetails(gameId, options.includeInactive)) ?? { status: "error", game: null, packages: [] };
   }
@@ -1056,11 +1067,11 @@ export async function fetchPublicProviderPackagePreview(gameId: string): Promise
   if (!isWantedProviderGameId(gameId) && !isBuiltInProviderGameId(gameId)) return { status: "unavailable", packages: [] };
   const providerGameIds = await providerGameIdVariants(gameId);
   const syncedPackages = await getPublicSyncedProviderPackages(providerGameIds);
-  if (syncedPackages?.length) return { status: "ready", packages: syncedPackages };
+  if (syncedPackages?.length) return { status: "ready", packages: regularMobileLegendsPackages(gameId, syncedPackages) };
   const details = await fetchProviderGameDetails(gameId);
   if (details.status === "ready") {
     const packages = await filterOrderableProviderPackages(details.packages);
-    if (packages.length) return { status: "ready", packages };
+    if (packages.length) return { status: "ready", packages: regularMobileLegendsPackages(gameId, packages) };
   }
   return { status: details.status, packages: [] };
 }
@@ -1069,10 +1080,10 @@ export async function fetchPublicProviderPackagePreview(gameId: string): Promise
 export async function fetchProviderPreviewPackages(gameId: string): Promise<ProviderPackageResponse> {
   if (!isWantedProviderGameId(gameId) && !isBuiltInProviderGameId(gameId)) return { status: "unavailable", packages: [] };
   const details = await fetchProviderGameDetails(gameId, { includeInactive: true });
-  if (details.status === "ready" && details.packages.length) return { status: "ready", packages: details.packages };
+  if (details.status === "ready" && details.packages.length) return { status: "ready", packages: regularMobileLegendsPackages(gameId, details.packages) };
   const providerGameIds = await providerGameIdVariants(gameId);
   const fallbackPackages = await getAdminSyncedProviderPackages(providerGameIds);
-  if (fallbackPackages?.length) return { status: "ready", packages: fallbackPackages };
+  if (fallbackPackages?.length) return { status: "ready", packages: regularMobileLegendsPackages(gameId, fallbackPackages) };
   return { status: details.status, packages: [] };
 }
 
@@ -1098,7 +1109,7 @@ async function providerGameIdVariants(gameId: string): Promise<string[]> {
   // mobile_legends_id, mobile_legends_ph...) instead of a fixed hard-coded list,
   // so all public packages surface even when the provider adds new region IDs.
   const variants = (await getProviderAvailabilityCatalog()).games
-    .filter((game) => game.id !== normalizedGameId && familyPattern.test(game.id))
+    .filter((game) => game.id !== normalizedGameId && familyPattern.test(game.id) && !isMobileLegendsAdventureGame(game.id, game.name))
     .map((game) => game.id);
   if (variants.length) return variants;
   if (normalizedGameId === mobileLegendsFamilyGameId) return [...mobileLegendsFamilyVariantIds];
@@ -1113,10 +1124,10 @@ export async function fetchProviderPackages(input: ProviderPackageRequest): Prom
   if (!hasProviderIdentityField(input.fields)) {
     if (providerConfigured) {
       const details = await fetchProviderGameDetails(input.gameId);
-      if (details.status === "ready" && details.packages.length) return { status: "ready", packages: details.packages };
+      if (details.status === "ready" && details.packages.length) return { status: "ready", packages: regularMobileLegendsPackages(input.gameId, details.packages) };
     }
     const fallbackPackages = await getPublicSyncedProviderPackages(await providerGameIdVariants(input.gameId));
-    if (fallbackPackages?.length) return { status: "ready", packages: fallbackPackages };
+    if (fallbackPackages?.length) return { status: "ready", packages: regularMobileLegendsPackages(input.gameId, fallbackPackages) };
     return { status: "unavailable", packages: [] };
   }
   if (!providerConfigured) return { status: "unavailable", packages: [] };
@@ -1125,14 +1136,14 @@ export async function fetchProviderPackages(input: ProviderPackageRequest): Prom
   if (identity.status === "error") return { status: "error", packages: [] };
   if (identity.status !== "verified" && !(identity.status === "not_supported" && input.idAccuracyConfirmed)) return { status: "verification_required", packages: [] };
   const syncedPackages = await getPublicSyncedProviderPackages(await providerGameIdVariants(input.gameId));
-  if (syncedPackages?.length) return { status: "ready", packages: syncedPackages };
+  if (syncedPackages?.length) return { status: "ready", packages: regularMobileLegendsPackages(input.gameId, syncedPackages) };
   const details = await fetchProviderGameDetails(input.gameId);
   if (details.status === "ready") {
     const orderablePackages = await filterOrderableProviderPackages(details.packages);
-    if (orderablePackages.length) return { status: "ready", packages: orderablePackages };
+    if (orderablePackages.length) return { status: "ready", packages: regularMobileLegendsPackages(input.gameId, orderablePackages) };
   }
   const fallbackPackages = await getPublicSyncedProviderPackages(await providerGameIdVariants(input.gameId));
-  if (fallbackPackages?.length) return { status: "ready", packages: fallbackPackages };
+  if (fallbackPackages?.length) return { status: "ready", packages: regularMobileLegendsPackages(input.gameId, fallbackPackages) };
   return { status: details.status === "ready" ? "unavailable" : details.status, packages: [] };
 }
 

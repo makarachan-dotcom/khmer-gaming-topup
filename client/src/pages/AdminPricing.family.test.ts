@@ -40,4 +40,15 @@ describe("admin catalog matches the public storefront", () => {
       { id: "free_fire_my_sg", name: "Free Fire (MY/SG)", isActive: true },
     ])).toEqual(["free_fire_bd", "free_fire_my_sg"]);
   });
+
+  it("keeps MLBB Adventure / M-CASH out of regular Mobile Legends", () => {
+    expect(storefrontCatalogFamily({ id: "mobile_legends_global", name: "Mobile Legends (Global)" })?.id).toBe("mobile_legends");
+    expect(storefrontCatalogFamily({ id: "mobile_legends_adventure", name: "Mobile Legends Adventure" })).toBeNull();
+    const grouped = groupCatalogGamesLikeStorefront([
+      { id: "mlbb", titleEn: "Mobile Legends (Global)", packages: [{ id: "d86", amountLabel: "86 Diamonds", basePriceUsd: "1.00", profitMarginPercent: "0", priceUsd: "1.10", isActive: true, providerAuthorized: true }] },
+      { id: "adv", titleEn: "Mobile Legends Adventure", packages: [{ id: "cash", amountLabel: "60 M-CASH", basePriceUsd: "1.00", profitMarginPercent: "0", priceUsd: "1.10", isActive: true, providerAuthorized: true }] },
+    ]);
+    expect(grouped.map((item) => item.titleEn)).toEqual(["Mobile Legends", "Mobile Legends Adventure"]);
+    expect(grouped.find((item) => item.titleEn === "Mobile Legends")?.packages?.map((item) => item.id)).toEqual(["d86"]);
+  });
 });

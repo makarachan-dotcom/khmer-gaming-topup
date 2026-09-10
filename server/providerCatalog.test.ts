@@ -340,6 +340,27 @@ describe("provider catalog", () => {
     if (result.status === "ready") expect(result.packages.map((item) => item.id)).toEqual([providerPackageRecordId("mobile_legends_id", "id"), providerPackageRecordId("mobile_legends_ph", "ph")]);
   });
 
+  it("keeps M-CASH and MLBB Adventure out of regular Mobile Legends", async () => {
+    process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
+    process.env.FZR_CARDS_API_KEY = "server-only-key";
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (url.includes("/offers?category_id=mobile_legends_global")) return { ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "mobile_legends_global", name: "Mobile Legends (Global)", fields: [{ key: "player_id", label: "Player ID", type: "text" }, { key: "server_id", label: "Server ID", type: "text" }], offers: [{ offer_id: "diamonds", name: "86 Diamonds", price_usd: "1.00" }, { offer_id: "cash", name: "60 M-CASH", price_usd: "1.20" }] }) };
+      if (url.includes("/offers?category_id=mobile_legends_adventure")) return { ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "mobile_legends_adventure", name: "Mobile Legends Adventure", fields: [{ key: "player_id", label: "Player ID", type: "text" }], offers: [{ offer_id: "adv", name: "120 M-CASH", price_usd: "2.00" }] }) };
+      return { ok: true, json: async () => ({ ok: true, kind: "topup", items: [{ category_id: "mobile_legends_global", name: "Mobile Legends (Global)" }, { category_id: "mobile_legends_adventure", name: "Mobile Legends Adventure" }], meta: { next_cursor: null, has_more: false } }) };
+    }));
+
+    const regular = await fetchProviderGameDetails("mobile_legends", { includeInactive: true });
+    expect(regular).toMatchObject({ status: "ready", game: { id: "mobile_legends", name: "Mobile Legends" } });
+    if (regular.status === "ready") {
+      expect(regular.packages.map((item) => item.label)).toEqual(["86 Diamonds"]);
+      expect(regular.packages.some((item) => /m-cash/i.test(item.label))).toBe(false);
+    }
+
+    const adventure = await fetchProviderGameDetails("mobile_legends_adventure", { includeInactive: true });
+    expect(adventure).toMatchObject({ status: "ready", game: { id: "mobile_legends_adventure" } });
+    if (adventure.status === "ready") expect(adventure.packages.map((item) => item.label)).toEqual(["120 M-CASH"]);
+  });
+
   it("merges owner-enabled Free Fire regional variants into one public Free Fire family page", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "server-only-key";
