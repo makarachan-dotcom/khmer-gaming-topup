@@ -498,6 +498,26 @@ function isCurrencyPackage(item: ProviderPackage) {
   return !isPassPackage(item) && !isSpecialPackage(item) && !isFullTicketPackage(item);
 }
 
+export function providerPackageIdentityKey(item: Pick<ProviderPackage, "label" | "amountLabel">) {
+  const pack = item as ProviderPackage;
+  const kind = isPassPackage(pack) ? "pass" : isBonusPackage(pack) ? "bonus" : isSpecialPackage(pack) ? "special" : "std";
+  const amount = item.amountLabel.toLowerCase().replace(/[^a-z0-9.]+/g, " ").replace(/\s+/g, " ").trim();
+  const label = item.label.toLowerCase().replace(/[^a-z0-9.]+/g, " ").replace(/\s+/g, " ").trim();
+  const numbers = (amount.match(/\d+(?:\.\d+)?/g) ?? []).join("-");
+  const unit = (amount.match(/[a-z]+/g) ?? []).join("");
+  if (numbers) return `${kind}:${numbers}:${unit}`;
+  return `${kind}:${label || amount}`;
+}
+
+export function keepCheapestUniqueProviderPackages<T extends ProviderPackage>(items: T[]) {
+  const cheapest = new Map<string, T>();
+  for (const item of sortProviderPackagesByPrice(items)) {
+    const key = providerPackageIdentityKey(item);
+    if (!cheapest.has(key)) cheapest.set(key, item);
+  }
+  return [...cheapest.values()];
+}
+
 export function groupProviderPackagesByMeaning<T extends ProviderPackage>(items: T[]) {
   const standard: T[] = [];
   const bonus: T[] = [];
@@ -596,7 +616,7 @@ function DiamondPackages({ packages, status, selectedPackageId, onSelect, gameId
   useEffect(() => subscribeToPackageArtworkChanges((changedGameId) => { if (changedGameId === gameId) void refetchPackageArtwork(); }), [gameId, refetchPackageArtwork]);
   const fullTicketEvent = (eventContent.data ?? []).find((item) => item.contentKey === "topup-event-full-ticket");
   const { eventPackages: fullTicketPackages, storefrontPackages } = partitionProviderPackagesForFullTicketEvent(packages, Boolean(fullTicketEvent));
-  const gamePackages = useMemo(() => sortProviderPackagesByPrice([...storefrontPackages, ...fullTicketPackages]), [fullTicketPackages, storefrontPackages]);
+  const gamePackages = useMemo(() => keepCheapestUniqueProviderPackages([...storefrontPackages, ...fullTicketPackages]), [fullTicketPackages, storefrontPackages]);
   const [packageSort, setPackageSort] = useState<PackageSortKey>("recommended");
   const categoryTabs = useMemo<PackageCategory[]>(() => buildPackageCategories(gamePackages, categoryOverrides), [categoryOverrides, gamePackages]);
   // One package is suggested so the most common purchase is the first card the

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 vi.mock("streamdown", () => ({ Streamdown: () => null }));
-import { canBrowseTopupPackages, canBrowseVerifiedPackages, canCreateTopupPurchaseContext, gameIdFromTopupPath, gameThemedArtworkForPackage, gameTopupPath, groupProviderPackagesByMeaning, identityFieldsForGame, initialDiamondPackageLimit, packageSortOptions, partitionProviderPackagesForFullTicketEvent, readVerifiedPlayerEntries, recommendedProviderPackage, requiresPlayerIdentityCheck, requiresVerifiedUsername, saveVerifiedPlayerEntry, sortProviderPackagesByPrice, sortProviderPackagesForDisplay, usesLegacyMobileLegendsArtwork, usesMobileLegendsDiamondChestArtwork, visibleDiamondPackageItems } from "./GameTopup";
+import { canBrowseTopupPackages, canBrowseVerifiedPackages, canCreateTopupPurchaseContext, gameIdFromTopupPath, gameThemedArtworkForPackage, gameTopupPath, groupProviderPackagesByMeaning, identityFieldsForGame, initialDiamondPackageLimit, keepCheapestUniqueProviderPackages, packageSortOptions, partitionProviderPackagesForFullTicketEvent, readVerifiedPlayerEntries, recommendedProviderPackage, requiresPlayerIdentityCheck, requiresVerifiedUsername, saveVerifiedPlayerEntry, sortProviderPackagesByPrice, sortProviderPackagesForDisplay, usesLegacyMobileLegendsArtwork, usesMobileLegendsDiamondChestArtwork, visibleDiamondPackageItems } from "./GameTopup";
 
 describe("dedicated game top-up routes", () => {
   it("creates and reads an encoded provider game route", () => {
@@ -24,6 +24,17 @@ describe("dedicated game top-up routes", () => {
     ];
     expect(sortProviderPackagesByPrice(packages).map((item) => item.id)).toEqual(["low", "mid", "high"]);
     expect(packages.map((item) => item.id)).toEqual(["mid", "low", "high"]);
+  });
+
+  it("keeps one package per amount and prefers the cheapest price", () => {
+    const packages = [
+      { id: "stars-500-high", label: "500 Stars", amountLabel: "500 Stars", priceLabel: "$9.90" },
+      { id: "stars-500-low", label: "500 Stars", amountLabel: "500 Stars", priceLabel: "$7.70" },
+      { id: "stars-750", label: "750 Stars", amountLabel: "750 Stars", priceLabel: "$11.54" },
+      { id: "premium-month-high", label: "Premium 1 Month", amountLabel: "1 Month", priceLabel: "$6.99" },
+      { id: "premium-month-low", label: "Premium 1 Month", amountLabel: "1 Month", priceLabel: "$4.99" },
+    ];
+    expect(keepCheapestUniqueProviderPackages(packages).map((item) => item.id)).toEqual(["premium-month-low", "stars-500-low", "stars-750"]);
   });
 
   it("groups provider packages by their genuine meaning, including Elite Pass", () => {
