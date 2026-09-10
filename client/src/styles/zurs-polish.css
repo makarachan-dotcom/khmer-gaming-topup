@@ -408,14 +408,20 @@ body:has(.zl-shell) .zs-mascot__bubble {
 .package-choice-check { position: absolute; top: 0.32rem; right: 0.32rem; z-index: 5; }
 .package-choice--clean .package-choice-surface { min-height: 0; padding: 0.5rem; }
 .package-choice .package-badge { display: inline-flex; margin-top: 0.28rem; }
+/* Suggested package: a warm edge so the easiest choice is obvious at a glance.
+   Declared here (after buttons.css) so it outranks the base card border. */
+.package-choice--recommended { border-color: rgba(245, 197, 24, 0.78) !important; box-shadow: 0 10px 22px rgba(245, 197, 24, 0.16); }
+.package-choice--recommended .package-choice-surface { background: linear-gradient(160deg, #fffdf4, #fff6de) !important; }
+.package-choice--recommended:hover { border-color: #f5c518 !important; }
+.package-choice-badges .package-badge { margin-top: 0; }
 
 @media (min-width: 768px) {
   .container { max-width: 980px !important; }
-  .game-topup-container { max-width: 920px !important; }
+  .game-topup-container { max-width: 1100px !important; }
   .game-detail-hero { min-height: 8.25rem !important; }
   .game-detail-hero__title { font-size: 1.32rem !important; }
   .package-category-grid {
-    gap: 0.6rem !important;
+    gap: 0.85rem !important;
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
   }
   .package-category-grid > article { height: auto !important; }
@@ -426,6 +432,9 @@ body:has(.zl-shell) .zs-mascot__bubble {
 }
 @media (min-width: 1100px) {
   .package-category-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+}
+@media (min-width: 1200px) {
+  .game-topup-container { max-width: 1240px !important; }
 }
 
 

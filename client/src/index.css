@@ -1451,9 +1451,9 @@ img.checkout-method-card__icon { object-fit: contain; }
 
 /* Game top-up package layout: sizing and grid geometry only; existing package-card presentation is preserved. */
 @media (min-width: 768px) {
-  .game-topup-container { max-width: 1180px; }
+  .game-topup-container { max-width: 1100px; }
   .package-category-grid { gap: 1rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .package-category-grid > article { height: 10.55rem; }
+  .package-category-grid > article { height: auto; min-height: 12.6rem; }
   .package-category-grid > article > .package-choice,
   .package-category-grid .package-choice-surface { height: 100%; }
   .package-category-grid .package-choice-surface { min-height: 0; }
@@ -1462,9 +1462,40 @@ img.checkout-method-card__icon { object-fit: contain; }
   .package-category-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 @media (min-width: 1200px) {
-  .game-topup-container { max-width: 1180px; }
-  .package-category-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .game-topup-container { max-width: 1240px; }
+  .package-category-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
+
+/* Package picking experience: one searchable row of controls, a suggested card,
+   and an in-page confirmation of the chosen package. Prices on every surface are
+   painted from the admin-set catalogue value; nothing is recalculated here. */
+.package-category-browser__note { margin-top: 0.12rem; color: rgba(226, 232, 240, 0.7); font-size: 0.6rem; font-weight: 600; }
+.package-toolbar { display: grid; gap: 0.55rem; }
+@media (min-width: 640px) { .package-toolbar { grid-template-columns: minmax(0, 1fr) auto; align-items: center; } }
+.package-sort { display: inline-flex; align-items: center; gap: 0.2rem; justify-self: start; border: 1px solid rgba(148, 163, 184, 0.32); border-radius: 0.8rem; background: rgba(8, 15, 30, 0.52); padding: 0.2rem; }
+.package-sort__icon { display: grid; height: 1.95rem; width: 1.6rem; flex: 0 0 auto; place-items: center; color: #f5c518; }
+.package-sort__option { display: inline-flex; height: 1.95rem; align-items: center; justify-content: center; border: 0; border-radius: 0.6rem; background: transparent; padding: 0 0.6rem; color: #cbd5e1; font-size: 0.68rem; font-weight: 800; white-space: nowrap; transition: background-color 160ms ease, color 160ms ease; }
+.package-sort__option:hover { background: rgba(255, 255, 255, 0.08); color: #f8fafc; }
+.package-sort__option:focus-visible { outline: 2px solid #ffcf2f; outline-offset: 2px; }
+.package-sort__option--active { background: linear-gradient(135deg, #ffb800, #f5c518); color: #162039; }
+.package-choice-badges { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem; margin-top: 0.3rem; }
+.package-choice-badges:empty { display: none; }
+.package-choice .package-choice__price { font-size: 1rem; line-height: 1.35; }
+.package-choice-recommendation { gap: 0.18rem; }
+.package-selection-summary { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.85rem; border: 1px solid rgba(56, 189, 248, 0.42); border-radius: 0.9rem; background: linear-gradient(135deg, #f0f9ff, #e0f2fe); padding: 0.6rem 0.75rem; }
+.package-selection-summary__mark { display: grid; height: 1.85rem; width: 1.85rem; flex: 0 0 auto; place-items: center; border-radius: 999px; background: linear-gradient(135deg, #38bdf8, #22d3ee); color: #06202e; }
+.package-selection-summary__label { overflow: hidden; color: #0f172a; font-size: 0.76rem; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+.package-selection-summary__hint { margin-top: 0.1rem; color: #475569; font-size: 0.62rem; font-weight: 600; }
+.package-selection-summary__price { margin-left: auto; flex: 0 0 auto; color: #92400e; font-size: 0.95rem; font-weight: 900; }
+.package-grid-skeleton__card { display: flex; height: 100%; min-height: 12.6rem; flex-direction: column; gap: 0.45rem; border: 1px solid rgba(148, 163, 184, 0.28); border-radius: 0.8rem; background: #ffffff; padding: 0.6rem; }
+.package-grid-skeleton__art { display: block; height: 5.35rem; border-radius: 0.7rem; background: linear-gradient(100deg, #eef2f7 30%, #f8fafc 50%, #eef2f7 70%); background-size: 220% 100%; }
+.package-grid-skeleton__line { display: block; height: 0.6rem; border-radius: 999px; background: linear-gradient(100deg, #eef2f7 30%, #f8fafc 50%, #eef2f7 70%); background-size: 220% 100%; }
+.package-grid-skeleton__line--short { width: 62%; }
+.package-grid-skeleton__price { display: block; margin-top: auto; height: 0.95rem; width: 45%; border-radius: 999px; background: linear-gradient(100deg, #dbe4ee 30%, #eef3f9 50%, #dbe4ee 70%); background-size: 220% 100%; }
+@media (prefers-reduced-motion: no-preference) {
+  .package-grid-skeleton__art, .package-grid-skeleton__line, .package-grid-skeleton__price { animation: package-grid-skeleton-sweep 1.5s ease-in-out infinite; }
+}
+@keyframes package-grid-skeleton-sweep { from { background-position: 140% 0; } to { background-position: -40% 0; } }
 
 /* Storefront utility controls: explicit right-side anchors keep them clear of the footer and mobile action bar. */
 .storefront-scroll-top {

@@ -2,6 +2,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
 import { AnimatedBackButton } from "@/components/AnimatedBackButton";
 import { OutlineLoader } from "@/components/OutlineLoader";
+import { notifyPackagePricingChanged } from "@/lib/packagePricingBroadcast";
 import { trpc } from "@/lib/trpc";
 import {
   CalendarDays,
@@ -245,7 +246,14 @@ function PricingWorkspace() {
     },
     onError: (_error, _input, context) =>
       utils.admin.fullCatalog.setData(undefined, context?.previous),
-    onSuccess: () => utils.admin.fullCatalog.invalidate(),
+    // The storefront paints the saved catalogue price verbatim, so dropping the
+    // cached preview immediately is what keeps the card total and the KHQR
+    // amount from ever disagreeing.
+    onSuccess: () => {
+      utils.admin.fullCatalog.invalidate();
+      utils.provider.packagePreview.invalidate();
+      notifyPackagePricingChanged();
+    },
   });
 
   const deleteGame = trpc.admin.deleteGamePackage.useMutation({
@@ -270,6 +278,9 @@ function PricingWorkspace() {
       );
       utils.admin.fullCatalog.invalidate();
       utils.admin.providerCatalogStatus.invalidate();
+      // A sync can reprice every offer in the catalogue at once.
+      utils.provider.packagePreview.invalidate();
+      notifyPackagePricingChanged();
     },
   });
 

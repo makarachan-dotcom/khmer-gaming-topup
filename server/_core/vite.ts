@@ -4,7 +4,6 @@ import { type Server } from "http";
 import { nanoid } from "nanoid";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import viteConfig from "../../vite.config";
 
 export async function setupVite(app: Express, server: Server) {
   const serverOptions = {
@@ -13,9 +12,15 @@ export async function setupVite(app: Express, server: Server) {
     allowedHosts: true as const,
   };
 
+  // vite.config.ts exports a FUNCTION (`defineConfig(({ mode }) => ({...}))`).
+  // Spreading it into this object therefore produced `{}` — no `root`, no
+  // Tailwind plugin, no `@` alias — so every `/src/*.tsx` request 404'd and the
+  // dev storefront could never boot. Point Vite at the real config file (it
+  // understands both the object and function forms) and only override what the
+  // embedded dev server needs. `allowedHosts: true` keeps proxied preview hosts
+  // working.
   const vite = await createViteServer({
-    ...viteConfig,
-    configFile: false,
+    configFile: path.resolve(import.meta.dirname, "../../vite.config.ts"),
     server: serverOptions,
     appType: "custom",
   });
