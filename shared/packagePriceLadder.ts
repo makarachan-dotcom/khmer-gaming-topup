@@ -14,12 +14,22 @@ export type LadderPackage = {
 export function packageAmountAndUnit(label: string, amountLabel: string) {
   const text = `${amountLabel} ${label}`.toLowerCase().replace(/,/g, "");
   if (/\b(?:weekly|daily|monthly|membership|subscription|pass|promo|special|event|crate)\b/.test(text)) return null;
-  const match = text.match(/(\d+(?:\.\d+)?)\s*([a-z]+)/);
-  if (!match) return null;
-  const amount = Number(match[1]);
-  const unit = (match[2] ?? "").replace(/s$/, "");
-  if (!Number.isFinite(amount) || amount <= 0 || !unit) return null;
-  return { amount, unit };
+
+  const bonus = text.match(/(\d+(?:\.\d+)?)(?:\s*[a-z]+)?\s*\+\s*(\d+(?:\.\d+)?)\s*([a-z]+)/);
+  if (bonus) {
+    const amount = Number(bonus[1]) + Number(bonus[2]);
+    const unit = (bonus[3] ?? "").replace(/s$/, "");
+    if (Number.isFinite(amount) && amount > 0 && unit) return { amount, unit };
+  }
+
+  let best: { amount: number; unit: string } | null = null;
+  for (const match of text.matchAll(/(\d+(?:\.\d+)?)\s*([a-z]+)/g)) {
+    const amount = Number(match[1]);
+    const unit = (match[2] ?? "").replace(/s$/, "");
+    if (!Number.isFinite(amount) || amount <= 0 || !unit) continue;
+    if (!best || amount > best.amount) best = { amount, unit };
+  }
+  return best;
 }
 
 function readPackagePrice(item: LadderPackage) {
