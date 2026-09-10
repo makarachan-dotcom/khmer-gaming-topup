@@ -6,8 +6,13 @@ const art = {
   ffDiamondXl: "/package-art/ff-diamond-xl.jpg",
   ffWeekly: "/package-art/ff-weekly.jpg",
   ffMonthly: "/package-art/ff-monthly.jpg",
+  mlbbDiamondXs: "/package-art/mlbb-diamond-xs.jpg",
   mlbbDiamonds: "/package-art/mlbb-diamonds.jpg",
+  mlbbBag: "/package-art/mlbb-bag.jpg",
+  mlbbPouch: "/package-art/mlbb-pouch.jpg",
   mlbbChest: "/package-art/mlbb-chest.jpg",
+  mlbbVault: "/package-art/mlbb-vault.jpg",
+  mlbbPile: "/package-art/mlbb-pile.jpg",
   mlbbWeekly: "/package-art/mlbb-weekly.jpg",
   mlbbTwilight: "/package-art/mlbb-twilight.jpg",
   pubgUc: "/package-art/pubg-uc.jpg",
@@ -44,7 +49,15 @@ export function officialPackageArtFor(gameId: string, gameName: string, label: s
   if (/\b(?:crate|lucky\s*bag|chest|bundle|event pack|promo)\b/.test(text) && !/\bdiamonds?\b/.test(text)) return art.specialCrate;
   if (isPubg) return art.pubgUc;
   if (isHok) return art.hokTokens;
-  if (isMlbb) return amount >= 500 ? art.mlbbChest : art.mlbbDiamonds;
+  if (isMlbb) {
+    if (amount >= 4000) return art.mlbbPile;
+    if (amount >= 2200) return art.mlbbVault;
+    if (amount >= 1200) return art.mlbbChest;
+    if (amount >= 700) return art.mlbbPouch;
+    if (amount >= 300) return art.mlbbBag;
+    if (amount >= 80) return art.mlbbDiamonds;
+    return art.mlbbDiamondXs;
+  }
   if (amount >= 4000) return art.ffDiamondXl;
   if (amount >= 1000) return art.ffDiamondL;
   if (amount >= 300) return art.ffDiamondM;

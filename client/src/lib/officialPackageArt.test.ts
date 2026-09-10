@@ -13,6 +13,10 @@ describe("official package art", () => {
   it("maps MLBB, PUBG, and Honor of Kings items to their own product art", () => {
     expect(officialPackageArtFor("mobile_legends", "Mobile Legends", "Weekly Pass", "Weekly Pass")).toContain("mlbb-weekly");
     expect(officialPackageArtFor("mobile_legends", "Mobile Legends", "Twilight Pass", "Twilight Pass")).toContain("mlbb-twilight");
+    expect(officialPackageArtFor("mobile_legends", "Mobile Legends", "11 + 1 Diamonds", "11 Diamonds")).toContain("mlbb-diamond-xs");
+    expect(officialPackageArtFor("mobile_legends", "Mobile Legends", "250 Diamonds", "250 Diamonds")).toContain("mlbb-diamonds");
+    expect(officialPackageArtFor("mobile_legends", "Mobile Legends", "500 Diamonds", "500 Diamonds")).toContain("mlbb-bag");
+    expect(officialPackageArtFor("mobile_legends", "Mobile Legends", "1889 Diamonds", "1889 Diamonds")).toContain("mlbb-chest");
     expect(officialPackageArtFor("pubg_mobile", "PUBG Mobile", "60 UC", "60 UC")).toContain("pubg-uc");
     expect(officialPackageArtFor("honor_of_kings", "Honor of Kings", "80 Tokens", "80 Tokens")).toContain("hok-tokens");
   });
