@@ -13,6 +13,9 @@ const art = {
   pubgUc: "/package-art/pubg-uc.jpg",
   hokTokens: "/package-art/hok-tokens.jpg",
   specialCrate: "/package-art/special-crate.jpg",
+  telegramStars: "/package-art/telegram-stars.jpg",
+  telegramPremium: "/package-art/telegram-premium.jpg",
+  robux: "/package-art/robux.jpg",
 } as const;
 
 function packageCopy(gameId: string, gameName: string, label: string, amountLabel: string) {
@@ -28,9 +31,12 @@ export function officialPackageArtFor(gameId: string, gameName: string, label: s
   const text = packageCopy(gameId, gameName, label, amountLabel);
   const amount = largestAmount(label, amountLabel);
   const isMlbb = /mobile[\s_-]*legends|\bmlbb\b/.test(text);
-  const isPubg = /pubg|\buc\b/.test(text);
+  const isPubg = /pubg/.test(text) || /\buc\b/.test(`${label} ${amountLabel}`.toLowerCase());
   const isHok = /honor[\s_-]*of[\s_-]*kings/.test(text);
 
+  if (/telegram/.test(text) && /premium|month/.test(text)) return art.telegramPremium;
+  if (/telegram/.test(text) || /\bstars?\b/.test(`${label} ${amountLabel}`.toLowerCase())) return art.telegramStars;
+  if (/roblox|robux/.test(text)) return art.robux;
   if (/twilight/.test(text)) return art.mlbbTwilight;
   if (/weekly\s*lite/.test(text)) return art.ffWeekly;
   if (/weekly/.test(text) && /pass|membership|card/.test(text)) return isMlbb ? art.mlbbWeekly : art.ffWeekly;

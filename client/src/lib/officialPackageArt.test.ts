@@ -16,4 +16,10 @@ describe("official package art", () => {
     expect(officialPackageArtFor("pubg_mobile", "PUBG Mobile", "60 UC", "60 UC")).toContain("pubg-uc");
     expect(officialPackageArtFor("honor_of_kings", "Honor of Kings", "80 Tokens", "80 Tokens")).toContain("hok-tokens");
   });
+
+  it("maps Telegram and Roblox packs to their own product art, not diamonds", () => {
+    expect(officialPackageArtFor("telegram_stars", "Telegram Stars", "500 Stars", "500 Stars")).toContain("telegram-stars");
+    expect(officialPackageArtFor("telegram_premium", "Telegram Premium", "Premium 1 Month", "1 Month")).toContain("telegram-premium");
+    expect(officialPackageArtFor("roblox_robux", "Roblox", "800 Robux", "800 Robux")).toContain("robux");
+  });
 });

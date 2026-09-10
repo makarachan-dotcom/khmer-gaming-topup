@@ -1,6 +1,6 @@
-/** Minimum extra USD when a bigger pack is cheaper than a smaller one. */
-export const shopLadderMinStepUsd = 0.3;
-/** Maximum extra USD added on one inverted step, so the ladder stays believable. */
+/** Smallest extra USD when a bigger pack is cheaper than a smaller one. */
+export const shopLadderMinStepUsd = 0.01;
+/** Largest extra USD on one inverted step — never a huge jump. */
 export const shopLadderMaxStepUsd = 2;
 
 export type LadderPackage = {
@@ -32,12 +32,9 @@ function readPackagePrice(item: LadderPackage) {
   return Number.isFinite(parsed) ? parsed : Number.POSITIVE_INFINITY;
 }
 
-/** Round up to a shop-looking .x9 so the bump does not look like cost + margin. */
+/** Round up to the next cent so the ladder stays a clean shop price. */
 export function shopPriceFromUsd(value: number) {
-  const cents = Math.max(1, Math.ceil(value * 100 - 1e-9));
-  const ones = cents % 10;
-  const bumped = ones === 9 ? cents : cents + (9 - ones);
-  return Number((bumped / 100).toFixed(2));
+  return Number((Math.ceil(value * 100 - 1e-9) / 100).toFixed(2));
 }
 
 function writePackagePrice<T extends LadderPackage>(item: T, price: number): T {
@@ -46,8 +43,9 @@ function writePackagePrice<T extends LadderPackage>(item: T, price: number): T {
 }
 
 /**
- * If 110 diamonds is cheaper than 100 diamonds, lift the bigger pack by $0.30–$2.00
- * and round to a clean shop price. Never lowers a pack.
+ * If 110 diamonds is cheaper than 100 diamonds, lift the bigger pack a little
+ * ($0.01–$0.30 typically, never more than $2) so prices stay in order.
+ * Never lowers a pack.
  */
 export function applyShopPriceLadder<T extends LadderPackage>(items: T[]): T[] {
   const indexed = items.map((item, index) => ({ item, index, price: readPackagePrice(item), measure: packageAmountAndUnit(item.label, item.amountLabel) }));
