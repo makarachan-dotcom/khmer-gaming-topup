@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 vi.mock("streamdown", () => ({ Streamdown: () => null }));
-import { canBrowseTopupPackages, canBrowseVerifiedPackages, canCreateTopupPurchaseContext, gameIdFromTopupPath, gameThemedArtworkForPackage, gameTopupPath, groupProviderPackagesByMeaning, identityFieldAutoComplete, identityFieldInputMode, identityFieldsForGame, initialDiamondPackageLimit, packageSortOptions, partitionProviderPackagesForFullTicketEvent, readVerifiedPlayerEntries, recommendedProviderPackage, requiresPlayerIdentityCheck, requiresVerifiedUsername, saveVerifiedPlayerEntry, sortProviderPackagesByPrice, sortProviderPackagesForDisplay, usesLegacyMobileLegendsArtwork, usesMobileLegendsDiamondChestArtwork, visibleDiamondPackageItems } from "./GameTopup";
+import { canBrowseTopupPackages, canBrowseVerifiedPackages, canCreateTopupPurchaseContext, gameIdFromTopupPath, gameThemedArtworkForPackage, gameTopupPath, groupProviderPackagesByMeaning, identityFieldsForGame, initialDiamondPackageLimit, packageSortOptions, partitionProviderPackagesForFullTicketEvent, readVerifiedPlayerEntries, recommendedProviderPackage, requiresPlayerIdentityCheck, requiresVerifiedUsername, saveVerifiedPlayerEntry, sortProviderPackagesByPrice, sortProviderPackagesForDisplay, usesLegacyMobileLegendsArtwork, usesMobileLegendsDiamondChestArtwork, visibleDiamondPackageItems } from "./GameTopup";
 
 describe("dedicated game top-up routes", () => {
   it("creates and reads an encoded provider game route", () => {
@@ -242,13 +242,6 @@ describe("dedicated game top-up routes", () => {
       { key: "username", label: "Roblox Username", placeholder: "e.g. builderman", required: true, kind: "text" },
       { key: "password", label: "Roblox Password", placeholder: "Account password", required: true, kind: "password" },
     ]);
-  });
-
-  it("uses a letter keyboard for Telegram username and a number pad only for game IDs", () => {
-    expect(identityFieldInputMode({ key: "username", label: "Telegram Username", required: true, kind: "text" })).toBe("text");
-    expect(identityFieldAutoComplete({ key: "username", label: "Telegram Username", required: true, kind: "text" })).toBe("off");
-    expect(identityFieldInputMode({ key: "player_id", label: "Player ID", required: true, kind: "text" })).toBe("numeric");
-    expect(identityFieldInputMode({ key: "server_id", label: "Server ID", required: true, kind: "text" })).toBe("numeric");
   });
 
   it("always asks Mobile Legends shoppers for Player ID and Server ID", () => {

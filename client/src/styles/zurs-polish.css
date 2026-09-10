@@ -404,21 +404,10 @@ body:has(.zl-shell) .zs-mascot__bubble {
   padding: 0.15rem;
 }
 .pkg-art__amount { display: none; }
-.package-choice-surface { position: relative; display: flex; flex-direction: column; }
+.package-choice-surface { position: relative; }
 .package-choice-check { position: absolute; top: 0.32rem; right: 0.32rem; z-index: 5; }
-.package-choice--clean .package-choice-surface { min-height: 12.25rem; padding: 0.5rem; height: 100%; }
-.package-choice .package-badge {
-  position: absolute;
-  top: 0.45rem;
-  left: 0.45rem;
-  z-index: 6;
-  margin: 0 !important;
-}
-.package-choice-surface .text-amber-800 { margin-top: auto; }
-.package-choice--selected .package-choice-surface { margin: 0 !important; }
-.package-category-grid { align-items: stretch; }
-.package-category-grid > article { display: flex; min-width: 0; }
-.package-category-grid > article > .package-choice { display: flex; width: 100%; min-height: 12.25rem; }
+.package-choice--clean .package-choice-surface { min-height: 0; padding: 0.5rem; }
+.package-choice .package-badge { display: inline-flex; margin-top: 0.28rem; }
 /* Suggested package: a warm edge so the easiest choice is obvious at a glance.
    Declared here (after buttons.css) so it outranks the base card border. */
 .package-choice--recommended { border-color: rgba(245, 197, 24, 0.78) !important; box-shadow: 0 10px 22px rgba(245, 197, 24, 0.16); }
@@ -434,11 +423,10 @@ body:has(.zl-shell) .zs-mascot__bubble {
   .package-category-grid {
     gap: 0.85rem !important;
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-    align-items: stretch !important;
   }
   .package-category-grid > article { height: auto !important; }
   .package-choice-surface,
-  .package-choice--clean .package-choice-surface { min-height: 12.85rem !important; height: 100% !important; }
+  .package-choice--clean .package-choice-surface { min-height: 0 !important; }
   .pkg-art { height: 5.35rem; }
   .zurs-game-card { max-width: none; }
 }
