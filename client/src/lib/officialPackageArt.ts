@@ -20,6 +20,10 @@ const art = {
   specialCrate: "/package-art/special-crate.jpg",
   telegramStars: "/package-art/telegram-stars.jpg",
   telegramPremium: "/package-art/telegram-premium.jpg",
+  robuxXs: "/package-art/robux-xs.jpg",
+  robuxS: "/package-art/robux-s.jpg",
+  robuxM: "/package-art/robux-m.jpg",
+  robuxL: "/package-art/robux-l.jpg",
   robux: "/package-art/robux.jpg",
 } as const;
 
@@ -41,7 +45,13 @@ export function officialPackageArtFor(gameId: string, gameName: string, label: s
 
   if (/telegram/.test(text) && /premium|month/.test(text)) return art.telegramPremium;
   if (/telegram/.test(text) || /\bstars?\b/.test(`${label} ${amountLabel}`.toLowerCase())) return art.telegramStars;
-  if (/roblox|robux/.test(text)) return art.robux;
+  if (/roblox|robux/.test(text)) {
+    if (amount >= 4000) return art.robux;
+    if (amount >= 1200) return art.robuxL;
+    if (amount >= 400) return art.robuxM;
+    if (amount >= 80) return art.robuxS;
+    return art.robuxXs;
+  }
   if (/twilight/.test(text)) return art.mlbbTwilight;
   if (/weekly\s*lite/.test(text)) return art.ffWeekly;
   if (/weekly/.test(text) && /pass|membership|card/.test(text)) return isMlbb ? art.mlbbWeekly : art.ffWeekly;

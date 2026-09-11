@@ -24,6 +24,8 @@ describe("official package art", () => {
   it("maps Telegram and Roblox packs to their own product art, not diamonds", () => {
     expect(officialPackageArtFor("telegram_stars", "Telegram Stars", "500 Stars", "500 Stars")).toContain("telegram-stars");
     expect(officialPackageArtFor("telegram_premium", "Telegram Premium", "Premium 1 Month", "1 Month")).toContain("telegram-premium");
-    expect(officialPackageArtFor("roblox_robux", "Roblox", "800 Robux", "800 Robux")).toContain("robux");
+    expect(officialPackageArtFor("roblox_robux", "Roblox", "80 Robux", "80 Robux")).toContain("robux-s");
+    expect(officialPackageArtFor("roblox_robux", "Roblox", "800 Robux", "800 Robux")).toContain("robux-m");
+    expect(officialPackageArtFor("roblox_robux", "Roblox", "4500 Robux", "4500 Robux")).toContain("robux.jpg");
   });
 });
