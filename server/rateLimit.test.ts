@@ -11,11 +11,13 @@ const routersSource = fs.readFileSync(path.join(serverDir, "routers.ts"), "utf8"
 describe("rate limit buckets", () => {
   it("keeps the limits required by the security review", () => {
     expect(rateLimitBuckets.payKeyIssue).toMatchObject({ limit: 20, windowSeconds: 300 });
-    expect(rateLimitBuckets.auth).toMatchObject({ limit: 60, windowSeconds: 60 });
+    expect(rateLimitBuckets.auth).toMatchObject({ limit: 10, windowSeconds: 60 });
     expect(rateLimitBuckets.trpcPublic).toMatchObject({ limit: 600, windowSeconds: 60 });
     expect(rateLimitBuckets.createTopup).toMatchObject({ limit: 10, windowSeconds: 3600 });
-    expect(rateLimitBuckets.beginPayment).toMatchObject({ limit: 20, windowSeconds: 300 });
-    expect(rateLimitBuckets.paymentStatus).toMatchObject({ limit: 60, windowSeconds: 60 });
+    expect(rateLimitBuckets.createOrderMinute).toMatchObject({ limit: 5, windowSeconds: 60 });
+    expect(rateLimitBuckets.beginPayment).toMatchObject({ limit: 5, windowSeconds: 60 });
+    expect(rateLimitBuckets.paymentStatus).toMatchObject({ limit: 30, windowSeconds: 60 });
+    expect(rateLimitBuckets.khqrWebhook).toMatchObject({ limit: 60, windowSeconds: 60 });
   });
 
   it("rejects the attempt past the pay key limit from one address", async () => {
@@ -68,6 +70,7 @@ describe("rate limit wiring regression", () => {
   });
 
   it("caps topup order creation per account", () => {
+    expect(routersSource).toContain("rateLimitBuckets.createOrderMinute");
     expect(routersSource).toContain("rateLimitBuckets.createTopup");
     const limiterIndex = routersSource.indexOf("rateLimitBuckets.createTopup");
     const writeIndex = routersSource.indexOf("db.createTopupOrder");

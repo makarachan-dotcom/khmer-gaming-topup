@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { applyBackendSecurity, HTML_CONTENT_SECURITY_POLICY, isCloudflareIp, SECURITY_TXT, visitorIpFromRequest } from "./edgeSecurity";
+import { htmlContentSecurityPolicyFromHtml } from "./cspPolicy";
 import type { NextFunction, Request, Response } from "express";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -94,6 +95,13 @@ describe("public security artifacts", () => {
     expect(HTML_CONTENT_SECURITY_POLICY).toContain("https://fonts.googleapis.com");
     expect(HTML_CONTENT_SECURITY_POLICY).toContain("https://accounts.google.com");
     expect(HTML_CONTENT_SECURITY_POLICY).toContain("connect-src 'self' https://www.zurs.me https://zurs.me https://*.appwrite.io https://accounts.google.com https://fonts.gstatic.com");
+    const scriptSrc = HTML_CONTENT_SECURITY_POLICY.split(";").map((part) => part.trim()).find((part) => part.startsWith("script-src")) ?? "";
+    expect(scriptSrc).toContain("'self'");
+    expect(scriptSrc).toContain("sha256-");
+    expect(scriptSrc).not.toContain("unsafe-inline");
+    expect(scriptSrc).not.toContain("unsafe-eval");
+    const indexHtml = readFileSync(resolve(process.cwd(), "client/index.html"), "utf8");
+    expect(htmlContentSecurityPolicyFromHtml(indexHtml)).toBe(HTML_CONTENT_SECURITY_POLICY);
     const vercel = readFileSync(resolve(process.cwd(), "vercel.json"), "utf8");
     expect(vercel).toContain(HTML_CONTENT_SECURITY_POLICY);
     expect(vercel).not.toMatch(/Access-Control-Allow-Origin["']?\s*[:=]\s*["']\*/);

@@ -66,6 +66,7 @@ export const appRouter = router({
     summary: protectedProcedure.query(({ ctx }) => db.getCustomerWalletSummary(ctx.user.id)),
     topupAvailability: protectedProcedure.query(() => db.getWalletTopupAvailability()),
     beginTopup: protectedProcedure.input(z.object({ amountKhr: z.string().regex(/^\d+$/) })).mutation(async ({ ctx, input }) => {
+      await enforceRateLimitOrThrow({ bucket: rateLimitBuckets.createOrderMinute, identifier: `user:wallet:${ctx.user.id}`, mode: "strict" });
       await enforceRateLimitOrThrow({ bucket: rateLimitBuckets.beginPayment, identifier: `user:wallet:${ctx.user.id}`, mode: "strict" });
       return db.beginWalletTopup({ userId: ctx.user.id, ...input });
     }),
@@ -150,12 +151,12 @@ export const appRouter = router({
     createAdminKhqrTest: ownerProcedure.mutation(({ ctx }) => db.createAdminKhqrTestOrder({ userId: ctx.user.id })),
     pendingPaymentCount: protectedProcedure.query(async ({ ctx }) => ({ count: await db.countPendingKhqrPayments(ctx.user.id), limit: db.pendingKhqrPaymentLimit })),
     createService: protectedProcedure.input(z.object({ slug: z.string().trim().min(2).max(120), quantity: z.number().int().min(1).max(50).optional(), customerNote: z.string().trim().max(400).optional() })).mutation(async ({ ctx, input }) => {
+      await enforceRateLimitOrThrow({ bucket: rateLimitBuckets.createOrderMinute, identifier: `user:service:${ctx.user.id}`, mode: "strict" });
       await enforceRateLimitOrThrow({ bucket: rateLimitBuckets.createTopup, identifier: `user:service:${ctx.user.id}`, mode: "strict" });
       return createPartnerServiceOrder({ userId: ctx.user.id, slug: input.slug, quantity: input.quantity, customerNote: input.customerNote });
     }),
     createTopup: protectedProcedure.input(z.object({ packageId: z.string().min(4).max(64), playerId: z.string().trim().min(2).max(128), zoneId: z.string().trim().min(1).max(128).optional(), accountPassword: z.string().trim().min(4).max(200).optional(), quantity: z.number().int().min(1).max(9) })).mutation(async ({ ctx, input }) => {
-      // Ten orders per hour per account. Checked before the order is written so
-      // an abusive account cannot flood the provider queue.
+      await enforceRateLimitOrThrow({ bucket: rateLimitBuckets.createOrderMinute, identifier: `user:${ctx.user.id}`, mode: "strict" });
       await enforceRateLimitOrThrow({ bucket: rateLimitBuckets.createTopup, identifier: `user:${ctx.user.id}`, mode: "strict" });
       return db.createTopupOrder({ userId: ctx.user.id, ...input });
     }),

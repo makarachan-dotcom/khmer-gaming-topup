@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
+import { htmlContentSecurityPolicyFromCommittedHashes } from "./cspPolicy";
 
 /**
  * Visitor IP and API hardening.
@@ -114,28 +115,11 @@ export function visitorIpFromRequest(req: Pick<Request, "headers" | "socket">): 
 export const STORE_CORS_ORIGINS = ["https://www.zurs.me", "https://zurs.me"] as const;
 
 /**
- * Page CSP. `script-src` includes `'unsafe-inline'` because `client/index.html`
- * ships JSON-LD blocks as inline scripts and Vercel static HTML has no nonce.
- * Fonts/OAuth/Lottie hosts below are the ones the storefront already loads.
- * `connect-src` includes `https://fonts.gstatic.com` so Noto Lottie emoji JSON
- * can load; `img-src` includes DO Spaces / Fazer Cards because catalog art is
- * served from those hosts today.
+ * Page CSP. Inline JSON-LD is allowed only via sha256 hashes (see cspPolicy.ts).
+ * `'unsafe-inline'` is not used for scripts. style-src keeps `'unsafe-inline'`
+ * because CSS-in-JS / Tailwind injects style tags.
  */
-export const HTML_CONTENT_SECURITY_POLICY = [
-  "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "font-src 'self' https://fonts.gstatic.com data:",
-  "img-src 'self' data: blob: https://www.zurs.me https://files.manuscdn.com https://*.appwrite.io https://*.googleusercontent.com https://*.cdn.digitaloceanspaces.com https://reseller.fazercards.com",
-  "connect-src 'self' https://www.zurs.me https://zurs.me https://*.appwrite.io https://accounts.google.com https://fonts.gstatic.com",
-  "media-src 'self' blob:",
-  "frame-src 'self' https://accounts.google.com",
-  "frame-ancestors 'self'",
-  "base-uri 'self'",
-  "form-action 'self' https://accounts.google.com",
-  "object-src 'none'",
-  "upgrade-insecure-requests",
-].join("; ");
+export const HTML_CONTENT_SECURITY_POLICY = htmlContentSecurityPolicyFromCommittedHashes();
 
 export const API_CONTENT_SECURITY_POLICY = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; object-src 'none'";
 

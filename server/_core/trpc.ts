@@ -34,7 +34,10 @@ export const adminProcedure = t.procedure.use(
   t.middleware(async opts => {
     const { ctx, next } = opts;
 
-    if (!ctx.user || (ctx.user.role !== "admin" && !isSingleAdminEmail(ctx.user.email))) {
+    if (!ctx.user) {
+      throw new TRPCError({ code: "UNAUTHORIZED", message: UNAUTHED_ERR_MSG });
+    }
+    if (ctx.user.role !== "admin" && !isSingleAdminEmail(ctx.user.email)) {
       throw new TRPCError({ code: "FORBIDDEN", message: NOT_ADMIN_ERR_MSG });
     }
 
@@ -51,7 +54,10 @@ export function scopedAdminProcedure(requiredPermission: DelegatedAdminPermissio
   return t.procedure.use(
     t.middleware(async opts => {
       const { ctx, next } = opts;
-      if (!ctx.user || (ctx.user.role !== "admin" && !isSingleAdminEmail(ctx.user.email))) {
+      if (!ctx.user) {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: UNAUTHED_ERR_MSG });
+      }
+      if (ctx.user.role !== "admin" && !isSingleAdminEmail(ctx.user.email)) {
         throw new TRPCError({ code: "FORBIDDEN", message: NOT_ADMIN_ERR_MSG });
       }
       if (!isSingleAdminEmail(ctx.user.email)) {
@@ -68,7 +74,8 @@ export function scopedAdminProcedure(requiredPermission: DelegatedAdminPermissio
 export const ownerProcedure = t.procedure.use(
   t.middleware(async opts => {
     const { ctx, next } = opts;
-    if (!ctx.user || !isSingleAdminEmail(ctx.user.email)) throw new TRPCError({ code: "FORBIDDEN", message: NOT_ADMIN_ERR_MSG });
+    if (!ctx.user) throw new TRPCError({ code: "UNAUTHORIZED", message: UNAUTHED_ERR_MSG });
+    if (!isSingleAdminEmail(ctx.user.email)) throw new TRPCError({ code: "FORBIDDEN", message: NOT_ADMIN_ERR_MSG });
     return next({ ctx: { ...ctx, user: ctx.user } });
   }),
 );

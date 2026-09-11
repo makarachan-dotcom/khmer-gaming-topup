@@ -53,8 +53,8 @@ export function createApp() {
   const khqrWorkerWebhookHandler = async (req: express.Request, res: express.Response) => {
     // Defence in depth for the only unauthenticated endpoint that can move
     // money. Each layer assumes the one before it may have been defeated:
-    //   1. volume cap        — bounded work per source
-    //   2. HMAC over raw bytes — authenticity
+    //   1. HMAC over raw bytes — authenticity before any volume accounting
+    //   2. volume cap        — 60 signed callbacks / minute / source
     //   3. schema            — shape and range
     //   4. freshness window  — a captured body keeps a valid signature forever
     //   5. single-use nonce  — blocks concurrent and rapid replay
@@ -68,9 +68,9 @@ export function createApp() {
     };
     let claimedNonce: string | null = null;
     try {
+      if (!verifyKhqrWorkerSignature(req.body, req.header("x-khqr-signature") ?? undefined, getKhqrWorkerCredentials().callbackSecret ?? undefined)) { await penalise(); return res.status(401).json({ success: false, error: "invalid signature" }); }
       const volume = await consumeRateLimit({ bucket: rateLimitBuckets.khqrWebhook, identifier: sourceIp, mode: "lenient" });
       if (!volume.allowed) return sendRateLimited(res, volume.retryAfterSeconds);
-      if (!verifyKhqrWorkerSignature(req.body, req.header("x-khqr-signature") ?? undefined, getKhqrWorkerCredentials().callbackSecret ?? undefined)) { await penalise(); return res.status(401).json({ success: false, error: "invalid signature" }); }
       const callback = parseKhqrWorkerCallback(req.body);
       if (!callback) { await penalise(); return res.status(400).json({ success: false, error: "invalid callback" }); }
       if (!isFreshWebhookTimestamp(callback.timestamp)) { await penalise(); return res.status(401).json({ success: false, error: "stale callback" }); }

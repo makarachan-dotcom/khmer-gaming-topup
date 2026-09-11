@@ -55,15 +55,15 @@ export const rateLimitBuckets = {
   // 9 requests per minute per viewer, so trpcPublic must stay generous.
   payKeyIssue: { name: "paykey", limit: 20, windowSeconds: 300 },
   payLinkInvalid: { name: "paylink", limit: 30, windowSeconds: 3600 },
-  auth: { name: "auth", limit: 60, windowSeconds: 60 },
+  auth: { name: "auth", limit: 10, windowSeconds: 60 },
   trpcPublic: { name: "trpc", limit: 600, windowSeconds: 60 },
   // Keyed by authenticated user, not IP, so CGNAT does not apply.
   createTopup: { name: "topup", limit: 10, windowSeconds: 3600 },
-  beginPayment: { name: "paybegin", limit: 20, windowSeconds: 300 },
-  paymentStatus: { name: "paystat", limit: 60, windowSeconds: 60 },
-  // Signed KHQR worker callbacks. Generous, because a legitimate worker retries
-  // and one busy minute can carry many settlements.
-  khqrWebhook: { name: "khqrhook", limit: 300, windowSeconds: 60 },
+  createOrderMinute: { name: "ordermin", limit: 5, windowSeconds: 60 },
+  beginPayment: { name: "paybegin", limit: 5, windowSeconds: 60 },
+  paymentStatus: { name: "paystat", limit: 30, windowSeconds: 60 },
+  // Signed KHQR worker callbacks. Verify HMAC first, then this volume cap.
+  khqrWebhook: { name: "khqrhook", limit: 60, windowSeconds: 60 },
   // Callbacks that fail signature/shape/freshness. Tight, because a genuine
   // worker never produces these: it is signature probing or replay hunting.
   khqrWebhookReject: { name: "khqrhookbad", limit: 15, windowSeconds: 300 },
@@ -254,15 +254,19 @@ export async function enforceRateLimitOrThrow(options: {
   if (decision.allowed) return;
   throw new TRPCError({
     code: "TOO_MANY_REQUESTS",
-    message: JSON.stringify({ code: "RATE_LIMITED", retryAfter: decision.retryAfterSeconds }),
+    message: "Too many requests. Please try again later.",
   });
 }
 
-/** 429 body shape shared by every endpoint. Never leaks limiter internals. */
+/** 429 body. Retry-After is the HTTP signal; body does not name buckets or limits. */
 export function sendRateLimited(res: Response, retryAfterSeconds: number) {
   res.setHeader("Retry-After", String(retryAfterSeconds));
   res.setHeader("Cache-Control", "no-store");
-  return res.status(429).json({ code: "RATE_LIMITED", retryAfter: retryAfterSeconds });
+  return res.status(429).json({
+    error: "Too many requests. Please try again later.",
+    code: "RATE_LIMITED",
+    retryAfter: retryAfterSeconds,
+  });
 }
 
 /**

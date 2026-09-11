@@ -29,6 +29,10 @@ describe("KHQR worker webhook", () => {
     expect(appSource).toContain('app.post("/api/webhooks/khqr-worker", khqrWorkerWebhookBody, khqrWorkerWebhookHandler)');
     expect(appSource).toContain('app.post("/api/webhooks/bakong", khqrWorkerWebhookBody, khqrWorkerWebhookHandler)');
     expect(appSource).toContain("recordKhqrWorkerPaymentExpired");
+    const signatureIndex = appSource.indexOf("verifyKhqrWorkerSignature");
+    const volumeIndex = appSource.indexOf("rateLimitBuckets.khqrWebhook,");
+    expect(signatureIndex).toBeGreaterThan(-1);
+    expect(volumeIndex).toBeGreaterThan(signatureIndex);
   });
   it("rejects an invalid signature and a stale callback", () => {
     expect(verifyKhqrWorkerSignature(body, "0".repeat(64), secret)).toBe(false);
