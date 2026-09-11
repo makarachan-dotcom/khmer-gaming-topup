@@ -1,5 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import type { NextFunction, Request, Response } from "express";
+import { visitorIpFromRequest } from "./edgeSecurity";
 
 /**
  * Durable rate limiting for Vercel serverless.
@@ -230,15 +231,12 @@ export async function consumeRateLimit(options: {
 }
 
 /**
- * Vercel sets `x-vercel-forwarded-for` itself, so it cannot be spoofed by the
- * client. `x-forwarded-for` is only used as a local/dev fallback.
+ * Visitor IP for bans and rate limits. Cloudflare `cf-connecting-ip` is used
+ * only when the hop that reached us is a Cloudflare edge; otherwise Vercel's
+ * own forwarded address is used so clients cannot spoof identity.
  */
 export function clientIpFromRequest(req: Request): string {
-  const vercel = req.headers["x-vercel-forwarded-for"];
-  if (typeof vercel === "string" && vercel.trim()) return vercel.split(",")[0]!.trim();
-  const forwarded = req.headers["x-forwarded-for"];
-  if (typeof forwarded === "string" && forwarded.trim()) return forwarded.split(",")[0]!.trim();
-  return req.socket?.remoteAddress ?? "unknown";
+  return visitorIpFromRequest(req);
 }
 
 /**

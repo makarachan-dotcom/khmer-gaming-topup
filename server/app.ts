@@ -19,6 +19,7 @@ import { registerTelegramRoutes } from "./telegramRoutes";
 import { enforceIpBan } from "./ipBanGuard";
 import { clientIpFromRequest, consumeRateLimit, rateLimitBuckets, rateLimitMiddleware, sendRateLimited } from "./rateLimit";
 import { consumeWebhookNonce, isFreshWebhookTimestamp, releaseWebhookNonce, webhookReplayKey } from "./paymentSecurity";
+import { applyBackendSecurity } from "./edgeSecurity";
 
 /**
  * Builds the shared Express application for the local long-running server and
@@ -30,6 +31,7 @@ export function createApp() {
   // Vercel terminates TLS in front of the function, so the real client address
   // arrives in a forwarded header. Rate limiting depends on reading it.
   app.set("trust proxy", 1);
+  app.use(applyBackendSecurity);
 
   // Site-wide ban enforcement, mounted before every route.
   //
