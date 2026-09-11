@@ -254,7 +254,7 @@ export const PackEmoji = memo(function PackEmoji({
   if (name === "svc-gemini") return <BrandPng src="/emoji-anim/svc-gemini.png" size={size} className={className} label={meta.label} />;
 
   const showLottie = !staticFrame;
-  const showPng = !pngFailed && (staticFrame || !playing);
+  const showPng = !pngFailed;
   const showGlyph = pngFailed && !playing;
 
   return (
@@ -285,6 +285,52 @@ export const PackEmoji = memo(function PackEmoji({
       {showLottie ? (
         <div ref={hostRef} aria-hidden="true" className="pack-emoji__lottie" style={{ position: "absolute", inset: 0, zIndex: 2, width: "100%", height: "100%" }} />
       ) : null}
+    </span>
+  );
+});
+
+/** Tab icons must never fall back to iOS native 🛒 / 👋 — PNG is always visible, Lottie paints on top. */
+export const TabPackEmoji = memo(function TabPackEmoji({ name, size = 22 }: { name: PackEmojiName; size?: number }) {
+  const hostRef = useRef<HTMLDivElement | null>(null);
+  const meta = PACK_EMOJI[name];
+  const reduceMotion = prefersStaticEmoji();
+
+  useEffect(() => {
+    if (reduceMotion) return;
+    if (typeof navigator !== "undefined" && navigator.userAgent.toLowerCase().includes("jsdom")) return;
+    let cancelled = false;
+    let animation: AnimationItem | null = null;
+    void Promise.all([loadPackAnimation(name), import("lottie-web")])
+      .then(async ([data, module]) => {
+        if (cancelled || !data) return;
+        if (!hostRef.current) await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        if (cancelled || !hostRef.current) return;
+        try {
+          hostRef.current.replaceChildren();
+          animation = module.default.loadAnimation({
+            container: hostRef.current,
+            renderer: "svg",
+            loop: true,
+            autoplay: true,
+            animationData: data,
+            rendererSettings: { progressiveLoad: false, preserveAspectRatio: "xMidYMid meet" },
+          });
+        } catch {
+          /* PNG underneath stays visible */
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+      animation?.destroy();
+    };
+  }, [name, reduceMotion]);
+
+  if (!meta) return null;
+  return (
+    <span role="img" aria-label={meta.label} className="zurs-tab-pack" style={{ width: size, height: size }}>
+      <img src={`/emoji-anim/${encodeURIComponent(name)}.png`} alt="" width={size} height={size} />
+      <div ref={hostRef} className="zurs-tab-pack__lottie" aria-hidden="true" />
     </span>
   );
 });

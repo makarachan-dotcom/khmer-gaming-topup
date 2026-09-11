@@ -105,8 +105,10 @@ describe("storefront media protection", () => {
     const packSource = readFileSync(join(process.cwd(), "client/src/components/PackEmoji.tsx"), "utf8");
     expect(componentSource).toContain('pack: "shopping-bag"');
     expect(componentSource).toContain('pack: "user-laptop"');
+    expect(componentSource).toContain("TabPackEmoji");
     expect(packSource).toContain('"shopping-bag": { emoji: "🛍️"');
     expect(packSource).toContain('"user-laptop": { emoji: "👤"');
+    expect(packSource).toContain("zurs-tab-pack");
     expect(packSource).not.toContain('"shopping-bag": { emoji: "🛒"');
     expect(packSource).not.toContain('"user-laptop": { emoji: "👋"');
   });

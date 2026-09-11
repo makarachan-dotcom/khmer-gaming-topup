@@ -11,7 +11,7 @@ import { trpc } from "@/lib/trpc";
 import { animate } from "animejs";
 import { ArrowUp, ChevronRight, LogIn, LogOut, WalletCards } from "lucide-react";
 import { FontEmojiBrand } from "@/components/FontEmojiBrand";
-import { PackEmoji } from "@/components/PackEmoji";
+import { PackEmoji, TabPackEmoji } from "@/components/PackEmoji";
 import { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { TAB_LONG_PRESS_MS, TAB_SCRUB_PX, tabIndexFromClientX, tabProgressFromClientX } from "@/lib/mobileTabOrder";
@@ -320,7 +320,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
             return (
               <Link key={href} href={href} draggable={false} aria-current={active ? "page" : undefined} className={classes} onClick={onTabClick}>
                 <span className="zurs-tab-glyph" aria-hidden="true">
-                  {active && animation ? <AnimatedGlyph name={animation} size={18} color="#062033" /> : <PackEmoji name={pack} size={20} />}
+                  {active && animation ? <AnimatedGlyph name={animation} size={18} color="#062033" /> : <TabPackEmoji name={pack} size={22} />}
                 </span>
                 <span className={cn("zurs-mobile-tab-label truncate", active ? "max-w-[4rem] opacity-100" : "max-w-0 opacity-0")}>{label}</span>
               </Link>
