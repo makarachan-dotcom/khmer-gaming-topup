@@ -59,6 +59,8 @@ export const rateLimitBuckets = {
   trpcPublic: { name: "trpc", limit: 600, windowSeconds: 60 },
   // Keyed by authenticated user, not IP, so CGNAT does not apply.
   createTopup: { name: "topup", limit: 10, windowSeconds: 3600 },
+  beginPayment: { name: "paybegin", limit: 20, windowSeconds: 300 },
+  paymentStatus: { name: "paystat", limit: 60, windowSeconds: 60 },
   // Signed KHQR worker callbacks. Generous, because a legitimate worker retries
   // and one busy minute can carry many settlements.
   khqrWebhook: { name: "khqrhook", limit: 300, windowSeconds: 60 },

@@ -110,6 +110,54 @@ export function visitorIpFromRequest(req: Pick<Request, "headers" | "socket">): 
   return "unknown";
 }
 
+/** Browser origins allowed to call the API with credentials. Never `*`. */
+export const STORE_CORS_ORIGINS = ["https://www.zurs.me", "https://zurs.me"] as const;
+
+/**
+ * Page CSP. `script-src` includes `'unsafe-inline'` because `client/index.html`
+ * ships JSON-LD blocks as inline scripts and Vercel static HTML has no nonce.
+ * Fonts/OAuth/Lottie hosts below are the ones the storefront already loads.
+ * `connect-src` includes `https://fonts.gstatic.com` so Noto Lottie emoji JSON
+ * can load; `img-src` includes DO Spaces / Fazer Cards because catalog art is
+ * served from those hosts today.
+ */
+export const HTML_CONTENT_SECURITY_POLICY = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' https://fonts.gstatic.com data:",
+  "img-src 'self' data: blob: https://www.zurs.me https://files.manuscdn.com https://*.appwrite.io https://*.googleusercontent.com https://*.cdn.digitaloceanspaces.com https://reseller.fazercards.com",
+  "connect-src 'self' https://www.zurs.me https://zurs.me https://*.appwrite.io https://accounts.google.com https://fonts.gstatic.com",
+  "media-src 'self' blob:",
+  "frame-src 'self' https://accounts.google.com",
+  "frame-ancestors 'self'",
+  "base-uri 'self'",
+  "form-action 'self' https://accounts.google.com",
+  "object-src 'none'",
+  "upgrade-insecure-requests",
+].join("; ");
+
+export const API_CONTENT_SECURITY_POLICY = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; object-src 'none'";
+
+export const SECURITY_TXT = [
+  "Contact: mailto:support@zurs.me",
+  "Expires: 2027-09-12T00:00:00.000Z",
+  "Preferred-Languages: km, en",
+  "Canonical: https://www.zurs.me/.well-known/security.txt",
+  "",
+].join("\n");
+
+export function applyStoreCors(req: Pick<Request, "headers" | "method">, res: Response) {
+  const origin = headerValue(req.headers, "origin");
+  if (origin && (STORE_CORS_ORIGINS as readonly string[]).includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.setHeader("Access-Control-Allow-Methods", "GET,HEAD,POST,PUT,PATCH,DELETE,OPTIONS");
+    res.setHeader("Vary", "Origin");
+  }
+}
+
 export function applyBackendSecurity(req: Request, res: Response, next: NextFunction) {
   if (req.method === "TRACE" || req.method === "TRACK") {
     res.setHeader("Allow", "GET,HEAD,POST,PUT,PATCH,DELETE,OPTIONS");
@@ -120,10 +168,15 @@ export function applyBackendSecurity(req: Request, res: Response, next: NextFunc
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
   res.setHeader("Referrer-Policy", "no-referrer");
-  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), interest-cohort=()");
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
   res.setHeader("Cross-Origin-Resource-Policy", "same-origin");
   res.setHeader("X-DNS-Prefetch-Control", "off");
   res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
-  if (req.path.startsWith("/api")) res.setHeader("Cache-Control", "no-store");
+  res.setHeader("Content-Security-Policy", API_CONTENT_SECURITY_POLICY);
+  res.removeHeader("X-Powered-By");
+  if (req.path.startsWith("/api") || (req.originalUrl || "").startsWith("/api")) res.setHeader("Cache-Control", "no-store");
+  applyStoreCors(req, res);
+  if (req.method === "OPTIONS") return res.status(204).end();
   return next();
 }

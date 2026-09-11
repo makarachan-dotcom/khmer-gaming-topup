@@ -14,6 +14,8 @@ describe("rate limit buckets", () => {
     expect(rateLimitBuckets.auth).toMatchObject({ limit: 60, windowSeconds: 60 });
     expect(rateLimitBuckets.trpcPublic).toMatchObject({ limit: 600, windowSeconds: 60 });
     expect(rateLimitBuckets.createTopup).toMatchObject({ limit: 10, windowSeconds: 3600 });
+    expect(rateLimitBuckets.beginPayment).toMatchObject({ limit: 20, windowSeconds: 300 });
+    expect(rateLimitBuckets.paymentStatus).toMatchObject({ limit: 60, windowSeconds: 60 });
   });
 
   it("rejects the attempt past the pay key limit from one address", async () => {
@@ -70,5 +72,11 @@ describe("rate limit wiring regression", () => {
     const limiterIndex = routersSource.indexOf("rateLimitBuckets.createTopup");
     const writeIndex = routersSource.indexOf("db.createTopupOrder");
     expect(limiterIndex).toBeLessThan(writeIndex);
+  });
+
+  it("caps checkout begin and payment-status polling per account", () => {
+    expect(routersSource).toContain("rateLimitBuckets.beginPayment");
+    expect(routersSource).toContain("rateLimitBuckets.paymentStatus");
+    expect(routersSource.indexOf("rateLimitBuckets.beginPayment")).toBeLessThan(routersSource.indexOf("db.beginStagedPayment"));
   });
 });

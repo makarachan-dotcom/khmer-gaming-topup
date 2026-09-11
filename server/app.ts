@@ -19,7 +19,7 @@ import { registerTelegramRoutes } from "./telegramRoutes";
 import { enforceIpBan } from "./ipBanGuard";
 import { clientIpFromRequest, consumeRateLimit, rateLimitBuckets, rateLimitMiddleware, sendRateLimited } from "./rateLimit";
 import { consumeWebhookNonce, isFreshWebhookTimestamp, releaseWebhookNonce, webhookReplayKey } from "./paymentSecurity";
-import { applyBackendSecurity } from "./edgeSecurity";
+import { applyBackendSecurity, SECURITY_TXT } from "./edgeSecurity";
 
 /**
  * Builds the shared Express application for the local long-running server and
@@ -31,7 +31,13 @@ export function createApp() {
   // Vercel terminates TLS in front of the function, so the real client address
   // arrives in a forwarded header. Rate limiting depends on reading it.
   app.set("trust proxy", 1);
+  app.disable("x-powered-by");
   app.use(applyBackendSecurity);
+  app.get("/.well-known/security.txt", (_req, res) => {
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    return res.status(200).send(SECURITY_TXT);
+  });
 
   // Site-wide ban enforcement, mounted before every route.
   //

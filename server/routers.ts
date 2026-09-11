@@ -65,9 +65,18 @@ export const appRouter = router({
   wallet: router({
     summary: protectedProcedure.query(({ ctx }) => db.getCustomerWalletSummary(ctx.user.id)),
     topupAvailability: protectedProcedure.query(() => db.getWalletTopupAvailability()),
-    beginTopup: protectedProcedure.input(z.object({ amountKhr: z.string().regex(/^\d+$/) })).mutation(({ ctx, input }) => db.beginWalletTopup({ userId: ctx.user.id, ...input })),
-    topupSession: protectedProcedure.input(z.object({ topupId: z.string().min(4).max(64) })).query(({ ctx, input }) => db.getWalletTopupSession({ userId: ctx.user.id, ...input })),
-    refreshTopup: protectedProcedure.input(z.object({ topupId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => db.refreshWalletTopup({ userId: ctx.user.id, ...input })),
+    beginTopup: protectedProcedure.input(z.object({ amountKhr: z.string().regex(/^\d+$/) })).mutation(async ({ ctx, input }) => {
+      await enforceRateLimitOrThrow({ bucket: rateLimitBuckets.beginPayment, identifier: `user:wallet:${ctx.user.id}`, mode: "strict" });
+      return db.beginWalletTopup({ userId: ctx.user.id, ...input });
+    }),
+    topupSession: protectedProcedure.input(z.object({ topupId: z.string().min(4).max(64) })).query(async ({ ctx, input }) => {
+      await enforceRateLimitOrThrow({ bucket: rateLimitBuckets.paymentStatus, identifier: `user:wallet:${ctx.user.id}`, mode: "lenient" });
+      return db.getWalletTopupSession({ userId: ctx.user.id, ...input });
+    }),
+    refreshTopup: protectedProcedure.input(z.object({ topupId: z.string().min(4).max(64) })).mutation(async ({ ctx, input }) => {
+      await enforceRateLimitOrThrow({ bucket: rateLimitBuckets.paymentStatus, identifier: `user:wallet:${ctx.user.id}`, mode: "lenient" });
+      return db.refreshWalletTopup({ userId: ctx.user.id, ...input });
+    }),
   }),
   liveSpin: router({
     state: publicProcedure.query(() => ({ retired: true as const, event: null })),
@@ -150,9 +159,18 @@ export const appRouter = router({
       await enforceRateLimitOrThrow({ bucket: rateLimitBuckets.createTopup, identifier: `user:${ctx.user.id}`, mode: "strict" });
       return db.createTopupOrder({ userId: ctx.user.id, ...input });
     }),
-    beginPayment: protectedProcedure.input(z.object({ orderId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => db.beginStagedPayment({ userId: ctx.user.id, ...input })),
-    paymentSession: protectedProcedure.input(z.object({ orderId: z.string().min(4).max(64) })).query(({ ctx, input }) => db.getCustomerPaymentSession({ userId: ctx.user.id, ...input })),
-    refreshPayment: protectedProcedure.input(z.object({ orderId: z.string().min(4).max(64) })).mutation(({ ctx, input }) => db.refreshBakongPayment({ userId: ctx.user.id, ...input })),
+    beginPayment: protectedProcedure.input(z.object({ orderId: z.string().min(4).max(64) })).mutation(async ({ ctx, input }) => {
+      await enforceRateLimitOrThrow({ bucket: rateLimitBuckets.beginPayment, identifier: `user:${ctx.user.id}`, mode: "strict" });
+      return db.beginStagedPayment({ userId: ctx.user.id, ...input });
+    }),
+    paymentSession: protectedProcedure.input(z.object({ orderId: z.string().min(4).max(64) })).query(async ({ ctx, input }) => {
+      await enforceRateLimitOrThrow({ bucket: rateLimitBuckets.paymentStatus, identifier: `user:${ctx.user.id}`, mode: "lenient" });
+      return db.getCustomerPaymentSession({ userId: ctx.user.id, ...input });
+    }),
+    refreshPayment: protectedProcedure.input(z.object({ orderId: z.string().min(4).max(64) })).mutation(async ({ ctx, input }) => {
+      await enforceRateLimitOrThrow({ bucket: rateLimitBuckets.paymentStatus, identifier: `user:${ctx.user.id}`, mode: "lenient" });
+      return db.refreshBakongPayment({ userId: ctx.user.id, ...input });
+    }),
     tracking: protectedProcedure.input(z.object({ trackingCode: z.string().trim().min(12).max(48) })).query(({ ctx, input }) => db.getCustomerOrderTracking({ userId: ctx.user.id, ...input })),
     submitCdkToken: protectedProcedure.input(z.object({ orderId: z.string().min(4).max(64), token: z.string().min(20).max(8000) })).mutation(async ({ ctx, input }) => {
       await enforceRateLimitOrThrow({ bucket: rateLimitBuckets.createTopup, identifier: `user:cdk:${ctx.user.id}`, mode: "strict" });
