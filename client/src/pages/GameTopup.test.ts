@@ -224,7 +224,8 @@ describe("dedicated game top-up routes", () => {
     expect(requiresPlayerIdentityCheck([
       { key: "username", label: "Roblox Username", required: true, kind: "text" },
       { key: "password", label: "Roblox Password", required: true, kind: "password" },
-    ])).toBe(false);
+    ])).toBe(true);
+    expect(requiresVerifiedUsername("roblox_robux")).toBe(true);
   });
 
   it("keeps only private verified ID fields in a small per-game browser history", () => {

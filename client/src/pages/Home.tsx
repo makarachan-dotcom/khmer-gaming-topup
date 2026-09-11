@@ -217,7 +217,7 @@ function HomeTopupExperience() {
     [games],
   );
   return (
-    <section id="topup-games" className="container mt-5 pb-28 sm:mt-10 sm:pb-12">
+    <section id="topup-games" className="container mt-5 pb-10 sm:mt-10 sm:pb-12">
       <LoadingOverlay open={gamesQuery.isLoading} label="កំពុងរៀបចំបញ្ជីហ្គេម…" />
       <SectionHeading
         eyebrow="GAME TOP-UP"

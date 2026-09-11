@@ -150,7 +150,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
         </div>
       </header>
       {children}
-      <footer className="zurs-footer-glass zurs-footer mt-12 border-t pb-6 pt-8 sm:mt-16">
+      <footer className="zurs-footer-glass zurs-footer mt-6 border-t pb-6 pt-6 sm:mt-16 sm:pt-8">
         <div className="container">
           <div className="zurs-footer-inner rounded-2xl p-5 sm:p-6">
             <div className="flex min-w-0 items-start gap-3.5">

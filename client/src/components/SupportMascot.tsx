@@ -66,8 +66,8 @@ export default function SupportMascot() {
         <svg className="zs-mascot__svg" viewBox="0 0 48 48" width="34" height="34" aria-hidden="true">
           <line x1="24" y1="8" x2="24" y2="14" stroke="#8d97b2" strokeWidth="1.6" strokeLinecap="round" />
           <circle className="zs-mascot__antenna" cx="24" cy="6.5" r="2.6" fill="#38bdf8" />
-          <rect x="8" y="14" width="32" height="28" rx="10" fill="#18233a" stroke="#38bdf8" strokeWidth="1.6" />
-          <rect x="12" y="19" width="24" height="15" rx="7" fill="#0a0f1e" />
+          <rect x="8" y="14" width="32" height="28" rx="10" fill="#f4f7fb" stroke="#38bdf8" strokeWidth="1.6" />
+          <rect x="12" y="19" width="24" height="15" rx="7" fill="#e8f4ff" />
           <g className="zs-mascot__eyes">
             <circle cx="19" cy="26" r="2.9" fill="#7dd3fc" />
             <circle cx="29" cy="26" r="2.9" fill="#7dd3fc" />

@@ -121,22 +121,28 @@ export default function GameTopup() {
   const { setSelectedProduct, clearSelectedProduct, setSelectedPaymentMethodId } = useSelectedProduct();
   const game = gameQuery.data?.status === "ready" ? gameQuery.data.game : localCategoryPreview ? localCategoryPreviewGame : null;
   const identityFields = useMemo(() => identityFieldsForGame(game?.id ?? gameId, game?.requiredFields ?? []), [game?.id, game?.requiredFields, gameId]);
+  const lookupFields = useMemo(() => identityLookupFields(identityFields), [identityFields]);
   const gameImageOverride = (gameImages.data ?? []).find((item) => item.gameId === providerGameImageKey(game?.id ?? gameId, game?.name ?? ""));
   const gameArtwork = resolvedGameArtworkFor(game?.id ?? gameId, game?.name ?? "", gameImageOverride);
   const gameLogoUrl = gameImageOverride?.logoUrl ?? game?.logoUrl;
+  const identityReady = Boolean(game && lookupFields.filter((field) => field.required).every((field) => details[field.key]?.trim()));
   const fieldsReady = Boolean(game && identityFields.filter((field) => field.required).every((field) => details[field.key]?.trim()));
   const providerFields = useMemo(() => {
     if (!game || !fieldsReady) return null;
     return Object.fromEntries(identityFields.filter((field) => field.required || Boolean(details[field.key]?.trim())).map((field) => [field.key, details[field.key]!.trim()]));
   }, [details, fieldsReady, game, identityFields]);
+  const identityLookupPayload = useMemo(() => {
+    if (!game || !identityReady) return null;
+    return Object.fromEntries(lookupFields.filter((field) => field.required || Boolean(details[field.key]?.trim())).map((field) => [field.key, details[field.key]!.trim()]));
+  }, [details, game, identityReady, lookupFields]);
   const checkoutAccount = checkoutAccountFields(providerFields);
   const requiresVerifiedPlayerName = requiresVerifiedUsername(game?.id ?? gameId);
   const identityRequired = requiresPlayerIdentityCheck(identityFields);
-  const validationInput = useMemo(() => game && providerFields && identityRequired ? { gameId: game.id, fields: providerFields } : null, [game, identityRequired, providerFields]);
+  const validationInput = useMemo(() => game && identityLookupPayload && identityRequired ? { gameId: game.id, fields: identityLookupPayload } : null, [game, identityLookupPayload, identityRequired]);
   const adminPreviewActive = isOwnerAdmin && adminPreviewEnabled;
   const identity = validatePlayerId.data;
   const identityVerified = identity?.status === "verified";
-  const canBrowsePackages = canBrowseTopupPackages(fieldsReady, identity?.status, adminPreviewActive, identityRequired, idAccuracyConfirmed);
+  const canBrowsePackages = canBrowseTopupPackages(identityReady, identity?.status, adminPreviewActive, identityRequired, idAccuracyConfirmed);
   const canCreatePurchaseContext = canCreateTopupPurchaseContext(fieldsReady, identity?.status, adminPreviewActive, identityRequired, idAccuracyConfirmed, requiresVerifiedPlayerName, identity?.playerName, checkoutAccount.playerId);
   // Prices must follow an admin edit straight away. staleTime was 60s, so a new
   // price or margin could stay invisible to shoppers for a full minute. The
@@ -313,7 +319,7 @@ export function canBrowseVerifiedPackages(fieldsReady: boolean, status?: string)
 }
 
 export function requiresVerifiedUsername(gameId: string) {
-  return /^(?:mobile_legends|free_fire|pubg_mobile|blood_strike|honor_of_kings|magic_chess)(?:_|$)/i.test(gameId.trim());
+  return /^(?:mobile_legends|free_fire|pubg_mobile|blood_strike|honor_of_kings|magic_chess|roblox)(?:_|$)/i.test(gameId.trim());
 }
 
 export function identityFieldsForGame(gameId: string, fields: GameField[]) {
@@ -346,9 +352,12 @@ export function identityFieldsForGame(gameId: string, fields: GameField[]) {
   return fields;
 }
 
+export function identityLookupFields(fields: GameField[]) {
+  return fields.filter((field) => field.kind !== "password");
+}
+
 export function requiresPlayerIdentityCheck(fields: GameField[]) {
-  if (fields.some((field) => /password|passwd/i.test(`${field.key} ${field.label}`))) return false;
-  return fields.some((field) => /(?:player|user|account|game|zone|server|uid).*\bid\b|\bid\b.*(?:player|user|account|game|zone|server)|(?:^|[_\s-])(?:player|user|account|zone|server|uid)(?:[_\s-]|$)|user[\s_-]*name|telegram/i.test(`${field.key} ${field.label}`));
+  return identityLookupFields(fields).some((field) => /(?:player|user|account|game|zone|server|uid).*\bid\b|\bid\b.*(?:player|user|account|game|zone|server)|(?:^|[_\s-])(?:player|user|account|zone|server|uid)(?:[_\s-]|$)|user[\s_-]*name|telegram/i.test(`${field.key} ${field.label}`));
 }
 
 export function canBrowseTopupPackages(fieldsReady: boolean, status: string | undefined, adminPreviewActive: boolean, identityRequired = true, idAccuracyConfirmed = false) {

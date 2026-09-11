@@ -1412,8 +1412,46 @@ async function validateTelegramHandleIdentity(input: ProviderPackageRequest): Pr
   return { status: "verified", playerName: result.profile.displayName, playerId: `@${result.profile.handle}`, region: "Telegram", photoUrl: result.profile.photoUrl };
 }
 
+const robloxUsernameLookupSchema = z.object({
+  data: z.array(z.object({
+    requestedUsername: z.string().optional(),
+    id: z.number(),
+    name: z.string().min(1),
+    displayName: z.string().min(1).optional(),
+  })).optional(),
+});
+
+export function readRobloxUsername(fields: Record<string, string>) {
+  const raw = (fields.username ?? fields.user_name ?? fields.player_id ?? "").trim().replace(/^@+/, "");
+  return /^[A-Za-z0-9_]{3,20}$/.test(raw) ? raw : null;
+}
+
+async function validateRobloxUsernameIdentity(input: ProviderPackageRequest): Promise<ProviderPlayerIdentityResponse> {
+  const username = readRobloxUsername(input.fields);
+  if (!username) return emptyIdentity("invalid");
+  try {
+    const response = await fetch("https://users.roblox.com/v1/usernames/users", {
+      method: "POST",
+      headers: { Accept: "application/json", "Content-Type": "application/json", "User-Agent": "ZURS.me Check-ID" },
+      body: JSON.stringify({ usernames: [username], excludeBannedUsers: true }),
+      signal: AbortSignal.timeout(10_000),
+    });
+    const payload = await response.json().catch(() => null);
+    const parsed = robloxUsernameLookupSchema.safeParse(payload);
+    const hit = parsed.success
+      ? parsed.data.data?.find((row) => row.name.toLowerCase() === username.toLowerCase() || row.requestedUsername?.toLowerCase() === username.toLowerCase())
+      : undefined;
+    if (hit) return { status: "verified", playerName: hit.displayName || hit.name, playerId: hit.name, region: "Roblox" };
+    if (response.ok) return emptyIdentity("invalid");
+  } catch {
+    /* Public lookup is best-effort. */
+  }
+  return emptyIdentity("not_supported");
+}
+
 export async function validateProviderPlayerIdentity(input: ProviderPackageRequest): Promise<ProviderPlayerIdentityResponse> {
   if (isTelegramServiceGameId(input.gameId)) return await validateTelegramHandleIdentity(input);
+  if (/roblox|robux/i.test(input.gameId)) return await validateRobloxUsernameIdentity(input);
   const freeApiResult = await validateWithOwnerApprovedFreeApi(input);
   if (freeApiResult && freeApiResult.status !== "unavailable") return freeApiResult;
   if (isFreeFireGame(input.gameId)) {
