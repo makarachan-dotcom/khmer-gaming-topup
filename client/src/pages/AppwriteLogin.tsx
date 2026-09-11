@@ -62,6 +62,54 @@ function OtpDevice({ state }: { state: "idle" | "typing" | "verifying" | "succes
   );
 }
 
+/** Small hardware mark. Calm by default; only its badge changes with state. */
+function OtpDevice({ state }: { state: "idle" | "typing" | "verifying" | "success" | "error" | "locked" }) {
+  return (
+    <div className={`zl-device zl-device--${state}`} aria-hidden="true">
+      <div className="zl-device__screen">
+        <span className="zl-device__dot" />
+        <span className="zl-device__dot" />
+        <span className="zl-device__dot" />
+      </div>
+      <div className="zl-device__badge">
+        {state === "success" ? <Check className="h-4 w-4" strokeWidth={3} /> : state === "locked" ? <ShieldAlert className="h-4 w-4" strokeWidth={2.5} /> : <Lock className="h-4 w-4" strokeWidth={2.5} />}
+      </div>
+    </div>
+  );
+}
+
+/** Small hardware mark. Calm by default; only its badge changes with state. */
+function OtpDevice({ state }: { state: "idle" | "typing" | "verifying" | "success" | "error" | "locked" }) {
+  return (
+    <div className={`zl-device zl-device--${state}`} aria-hidden="true">
+      <div className="zl-device__screen">
+        <span className="zl-device__dot" />
+        <span className="zl-device__dot" />
+        <span className="zl-device__dot" />
+      </div>
+      <div className="zl-device__badge">
+        {state === "success" ? <Check className="h-4 w-4" strokeWidth={3} /> : state === "locked" ? <ShieldAlert className="h-4 w-4" strokeWidth={2.5} /> : <Lock className="h-4 w-4" strokeWidth={2.5} />}
+      </div>
+    </div>
+  );
+}
+
+/** Small hardware mark. Calm by default; only its badge changes with state. */
+function OtpDevice({ state }: { state: "idle" | "typing" | "verifying" | "success" | "error" | "locked" }) {
+  return (
+    <div className={`zl-device zl-device--${state}`} aria-hidden="true">
+      <div className="zl-device__screen">
+        <span className="zl-device__dot" />
+        <span className="zl-device__dot" />
+        <span className="zl-device__dot" />
+      </div>
+      <div className="zl-device__badge">
+        {state === "success" ? <Check className="h-4 w-4" strokeWidth={3} /> : state === "locked" ? <ShieldAlert className="h-4 w-4" strokeWidth={2.5} /> : <Lock className="h-4 w-4" strokeWidth={2.5} />}
+      </div>
+    </div>
+  );
+}
+
 export default function AppwriteLogin() {
   const { user, loading, refresh } = useAuth();
   const returnTo = useMemo(safeReturnPath, []);
@@ -356,9 +404,8 @@ export default function AppwriteLogin() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code]);
 
-  const deviceState =
-    phase === "blocked" ? "locked" : phase === "success" ? "success" : phase === "verifying" ? "verifying" : error ? "error" : code.length ? "typing" : "idle";
   const filledCount = digits.filter(Boolean).length;
+  const mascotFocus = Math.min(filledCount, OTP_LENGTH - 1);
   const lockProgress = lockTotal > 0 ? Math.min(100, Math.max(0, ((lockTotal - lockLeft) / lockTotal) * 100)) : 0;
 
   /*
@@ -421,7 +468,6 @@ export default function AppwriteLogin() {
 
         <div className="zl-hero">
           <ZursLoginMascot state={mascotState} focusIndex={mascotFocus} filled={filledCount} total={OTP_LENGTH} />
-          <OtpDevice state={deviceState} />
           {phase !== "blocked" ? (
             <div className="zl-steps" aria-hidden="true">
               {(["email", "otp", "name"] as const).map((item, index) => {
