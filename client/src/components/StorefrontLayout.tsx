@@ -320,7 +320,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
             return (
               <Link key={href} href={href} draggable={false} aria-current={active ? "page" : undefined} className={classes} onClick={onTabClick}>
                 <span className="zurs-tab-glyph" aria-hidden="true">
-                  {active && animation ? <AnimatedGlyph name={animation} size={18} color="#062033" /> : <PackEmoji name={pack} size={18} />}
+                  {active && animation ? <AnimatedGlyph name={animation} size={18} color="#062033" /> : <PackEmoji name={pack} size={20} />}
                 </span>
                 <span className={cn("zurs-mobile-tab-label truncate", active ? "max-w-[4rem] opacity-100" : "max-w-0 opacity-0")}>{label}</span>
               </Link>

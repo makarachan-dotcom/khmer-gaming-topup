@@ -100,6 +100,17 @@ describe("storefront media protection", () => {
     expect(componentSource).not.toContain('href: "/ai"');
   });
 
+  it("uses a shop bag for Store and a person mark for Account", () => {
+    const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
+    const packSource = readFileSync(join(process.cwd(), "client/src/components/PackEmoji.tsx"), "utf8");
+    expect(componentSource).toContain('pack: "shopping-bag"');
+    expect(componentSource).toContain('pack: "user-laptop"');
+    expect(packSource).toContain('"shopping-bag": { emoji: "🛍️"');
+    expect(packSource).toContain('"user-laptop": { emoji: "👤"');
+    expect(packSource).not.toContain('"shopping-bag": { emoji: "🛒"');
+    expect(packSource).not.toContain('"user-laptop": { emoji: "👋"');
+  });
+
   it("uses a compact two-item rounded mobile tab bar and no public AI entry", () => {
     const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
     const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
