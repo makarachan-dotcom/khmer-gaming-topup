@@ -12,7 +12,7 @@ describe("storefront image loading performance", () => {
 
   it("uses explicit aspect frames, async decode, and native lazy loading for noncritical media", () => {
     const homeSource = readFileSync(resolve(process.cwd(), "client/src/pages/Home.tsx"), "utf8");
-    expect(homeSource).toContain("aspect-[16/7]");
+    expect(homeSource).toContain("aspect-[16/5.5]");
     expect(homeSource).toContain('fetchPriority={index === 0 ? "high" : "auto"}');
     expect(homeSource).toContain('loading="lazy"');
     expect(homeSource).toContain('decoding="async"');
