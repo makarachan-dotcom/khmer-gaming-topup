@@ -621,6 +621,16 @@
 }
 
 .zs-msg__text { margin: 0; font-size: 0.84rem; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
+.zs-msg__text .zs-msg__inlineEmoji,
+.zs-msg__text .zcp-emoji-host,
+.zs-msg__text .zcp-emoji-lottie,
+.zs-msg__text .zcp-emoji-static {
+  display: inline-grid;
+  vertical-align: -0.35em;
+  margin: 0 0.04em;
+  animation: none;
+  filter: drop-shadow(0 4px 8px rgba(2, 6, 23, 0.25));
+}
 .zs-msg__time { margin-top: 3px; font-size: 0.64rem; color: var(--zs-muted); }
 .zs-msg__audio { width: 208px; height: 34px; }
 
@@ -688,6 +698,7 @@
 /* ------------------------------- composer ------------------------------- */
 
 .zs-chat__composer {
+  position: relative;
   display: flex;
   align-items: flex-end;
   gap: 8px;
@@ -772,19 +783,20 @@
 }
 .zs-chat__emojiTray {
   position: absolute;
-  bottom: 48px;
-  left: -8px;
+  left: 10px;
+  right: 10px;
+  bottom: calc(100% + 8px);
   z-index: 30;
-  width: 276px;
-  padding: 10px 8px 8px;
+  width: auto;
+  padding: 10px;
   border-radius: 20px;
   border: 1px solid rgba(201, 151, 18, 0.32);
   background: rgba(10, 16, 32, 0.97);
   box-shadow: 0 22px 54px rgba(2, 6, 23, 0.66);
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 4px;
-  transform-origin: bottom left;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  transform-origin: bottom center;
   animation: zs-emoji-tray-in 260ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 @keyframes zs-emoji-tray-in {
@@ -793,7 +805,8 @@
 .zs-chat__emojiChoice {
   display: grid;
   place-items: center;
-  height: 42px;
+  height: 46px;
+  min-width: 0;
   border-radius: 12px;
   padding: 0;
   background: transparent;
@@ -852,11 +865,6 @@
 @media (max-width: 640px) {
   .zs-chat { padding: 0; align-items: stretch; justify-content: stretch; }
   .zs-chat__panel { width: 100%; height: 100%; border: none; border-radius: 0; }
-  .zs-chat__emojiTray {
-    left: 0;
-    right: auto;
-    width: min(300px, calc(100vw - 24px));
-  }
 }
 
 /* ---------------------------- reduced motion ---------------------------- */

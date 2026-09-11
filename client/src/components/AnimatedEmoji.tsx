@@ -76,9 +76,14 @@ export const AnimatedEmoji = memo(function AnimatedEmoji({
     // import - out of the module graph until an animated emoji is rendered.
     if (typeof navigator !== "undefined" && navigator.userAgent.toLowerCase().includes("jsdom")) return;
     void Promise.all([loadEmojiAnimation(emoji), import("lottie-web")])
-      .then(([data, module]) => {
+      .then(async ([data, module]) => {
         if (cancelled) return;
-        if (!data || !hostRef.current) {
+        if (!data) {
+          setStaticOnly(true);
+          return;
+        }
+        if (!hostRef.current) await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        if (cancelled || !hostRef.current) {
           setStaticOnly(true);
           return;
         }
@@ -90,6 +95,7 @@ export const AnimatedEmoji = memo(function AnimatedEmoji({
             loop: true,
             autoplay: true,
             animationData: data,
+            rendererSettings: { progressiveLoad: false, preserveAspectRatio: "xMidYMid meet" },
           });
           setReady(true);
         } catch {
@@ -123,7 +129,7 @@ export const AnimatedEmoji = memo(function AnimatedEmoji({
           {emoji}
         </span>
       ) : null}
-      <div ref={hostRef} className="zcp-emoji-lottie" style={{ width: size, height: size, position: ready ? "relative" : "absolute", inset: 0 }} />
+      <div ref={hostRef} className="zcp-emoji-lottie" style={{ width: size, height: size, position: "absolute", inset: 0, opacity: ready ? 1 : 0 }} />
     </span>
   );
 });
@@ -153,11 +159,25 @@ export function splitEmojiOnly(text: string): string[] | null {
   return clusters;
 }
 
-/** The composer's quick-emoji tray. 6×4 so the popover is a clean grid of
- *  the same Lottie pack the rest of ZURS already uses. */
+/** Split mixed chat text so inline emoji can play as Lottie next to letters. */
+export function splitMessageParts(text: string): Array<{ type: "text" | "emoji"; value: string }> {
+  const parts: Array<{ type: "text" | "emoji"; value: string }> = [];
+  const re = new RegExp(EMOJI_CLUSTER.source, "gu");
+  let last = 0;
+  for (const match of text.matchAll(re)) {
+    const at = match.index ?? 0;
+    if (at > last) parts.push({ type: "text", value: text.slice(last, at) });
+    parts.push({ type: "emoji", value: match[0] });
+    last = at + match[0].length;
+  }
+  if (last < text.length) parts.push({ type: "text", value: text.slice(last) });
+  return parts;
+}
+
+/** The composer's quick-emoji tray. 5×4 so every cell fits inside the panel. */
 export const QUICK_EMOJIS = [
-  "🙏", "😀", "😂", "🥰", "😍", "👍",
-  "🔥", "🎉", "👏", "💯", "✨", "🎮",
-  "😢", "🤗", "🥳", "🤝", "🚀", "👋",
-  "🙌", "🎁", "⭐", "📦", "❤️", "💬",
+  "🙏", "😀", "😂", "🥰", "😍",
+  "👍", "🔥", "🎉", "👏", "💯",
+  "✨", "🎮", "😢", "🤗", "🥳",
+  "🤝", "🚀", "👋", "🎁", "❤️",
 ];

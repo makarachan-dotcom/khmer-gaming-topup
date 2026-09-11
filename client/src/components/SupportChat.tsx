@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Camera, ImageIcon, Mic, Send, Smile, Square, X } from "lucide-react";
 import { formatCountdownKh } from "@/lib/loginGuard";
 import SupportOrb, { type SupportOrbMood } from "@/components/SupportOrb";
-import { AnimatedEmoji, QUICK_EMOJIS, splitEmojiOnly } from "@/components/AnimatedEmoji";
+import { AnimatedEmoji, QUICK_EMOJIS, splitEmojiOnly, splitMessageParts } from "@/components/AnimatedEmoji";
 import { ChatWarmth } from "@/components/ChatWarmth";
 import { VerifiedName } from "@/components/VerifiedName";
 import {
@@ -68,6 +68,21 @@ function timeOf(value: string) {
   const parsed = Date.parse(value);
   if (!Number.isFinite(parsed)) return "";
   return new Date(parsed).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+}
+
+function MessageCopy({ text }: { text: string }) {
+  const parts = splitMessageParts(text);
+  return (
+    <p className="zs-msg__text">
+      {parts.map((part, index) =>
+        part.type === "emoji" ? (
+          <AnimatedEmoji key={`e-${index}-${part.value}`} emoji={part.value} size={22} className="zs-msg__inlineEmoji" />
+        ) : (
+          <span key={`t-${index}`}>{part.value}</span>
+        ),
+      )}
+    </p>
+  );
 }
 
 export default function SupportChat({ open, onClose, seedTopic, seedOrderRef }: SupportChatProps) {
@@ -408,7 +423,7 @@ export default function SupportChat({ open, onClose, seedTopic, seedOrderRef }: 
                     {message.kind === "voice" && message.mediaUrl ? (
                       <audio className="zs-msg__audio" controls preload="metadata" src={message.mediaUrl} />
                     ) : null}
-                    {message.text ? <p className="zs-msg__text">{message.text}</p> : null}
+                    {message.text ? <MessageCopy text={message.text} /> : null}
                   </div>
                   <time className="zs-msg__time" dateTime={message.at}>
                     {timeOf(message.at)}
@@ -444,6 +459,22 @@ export default function SupportChat({ open, onClose, seedTopic, seedOrderRef }: 
 
         {session && session.status !== "closed" ? (
           <footer className="zs-chat__composer">
+            {emojiOpen ? (
+              <div className="zs-chat__emojiTray" role="listbox" aria-label="Emoji">
+                {QUICK_EMOJIS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    className="zs-chat__emojiChoice"
+                    onClick={() => insertEmoji(emoji)}
+                    role="option"
+                    title={emoji}
+                  >
+                    <AnimatedEmoji emoji={emoji} size={30} />
+                  </button>
+                ))}
+              </div>
+            ) : null}
             {/* Image, camera and voice are parked until the media pipeline is
               * re-enabled. They stay visible but greyed and genuinely inert, so
               * text is the only thing that can leave this composer. */}
@@ -484,22 +515,6 @@ export default function SupportChat({ open, onClose, seedTopic, seedOrderRef }: 
               >
                 <Smile size={16} aria-hidden="true" />
               </button>
-              {emojiOpen ? (
-                <div className="zs-chat__emojiTray" role="listbox" aria-label="Emoji">
-                  {QUICK_EMOJIS.map((emoji) => (
-                    <button
-                      key={emoji}
-                      type="button"
-                      className="zs-chat__emojiChoice"
-                      onClick={() => insertEmoji(emoji)}
-                      role="option"
-                      title={emoji}
-                    >
-                      <AnimatedEmoji emoji={emoji} size={28} />
-                    </button>
-                  ))}
-                </div>
-              ) : null}
             </div>
             <textarea
               className="zs-chat__input"
