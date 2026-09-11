@@ -16,6 +16,7 @@ type ArtworkProps = {
 
 const managedProviderArtwork: Array<{ matches: RegExp; url: string }> = [
   { matches: /^mobile legends/i, url: "/api/provider-artwork/mobile-legends" },
+  { matches: /^roblox/i, url: "/package-art/roblox-logo.png" },
 ];
 
 export function hasProviderApprovedGameLogo(logoUrl?: string) {
@@ -31,7 +32,7 @@ export function resolveProviderGameLogo(name: string, logoUrl?: string) {
 }
 
 export function canRenderProviderArtwork(url?: string) {
-  return hasProviderApprovedGameLogo(url) || isWebsiteManagedMediaUrl(url) || url?.startsWith("/api/provider-artwork/");
+  return hasProviderApprovedGameLogo(url) || isWebsiteManagedMediaUrl(url) || Boolean(url?.startsWith("/api/provider-artwork/") || url?.startsWith("/package-art/"));
 }
 
 export function ProviderGameArtwork({ name, logoUrl, className, iconClassName, priority = false, region, showCountryFlag = true }: ArtworkProps) {
