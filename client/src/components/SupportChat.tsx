@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Camera, ImageIcon, Mic, Send, Square, X } from "lucide-react";
+import { Camera, ImageIcon, Mic, Send, Smile, Square, X } from "lucide-react";
 import { formatCountdownKh } from "@/lib/loginGuard";
 import SupportOrb, { type SupportOrbMood } from "@/components/SupportOrb";
+import { AnimatedEmoji, QUICK_EMOJIS, splitEmojiOnly } from "@/components/AnimatedEmoji";
+import { ChatWarmth } from "@/components/ChatWarmth";
 import {
   SupportChatError,
   baseMimeType,
@@ -78,6 +80,7 @@ export default function SupportChat({ open, onClose, seedTopic, seedOrderRef }: 
   const [error, setError] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
   const [loadedMedia, setLoadedMedia] = useState<Record<string, boolean>>({});
+  const [emojiOpen, setEmojiOpen] = useState(false);
 
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -153,6 +156,7 @@ export default function SupportChat({ open, onClose, seedTopic, seedOrderRef }: 
     const recorder = recorderRef.current;
     if (recorder && recorder.state !== "inactive") recorder.stop();
     setRecording(false);
+    setEmojiOpen(false);
   }, [open]);
 
   const startChat = useCallback(async () => {
@@ -180,12 +184,17 @@ export default function SupportChat({ open, onClose, seedTopic, seedOrderRef }: 
       const result = await sendSupportText(session.id, text.slice(0, supportTextMaxLength));
       setSession(result.session);
       setDraft("");
+      setEmojiOpen(false);
     } catch (cause) {
       fail(cause);
     } finally {
       setBusy(false);
     }
   }, [draft, session, busy, fail]);
+
+  const insertEmoji = useCallback((emoji: string) => {
+    setDraft((current) => `${current}${emoji}`.slice(0, supportTextMaxLength));
+  }, []);
 
   const sendBlob = useCallback(
     async (blob: Blob, kind: "image" | "voice") => {
@@ -309,21 +318,23 @@ export default function SupportChat({ open, onClose, seedTopic, seedOrderRef }: 
             </div>
           ) : !authenticated ? (
             <div className="zs-chat__center zs-chat__notice">
+              <ChatWarmth mood="signin" />
               <p className="zs-chat__introTitle">សូមចូលគណនីជាមុនសិន</p>
               <p>ការឆាតជាមួយក្រុមជំនួយត្រូវការគណនី ដើម្បីយើងដឹងថាជាអ្នកណា។</p>
-              <a className="zs-chat__cta" href="/api/auth/google">
+              <a className="zs-chat__cta" href="/api/auth/google?returnTo=%2Fchat">
                 ចូលគណនី
               </a>
             </div>
           ) : !session ? (
             quota && quota.blocked ? (
               <div className="zs-chat__center zs-chat__notice">
+                <ChatWarmth mood="quota" />
                 <p className="zs-chat__introTitle">អ្នកបានប្រើសិទ្ធិឆាតសម្រាប់ថ្ងៃនេះរួចហើយ</p>
                 <TelegramFallback resetsInSeconds={quota.resetsInSeconds} />
               </div>
             ) : (
               <div className="zs-chat__intro">
-                <SupportOrb mood="waiting" caption={false} />
+                <ChatWarmth mood="welcome" />
                 <p className="zs-chat__introTitle">ត្រូវការជំនួយអ្វី?</p>
                 <p className="zs-chat__introNote">អ្នកអាចឆាតជាមួយក្រុមជំនួយ ១ ដងក្នុងមួយថ្ងៃ។</p>
                 {seedOrderRef ? (
@@ -349,7 +360,23 @@ export default function SupportChat({ open, onClose, seedTopic, seedOrderRef }: 
             )
           ) : (
             <ul className="zs-chat__list">
-              {messages.map((message) => (
+              {messages.map((message) => {
+                const clusters = message.kind === "text" && message.text ? splitEmojiOnly(message.text) : null;
+                if (clusters) {
+                  return (
+                    <li key={message.id} className={`zs-msg zs-msg--${message.role} zs-msg--emoji`}>
+                      <div className="zs-msg__emojiRow">
+                        {clusters.map((emoji, index) => (
+                          <AnimatedEmoji key={`${message.id}-${index}`} emoji={emoji} size={clusters.length === 1 ? 80 : 56} />
+                        ))}
+                      </div>
+                      <time className="zs-msg__time" dateTime={message.at}>
+                        {timeOf(message.at)}
+                      </time>
+                    </li>
+                  );
+                }
+                return (
                 <li key={message.id} className={`zs-msg zs-msg--${message.role} zs-msg--${message.kind}`}>
                   <div className="zs-msg__bubble">
                     {message.kind === "image" && message.mediaUrl ? (
@@ -370,7 +397,8 @@ export default function SupportChat({ open, onClose, seedTopic, seedOrderRef }: 
                     {timeOf(message.at)}
                   </time>
                 </li>
-              ))}
+                );
+              })}
 
               {mood ? (
                 <li className="zs-msg zs-msg--orb">
@@ -380,6 +408,7 @@ export default function SupportChat({ open, onClose, seedTopic, seedOrderRef }: 
 
               {session.status === "closed" ? (
                 <li className="zs-chat__closed">
+                  <ChatWarmth mood="closed" />
                   <p>ការឆាតនេះត្រូវបានបិទ។ ការរាយការណ៍លើកក្រោយត្រូវបើកការឆាតថ្មី។</p>
                   <TelegramFallback
                     resetsInSeconds={quota && quota.blocked ? quota.resetsInSeconds : null}
@@ -428,6 +457,31 @@ export default function SupportChat({ open, onClose, seedTopic, seedOrderRef }: 
                 }}
               />
             </label>
+            <div className="zs-chat__emojipick">
+              <button
+                type="button"
+                className={`zs-chat__emojiBtn${emojiOpen ? " is-open" : ""}`}
+                onClick={() => setEmojiOpen((open) => !open)}
+                aria-label="Emoji"
+                aria-expanded={emojiOpen}
+              >
+                <Smile size={16} aria-hidden="true" />
+              </button>
+              {emojiOpen ? (
+                <div className="zs-chat__emojiTray" role="listbox" aria-label="Emoji">
+                  {QUICK_EMOJIS.map((emoji) => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      className="zs-chat__emojiChoice"
+                      onClick={() => insertEmoji(emoji)}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
             <textarea
               className="zs-chat__input"
               rows={1}
