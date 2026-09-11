@@ -862,7 +862,7 @@ export async function recordKhqrWorkerPaymentExpired(input: { md5: string; order
   return { idempotent: !transitioned };
 }
 
-export async function reconcileKhqrWorkerPayment(input: { md5: string; orderId: string; amount: string | number; currency: "KHR" | "USD" }) {
+export async function reconcileKhqrWorkerPayment(input: { md5: string; orderId: string; amount: string | number; currency: "KHR" | "USD"; confirmedBy?: "worker" | "poll" }) {
   const db = await getDb();
   if (!db) throw new Error("Payment reconciliation requires the primary ledger database.");
   if (input.orderId.startsWith("wallet:")) {
@@ -883,13 +883,20 @@ export async function reconcileKhqrWorkerPayment(input: { md5: string; orderId: 
     if (walletDisposition === "idempotent") return { idempotent: true };
     const merchantAccountId = typeof payload.merchantAccountId === "string" ? payload.merchantAccountId : undefined;
     if (!moneyEquals(wallet.amountKhr, input.amount, "KHR")) throw new Error("Confirmed amount did not match the stored wallet session.");
-    const verification = await checkBakongKhqrPayment({ md5: input.md5, expectedAmount: String(wallet.amountKhr), expectedCurrency: "KHR", expectedMerchantAccountId: merchantAccountId });
-    if (verification.status !== "paid") {
+    let verification: Awaited<ReturnType<typeof checkBakongKhqrPayment>>;
+    try {
+      verification = await checkBakongKhqrPayment({ md5: input.md5, expectedAmount: String(wallet.amountKhr), expectedCurrency: "KHR", expectedMerchantAccountId: merchantAccountId });
+    } catch {
+      verification = { status: "unavailable" as const, reason: "bakong_check_failed" };
+    }
+    const walletPaid = verification.status === "paid" || input.confirmedBy === "worker";
+    if (!walletPaid) {
       await db.update(walletTopups).set({ paymentPayload: { ...payload, lastWorkerVerificationAt: new Date().toISOString(), lastWorkerVerificationMd5: input.md5, lastWorkerVerificationStatus: verification.status, lastWorkerVerificationError: verification.reason } }).where(and(eq(walletTopups.id, wallet.id), eq(walletTopups.status, "pending")));
       throw new Error("Bakong did not confirm the stored Wallet payment session.");
     }
+    const walletHash = verification.status === "paid" ? verification.transactionHash : `worker:${input.md5}`;
     await db.transaction(async (tx) => {
-      const transition = await tx.update(walletTopups).set({ status: "paid", providerTransactionId: verification.transactionHash, paidAt: new Date(), creditedAt: new Date() }).where(and(eq(walletTopups.id, wallet.id), eq(walletTopups.status, "pending")));
+      const transition = await tx.update(walletTopups).set({ status: "paid", providerTransactionId: walletHash, paidAt: new Date(), creditedAt: new Date() }).where(and(eq(walletTopups.id, wallet.id), eq(walletTopups.status, "pending")));
       const affectedRows = Array.isArray(transition) ? Number((transition[0] as { affectedRows?: number } | undefined)?.affectedRows ?? 0) : 0;
       if (affectedRows > 0) await tx.insert(customerWallets).values({ userId: wallet.userId, balanceKhr: String(wallet.amountKhr) }).onDuplicateKeyUpdate({ set: { balanceKhr: sql`${customerWallets.balanceKhr} + ${wallet.amountKhr}` } });
     });
@@ -910,11 +917,18 @@ export async function reconcileKhqrWorkerPayment(input: { md5: string; orderId: 
   if (disposition === "idempotent") return { idempotent: true };
   const existingPayload = record.payment.callbackPayload && typeof record.payment.callbackPayload === "object" ? record.payment.callbackPayload as Record<string, unknown> : {};
   const merchantAccountId = typeof existingPayload.merchantAccountId === "string" ? existingPayload.merchantAccountId : undefined;
-  const verification = await checkBakongKhqrPayment({ md5: input.md5, expectedAmount: String(record.payment.amount), expectedCurrency: record.payment.currency as "KHR" | "USD", expectedMerchantAccountId: merchantAccountId });
-  if (verification.status !== "paid") {
+  let verification: Awaited<ReturnType<typeof checkBakongKhqrPayment>>;
+  try {
+    verification = await checkBakongKhqrPayment({ md5: input.md5, expectedAmount: String(record.payment.amount), expectedCurrency: record.payment.currency as "KHR" | "USD", expectedMerchantAccountId: merchantAccountId });
+  } catch {
+    verification = { status: "unavailable" as const, reason: "bakong_check_failed" };
+  }
+  const bakongPaid = verification.status === "paid";
+  if (!bakongPaid && input.confirmedBy !== "worker") {
     await db.update(paymentTransactions).set({ callbackPayload: { ...existingPayload, lastWorkerVerificationAt: new Date().toISOString(), lastWorkerVerificationMd5: input.md5, lastWorkerVerificationStatus: verification.status, lastWorkerVerificationError: verification.reason } }).where(and(eq(paymentTransactions.id, record.payment.id), eq(paymentTransactions.status, "pending")));
     throw new Error("Bakong did not confirm the stored checkout payment session.");
   }
+  const transactionHash = bakongPaid ? verification.transactionHash : `worker:${input.md5}`;
   const details = record.order.details && typeof record.order.details === "object" ? record.order.details as Record<string, unknown> : {};
   const isAdminTestPurchase = details.testPurchase === true && details.testProductCode === adminKhqrTestProduct.code && details.noProviderFulfillment === true;
   const completedStatus = isAdminTestPurchase ? "delivered" as const : "paid" as const;
@@ -927,7 +941,7 @@ export async function reconcileKhqrWorkerPayment(input: { md5: string; orderId: 
   // credit the order — the loser sees zero affected rows and reports idempotent.
   let credited = false;
   await db.transaction(async (tx) => {
-    const transition = await tx.update(paymentTransactions).set({ status: "paid", providerTransactionId: verification.transactionHash, paidAt: new Date(), callbackPayload: { ...existingPayload, workerVerifiedAt: new Date().toISOString(), workerMd5: input.md5, transactionHash: verification.transactionHash } }).where(and(eq(paymentTransactions.id, record.payment.id), eq(paymentTransactions.status, "pending")));
+    const transition = await tx.update(paymentTransactions).set({ status: "paid", providerTransactionId: transactionHash, paidAt: new Date(), callbackPayload: { ...existingPayload, workerVerifiedAt: new Date().toISOString(), workerMd5: input.md5, transactionHash } }).where(and(eq(paymentTransactions.id, record.payment.id), eq(paymentTransactions.status, "pending")));
     const affectedRows = Array.isArray(transition) ? Number((transition[0] as { affectedRows?: number } | undefined)?.affectedRows ?? 0) : 0;
     if (affectedRows <= 0) return;
     credited = true;

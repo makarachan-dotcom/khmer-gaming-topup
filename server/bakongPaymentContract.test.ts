@@ -19,6 +19,8 @@ describe("Bakong KHQR payment contract", () => {
     expect(db).toContain('createBakongKhqrPayment');
     expect(db).toContain('checkBakongKhqrPayment');
     expect(db).toContain('reconcileKhqrWorkerPayment');
+    expect(db).toContain('confirmedBy !== "worker"');
+    expect(readFileSync(resolve(process.cwd(), "server/app.ts"), "utf8")).toContain('confirmedBy: "worker"');
     const refresh = db.slice(db.indexOf("export async function refreshBakongPayment"), db.indexOf("export async function recordKhqrWorkerVerificationDeferred"));
     expect(refresh.indexOf("reconcileKhqrWorkerPayment")).toBeLessThan(refresh.indexOf("status: \"expired\""));
   });

@@ -29,6 +29,7 @@ describe("KHQR worker webhook", () => {
     expect(appSource).toContain('app.post("/api/webhooks/khqr-worker", khqrWorkerWebhookBody, khqrWorkerWebhookHandler)');
     expect(appSource).toContain('app.post("/api/webhooks/bakong", khqrWorkerWebhookBody, khqrWorkerWebhookHandler)');
     expect(appSource).toContain("recordKhqrWorkerPaymentExpired");
+    expect(appSource).toContain('confirmedBy: "worker"');
     const signatureIndex = appSource.indexOf("verifyKhqrWorkerSignature");
     const volumeIndex = appSource.indexOf("rateLimitBuckets.khqrWebhook,");
     expect(signatureIndex).toBeGreaterThan(-1);

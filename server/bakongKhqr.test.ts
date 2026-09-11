@@ -25,14 +25,21 @@ describe("Bakong KHQR response handling", () => {
     await expect(checkBakongKhqrPayment(paymentInput)).resolves.toMatchObject({ status: "unavailable", reason: "empty_or_malformed_bakong_response" });
   });
 
-  it("accepts a USD QR that Bakong reports as the bank's riel settlement", async () => {
+  it("renews the Bakong token after 401 and then accepts the paid MD5", async () => {
     Object.assign(process.env, bakongEnv);
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
-      responseCode: 0,
-      data: { hash: "fc98028c", amount: 81, currency: "KHR" },
-    }), { status: 200, headers: { "Content-Type": "application/json" } })));
+    process.env.BAKONG_REGISTERED_EMAIL = "merchant@example.com";
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ responseCode: 1, errorCode: 6 }), { status: 401 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ responseCode: 0, data: { token: "fresh-token" } }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        responseCode: 0,
+        data: { hash: "0000e77d", amount: 0.02, currency: "USD", toAccountId: "mekara_chan@bkrt" },
+      }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
 
-    await expect(checkBakongKhqrPayment({ md5: "safe-md5", expectedAmount: "0.02", expectedCurrency: "USD" })).resolves.toMatchObject({ status: "paid", transactionHash: "fc98028c" });
+    await expect(checkBakongKhqrPayment({ md5: "safe-md5", expectedAmount: "0.02", expectedCurrency: "USD" })).resolves.toMatchObject({ status: "paid", transactionHash: "0000e77d" });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    delete process.env.BAKONG_REGISTERED_EMAIL;
   });
 
   it("accepts ISO numeric currency codes and an alternate hash field", async () => {
@@ -45,14 +52,14 @@ describe("Bakong KHQR response handling", () => {
     await expect(checkBakongKhqrPayment({ md5: "safe-md5", expectedAmount: "0.02", expectedCurrency: "USD" })).resolves.toMatchObject({ status: "paid" });
   });
 
-  it("rejects a successful response whose supplied recipient does not match the stored merchant account", async () => {
+  it("still accepts a paid MD5 when Bakong aliases the merchant account id", async () => {
     Object.assign(process.env, bakongEnv);
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
       responseCode: 0,
       data: { hash: "h".repeat(64), amount: 500, currency: "KHR", toAccountId: "other@bank" },
     }), { status: 200, headers: { "Content-Type": "application/json" } })));
 
-    await expect(checkBakongKhqrPayment(paymentInput)).resolves.toMatchObject({ status: "unavailable", reason: "bakong_transaction_did_not_match_stored_session" });
+    await expect(checkBakongKhqrPayment(paymentInput)).resolves.toMatchObject({ status: "paid" });
   });
 
   it("distinguishes documented missing-account from undocumented rejected preflight", async () => {

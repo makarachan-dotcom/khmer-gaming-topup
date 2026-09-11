@@ -79,7 +79,7 @@ export function createApp() {
       if (!(await consumeWebhookNonce(nonce))) { await penalise(); return res.status(409).json({ success: false, error: "callback already processed" }); }
       claimedNonce = nonce;
       if (callback.event === "payment.paid") {
-        const result = await import("./db").then(async ({ reconcileKhqrWorkerPayment, settleSecurePaymentLinks }) => { const reconciliation = await reconcileKhqrWorkerPayment(callback); await settleSecurePaymentLinks(callback.orderId, "paid"); return reconciliation; });
+        const result = await import("./db").then(async ({ reconcileKhqrWorkerPayment, settleSecurePaymentLinks }) => { const reconciliation = await reconcileKhqrWorkerPayment({ ...callback, confirmedBy: "worker" }); await settleSecurePaymentLinks(callback.orderId, "paid"); return reconciliation; });
         return res.json({ success: true, idempotent: result.idempotent });
       }
       if (callback.event === "payment.expired") {
