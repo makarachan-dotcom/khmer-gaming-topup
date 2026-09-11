@@ -36,6 +36,10 @@ describe("support chat emoji warmth", () => {
     expect(css).toContain(".wave-person__sparkle");
     expect(css).toContain(".zs-chat__point");
     expect(css).toContain(".zurs-verified-name");
+    expect(css).toContain(".zurs-verified-seal");
+    const verified = readFileSync(join(process.cwd(), "client/src/components/VerifiedName.tsx"), "utf8");
+    expect(verified).toContain("zurs-verified-seal");
+    expect(verified).not.toContain('name="verified"');
     const account = readFileSync(join(process.cwd(), "client/src/pages/Account.tsx"), "utf8");
     expect(account).toContain('emoji="👉"');
     expect(account).toContain("<VerifiedName name={name}");
