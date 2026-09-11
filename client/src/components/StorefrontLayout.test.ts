@@ -84,13 +84,15 @@ describe("storefront media protection", () => {
     expect(mobileTabHrefForPath("/wallet")).toBe("/account");
   });
 
-  it("lets a long-press drag reorder mobile tabs without adding public AI or Live Spin destinations", () => {
+  it("lets a long-press on the tab bar scrub left and right to another page", () => {
     const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
-    expect(componentSource).toContain("TAB_ORDER_STORAGE_KEY");
     expect(componentSource).toContain("TAB_LONG_PRESS_MS");
-    expect(componentSource).toContain("onTabPointerDown");
-    expect(componentSource).toContain("is-editing");
-    expect(componentSource).toContain("is-dragging");
+    expect(componentSource).toContain("onBarPointerDown");
+    expect(componentSource).toContain("is-scrubbing");
+    expect(componentSource).toContain("goToTabAtX");
+    expect(componentSource).toContain("tabProgressFromClientX");
+    expect(componentSource).not.toContain("TAB_ORDER_STORAGE_KEY");
+    expect(componentSource).not.toContain("is-editing");
     expect(componentSource).not.toContain('href: "/live-spin"');
     expect(componentSource).not.toContain('href: "/ai"');
   });

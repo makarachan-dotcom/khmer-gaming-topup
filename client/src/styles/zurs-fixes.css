@@ -221,6 +221,12 @@
     transform: translateX(calc(var(--liquid-tab-x, 0) * (100% + 0.125rem)));
     transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
   }
+  .zurs-mobile-tabbar.is-scrubbing {
+    touch-action: none;
+  }
+  .zurs-mobile-tabbar.is-scrubbing .liquid-tab-thumb {
+    transition: none !important;
+  }
   .zurs-mobile-tab-label {
     transition: max-width 420ms cubic-bezier(0.22, 1, 0.36, 1), opacity 280ms ease;
   }

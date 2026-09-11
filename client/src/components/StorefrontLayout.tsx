@@ -14,15 +14,7 @@ import { FontEmojiBrand } from "@/components/FontEmojiBrand";
 import { PackEmoji } from "@/components/PackEmoji";
 import { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
-import {
-  TAB_LONG_PRESS_MS,
-  TAB_ORDER_STORAGE_KEY,
-  moveTab,
-  parseMobileTabOrder,
-  tabIndexFromClientX,
-  tabShiftX,
-  type MobileTabHref,
-} from "@/lib/mobileTabOrder";
+import { TAB_LONG_PRESS_MS, tabIndexFromClientX, tabProgressFromClientX } from "@/lib/mobileTabOrder";
 const logoUrl = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/kBXeVXEnNVEuNZKS.jpg";
 export function isProtectedMediaTarget(target: EventTarget | null) {
   return typeof Element !== "undefined" && target instanceof Element && Boolean(target.closest("img, video"));
@@ -78,23 +70,16 @@ function StorefrontShell({ children }: { children: ReactNode }) {
   const paymentMethods = trpc.payments.methods.useQuery(undefined, { staleTime: 30_000, refetchInterval: 15_000 });
   const selectedPaymentMethod = (paymentMethods.data ?? []).find((method) => method.id === selectedPaymentMethodId) ?? null;
   const activeMobileTabHref = mobileTabHrefForPath(location);
-  const [tabOrder, setTabOrder] = useState<MobileTabHref[]>(() => parseMobileTabOrder(null));
-  const tabOrderRef = useRef(tabOrder);
-  tabOrderRef.current = tabOrder;
+  const activeLiquidTab = Math.max(0, mobileNavigation.findIndex((item) => item.href === activeMobileTabHref));
   const tabBarRef = useRef<HTMLElement | null>(null);
   const pressTimerRef = useRef<number | null>(null);
-  const pendingPressRef = useRef<{ href: MobileTabHref; startX: number; startY: number; pointerId: number; target: HTMLElement } | null>(null);
-  const dragRef = useRef<{ href: MobileTabHref; startX: number; origin: number; pointerId: number } | null>(null);
+  const pendingPressRef = useRef<{ startX: number; startY: number; pointerId: number } | null>(null);
+  const scrubRef = useRef<{ pointerId: number } | null>(null);
+  const lastHrefRef = useRef(activeMobileTabHref);
+  const slideDirRef = useRef(0);
   const suppressClickRef = useRef(false);
-  const [draggingHref, setDraggingHref] = useState<MobileTabHref | null>(null);
-  const [dragOffset, setDragOffset] = useState(0);
-  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
-  const [slotWidth, setSlotWidth] = useState(0);
-  const orderedTabs = tabOrder
-    .map((href) => mobileNavigation.find((item) => item.href === href))
-    .filter((item): item is (typeof mobileNavigation)[number] => Boolean(item));
-  const activeLiquidTab = Math.max(0, tabOrder.findIndex((href) => href === activeMobileTabHref));
-  const editing = draggingHref !== null;
+  const [scrubbing, setScrubbing] = useState(false);
+  const [scrubTab, setScrubTab] = useState<number | null>(null);
   const isTopupRoute = location.startsWith("/topup/");
   // Round 9: the no-refund policy must be acknowledged before the checkout screen
   // opens, and the dialog itself offers a direct route into live support.
@@ -102,7 +87,9 @@ function StorefrontShell({ children }: { children: ReactNode }) {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const target = shellRef.current?.querySelector("main");
     if (!target) return;
-    animate(target, { opacity: [0.82, 1], translateY: [7, 0], duration: 360, ease: "outExpo" });
+    const dir = slideDirRef.current;
+    slideDirRef.current = 0;
+    animate(target, { opacity: [0.72, 1], translateX: [dir * 56, 0], duration: 380, ease: "outExpo" });
   }, [location]);
   useEffect(() => {
     const update = () => setShowScrollTop(window.scrollY > 360);
@@ -125,12 +112,31 @@ function StorefrontShell({ children }: { children: ReactNode }) {
     };
   }, []);
   useEffect(() => {
-    try {
-      setTabOrder(parseMobileTabOrder(window.localStorage.getItem(TAB_ORDER_STORAGE_KEY)));
-    } catch {
-      /* private mode */
-    }
-  }, []);
+    lastHrefRef.current = activeMobileTabHref;
+  }, [activeMobileTabHref]);
+  useEffect(() => {
+    if (!scrubbing) return;
+    const onMove = (event: PointerEvent) => {
+      event.preventDefault();
+      const nav = tabBarRef.current;
+      if (nav) setScrubTab(tabProgressFromClientX(event.clientX, nav.getBoundingClientRect(), mobileNavigation.length));
+      goToTabAtX(event.clientX);
+    };
+    const onUp = (event: PointerEvent) => {
+      goToTabAtX(event.clientX);
+      scrubRef.current = null;
+      setScrubbing(false);
+      setScrubTab(null);
+    };
+    window.addEventListener("pointermove", onMove, { passive: false });
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+    };
+  }, [scrubbing]);
   const clearTabPress = () => {
     if (pressTimerRef.current != null) {
       window.clearTimeout(pressTimerRef.current);
@@ -138,77 +144,76 @@ function StorefrontShell({ children }: { children: ReactNode }) {
     }
     pendingPressRef.current = null;
   };
-  const persistTabOrder = (next: MobileTabHref[]) => {
-    setTabOrder(next);
-    try {
-      window.localStorage.setItem(TAB_ORDER_STORAGE_KEY, JSON.stringify(next));
-    } catch {
-      /* ignore quota / private mode */
-    }
+  const goToTabAtX = (clientX: number) => {
+    const nav = tabBarRef.current;
+    if (!nav) return;
+    const rect = nav.getBoundingClientRect();
+    const index = tabIndexFromClientX(clientX, rect, mobileNavigation.length);
+    const href = mobileNavigation[index]?.href;
+    if (!href || href === lastHrefRef.current) return;
+    const from = mobileNavigation.findIndex((item) => item.href === lastHrefRef.current);
+    slideDirRef.current = index > from ? 1 : -1;
+    lastHrefRef.current = href;
+    setLocation(href);
+    window.scrollTo({ top: 0, behavior: "auto" });
   };
-  const beginTabDrag = () => {
+  const beginTabScrub = () => {
     const pending = pendingPressRef.current;
     if (!pending) return;
-    const origin = tabOrderRef.current.indexOf(pending.href);
-    dragRef.current = { href: pending.href, startX: pending.startX, origin, pointerId: pending.pointerId };
+    scrubRef.current = { pointerId: pending.pointerId };
     suppressClickRef.current = true;
-    setDraggingHref(pending.href);
-    setDragOffset(0);
-    setHoverIndex(origin);
+    setScrubbing(true);
     const nav = tabBarRef.current;
-    if (nav) setSlotWidth(nav.getBoundingClientRect().width / Math.max(1, tabOrderRef.current.length));
-    pending.target.setPointerCapture?.(pending.pointerId);
+    if (nav) {
+      setScrubTab(tabProgressFromClientX(pending.startX, nav.getBoundingClientRect(), mobileNavigation.length));
+      try {
+        nav.setPointerCapture(pending.pointerId);
+      } catch {
+        /* window listeners take over */
+      }
+    }
     try {
-      navigator.vibrate?.(12);
+      navigator.vibrate?.(10);
     } catch {
       /* desktop */
     }
   };
-  const onTabPointerDown = (href: MobileTabHref, event: ReactPointerEvent<HTMLAnchorElement>) => {
+  const onBarPointerDown = (event: ReactPointerEvent<HTMLElement>) => {
     if (event.pointerType === "mouse" && event.button !== 0) return;
     clearTabPress();
-    pendingPressRef.current = {
-      href,
-      startX: event.clientX,
-      startY: event.clientY,
-      pointerId: event.pointerId,
-      target: event.currentTarget,
-    };
-    pressTimerRef.current = window.setTimeout(beginTabDrag, TAB_LONG_PRESS_MS);
+    pendingPressRef.current = { startX: event.clientX, startY: event.clientY, pointerId: event.pointerId };
+    pressTimerRef.current = window.setTimeout(beginTabScrub, TAB_LONG_PRESS_MS);
   };
-  const onTabPointerMove = (event: ReactPointerEvent<HTMLAnchorElement>) => {
+  const onBarPointerMove = (event: ReactPointerEvent<HTMLElement>) => {
     const pending = pendingPressRef.current;
-    if (!dragRef.current && pending) {
-      if (Math.hypot(event.clientX - pending.startX, event.clientY - pending.startY) > 10) clearTabPress();
+    if (!scrubRef.current && pending) {
+      const dx = event.clientX - pending.startX;
+      const dy = event.clientY - pending.startY;
+      if (Math.abs(dy) > 14 && Math.abs(dy) > Math.abs(dx)) clearTabPress();
       return;
     }
-    const drag = dragRef.current;
-    const nav = tabBarRef.current;
-    if (!drag || !nav) return;
+    if (!scrubRef.current) return;
     event.preventDefault();
-    setDragOffset(event.clientX - drag.startX);
-    setHoverIndex(tabIndexFromClientX(event.clientX, nav.getBoundingClientRect(), tabOrderRef.current.length));
+    const nav = tabBarRef.current;
+    if (nav) setScrubTab(tabProgressFromClientX(event.clientX, nav.getBoundingClientRect(), mobileNavigation.length));
+    goToTabAtX(event.clientX);
   };
-  const onTabPointerUp = (event: ReactPointerEvent<HTMLAnchorElement>) => {
-    const drag = dragRef.current;
+  const onBarPointerUp = (event: ReactPointerEvent<HTMLElement>) => {
+    const wasScrubbing = Boolean(scrubRef.current);
     clearTabPress();
-    if (drag) {
-      const nav = tabBarRef.current;
-      const origin = tabOrderRef.current.indexOf(drag.href);
-      const hover = nav ? tabIndexFromClientX(event.clientX, nav.getBoundingClientRect(), tabOrderRef.current.length) : origin;
-      persistTabOrder(moveTab(tabOrderRef.current, origin, hover));
+    if (wasScrubbing) {
+      goToTabAtX(event.clientX);
       try {
-        event.currentTarget.releasePointerCapture?.(drag.pointerId);
+        event.currentTarget.releasePointerCapture?.(event.pointerId);
       } catch {
         /* already released */
       }
     }
-    dragRef.current = null;
-    setDraggingHref(null);
-    setDragOffset(0);
-    setHoverIndex(null);
+    scrubRef.current = null;
+    setScrubbing(false);
+    setScrubTab(null);
   };
-  const onTabClick = (event: ReactPointerEvent<HTMLAnchorElement> | { preventDefault: () => void; stopPropagation: () => void }) => {
+  const onTabClick = (event: { preventDefault: () => void; stopPropagation: () => void }) => {
     if (!suppressClickRef.current) return;
     event.preventDefault();
     event.stopPropagation();
@@ -308,33 +313,22 @@ function StorefrontShell({ children }: { children: ReactNode }) {
         product={selectedProduct} paymentMethodName={selectedPaymentMethod?.name ?? null} isAuthenticated={Boolean(user)} isAuthenticationLoading={loading} signInHref={googleSignInHref} onContinue={() => setLocation("/checkout/preview")} /> : (
         <nav
           ref={tabBarRef}
-          className={cn("liquid-tabbar zurs-mobile-tabbar fixed bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-1/2 z-40 grid h-14 w-full -translate-x-1/2 grid-cols-2 gap-0.5 rounded-full p-1 sm:hidden", mobileTabColumns, editing && "is-editing")}
-          style={{ "--liquid-tab-x": String(activeLiquidTab) } as CSSProperties}
+          className={cn("liquid-tabbar zurs-mobile-tabbar fixed bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-1/2 z-40 grid h-14 w-full -translate-x-1/2 grid-cols-2 gap-0.5 rounded-full p-1 sm:hidden", mobileTabColumns, scrubbing && "is-scrubbing")}
+          style={{ "--liquid-tab-x": String(scrubTab ?? activeLiquidTab) } as CSSProperties}
           aria-label="Mobile primary navigation"
+          onPointerDown={onBarPointerDown}
+          onPointerMove={onBarPointerMove}
+          onPointerUp={onBarPointerUp}
+          onPointerCancel={onBarPointerUp}
           onContextMenu={(event) => event.preventDefault()}
         >
           <span className="liquid-tab-thumb" aria-hidden="true" />
-          {orderedTabs.map(({ href, label, animation, pack }, index) => {
+          {mobileNavigation.map(({ href, label, animation, pack }) => {
             const active = activeMobileTabHref === href;
             const tabKind = href === "/" ? "home" : "account";
-            const dragging = draggingHref === href;
-            const origin = draggingHref ? tabOrder.indexOf(draggingHref) : -1;
-            const shift = dragging || origin < 0 || hoverIndex == null ? 0 : tabShiftX(index, origin, hoverIndex, slotWidth);
-            const classes = cn(`zurs-mobile-tab zurs-mobile-tab--${tabKind} relative z-10 flex min-w-0 items-center justify-center gap-1.5 rounded-full px-2 py-1 text-xs font-bold`, href === "/topup" && "zurs-mobile-tab--store", active ? "zurs-mobile-tab--active" : "hover:text-ink", dragging && "is-dragging", !dragging && shift !== 0 && "is-shifting");
+            const classes = cn(`zurs-mobile-tab zurs-mobile-tab--${tabKind} relative z-10 flex min-w-0 items-center justify-center gap-1.5 rounded-full px-2 py-1 text-xs font-bold`, href === "/topup" && "zurs-mobile-tab--store", active ? "zurs-mobile-tab--active" : "hover:text-ink");
             return (
-              <Link
-                key={href}
-                href={href}
-                draggable={false}
-                aria-current={active ? "page" : undefined}
-                className={classes}
-                style={dragging ? { transform: `translateX(${dragOffset}px) scale(1.08)`, zIndex: 20, transition: "none" } : shift ? { transform: `translateX(${shift}px)` } : undefined}
-                onPointerDown={(event) => onTabPointerDown(href as MobileTabHref, event)}
-                onPointerMove={onTabPointerMove}
-                onPointerUp={onTabPointerUp}
-                onPointerCancel={onTabPointerUp}
-                onClick={(event) => onTabClick(event)}
-              >
+              <Link key={href} href={href} draggable={false} aria-current={active ? "page" : undefined} className={classes} onClick={onTabClick}>
                 <span className="zurs-tab-glyph" aria-hidden="true">
                   {active && animation ? <AnimatedGlyph name={animation} size={18} color="#062033" /> : <PackEmoji name={pack} size={18} />}
                 </span>
