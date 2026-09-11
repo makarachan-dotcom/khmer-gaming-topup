@@ -788,16 +788,23 @@ export async function refreshBakongPayment(input: { orderId: string; userId: num
   const current = payment[0];
   if (!current) throw new Error("Bakong payment session not found");
   if (current.status === "paid") return getCustomerPaymentSession(input);
-  if (current.expiresAt && current.expiresAt.getTime() <= Date.now()) { await db.update(paymentTransactions).set({ status: "expired" }).where(eq(paymentTransactions.id, current.id)); await updateOrderStatus({ orderId: input.orderId, status: "expired" }); return getCustomerPaymentSession(input); }
   const payload = current.callbackPayload && typeof current.callbackPayload === "object" ? current.callbackPayload as Record<string, unknown> : {};
   const md5 = typeof payload.bakongMd5 === "string" ? payload.bakongMd5 : current.providerRequestId;
   if (!md5) throw new Error("Bakong payment session is missing its verification reference");
-  // Keep the browser refresh path as a safe fallback when the background worker
-  // is delayed or unavailable. Reconciliation still verifies the official
-  // Bakong response against the stored amount, currency, merchant, and pending
-  // ledger row before moving the order to paid.
-  const result = await reconcileKhqrWorkerPayment({ md5, orderId: input.orderId, amount: String(current.amount), currency: current.currency as "KHR" | "USD" });
-  if (!result.idempotent) await settleSecurePaymentLinks(input.orderId, "paid");
+  // Always ask Bakong before honouring the QR clock. A customer can pay in the
+  // last seconds of the window; marking expired first would strand that money.
+  try {
+    const result = await reconcileKhqrWorkerPayment({ md5, orderId: input.orderId, amount: String(current.amount), currency: current.currency as "KHR" | "USD" });
+    if (!result.idempotent) await settleSecurePaymentLinks(input.orderId, "paid");
+    return getCustomerPaymentSession(input);
+  } catch {
+    /* Still pending, or Bakong has not confirmed this MD5 yet. */
+  }
+  if (current.expiresAt && current.expiresAt.getTime() <= Date.now()) {
+    await db.update(paymentTransactions).set({ status: "expired" }).where(and(eq(paymentTransactions.id, current.id), eq(paymentTransactions.status, "pending")));
+    await updateOrderStatus({ orderId: input.orderId, status: "expired" });
+    return getCustomerPaymentSession(input);
+  }
   return getCustomerPaymentSession(input);
 }
 

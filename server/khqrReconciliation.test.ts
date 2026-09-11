@@ -18,6 +18,7 @@ describe("KHQR reconciliation guard", () => {
 
   it("handles already-paid matching sessions without a second payment transition", () => {
     expect(getKhqrReconciliationDisposition({ ...pending, paymentStatus: "paid", orderStatus: "paid" }, callback)).toBe("idempotent");
+    expect(getKhqrReconciliationDisposition({ ...pending, paymentStatus: "paid", orderStatus: "delivered" }, callback)).toBe("idempotent");
   });
 
   it("permits only the exact pending wallet session and is idempotent after credit", () => {

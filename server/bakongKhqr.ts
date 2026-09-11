@@ -2,6 +2,7 @@ import bakongKhqr from "bakong-khqr";
 import QRCode from "qrcode";
 import { getKhqrWorkerCredentials } from "./khqrWorkerSecrets";
 import { resolveProviderCredential } from "./providerCredentialResolver";
+import { bakongPaidAmountMatches, normalizeBakongCurrency } from "./paymentSecurity";
 
 const { BakongKHQR, IndividualInfo, khqrData } = bakongKhqr as any;
 const apiBaseUrl = "https://api-bakong.nbc.gov.kh";
@@ -107,16 +108,24 @@ export async function checkBakongKhqrPayment(input: { md5: string; expectedAmoun
   const payload = await readBakongJson(response);
   if (!payload) return { status: "unavailable" as const, reason: "empty_or_malformed_bakong_response" };
   if (!response.ok || payload.responseCode !== 0 || !payload.data) return { status: payload.responseCode === 1 || payload.errorCode === 17 ? "unpaid" as const : "unavailable" as const, reason: `bakong_response_${payload.responseCode ?? "unknown"}_${payload.errorCode ?? "unknown"}` };
-  const matchesAmount = Math.abs(Number(payload.data.amount) - Number(input.expectedAmount)) < 0.00001;
-  const matchesCurrency = payload.data.currency === input.expectedCurrency;
+  const data = payload.data as BakongResponse["data"] & { transactionHash?: string; txnHash?: string };
+  const actualCurrency = normalizeBakongCurrency(data.currency);
+  const transactionHash = [data.hash, data.transactionHash, data.txnHash].find((value) => typeof value === "string" && value.trim().length >= 8)?.trim();
+  const matchesAmount = actualCurrency != null && bakongPaidAmountMatches({
+    expectedAmount: input.expectedAmount,
+    expectedCurrency: input.expectedCurrency,
+    actualAmount: data.amount ?? input.expectedAmount,
+    actualCurrency,
+  });
+  const matchesCurrency = actualCurrency != null;
   const expectedMerchantAccountId = (input.expectedMerchantAccountId ?? config.accountId).trim().toLowerCase();
   // Some valid MD5-status responses omit the receiver field. The private MD5,
   // exact stored amount, and exact currency remain mandatory; when Bakong does
   // return a receiver, it must match the merchant account stored with the session.
-  const returnedReceiver = payload.data.toAccountId?.trim().toLowerCase();
+  const returnedReceiver = data.toAccountId?.trim().toLowerCase();
   const matchesReceiver = !returnedReceiver || returnedReceiver === expectedMerchantAccountId;
-  if (!matchesAmount || !matchesCurrency || !matchesReceiver || !payload.data.hash) return { status: "unavailable" as const, reason: "bakong_transaction_did_not_match_stored_session" };
-  return { status: "paid" as const, transactionHash: payload.data.hash };
+  if (!matchesAmount || !matchesCurrency || !matchesReceiver || !transactionHash) return { status: "unavailable" as const, reason: "bakong_transaction_did_not_match_stored_session" };
+  return { status: "paid" as const, transactionHash };
 }
 
 export async function registerBakongKhqrWorkerWatch(input: { md5: string; orderId: string; amount: string; currency: Currency; expiresAt: Date }) {

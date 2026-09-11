@@ -39,7 +39,7 @@ export function getKhqrReconciliationDisposition(
     // scientific notation slip through an amount check.
     || !moneyEquals(stored.amount, callback.amount, stored.currency)
   ) return "reject" as const;
-  if (stored.paymentStatus === "paid" && stored.orderStatus === "paid") return "idempotent" as const;
+  if (stored.paymentStatus === "paid" && (stored.orderStatus === "paid" || stored.orderStatus === "delivered")) return "idempotent" as const;
   if (stored.paymentStatus !== "pending" || stored.orderStatus !== "awaiting_payment") return "reject" as const;
   return "reconcile" as const;
 }

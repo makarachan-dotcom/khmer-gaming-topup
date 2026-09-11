@@ -100,6 +100,37 @@ export function moneyEquals(left: string | number, right: string | number, curre
 }
 
 /**
+ * Banks settle a USD KHQR in riel at their posted NBC-band rate. $0.02 is 80–82៛.
+ * A $50 QR paid as 81៛ must never match.
+ */
+export const KHQR_KHR_PER_USD_MIN = 4_000;
+export const KHQR_KHR_PER_USD_MAX = 4_200;
+
+export function normalizeBakongCurrency(value: unknown): "KHR" | "USD" | null {
+  if (value === "USD" || value === "usd" || value === 840 || value === "840") return "USD";
+  if (value === "KHR" || value === "khr" || value === 116 || value === "116") return "KHR";
+  return null;
+}
+
+export function bakongPaidAmountMatches(input: {
+  expectedAmount: string | number;
+  expectedCurrency: "KHR" | "USD";
+  actualAmount: string | number;
+  actualCurrency: "KHR" | "USD";
+}): boolean {
+  if (input.expectedCurrency === input.actualCurrency) {
+    return moneyEquals(input.expectedAmount, input.actualAmount, input.expectedCurrency);
+  }
+  const usd = input.expectedCurrency === "USD" ? Number(input.expectedAmount) : Number(input.actualAmount);
+  const khr = input.expectedCurrency === "KHR" ? Number(input.expectedAmount) : Number(input.actualAmount);
+  if (!Number.isFinite(usd) || !Number.isFinite(khr) || usd <= 0 || khr <= 0) return false;
+  const implied = khr / usd;
+  if (implied < KHQR_KHR_PER_USD_MIN || implied > KHQR_KHR_PER_USD_MAX) return false;
+  const mid = usd * 4_100;
+  return Math.abs(khr - mid) <= Math.max(2, usd * 20);
+}
+
+/**
  * Validates an order total before it is written to the ledger or turned into a
  * QR. Rejects zero, negative, over-precise and out-of-band amounts.
  */

@@ -6,6 +6,8 @@ import {
   assessOrderVelocity,
   isFreshWebhookTimestamp,
   moneyEquals,
+  bakongPaidAmountMatches,
+  normalizeBakongCurrency,
   toMinorUnits,
   webhookReplayKey,
   webhookTimestampToleranceMs,
@@ -54,6 +56,24 @@ describe("money parsing", () => {
     // refuses the over-precise side instead of silently accepting it.
     expect(moneyEquals("2.00", "2.00000001", "USD")).toBe(false);
     expect(moneyEquals("2.00", "2e0", "USD")).toBe(false);
+  });
+});
+
+describe("Bakong USD KHQR settled in riel", () => {
+  it("accepts the NBC-band conversion used by ABA/PRASAC ($0.02 → 81៛)", () => {
+    expect(bakongPaidAmountMatches({ expectedAmount: "0.02", expectedCurrency: "USD", actualAmount: 81, actualCurrency: "KHR" })).toBe(true);
+    expect(bakongPaidAmountMatches({ expectedAmount: "0.02", expectedCurrency: "USD", actualAmount: 80, actualCurrency: "KHR" })).toBe(true);
+    expect(bakongPaidAmountMatches({ expectedAmount: "0.02", expectedCurrency: "USD", actualAmount: 82, actualCurrency: "KHR" })).toBe(true);
+  });
+
+  it("rejects a tiny riel payment against a large USD QR", () => {
+    expect(bakongPaidAmountMatches({ expectedAmount: "50.00", expectedCurrency: "USD", actualAmount: 81, actualCurrency: "KHR" })).toBe(false);
+  });
+
+  it("reads Bakong numeric currency codes", () => {
+    expect(normalizeBakongCurrency(840)).toBe("USD");
+    expect(normalizeBakongCurrency("116")).toBe("KHR");
+    expect(normalizeBakongCurrency("usd")).toBe("USD");
   });
 });
 

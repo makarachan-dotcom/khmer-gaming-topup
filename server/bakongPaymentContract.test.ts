@@ -19,6 +19,8 @@ describe("Bakong KHQR payment contract", () => {
     expect(db).toContain('createBakongKhqrPayment');
     expect(db).toContain('checkBakongKhqrPayment');
     expect(db).toContain('reconcileKhqrWorkerPayment');
+    const refresh = db.slice(db.indexOf("export async function refreshBakongPayment"), db.indexOf("export async function recordKhqrWorkerVerificationDeferred"));
+    expect(refresh.indexOf("reconcileKhqrWorkerPayment")).toBeLessThan(refresh.indexOf("status: \"expired\""));
   });
 
   it("offers a generated QR while the browser polls only the owner-scoped ledger session", () => {
