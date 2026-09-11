@@ -84,7 +84,7 @@ const RULES: Array<[RegExp, BrandId]> = [
   [/photoshop|adobe/, "adobe"],
   [/apple|icloud|itunes/, "apple"],
   [/steam/, "steam"],
-  [/\bvpn\b|nordvpn|wireguard/, "nordvpn"],
+  [/\bnordvpn\b/, "nordvpn"],
   [/heygen/, "heygen"],
   [/quill/, "quillbot"],
   [/manus/, "manus"],
@@ -139,5 +139,29 @@ export function BrandMark({ id, size = 28, className = "" }: { id: BrandId; size
 export function ServiceLogo({ text, size = 28, className = "" }: { text: string; size?: number; className?: string }) {
   const brand = matchBrand(text);
   if (brand) return <BrandMark id={brand} size={size} className={className} />;
-  return <PackEmoji name="svc-sparkle" size={size} className={className} />;
+  const letter = (text.match(/[A-Za-z\u1780-\u17FF]/)?.[0] ?? "Z").toUpperCase();
+  const radius = Math.max(6, Math.round(size * 0.28));
+  return (
+    <span
+      role="img"
+      aria-label={text}
+      className={`zurs-brand ${className}`}
+      style={{
+        width: size,
+        height: size,
+        borderRadius: radius,
+        background: "#161616",
+        color: "#f8f5ec",
+        display: "inline-grid",
+        placeItems: "center",
+        flex: "0 0 auto",
+        fontFamily: "Chakra Petch, Kantumruy Pro, sans-serif",
+        fontSize: Math.round(size * 0.42),
+        fontWeight: 800,
+        lineHeight: 1,
+      }}
+    >
+      {letter}
+    </span>
+  );
 }

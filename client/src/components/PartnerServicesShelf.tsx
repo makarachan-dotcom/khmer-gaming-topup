@@ -97,7 +97,7 @@ export function PartnerServicesShelf({ compact = false }: { compact?: boolean })
       <div className="max-w-2xl">
         <p className="zurs-eyebrow font-bold uppercase">DIGITAL SERVICES</p>
         <h1 className="mt-1 font-display text-xl font-bold text-ink sm:text-3xl" style={{ lineHeight: 1.45 }}>សេវាឌីជីថល</h1>
-        <p className="mt-1.5 text-sm text-ink-muted" style={{ lineHeight: 1.65 }}>Premium AI និង subscription — បន្ទាប់ពីបង់ប្រាក់ Admin បំពេញក្នុង ៥–១០ នាទី។</p>
+        <p className="mt-1.5 text-sm text-ink-muted" style={{ lineHeight: 1.65 }}>គណនី និង subscription — បន្ទាប់ពីបង់ប្រាក់ Admin បំពេញក្នុង ៥–១០ នាទី។</p>
       </div>
 
       {catalog.isLoading ? (
