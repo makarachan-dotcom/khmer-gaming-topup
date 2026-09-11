@@ -232,7 +232,7 @@ function HomeTopupExperience() {
       />
       {gamesQuery.isLoading ? (
         <div className="mt-5 grid min-h-36 place-items-center rounded-2xl border border-line bg-panel text-xs text-ink-muted">
-          <OutlineLoader size={30} color="#38bdf8" />
+          <OutlineLoader size={30} color="#c99712" />
           <span className="mt-2">កំពុងរៀបចំបញ្ជីហ្គេម…</span>
         </div>
       ) : games.length ? (
@@ -291,7 +291,7 @@ function HomeTopupExperience() {
         </>
       ) : (
         <div className="mt-5 rounded-2xl border border-dashed border-line bg-panel p-8 text-center text-xs leading-6 text-ink-muted">
-          <AnimatedGlyph name="settings" size={30} color="#38bdf8" className="mx-auto" />
+          <AnimatedGlyph name="settings" size={30} color="#c99712" className="mx-auto" />
           <p className="mt-3">បច្ចុប្បន្នមិនទាន់មានបញ្ជីហ្គេមសម្រាប់បង្ហាញទេ។ ព័ត៌មានហ្គេមនឹងបង្ហាញនៅទីនេះនៅពេលសេវារបស់ហាងបានដំណើរការ។</p>
         </div>
       )}

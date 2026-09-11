@@ -25,25 +25,12 @@
 /* Slow drifting aurora ribbons behind the glass. */
 .zcp::before,
 .zcp::after {
-  content: "";
-  position: absolute;
-  inset: -30% -20%;
-  pointer-events: none;
-  background: conic-gradient(from 120deg at 50% 50%, rgba(56, 189, 248, 0.22), rgba(168, 85, 247, 0.2), rgba(236, 72, 153, 0.16), rgba(56, 189, 248, 0.22));
-  filter: blur(90px);
-  opacity: 0.55;
-  animation: zcp-aurora 26s linear infinite;
-}
-.zcp::after {
-  inset: -40% -30%;
-  animation-duration: 38s;
-  animation-direction: reverse;
-  opacity: 0.32;
+  content: none;
 }
 
 @keyframes zcp-aurora {
   to {
-    transform: rotate(1turn);
+    transform: none;
   }
 }
 

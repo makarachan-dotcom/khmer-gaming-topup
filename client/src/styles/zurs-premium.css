@@ -104,8 +104,8 @@ body {
 @media (hover: hover) {
   .zurs-game-card:hover, article.group.rounded-2xl:hover {
     transform: translateY(-4px);
-    border-color: rgba(56, 189, 248, 0.5);
-    box-shadow: var(--zp-glow-accent);
+    border-color: rgba(24, 24, 21, 0.16);
+    box-shadow: var(--zp-shadow-card);
   }
   .surface:hover, .glass-panel:hover { box-shadow: var(--zp-shadow-card); }
 }

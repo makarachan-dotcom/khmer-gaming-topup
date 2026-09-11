@@ -431,4 +431,63 @@ body:has(.zl-shell) .zs-mascot__bubble {
   .game-topup-container { max-width: 1240px !important; }
 }
 
+/* Shop look — no spinning rainbow, no glass, no aurora. */
+.package-choice,
+.package-choice--gold,
+.package-choice--mlbb-diamonds,
+.package-choice--mlbb-bonus,
+.package-choice--mlbb-pass,
+.package-choice--mlbb-special {
+  border: 1px solid rgba(24, 24, 21, 0.12) !important;
+  background: #ffffff !important;
+  box-shadow: 0 1px 2px rgba(24, 24, 21, 0.05) !important;
+  padding: 0 !important;
+}
+.package-choice::before {
+  display: none !important;
+  animation: none !important;
+}
+.package-choice-surface,
+.package-choice--clean .package-choice-surface {
+  background: #ffffff !important;
+  margin: 0 !important;
+}
+.package-choice:hover {
+  transform: none !important;
+  border-color: rgba(24, 24, 21, 0.22) !important;
+  box-shadow: 0 4px 12px rgba(24, 24, 21, 0.08) !important;
+}
+.package-choice--selected,
+.package-choice--selected.package-choice--mlbb-diamonds,
+.package-choice--selected.package-choice--mlbb-bonus,
+.package-choice--selected.package-choice--mlbb-pass,
+.package-choice--selected.package-choice--mlbb-special {
+  border-color: #c99712 !important;
+  background: #ffffff !important;
+  box-shadow: 0 0 0 1px #c99712 !important;
+}
+.package-choice--recommended {
+  border-color: #c99712 !important;
+  box-shadow: none !important;
+}
+.package-choice--recommended .package-choice-surface {
+  background: #fffdf6 !important;
+}
+.glass-panel {
+  background: #ffffff !important;
+  backdrop-filter: none !important;
+  border: 1px solid rgba(24, 24, 21, 0.10) !important;
+  box-shadow: 0 8px 20px rgba(24, 24, 21, 0.06) !important;
+}
+.float-emoji { display: none !important; }
+.premium-shine::after { content: none !important; animation: none !important; }
+.package-category-browser__kicker { display: none !important; }
+.game-detail-hero { --hero-accent: #c99712; }
+.zurs-game-card:hover,
+article.group.rounded-2xl:hover {
+  border-color: rgba(24, 24, 21, 0.16) !important;
+  box-shadow: 0 8px 18px rgba(24, 24, 21, 0.08) !important;
+}
+
+
 
