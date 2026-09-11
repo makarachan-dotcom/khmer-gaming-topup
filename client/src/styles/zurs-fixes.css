@@ -300,3 +300,54 @@
 }
 .zurs-cdk__mark { color: #9a6b00 !important; }
 
+@media (max-width: 639px) {
+  .zurs-mobile-tabbar,
+  .zurs-mobile-tabbar.liquid-tabbar {
+    width: 17.25rem !important;
+    max-width: 17.25rem !important;
+    height: 3.15rem !important;
+    padding: 0.28rem !important;
+    background: #ffffff !important;
+    border: 1px solid rgba(24, 24, 21, 0.12) !important;
+    box-shadow: 0 8px 22px rgba(24, 24, 21, 0.12) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  .zurs-mobile-tab {
+    color: #6f6f68 !important;
+    background: transparent !important;
+  }
+  .zurs-mobile-tab--active,
+  .zurs-mobile-tab--live-active {
+    background: #161616 !important;
+    color: #ffffff !important;
+  }
+  main, .zp-page, #topup-games, .game-topup-container {
+    padding-bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  .zurs-banner-frame {
+    aspect-ratio: 16 / 5.6 !important;
+  }
+  .zp-game-grid {
+    gap: 0.7rem !important;
+  }
+  .zurs-game-card {
+    background: #ffffff !important;
+    border: 1px solid rgba(24, 24, 21, 0.10) !important;
+    box-shadow: none !important;
+    height: 100%;
+  }
+  .zurs-game-card-media {
+    aspect-ratio: 16 / 10;
+    background: #ecece8 !important;
+  }
+  .zurs-game-card-art {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .zurs-game-card-overlay {
+    background: linear-gradient(180deg, transparent 62%, rgba(22, 22, 22, 0.28)) !important;
+  }
+}
+

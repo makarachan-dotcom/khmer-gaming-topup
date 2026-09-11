@@ -15,7 +15,6 @@ import { Image as ImageIcon, Search, Video, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
 import { gameTopupPath } from "./GameTopup";
-import { PackEmoji } from "@/components/PackEmoji";
 // The owner's own storefront artwork, served from client/public so it ships
 // inside the build and cannot 404 behind an upload-CDN link.
 //
@@ -158,7 +157,7 @@ function HomeGameCard({ game, displayName, imageOverrides }: { game: CatalogGame
             <ProviderGameArtwork name={game.name} region={game.region} logoUrl={logoUrl} className="h-11 w-11 rounded-xl" showCountryFlag={false} />
           )}
           <span className="zurs-game-card-overlay" aria-hidden="true" />
-          {popular ? <span className="zurs-game-card-popular"><PackEmoji name="fire" size={13} />ពេញនិយម</span> : null}
+          {popular ? <span className="zurs-game-card-popular">ពេញនិយម</span> : null}
         </div>
         <span className="block min-w-0 px-1 pb-1 pt-2.5">
           <OverflowMarquee text={gameLabel} className="block text-sm font-bold leading-5 text-ink" />
@@ -217,7 +216,7 @@ function HomeTopupExperience() {
     [games],
   );
   return (
-    <section id="topup-games" className="container mt-8 pb-8 sm:mt-10 sm:pb-12">
+    <section id="topup-games" className="container mt-6 pb-24 sm:mt-10 sm:pb-12">
       <LoadingOverlay open={gamesQuery.isLoading} label="កំពុងរៀបចំបញ្ជីហ្គេម…" />
       <SectionHeading
         eyebrow="GAME TOP-UP"
