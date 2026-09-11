@@ -29,8 +29,18 @@ export async function createContext(
     // This prevents a missing external OAuth configuration from interrupting
     // authenticated Admin mutations on the official domain.
     const fallbackProfile = await readZursSessionFallbackProfile(opts.req);
-    if (fallbackProfile) user = fallbackProfile;
-    else {
+    if (fallbackProfile) {
+      user = fallbackProfile;
+      if (!user.displayName?.trim()) {
+        try {
+          const stored = await getUserByOpenId(user.openId);
+          const savedName = stored?.displayName?.trim() || null;
+          if (savedName) user = { ...user, displayName: savedName, name: stored?.name ?? user.name };
+        } catch (error) {
+          console.warn("[Auth] Stored display name lookup unavailable", error instanceof Error ? error.message : error);
+        }
+      }
+    } else {
       const openId = await readZursSession(opts.req);
       user = openId ? await getUserByOpenId(openId) ?? null : null;
     }

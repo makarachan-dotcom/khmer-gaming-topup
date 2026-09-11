@@ -6,7 +6,7 @@ export function getAccountDashboardState(user: AccountDashboardIdentity) {
   return {
     authenticated,
     isAdmin,
-    needsDisplayName: authenticated && !user?.displayName,
+    needsDisplayName: authenticated && !user?.displayName?.trim(),
     showLogout: authenticated,
     showPurchaseHistory: authenticated,
     showTransactionHistory: authenticated,

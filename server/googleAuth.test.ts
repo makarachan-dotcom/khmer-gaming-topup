@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getGoogleCallbackFailureReference, getGoogleCallbackUrl, getGoogleOAuthStatus, getGoogleStateCookieOptions, getPublicGoogleOAuthStatus, isAppwriteQuotaFailure, resolveGoogleUserOpenId, shouldQueueWelcomeEmail } from "./googleAuth";
+import { getGoogleCallbackFailureReference, getGoogleCallbackUrl, getGoogleOAuthStatus, getGoogleStateCookieOptions, getPublicGoogleOAuthStatus, googleSessionIdentity, isAppwriteQuotaFailure, resolveGoogleUserOpenId, shouldQueueWelcomeEmail } from "./googleAuth";
 
 describe("Google OAuth staging", () => {
   it("stays inactive without user-owned Google OAuth credentials", () => {
@@ -37,6 +37,24 @@ describe("Google OAuth staging", () => {
   it("keeps an existing verified-email account identity when Google is connected", () => {
     expect(resolveGoogleUserOpenId({ openId: "existing-account" }, "google-subject")).toBe("existing-account");
     expect(resolveGoogleUserOpenId(undefined, "google-subject")).toBe("google:google-subject");
+  });
+
+  it("carries a saved member name into later Google sessions", () => {
+    expect(googleSessionIdentity({
+      email: "member@example.com",
+      storedName: "Makara",
+      storedDisplayName: "Makara ZURS Member",
+      profileName: "Google Profile",
+    })).toMatchObject({ displayName: "Makara ZURS Member", name: "Makara", loginMethod: "google" });
+    expect(googleSessionIdentity({
+      email: "member@example.com",
+      profileName: "Google Profile",
+      previousDisplayName: "Makara ZURS Member",
+    }).displayName).toBe("Makara ZURS Member");
+    expect(googleSessionIdentity({
+      email: "new@example.com",
+      profileName: "New Member",
+    }).displayName).toBeNull();
   });
 
   it("queues one branded welcome email when a sender is authorized and no delivery exists", () => {

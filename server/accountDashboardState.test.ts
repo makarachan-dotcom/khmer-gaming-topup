@@ -6,4 +6,9 @@ describe("Account dashboard onboarding state", () => {
     const state = getAccountDashboardState({ email: "chanmakara672@gmail.com", role: "user", displayName: null });
     expect(state).toMatchObject({ authenticated: true, isAdmin: true, needsDisplayName: true, showLogout: true, showPurchaseHistory: true, showTransactionHistory: true });
   });
+
+  it("does not ask for a name again after one has been saved", () => {
+    const state = getAccountDashboardState({ email: "member@example.com", role: "user", displayName: "Makara ZURS Member" });
+    expect(state.needsDisplayName).toBe(false);
+  });
 });

@@ -4,7 +4,7 @@ import { parse as parseCookieHeader } from "cookie";
 import * as db from "./db";
 import { decryptRefreshToken, encryptRefreshToken, sendGmailWelcomeEmail } from "./gmailWelcome";
 import { isSingleAdminEmail } from "./storefrontDomain";
-import { createZursSession, getZursSessionCookieOptions, readZursSession, ZURS_SESSION_COOKIE } from "./zursSession";
+import { createZursSession, getZursSessionCookieOptions, readZursSession, readZursSessionFallbackProfile, ZURS_SESSION_COOKIE } from "./zursSession";
 import { grantAccessReprieve, normalizeDeviceId } from "./loginAbuseGuard";
 import { clientIpFromRequest } from "./rateLimit";
 
@@ -27,6 +27,24 @@ export function shouldQueueWelcomeEmail(input: { hasExistingDelivery: boolean; h
 
 export function getGoogleCallbackFailureReference(stage: "token" | "profile" | "user" | "session" | "welcome") {
   return `GOOGLE_${stage.toUpperCase()}_FAILED`;
+}
+
+/** Keep a saved ZURS member name across later Google sign-ins. */
+export function googleSessionIdentity(input: {
+  email: string;
+  storedName?: string | null;
+  storedDisplayName?: string | null;
+  profileName?: string | null;
+  previousDisplayName?: string | null;
+  previousName?: string | null;
+}) {
+  const displayName = input.storedDisplayName?.trim() || input.previousDisplayName?.trim() || null;
+  return {
+    email: input.email,
+    name: input.storedName ?? input.previousName ?? input.profileName ?? null,
+    displayName,
+    loginMethod: "google" as const,
+  };
 }
 
 export function isAppwriteQuotaFailure(error: unknown) {
@@ -143,7 +161,15 @@ export function registerGoogleAuthRoutes(app: Express) {
       const user = persistedUser ?? await db.getUserByOpenId(openId) ?? await db.getUserByEmail(email);
       if (!user) throw new Error("Unable to create Google user session");
       stage = "session";
-      const session = await createZursSession(user.openId, { email, name: profile.name ?? null, loginMethod: "google" });
+      const previous = await readZursSessionFallbackProfile(req);
+      const session = await createZursSession(user.openId, googleSessionIdentity({
+        email,
+        storedName: user.name,
+        storedDisplayName: user.displayName,
+        profileName: profile.name ?? null,
+        previousDisplayName: previous?.displayName,
+        previousName: previous?.name,
+      }));
       res.cookie(ZURS_SESSION_COOKIE, session, getZursSessionCookieOptions(req));
       await grantGoogleReprieve(req, email);
       stage = "welcome";
@@ -153,7 +179,13 @@ export function registerGoogleAuthRoutes(app: Express) {
       if (!isAppwriteQuotaFailure(error)) throw error;
       stage = "session";
       console.warn("[Google OAuth] Appwrite quota exhausted; using signed session fallback until persistence recovers");
-      const session = await createZursSession(fallbackOpenId, { email, name: profile.name ?? null, loginMethod: "google" });
+      const previous = await readZursSessionFallbackProfile(req);
+      const session = await createZursSession(fallbackOpenId, googleSessionIdentity({
+        email,
+        profileName: profile.name ?? null,
+        previousDisplayName: previous?.displayName,
+        previousName: previous?.name,
+      }));
       res.cookie(ZURS_SESSION_COOKIE, session, getZursSessionCookieOptions(req));
       await grantGoogleReprieve(req, email);
       return res.redirect(saved.returnPath);
