@@ -1486,7 +1486,7 @@ img.checkout-method-card__icon { object-fit: contain; }
 .package-choice .package-choice__price { font-size: 1rem; line-height: 1.35; }
 .package-choice-recommendation { gap: 0.18rem; }
 .package-selection-summary { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.85rem; border: 1px solid rgba(56, 189, 248, 0.42); border-radius: 0.9rem; background: linear-gradient(135deg, #f0f9ff, #e0f2fe); padding: 0.6rem 0.75rem; }
-.package-selection-summary__mark { display: grid; height: 1.85rem; width: 1.85rem; flex: 0 0 auto; place-items: center; border-radius: 999px; background: linear-gradient(135deg, #38bdf8, #22d3ee); color: #06202e; }
+.package-selection-summary__mark { display: grid; height: 1.85rem; width: 1.85rem; flex: 0 0 auto; place-items: center; border-radius: 999px; background: #c99712; color: #1a1403; }
 .package-selection-summary__label { overflow: hidden; color: #0f172a; font-size: 0.76rem; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
 .package-selection-summary__hint { margin-top: 0.1rem; color: #475569; font-size: 0.62rem; font-weight: 600; }
 .package-selection-summary__price { margin-left: auto; flex: 0 0 auto; color: #92400e; font-size: 0.95rem; font-weight: 900; }
@@ -1760,7 +1760,7 @@ body.product-sheet-open .contact-admin-fab {
 }
 .zurs-vault__head { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 0.75rem; }
 .zurs-vault__mark { display: grid; height: 2.6rem; width: 2.6rem; place-items: center; overflow: hidden; border-radius: 0.9rem; background: #fff; box-shadow: 0 6px 16px rgb(15 23 42 / 0.08); }
-.zurs-vault__kicker { margin: 0; font-size: 9px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #6366f1; }
+.zurs-vault__kicker { margin: 0; font-size: 9px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #9a6b00; }
 .zurs-vault__head h3 { margin: 0.1rem 0 0; font-size: 0.92rem; font-weight: 800; color: #0f172a; }
 .zurs-vault__head p { margin: 0.1rem 0 0; font-size: 11px; color: #64748b; }
 .zurs-vault__row { margin-top: 0.5rem; }
@@ -1794,8 +1794,8 @@ body.product-sheet-open .contact-admin-fab {
   margin-bottom: 0.4rem;
   padding: 0 0.9rem;
   border-radius: 0.8rem;
-  background: #4f46e5;
-  color: #fff;
+  background: #c99712;
+  color: #1a1403;
   font-size: 12px;
   font-weight: 800;
 }
@@ -1846,8 +1846,8 @@ body.product-sheet-open .contact-admin-fab {
   height: 2.4rem;
   border: 0;
   border-radius: 0.8rem;
-  background: #4f46e5;
-  color: #fff;
+  background: #c99712;
+  color: #1a1403;
   font-size: 12px;
   font-weight: 800;
 }
@@ -1856,7 +1856,7 @@ body.product-sheet-open .contact-admin-fab {
 .zurs-cdk {
   margin-top: 0.75rem;
   overflow: hidden;
-  border: 1px solid rgb(79 70 229 / 0.18);
+  border: 1px solid rgb(24 24 21 / 0.12);
   border-radius: 1.35rem;
   background: linear-gradient(165deg, #eef2ff 0%, #f8fafc 48%, #ffffff 100%);
   box-shadow: 0 18px 40px rgb(15 23 42 / 0.10);
@@ -1871,10 +1871,10 @@ body.product-sheet-open .contact-admin-fab {
   overflow: hidden;
   border-radius: 0.9rem;
   background: #fff;
-  color: #4f46e5;
+  color: #9a6b00;
   box-shadow: 0 6px 16px rgb(15 23 42 / 0.08);
 }
-.zurs-cdk__kicker { margin: 0; font-size: 9px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #4f46e5; }
+.zurs-cdk__kicker { margin: 0; font-size: 9px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #9a6b00; }
 .zurs-cdk__head h3 { margin: 0.1rem 0 0; font-size: 0.95rem; font-weight: 800; color: #0f172a; }
 .zurs-cdk__head p { margin: 0.2rem 0 0; font-size: 12px; line-height: 1.55; color: #64748b; }
 .zurs-cdk__input {
@@ -1900,8 +1900,8 @@ body.product-sheet-open .contact-admin-fab {
   margin-top: 0.65rem;
   border: 0;
   border-radius: 0.85rem;
-  background: #4f46e5;
-  color: #fff;
+  background: #c99712;
+  color: #1a1403;
   font-size: 13px;
   font-weight: 800;
 }

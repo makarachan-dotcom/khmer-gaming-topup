@@ -75,7 +75,7 @@
   box-shadow: 0 6px 14px rgba(37, 99, 235, 0.25);
   overflow: visible;
 }
-.contact-admin-avatar__clip { height: 100%; width: 100%; border-radius: inherit; overflow: hidden; background: linear-gradient(145deg, #1d4ed8, #0ea5e9); display: grid; place-items: center; }
+.contact-admin-avatar__clip { height: 100%; width: 100%; border-radius: inherit; overflow: hidden; background: #161616; display: grid; place-items: center; }
 .contact-admin-avatar__clip img { height: 100%; width: 100%; object-fit: cover; display: block; }
 .contact-admin-avatar__initials { font-family: "Chakra Petch", "Kantumruy Pro", sans-serif; font-size: 0.95rem; font-weight: 800; color: #fff; letter-spacing: 0.02em; }
 .contact-admin-status-dot { position: absolute; right: -1px; bottom: 1px; height: 0.85rem; width: 0.85rem; border: 2px solid #fff; border-radius: 999px; background: #94a3b8; }
@@ -240,3 +240,63 @@
 @media (prefers-reduced-motion: reduce) {
   .zl-bg__beam, .zl-device, .zl-device__dot, .zl-otp__box, .zl-btn__shine, .contact-admin-card, .contact-admin-card__pulse, .zl-steps__dot { animation: none !important; transition: none !important; }
 }
+
+/* Every page: drop Tailwind indigo/violet/cyan so the store reads as ink + gold, not AI. */
+.text-indigo-200,
+.text-indigo-500,
+.text-indigo-600,
+.text-indigo-700,
+.text-indigo-800,
+.text-violet-400,
+.text-fuchsia-700 {
+  color: #9a6b00 !important;
+}
+.bg-indigo-50,
+.bg-indigo-50\/50,
+.bg-indigo-50\/75,
+.bg-fuchsia-50 {
+  background-color: #fff8e8 !important;
+}
+.bg-indigo-100,
+.hover\:bg-indigo-100:hover {
+  background-color: #f3e6b8 !important;
+}
+.bg-indigo-600,
+.bg-indigo-500,
+.hover\:bg-indigo-500:hover {
+  background-color: #161616 !important;
+}
+.text-indigo-100 { color: #f3ead2 !important; }
+.border-indigo-100,
+.border-indigo-200,
+.border-indigo-400,
+.border-indigo-500,
+.focus\:border-indigo-400:focus,
+.focus\:border-indigo-500:focus {
+  border-color: #e2c56a !important;
+}
+.focus\:ring-indigo-100:focus,
+.focus-within\:border-indigo-400:focus-within {
+  --tw-ring-color: rgba(201, 151, 18, 0.22);
+  border-color: #c99712 !important;
+}
+.bg-gradient-to-t.from-indigo-600.to-violet-400 {
+  background-image: linear-gradient(to top, #161616, #c99712) !important;
+}
+.zurs-vault__kicker,
+.zurs-cdk__kicker {
+  color: #9a6b00 !important;
+}
+.zurs-vault,
+.zurs-cdk {
+  background: #ffffff !important;
+  border-color: rgba(24, 24, 21, 0.10) !important;
+}
+.zurs-vault__link,
+.zurs-deliver__send,
+.zurs-cdk__send {
+  background: #c99712 !important;
+  color: #1a1403 !important;
+}
+.zurs-cdk__mark { color: #9a6b00 !important; }
+

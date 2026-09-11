@@ -118,7 +118,7 @@
 .pkg-ribbon--discount { background: linear-gradient(135deg, #ff6b6b, #ff2d55); color: #fff; }
 .pkg-ribbon--hot { background: linear-gradient(135deg, #ff9a3c, #ff3d3d); color: #fff; }
 .pkg-ribbon--new { background: linear-gradient(135deg, #64d2ff, #3b82f6); color: #fff; }
-.pkg-ribbon--best { background: linear-gradient(135deg, #a78bfa, #6d28d9); color: #fff; }
+.pkg-ribbon--best { background: #161616; color: #f8f5ec; }
 .package-choice { position: relative; }
 
 /* --- 6. Fallback artwork: fades in instead of popping ------------------- */
@@ -210,7 +210,7 @@ body.refund-dialog-open .zurs-mobile-tabbar {
   transition: transform 0.18s var(--zc-ease), filter 0.18s var(--zc-ease);
 }
 .refund-dialog__decline { border: 1px solid rgba(148, 163, 184, 0.28); background: transparent; color: #c8d0ec; }
-.refund-dialog__agree { background: linear-gradient(135deg, #38bdf8, #6366f1); color: #06121f; }
+.refund-dialog__agree { background: #c99712; color: #1a1403; }
 .refund-dialog__decline:hover,
 .refund-dialog__agree:hover { transform: translateY(-1px); filter: brightness(1.06); }
 

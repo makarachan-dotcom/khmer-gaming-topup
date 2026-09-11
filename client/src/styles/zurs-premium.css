@@ -15,14 +15,14 @@
    ============================================================ */
 
 :root {
-  --zp-accent: var(--z-neon, #38bdf8);
-  --zp-accent-2: #a78bfa;
-  --zp-accent-3: #f472b6;
-  --zp-gold: #fbbf24;
+  --zp-accent: var(--z-neon, #c99712);
+  --zp-accent-2: #c99712;
+  --zp-accent-3: #161616;
+  --zp-gold: #c99712;
   --zp-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --zp-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --zp-shadow-card: 0 1px 2px rgba(2, 6, 23, 0.45), 0 18px 44px -14px rgba(2, 6, 23, 0.6);
-  --zp-glow-accent: 0 0 0 1px rgba(56, 189, 248, 0.35), 0 10px 34px -8px rgba(56, 189, 248, 0.35);
+  --zp-shadow-card: 0 1px 2px rgba(24, 24, 21, 0.08), 0 14px 32px -16px rgba(24, 24, 21, 0.18);
+  --zp-glow-accent: 0 0 0 1px rgba(201, 151, 18, 0.28), 0 8px 22px -10px rgba(201, 151, 18, 0.22);
   /* Premium font system (fonts are loaded via <link> in client/index.html) */
   --font-sans: "Kantumruy Pro", "Noto Sans Khmer", "DM Sans", system-ui, sans-serif;
   --font-display: "Chakra Petch", "Kantumruy Pro", "Noto Sans Khmer", sans-serif;
@@ -52,15 +52,7 @@ body {
 
 /* ---------- 1 · Ambient aurora backdrop ---------- */
 .zurs-dotted-shell::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background:
-    radial-gradient(44rem 30rem at 88% -12%, rgba(167, 139, 250, 0.13), transparent 62%),
-    radial-gradient(40rem 28rem at -12% 28%, rgba(56, 189, 248, 0.11), transparent 62%),
-    radial-gradient(32rem 24rem at 50% 112%, rgba(244, 114, 182, 0.09), transparent 62%);
+  content: none;
 }
 
 /* ---------- 2 · Premium header + gradient beam ---------- */
@@ -68,38 +60,19 @@ body {
   /* Keep the Tailwind sticky utility active; the header follows the viewport while scrolling. */
   position: sticky;
   overflow: hidden;
-  box-shadow: 0 10px 34px -12px rgba(2, 6, 23, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+  box-shadow: 0 8px 20px -10px rgba(24, 24, 21, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
 }
 .zurs-compact-header::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(120deg, rgba(56, 189, 248, 0.55), transparent 30%, transparent 68%, rgba(167, 139, 250, 0.55));
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-  opacity: 0.85;
+  content: none;
 }
 
 /* ---------- 3 · Hero / banner: Ken Burns zoom + premium ring ---------- */
 .zurs-banner-frame {
   border-radius: 1.35rem;
-  box-shadow: var(--zp-shadow-card), 0 0 0 1px rgba(56, 189, 248, 0.12);
+  box-shadow: var(--zp-shadow-card);
 }
 .zurs-banner-frame::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.6), transparent 35%, transparent 62%, rgba(167, 139, 250, 0.6));
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
+  content: none;
 }
 @media (prefers-reduced-motion: no-preference) {
   .zurs-banner-slide { animation: zp-kenburns 14s ease-in-out infinite alternate; }
@@ -347,11 +320,11 @@ html, body { overflow-x: clip; }
   min-width: 0;
   min-height: 3.15rem;
   border-radius: 1rem !important;
-  background: linear-gradient(120deg, #0ea5e9, #38bdf8 55%, #22d3ee) !important;
-  color: #062033 !important;
+  background: #c99712 !important;
+  color: #1a1403 !important;
   font-weight: 800 !important;
   font-size: 0.95rem;
-  box-shadow: 0 10px 28px -8px rgba(56, 189, 248, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  box-shadow: 0 8px 18px -8px rgba(201, 151, 18, 0.45);
   transition: transform 220ms var(--zp-ease-spring), box-shadow 220ms var(--zp-ease-out), filter 220ms var(--zp-ease-out);
   overflow: hidden;
 }
@@ -589,12 +562,12 @@ html, body { overflow-x: clip; }
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 .zp-deploy__log { margin: 0; font-size: 0.66rem; line-height: 1.7; color: #9fb3d1; white-space: pre-wrap; }
-.zp-deploy__log.is-cmd { color: #7dd3fc; font-weight: 700; }
+.zp-deploy__log.is-cmd { color: #c99712; font-weight: 700; }
 .zp-deploy__log.is-ok { color: #34d399; font-weight: 700; }
 .zp-deploy__log.is-note { color: #fbbf24; line-height: 1.6; margin-top: 0.3rem; }
 .zp-deploy__cursor {
   display: inline-block; width: 0.45rem; height: 0.8rem; margin-top: 0.15rem;
-  background: #38bdf8; border-radius: 1px; vertical-align: middle;
+  background: #c99712; border-radius: 1px; vertical-align: middle;
 }
 @media (prefers-reduced-motion: no-preference) {
   .zp-deploy__cursor { animation: zp-deploy-blink 0.9s steps(1) infinite; }

@@ -8,8 +8,8 @@
   --zs-panel: #0f1424;
   --zs-panel-2: #151b30;
   --zs-line: rgba(148, 163, 184, 0.18);
-  --zs-accent: #8b93ff;
-  --zs-sky: #38bdf8;
+  --zs-accent: #c99712;
+  --zs-sky: #c99712;
   --zs-text: #e7ecff;
   --zs-muted: #9aa3c0;
 }
@@ -396,7 +396,7 @@
   padding: 10px 20px;
   border: none;
   border-radius: 999px;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: #161616;
   color: #fff;
   font-size: 0.84rem;
   font-weight: 600;
@@ -433,7 +433,7 @@
 
 .zs-msg--user .zs-msg__bubble {
   border-bottom-right-radius: 5px;
-  background: linear-gradient(180deg, #4f46e5, #4338ca);
+  background: #161616;
   color: #fff;
 }
 
@@ -560,7 +560,7 @@
 .zs-chat__mic:hover,
 .zs-chat__send:hover { transform: translateY(-2px) scale(1.05); }
 
-.zs-chat__send { background: linear-gradient(135deg, #6366f1, #8b5cf6); border-color: transparent; color: #fff; }
+.zs-chat__send { background: #c99712; border-color: transparent; color: #1a1403; }
 
 .zs-chat__mic.is-live {
   background: #e11d48;
@@ -753,7 +753,7 @@
 	justify-content: center;
 	gap: 0.45rem;
 	border-radius: 0.9rem;
-	background: linear-gradient(135deg, #1d4ed8, #0ea5e9);
+	background: #229ed9;
 	padding: 0.7rem 0.9rem;
 	font-weight: 800;
 	color: #ffffff;

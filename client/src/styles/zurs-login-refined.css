@@ -22,10 +22,10 @@
    ====================================================================== */
 
 :root {
-  --zlr-accent: #8b93ff;
-  --zlr-accent-2: #b39bff;
-  --zlr-accent-soft: rgba(139, 147, 255, 0.16);
-  --zlr-ring: rgba(139, 147, 255, 0.4);
+  --zlr-accent: #c99712;
+  --zlr-accent-2: #9a6b00;
+  --zlr-accent-soft: rgba(201, 151, 18, 0.16);
+  --zlr-ring: rgba(201, 151, 18, 0.38);
   --zlr-ok: #6fe3b0;
   --zlr-warn: #ffb076;
   --zlr-danger: #ff8f8f;
@@ -63,15 +63,15 @@
 /* One accent, not three. The rose/orange beams from the older sheet are what
    made the page read as noisy behind a card that is otherwise indigo. */
 .zl-bg__beam--a {
-  background: radial-gradient(circle, rgba(139, 147, 255, 0.34), transparent 62%);
+  background: radial-gradient(circle, rgba(201, 151, 18, 0.22), transparent 62%);
   opacity: 0.5;
 }
 .zl-bg__beam--b {
-  background: radial-gradient(circle, rgba(179, 155, 255, 0.26), transparent 62%);
+  background: radial-gradient(circle, rgba(22, 22, 22, 0.10), transparent 62%);
   opacity: 0.42;
 }
 .zl-card__glow {
-  background: radial-gradient(72% 46% at 50% 0%, rgba(139, 147, 255, 0.22), transparent 72%);
+  background: radial-gradient(72% 46% at 50% 0%, rgba(201, 151, 18, 0.16), transparent 72%);
 }
 .zl-card.is-error {
   border-color: rgba(255, 143, 143, 0.45);
