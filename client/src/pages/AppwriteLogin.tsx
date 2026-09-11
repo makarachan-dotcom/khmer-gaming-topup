@@ -39,12 +39,12 @@ function safeReturnPath() {
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
 const step = {
-  initial: { opacity: 0, y: 10 },
+  initial: { opacity: 0, y: 8 },
   animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -8 },
+  exit: { opacity: 0, y: -6 },
 };
 
-const stepTransition = { duration: 0.32, ease: EASE };
+const stepTransition = { duration: 0.42, ease: EASE };
 
 /** Small hardware mark. Calm by default; only its badge changes with state. */
 function OtpDevice({ state }: { state: "idle" | "typing" | "verifying" | "success" | "error" | "locked" }) {
@@ -101,6 +101,23 @@ export default function AppwriteLogin() {
   useEffect(() => {
     if (!loading && user) window.location.replace(returnTo);
   }, [loading, returnTo, user]);
+
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+    const sync = () => {
+      const covered = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
+      document.documentElement.style.setProperty("--zl-keyboard", `${covered}px`);
+    };
+    viewport.addEventListener("resize", sync);
+    viewport.addEventListener("scroll", sync);
+    sync();
+    return () => {
+      viewport.removeEventListener("resize", sync);
+      viewport.removeEventListener("scroll", sync);
+      document.documentElement.style.removeProperty("--zl-keyboard");
+    };
+  }, []);
 
   // Ask the server about this address/device before rendering the form, so a
   // visitor who is already locked out never gets to type an email at all.
@@ -458,11 +475,12 @@ export default function AppwriteLogin() {
                         setEmail(event.target.value);
                         if (error) setError(null);
                       }}
+                      onFocus={(event) => event.currentTarget.scrollIntoView({ block: "center", behavior: "smooth" })}
                       type="email"
                       autoComplete="email"
                       inputMode="email"
+                      enterKeyHint="next"
                       placeholder="you@example.com"
-                      autoFocus
                     />
                   </span>
                 </label>
