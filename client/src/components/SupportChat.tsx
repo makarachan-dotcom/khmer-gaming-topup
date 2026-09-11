@@ -297,7 +297,7 @@ export default function SupportChat({ open, onClose, seedTopic, seedOrderRef }: 
             <p className="zs-chat__sub">
               {authenticated ? (
                 <span className="zs-chat__who">
-                  <VerifiedName name={memberName || "ZURS Member"} size={20} className="zs-chat__member" />
+                  <VerifiedName name={memberName || "ZURS Member"} size={18} className="zs-chat__member" />
                   {session
                     ? session.status === "closed"
                       ? " · ការឆាតបានបិទ"
