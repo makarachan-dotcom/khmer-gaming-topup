@@ -84,6 +84,17 @@ describe("storefront media protection", () => {
     expect(mobileTabHrefForPath("/wallet")).toBe("/account");
   });
 
+  it("lets a long-press drag reorder mobile tabs without adding public AI or Live Spin destinations", () => {
+    const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
+    expect(componentSource).toContain("TAB_ORDER_STORAGE_KEY");
+    expect(componentSource).toContain("TAB_LONG_PRESS_MS");
+    expect(componentSource).toContain("onTabPointerDown");
+    expect(componentSource).toContain("is-editing");
+    expect(componentSource).toContain("is-dragging");
+    expect(componentSource).not.toContain('href: "/live-spin"');
+    expect(componentSource).not.toContain('href: "/ai"');
+  });
+
   it("uses a compact two-item rounded mobile tab bar and no public AI entry", () => {
     const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
     const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
