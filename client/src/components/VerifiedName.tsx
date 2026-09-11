@@ -1,9 +1,9 @@
 import { useId } from "react";
 
 /**
- * Signed-in member name with a gold ZURS seal instead of the generic green ✅.
- * The disc, check, and sparkle are inline SVG so they stay sharp at 15–18px
- * on both the dark chat header and the light account card.
+ * Gold ZURS seal next to a signed-in name. Outer sparkles spin; the disc
+ * wobbles like a laugh. Replaces the generic green ✅ so it still reads as
+ * verified, but on-brand and moving.
  */
 function VerifiedMark({ size }: { size: number }) {
   const uid = useId().replace(/:/g, "");
@@ -12,40 +12,44 @@ function VerifiedMark({ size }: { size: number }) {
       className="zurs-verified-seal"
       width={size}
       height={size}
-      viewBox="0 0 32 32"
+      viewBox="0 0 36 36"
       aria-hidden="true"
       focusable="false"
     >
       <defs>
-        <linearGradient id={`${uid}-gold`} x1="6" y1="4" x2="26" y2="28">
-          <stop stopColor="#f6e08a" />
-          <stop offset="0.45" stopColor="#d4a017" />
+        <linearGradient id={`${uid}-gold`} x1="8" y1="6" x2="28" y2="30">
+          <stop stopColor="#fff3b0" />
+          <stop offset="0.4" stopColor="#e3b34c" />
           <stop offset="1" stopColor="#8a5f1c" />
         </linearGradient>
-        <linearGradient id={`${uid}-shine`} x1="10" y1="6" x2="22" y2="20">
-          <stop stopColor="#fff8d6" stopOpacity="0.95" />
-          <stop offset="1" stopColor="#fff8d6" stopOpacity="0" />
-        </linearGradient>
       </defs>
-      <circle cx="16" cy="16" r="13" fill={`url(#${uid}-gold)`} />
-      <circle cx="16" cy="16" r="13" fill="none" stroke="#f3d27a" strokeWidth="1.4" opacity="0.85" />
-      <circle cx="16" cy="16" r="10.2" fill={`url(#${uid}-shine)`} opacity="0.35" />
-      <path
-        d="M10.2 16.4 L14.1 20.2 L21.8 12.1"
-        fill="none"
-        stroke="#fffdf4"
-        strokeWidth="3.1"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path className="zurs-verified-seal__spark" d="M27.2 6.2 L28 8.4 L30.2 9.2 L28 10 L27.2 12.2 L26.4 10 L24.2 9.2 L26.4 8.4 Z" fill="#f6e08a" />
+
+      <g className="zurs-verified-seal__ring">
+        <path d="M18 1.6 L19.1 4.4 L22 5.5 L19.1 6.6 L18 9.4 L16.9 6.6 L14 5.5 L16.9 4.4 Z" fill="#f6e08a" />
+        <path d="M18 26.6 L19.1 29.4 L22 30.5 L19.1 31.6 L18 34.4 L16.9 31.6 L14 30.5 L16.9 29.4 Z" fill="#f6e08a" />
+        <path d="M30.5 14 L31.6 16.9 L34.4 18 L31.6 19.1 L30.5 22 L29.4 19.1 L26.6 18 L29.4 16.9 Z" fill="#f3d27a" />
+        <path d="M1.6 18 L4.4 16.9 L5.5 14 L6.6 16.9 L9.4 18 L6.6 19.1 L5.5 22 L4.4 19.1 Z" fill="#f3d27a" />
+      </g>
+
+      <g className="zurs-verified-seal__face">
+        <circle cx="18" cy="18" r="11.2" fill={`url(#${uid}-gold)`} />
+        <circle cx="18" cy="18" r="11.2" fill="none" stroke="#fff1b8" strokeWidth="1.3" opacity="0.9" />
+        <path
+          d="M12.6 18.3 L16.4 22.1 L24.2 13.6"
+          fill="none"
+          stroke="#fffdf4"
+          strokeWidth="2.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </g>
     </svg>
   );
 }
 
 export function VerifiedName({
   name,
-  size = 18,
+  size = 20,
   className = "",
 }: {
   name: string;
