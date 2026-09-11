@@ -11,6 +11,7 @@ import {
   type LoginGuardState,
 } from "@/lib/loginGuard";
 import ZursLoginMascot, { type MascotState } from "@/components/ZursLoginMascot";
+import { loginErrorKh, loginMascotState } from "@/lib/loginUi";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowLeft, Check, Loader2, Lock, Mail, ShieldAlert, ShieldCheck, User } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -59,6 +60,7 @@ export default function AppwriteLogin() {
   const [error, setError] = useState<string | null>(null);
   const [resendIn, setResendIn] = useState(0);
   const [name, setName] = useState("");
+  const [watching, setWatching] = useState(false);
 
   // Lockout state. `lockLeft` is a live countdown so the visitor can see the
   // 24 hours actually draining instead of reloading to find out.
@@ -197,7 +199,7 @@ export default function AppwriteLogin() {
         setError(`ស្នើកូដញិកញាប់ពេក។ សូមរង់ចាំ ${formatCountdownKh(reason.retryAfter)} រួចព្យាយាមម្ដងទៀត។`);
         return;
       }
-      setError(reason instanceof Error ? reason.message : "មិនអាចផ្ញើលេខកូដបានទេ។ សូមព្យាយាមម្ដងទៀត។");
+      setError(loginErrorKh(reason, "send"));
     } finally {
       setBusy(false);
     }
@@ -272,7 +274,7 @@ export default function AppwriteLogin() {
       }
       setPhase("otp");
       if (settled) setAttemptsLeft(settled.remainingAttempts);
-      setError(reason instanceof Error ? reason.message : "លេខកូដមិនត្រឹមត្រូវ ញូផុតកំណត់។");
+      setError(loginErrorKh(reason, "verify"));
       setDigits(Array(OTP_LENGTH).fill(""));
       window.setTimeout(() => inputsRef.current[0]?.focus(), 30);
     } finally {
@@ -355,8 +357,13 @@ export default function AppwriteLogin() {
    * `error` is checked before typing so a wrong code wins over the digits
    * still sitting in the boxes.
    */
-  const mascotState: MascotState =
-    phase === "blocked" ? "banned" : phase === "success" ? "success" : error ? "wrong" : phase === "otp" || phase === "verifying" ? "peeking" : "idle";
+  const mascotState: MascotState = loginMascotState({
+    phase,
+    error,
+    busy,
+    watching,
+    hasInput: phase === "name" ? name.trim().length > 0 : email.trim().length > 0,
+  });
 
   const backAction = () => {
     if (phase === "otp") {
@@ -454,7 +461,11 @@ export default function AppwriteLogin() {
                         setEmail(event.target.value);
                         if (error) setError(null);
                       }}
-                      onFocus={(event) => event.currentTarget.scrollIntoView({ block: "center", behavior: "smooth" })}
+                      onFocus={(event) => {
+                        setWatching(true);
+                        event.currentTarget.scrollIntoView({ block: "center", behavior: "smooth" });
+                      }}
+                      onBlur={() => setWatching(false)}
                       type="email"
                       autoComplete="email"
                       inputMode="email"
@@ -558,6 +569,8 @@ export default function AppwriteLogin() {
                         if (error) setError(null);
                       }}
                       autoFocus
+                      onFocus={() => setWatching(true)}
+                      onBlur={() => setWatching(false)}
                       minLength={2}
                       maxLength={40}
                       autoComplete="name"

@@ -1,4 +1,5 @@
 import { Account, AppwriteException, Client, ID } from "appwrite";
+import { loginErrorKh } from "./loginUi";
 
 type SessionExchangeResponse = {
   authenticated: boolean;
@@ -37,7 +38,14 @@ export async function requestAppwriteEmailOtp(email: string) {
 
 export async function completeAppwriteEmailOtp(input: { userId: string; secret: string }) {
   const account = createAccount();
-  await account.createSession({ userId: input.userId, secret: input.secret.trim() });
+  try {
+    await account.createSession({ userId: input.userId, secret: input.secret.trim() });
+  } catch (reason) {
+    if (reason instanceof AppwriteException) {
+      console.error("[OTP] createSession failed:", reason.code, reason.type);
+    }
+    throw new Error(loginErrorKh(reason, "verify"));
+  }
   const jwt = await account.createJWT({ duration: 900 });
   const response = await fetch("/api/auth/appwrite/session", {
     method: "POST",

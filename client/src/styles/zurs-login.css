@@ -373,30 +373,33 @@
   position: relative;
   display: flex;
   align-items: center;
-  border-radius: 0.85rem;
+  border-radius: 0.95rem;
   border: 1px solid var(--zl-line);
   background: var(--zl-surface);
   transition: border-color var(--zl-fast) var(--zl-ease), background-color var(--zl-fast) var(--zl-ease), box-shadow var(--zl-fast) var(--zl-ease);
 }
 
 .zl-field__control:focus-within {
-  border-color: rgba(139, 147, 255, 0.45);
+  border-color: var(--zl-accent);
   background: var(--zl-surface-strong);
   box-shadow: 0 0 0 3px var(--zl-accent-soft);
 }
 
 .zl-field__icon {
+  position: absolute;
+  left: 0.9rem;
   width: 1rem;
   height: 1rem;
-  margin-left: 0.9rem;
+  margin: 0;
   color: var(--zl-faint);
+  pointer-events: none;
   flex: none;
 }
 
 .zl-field__control input {
   flex: 1;
   min-width: 0;
-  padding: 0.85rem 0.9rem 0.85rem 0.65rem;
+  padding: 0.85rem 0.9rem 0.85rem 2.5rem;
   border: 0;
   background: transparent;
   color: var(--zl-text);
