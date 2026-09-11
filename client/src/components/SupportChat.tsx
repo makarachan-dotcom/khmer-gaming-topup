@@ -492,8 +492,10 @@ export default function SupportChat({ open, onClose, seedTopic, seedOrderRef }: 
                       type="button"
                       className="zs-chat__emojiChoice"
                       onClick={() => insertEmoji(emoji)}
+                      role="option"
+                      title={emoji}
                     >
-                      {emoji}
+                      <AnimatedEmoji emoji={emoji} size={28} />
                     </button>
                   ))}
                 </div>

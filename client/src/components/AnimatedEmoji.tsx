@@ -65,11 +65,13 @@ export const AnimatedEmoji = memo(function AnimatedEmoji({
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const [staticOnly, setStaticOnly] = useState(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     let animation: AnimationItem | null = null;
     setStaticOnly(false);
+    setReady(false);
     // Lazy player import keeps lottie-web - and the canvas probe it runs on
     // import - out of the module graph until an animated emoji is rendered.
     if (typeof navigator !== "undefined" && navigator.userAgent.toLowerCase().includes("jsdom")) return;
@@ -81,6 +83,7 @@ export const AnimatedEmoji = memo(function AnimatedEmoji({
           return;
         }
         try {
+          hostRef.current.replaceChildren();
           animation = module.default.loadAnimation({
             container: hostRef.current,
             renderer: "svg",
@@ -88,6 +91,7 @@ export const AnimatedEmoji = memo(function AnimatedEmoji({
             autoplay: true,
             animationData: data,
           });
+          setReady(true);
         } catch {
           setStaticOnly(true);
         }
@@ -106,7 +110,22 @@ export const AnimatedEmoji = memo(function AnimatedEmoji({
       </span>
     );
   }
-  return <div ref={hostRef} className={`zcp-emoji-lottie ${className}`} style={{ width: size, height: size }} role="img" aria-label={emoji} />;
+
+  return (
+    <span
+      className={`zcp-emoji-host ${className}`}
+      style={{ width: size, height: size, position: "relative", display: "inline-grid", placeItems: "center", flex: "none" }}
+      role="img"
+      aria-label={emoji}
+    >
+      {!ready ? (
+        <span className="zcp-emoji-static" style={{ fontSize: Math.round(size * 0.82), lineHeight: 1 }} aria-hidden="true">
+          {emoji}
+        </span>
+      ) : null}
+      <div ref={hostRef} className="zcp-emoji-lottie" style={{ width: size, height: size, position: ready ? "relative" : "absolute", inset: 0 }} />
+    </span>
+  );
 });
 
 /* ------------------------------------------------------------ detection */
@@ -134,12 +153,11 @@ export function splitEmojiOnly(text: string): string[] | null {
   return clusters;
 }
 
-/** The composer's quick-emoji tray (Khmer support-chat favourites first). */
+/** The composer's quick-emoji tray. 6×4 so the popover is a clean grid of
+ *  the same Lottie pack the rest of ZURS already uses. */
 export const QUICK_EMOJIS = [
-  "🙏", "😀", "😂", "🥰", "😍", "🤔", "👍", "❤️",
-  "🔥", "🎉", "😢", "😮", "👏", "💯", "✨", "🎮",
-  "💳", "🛒", "📦", "⏰", "✅", "❌", "🆗", "🙌",
-  "😅", "🤝", "💸", "🚀",
-  "😭", "😡", "🤯", "🥳", "😴", "🤗", "😇", "🤩",
-  "👋", "💪", "🎁", "⭐",
+  "🙏", "😀", "😂", "🥰", "😍", "👍",
+  "🔥", "🎉", "👏", "💯", "✨", "🎮",
+  "😢", "🤗", "🥳", "🤝", "🚀", "👋",
+  "🙌", "🎁", "⭐", "📦", "❤️", "💬",
 ];

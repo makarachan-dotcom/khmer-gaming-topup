@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { splitEmojiOnly } from "../client/src/components/AnimatedEmoji";
+import { splitEmojiOnly, QUICK_EMOJIS } from "../client/src/components/AnimatedEmoji";
 
 const chat = readFileSync(join(process.cwd(), "client/src/components/SupportChat.tsx"), "utf8");
 const warmth = readFileSync(join(process.cwd(), "client/src/components/ChatWarmth.tsx"), "utf8");
@@ -29,6 +29,9 @@ describe("support chat emoji warmth", () => {
     expect(chat).toContain("QUICK_EMOJIS");
     expect(chat).toContain("splitEmojiOnly");
     expect(chat).toContain("zs-chat__emojiTray");
+    expect(chat).toContain("<AnimatedEmoji emoji={emoji} size={28} />");
+    expect(QUICK_EMOJIS).toHaveLength(24);
+    expect(css).toContain("grid-template-columns: repeat(6, 1fr)");
     expect(chat).toContain('href="/api/auth/google?returnTo=%2Fchat"');
     expect(css).toContain(".zs-chat__warmth");
     expect(css).toContain(".zs-chat__emojiTray");
