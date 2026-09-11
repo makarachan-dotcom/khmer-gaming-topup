@@ -37,7 +37,6 @@ export default function Home() {
     <StorefrontLayout>
       <main className="zp-page">
         <Reveal as="section" index={0}><HomeBanner /></Reveal>
-        <HomeStickers />
         <Reveal as="section" index={1}><HomepageMedia /></Reveal>
         <Reveal as="section" index={2}><HomeTopupExperience /></Reveal>
       </main>
@@ -48,15 +47,15 @@ function HomeStickers() {
   const reduce = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   return (
     <div className="zurs-home-stickers" aria-hidden="true">
-      <video className="zurs-home-sticker zurs-home-sticker--wave" src="/stickers/nenkay-wave.webm" poster="/stickers/nenkay-wave.png" autoPlay={!reduce} loop muted playsInline />
-      <video className="zurs-home-sticker zurs-home-sticker--rest" src="/stickers/nenkay-rest.webm" poster="/stickers/nenkay-rest.png" autoPlay={!reduce} loop muted playsInline />
+      <img className="zurs-home-sticker zurs-home-sticker--wave" src={reduce ? "/stickers/nenkay-wave.png" : "/stickers/nenkay-wave.webp"} alt="" />
+      <img className="zurs-home-sticker zurs-home-sticker--rest" src={reduce ? "/stickers/nenkay-rest.png" : "/stickers/nenkay-rest.webp"} alt="" />
     </div>
   );
 }
 function SectionHeading({ eyebrow, title, description, aside }: { eyebrow: string; title: string; description?: string; aside?: React.ReactNode }) {
   return (
-    <div className="flex items-end justify-between gap-4">
-      <div className="max-w-2xl">
+    <div className="flex items-center justify-between gap-3">
+      <div className="min-w-0 flex-1 max-w-2xl">
         <p className="zurs-eyebrow font-bold uppercase">{eyebrow}</p>
         <h2 className="zp-heading mt-1.5 font-display text-xl font-bold leading-tight text-ink text-balance sm:text-2xl">{title}</h2>
         {description ? <p className="mt-2 hidden text-sm leading-6 text-ink-muted text-pretty sm:block">{description}</p> : null}
@@ -234,9 +233,12 @@ function HomeTopupExperience() {
         title="ជ្រើសរើសហ្គេមរបស់អ្នក"
         description="ស្វែងរកតាមឈ្មោះហ្គេម ឬមើលតែហ្គេមកម្ពុជា និង Global ដើម្បីចូលទៅកាន់ទំព័រ Top-up។"
         aside={
-          <div className="hidden shrink-0 items-center gap-3 rounded-2xl border border-line bg-panel px-4 py-2.5 sm:flex" aria-labelledby="accept-payment-title">
-            <p id="accept-payment-title" className="text-xs font-bold tracking-[0.14em] text-ink-muted">ACCEPT PAYMENT</p>
-            <span className="rounded-lg bg-ink p-1.5"><img src={khqrLogoUrl} alt="KHQR" className="h-6 w-auto max-w-24 object-contain" loading="eager" decoding="async" /></span>
+          <div className="flex shrink-0 items-center gap-2">
+            <HomeStickers />
+            <div className="hidden items-center gap-3 rounded-2xl border border-line bg-panel px-4 py-2.5 sm:flex" aria-labelledby="accept-payment-title">
+              <p id="accept-payment-title" className="text-xs font-bold tracking-[0.14em] text-ink-muted">ACCEPT PAYMENT</p>
+              <span className="rounded-lg bg-ink p-1.5"><img src={khqrLogoUrl} alt="KHQR" className="h-6 w-auto max-w-24 object-contain" loading="eager" decoding="async" /></span>
+            </div>
           </div>
         }
       />
