@@ -446,7 +446,7 @@
   display: inline-grid;
   place-items: center;
   overflow: visible;
-  filter: drop-shadow(0 2px 6px rgba(201, 151, 18, 0.5));
+  filter: drop-shadow(0 2px 7px rgba(42, 171, 238, 0.55));
 }
 .zurs-verified-seal { display: block; overflow: visible; }
 .zurs-verified-seal__ring {
