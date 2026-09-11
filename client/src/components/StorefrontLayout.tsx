@@ -12,7 +12,7 @@ import { animate } from "animejs";
 import { ArrowUp, ChevronRight, LogIn, LogOut, WalletCards } from "lucide-react";
 import { FontEmojiBrand } from "@/components/FontEmojiBrand";
 import { PackEmoji } from "@/components/PackEmoji";
-import { ReactNode, useEffect, useRef, useState } from "react";
+import { CSSProperties, ReactNode, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 const logoUrl = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/kBXeVXEnNVEuNZKS.jpg";
 export function isProtectedMediaTarget(target: EventTarget | null) {
@@ -69,6 +69,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
   const paymentMethods = trpc.payments.methods.useQuery(undefined, { staleTime: 30_000, refetchInterval: 15_000 });
   const selectedPaymentMethod = (paymentMethods.data ?? []).find((method) => method.id === selectedPaymentMethodId) ?? null;
   const activeMobileTabHref = mobileTabHrefForPath(location);
+  const activeLiquidTab = Math.max(0, mobileNavigation.findIndex((item) => item.href === activeMobileTabHref));
   const isTopupRoute = location.startsWith("/topup/");
   // Round 9: the no-refund policy must be acknowledged before the checkout screen
   // opens, and the dialog itself offers a direct route into live support.
@@ -190,7 +191,8 @@ function StorefrontShell({ children }: { children: ReactNode }) {
         * a selection behind a dialog. */}
       {isTopupRoute ? <SelectedProductActionBar
         product={selectedProduct} paymentMethodName={selectedPaymentMethod?.name ?? null} isAuthenticated={Boolean(user)} isAuthenticationLoading={loading} signInHref={googleSignInHref} onContinue={() => setLocation("/checkout/preview")} /> : (
-        <nav className={cn("liquid-tabbar zurs-mobile-tabbar fixed bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-1/2 z-40 grid h-14 w-full -translate-x-1/2 grid-cols-2 gap-0.5 rounded-full p-1 sm:hidden", mobileTabColumns)} aria-label="Mobile primary navigation">
+        <nav className={cn("liquid-tabbar zurs-mobile-tabbar fixed bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-1/2 z-40 grid h-14 w-full -translate-x-1/2 grid-cols-2 gap-0.5 rounded-full p-1 sm:hidden", mobileTabColumns)} style={{ "--liquid-tab-x": String(activeLiquidTab) } as CSSProperties} aria-label="Mobile primary navigation">
+          <span className="liquid-tab-thumb" aria-hidden="true" />
           {mobileNavigation.map(({ href, label, animation, pack }) => {
             const active = activeMobileTabHref === href;
             const tabKind = href === "/" ? "home" : "account";
