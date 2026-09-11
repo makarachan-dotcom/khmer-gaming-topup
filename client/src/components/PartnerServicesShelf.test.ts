@@ -10,7 +10,8 @@ describe("partner product pay sheet", () => {
     expect(componentSource).toContain("createPortal");
     expect(componentSource).toContain("product-sheet-open");
     expect(componentSource).toContain("zurs-product-sheet__cta");
-    expect(componentSource).toContain("ទិញឥឡូវ");
+    expect(componentSource).toContain("CatalogSwitch");
+    expect(componentSource).toContain('active="digital"');
     expect(styleSource).toContain("bottom: calc(4.75rem + env(safe-area-inset-bottom))");
     expect(styleSource).toContain(".zurs-product-sheet__cta");
     expect(styleSource).toContain("body.product-sheet-open .storefront-scroll-top");

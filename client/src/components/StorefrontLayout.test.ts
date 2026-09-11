@@ -54,6 +54,16 @@ describe("storefront media protection", () => {
     expect(styleSource).toContain("zurs-particle-field");
   });
 
+  it("exposes a desktop-only catalog switch so Digital Services is reachable without the mobile tab bar", () => {
+    const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
+    const homeSource = readFileSync(join(process.cwd(), "client/src/pages/Home.tsx"), "utf8");
+    expect(componentSource).toContain("zurs-catalog-switch");
+    expect(componentSource).toContain("hidden items-center gap-0.5");
+    expect(componentSource).toContain("sm:inline-flex");
+    expect(componentSource).toContain("សេវាឌីជីថល");
+    expect(homeSource).toContain('<CatalogSwitch active="games" />');
+  });
+
   it("keeps a clean two-tab mobile bar after the Live Spin giveaway was retired", () => {
     const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
     const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");

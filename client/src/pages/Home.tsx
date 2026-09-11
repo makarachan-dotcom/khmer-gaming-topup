@@ -1,4 +1,4 @@
-import StorefrontLayout from "@/components/StorefrontLayout";
+import StorefrontLayout, { CatalogSwitch } from "@/components/StorefrontLayout";
 import { Reveal } from "@/components/Reveal";
 import { AnimatedGlyph } from "@/components/AnimatedGlyph";
 import { GameLogoTicker } from "@/components/GameLogoTicker";
@@ -234,6 +234,7 @@ function HomeTopupExperience() {
         description="ស្វែងរកតាមឈ្មោះហ្គេម ឬមើលតែហ្គេមកម្ពុជា និង Global ដើម្បីចូលទៅកាន់ទំព័រ Top-up។"
         aside={
           <div className="flex shrink-0 items-center gap-2">
+            <CatalogSwitch active="games" />
             <HomeStickers />
             <div className="hidden items-center gap-3 rounded-2xl border border-line bg-panel px-4 py-2.5 sm:flex" aria-labelledby="accept-payment-title">
               <p id="accept-payment-title" className="text-xs font-bold tracking-[0.14em] text-ink-muted">ACCEPT PAYMENT</p>

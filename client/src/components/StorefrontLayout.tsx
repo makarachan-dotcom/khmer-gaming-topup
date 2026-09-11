@@ -29,6 +29,27 @@ const mobileNavigation = [
 // conflicting classes, so appending this token is what actually widens the
 // track - the base class stays untouched and the test stays honest.
 const mobileTabColumns = mobileNavigation.length > 2 ? "grid-cols-3" : "grid-cols-2";
+
+export function CatalogSwitch({ active }: { active: "games" | "digital" }) {
+  const item = (href: string, key: "games" | "digital", label: string, pack: "diamond-blue" | "gift") => (
+    <Link
+      href={href}
+      aria-current={active === key ? "page" : undefined}
+      className={cn(
+        "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-bold transition",
+        active === key ? "bg-neon text-neon-ink" : "text-ink-muted hover:bg-panel-2 hover:text-ink",
+      )}
+    >
+      <PackEmoji name={pack} size={15} />{label}
+    </Link>
+  );
+  return (
+    <nav className="zurs-catalog-switch hidden items-center gap-0.5 rounded-full border border-line bg-panel p-0.5 sm:inline-flex" aria-label="ប្ដូរកាតាឡុក">
+      {item("/", "games", "ហ្គេម", "diamond-blue")}
+      {item("/topup", "digital", "សេវាឌីជីថល", "gift")}
+    </nav>
+  );
+}
 export function mobileTabHrefForPath(pathname: string) {
   const path = pathname.split("?")[0]?.split("#")[0] || "/";
   if (path === "/account" || path.startsWith("/account/") || path === "/wallet" || path === "/order-status") return "/account";
@@ -227,6 +248,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
               <span className="storefront-header-title__player" title={playerTitle || undefined}>{playerTitle || "ZURS.me"}</span>
             </div>
           </Link>
+          <CatalogSwitch active={location === "/topup" || location.startsWith("/topup?") ? "digital" : "games"} />
           <nav className="flex items-center gap-2" aria-label="Account">
             <SupportMascot />
             {/* Legacy source-contract wording retained: Wallet កំពុងបិទជាបណ្តោះអាសន្ន. */}
