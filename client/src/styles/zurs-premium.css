@@ -239,14 +239,16 @@ html, body { overflow-x: clip; }
   will-change: translate;
   backface-visibility: hidden;
   contain: layout paint;
-  background: #ffffff !important;
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-  border: 1px solid rgba(24, 24, 21, 0.12) !important;
-  box-shadow: 0 10px 24px rgba(24, 24, 21, 0.12);
-  bottom: max(0.7rem, env(safe-area-inset-bottom)) !important;
+  /* solid enough that scrolling content never bleeds through */
+  background: rgba(13, 20, 38, 0.92) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  backdrop-filter: blur(18px) saturate(1.2);
+  border: 1px solid rgba(238, 242, 255, 0.14) !important;
+  box-shadow: 0 -4px 30px rgba(2, 6, 23, 0.5), 0 10px 24px -8px rgba(2, 6, 23, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  /* respect iPhone home indicator */
+  bottom: max(0.5rem, env(safe-area-inset-bottom)) !important;
   z-index: 55;
-  max-width: 17.5rem;
+  max-width: min(92vw, 24rem);
 }
 /* entrance — animates the `translate` property only, keeping the -50% centering */
 @media (prefers-reduced-motion: no-preference) {
