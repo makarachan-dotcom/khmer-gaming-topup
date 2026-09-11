@@ -91,6 +91,7 @@ describe("storefront media protection", () => {
     expect(componentSource).toContain("is-scrubbing");
     expect(componentSource).toContain("goToTabAtX");
     expect(componentSource).toContain("tabProgressFromClientX");
+    expect(componentSource).toContain("setHoverIndex");
     expect(componentSource).not.toContain("TAB_ORDER_STORAGE_KEY");
     expect(componentSource).not.toContain("is-editing");
     expect(componentSource).not.toContain('href: "/live-spin"');

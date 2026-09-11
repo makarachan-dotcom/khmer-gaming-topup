@@ -80,6 +80,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
   const suppressClickRef = useRef(false);
   const [scrubbing, setScrubbing] = useState(false);
   const [scrubTab, setScrubTab] = useState<number | null>(null);
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const isTopupRoute = location.startsWith("/topup/");
   // Round 9: the no-refund policy must be acknowledged before the checkout screen
   // opens, and the dialog itself offers a direct route into live support.
@@ -119,14 +120,17 @@ function StorefrontShell({ children }: { children: ReactNode }) {
     const onMove = (event: PointerEvent) => {
       event.preventDefault();
       const nav = tabBarRef.current;
-      if (nav) setScrubTab(tabProgressFromClientX(event.clientX, nav.getBoundingClientRect(), mobileNavigation.length));
-      goToTabAtX(event.clientX);
+      if (!nav) return;
+      const rect = nav.getBoundingClientRect();
+      setScrubTab(tabProgressFromClientX(event.clientX, rect, mobileNavigation.length));
+      setHoverIndex(tabIndexFromClientX(event.clientX, rect, mobileNavigation.length));
     };
     const onUp = (event: PointerEvent) => {
       goToTabAtX(event.clientX);
       scrubRef.current = null;
       setScrubbing(false);
       setScrubTab(null);
+      setHoverIndex(null);
     };
     window.addEventListener("pointermove", onMove, { passive: false });
     window.addEventListener("pointerup", onUp);
@@ -165,7 +169,9 @@ function StorefrontShell({ children }: { children: ReactNode }) {
     setScrubbing(true);
     const nav = tabBarRef.current;
     if (nav) {
-      setScrubTab(tabProgressFromClientX(pending.startX, nav.getBoundingClientRect(), mobileNavigation.length));
+      const rect = nav.getBoundingClientRect();
+      setScrubTab(tabProgressFromClientX(pending.startX, rect, mobileNavigation.length));
+      setHoverIndex(tabIndexFromClientX(pending.startX, rect, mobileNavigation.length));
       try {
         nav.setPointerCapture(pending.pointerId);
       } catch {
@@ -195,8 +201,10 @@ function StorefrontShell({ children }: { children: ReactNode }) {
     if (!scrubRef.current) return;
     event.preventDefault();
     const nav = tabBarRef.current;
-    if (nav) setScrubTab(tabProgressFromClientX(event.clientX, nav.getBoundingClientRect(), mobileNavigation.length));
-    goToTabAtX(event.clientX);
+    if (!nav) return;
+    const rect = nav.getBoundingClientRect();
+    setScrubTab(tabProgressFromClientX(event.clientX, rect, mobileNavigation.length));
+    setHoverIndex(tabIndexFromClientX(event.clientX, rect, mobileNavigation.length));
   };
   const onBarPointerUp = (event: ReactPointerEvent<HTMLElement>) => {
     const wasScrubbing = Boolean(scrubRef.current);
@@ -212,6 +220,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
     scrubRef.current = null;
     setScrubbing(false);
     setScrubTab(null);
+    setHoverIndex(null);
   };
   const onTabClick = (event: { preventDefault: () => void; stopPropagation: () => void }) => {
     if (!suppressClickRef.current) return;
@@ -324,7 +333,9 @@ function StorefrontShell({ children }: { children: ReactNode }) {
         >
           <span className="liquid-tab-thumb" aria-hidden="true" />
           {mobileNavigation.map(({ href, label, animation, pack }) => {
-            const active = activeMobileTabHref === href;
+            const previewHref = hoverIndex != null ? mobileNavigation[hoverIndex]?.href : null;
+            const shownHref = previewHref ?? activeMobileTabHref;
+            const active = shownHref === href;
             const tabKind = href === "/" ? "home" : "account";
             const classes = cn(`zurs-mobile-tab zurs-mobile-tab--${tabKind} relative z-10 flex min-w-0 items-center justify-center gap-1.5 rounded-full px-2 py-1 text-xs font-bold`, href === "/topup" && "zurs-mobile-tab--store", active ? "zurs-mobile-tab--active" : "hover:text-ink");
             return (
