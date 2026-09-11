@@ -366,25 +366,49 @@
 }
 
 .package-choice {
-  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 240ms ease, border-color 240ms ease;
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), border-color 220ms ease, box-shadow 220ms ease;
 }
 .package-choice:active {
-  transform: scale(0.96);
+  transform: scale(0.985);
 }
 .package-choice--selected {
-  animation: zurs-pkg-pick 420ms cubic-bezier(0.22, 1, 0.36, 1);
-  border-color: rgba(201, 151, 18, 0.7) !important;
-  box-shadow: 0 0 0 3px rgba(201, 151, 18, 0.22), 0 10px 22px rgba(201, 151, 18, 0.16) !important;
+  animation: none;
+  border-color: #c99712 !important;
+  box-shadow: 0 0 0 2px rgba(201, 151, 18, 0.26) !important;
 }
-@keyframes zurs-pkg-pick {
-  0% { transform: scale(0.94); }
-  58% { transform: scale(1.045); }
-  100% { transform: scale(1); }
+.package-choice--selected:hover,
+.package-choice--selected:active {
+  transform: none;
+  border-color: #c99712 !important;
+}
+.package-choice--selected .package-choice-surface {
+  background: #fffef8 !important;
+}
+.package-choice-check {
+  animation: zurs-pkg-check 360ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes zurs-pkg-check {
+  0% { opacity: 0; transform: scale(0.72); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@media (hover: hover) and (pointer: fine) {
+  .package-choice:hover {
+    transform: translateY(-1px);
+  }
+  .package-choice--selected:hover {
+    transform: none;
+  }
+}
+@media (hover: none) {
+  .package-choice:hover {
+    transform: none;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .package-choice,
   .package-choice:active,
-  .package-choice--selected {
+  .package-choice--selected,
+  .package-choice-check {
     animation: none;
     transition: none;
     transform: none;
