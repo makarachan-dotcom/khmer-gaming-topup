@@ -14,7 +14,7 @@ import { FontEmojiBrand } from "@/components/FontEmojiBrand";
 import { PackEmoji } from "@/components/PackEmoji";
 import { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { TAB_LONG_PRESS_MS, tabIndexFromClientX, tabProgressFromClientX } from "@/lib/mobileTabOrder";
+import { TAB_LONG_PRESS_MS, TAB_SCRUB_PX, tabIndexFromClientX, tabProgressFromClientX } from "@/lib/mobileTabOrder";
 const logoUrl = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/kBXeVXEnNVEuNZKS.jpg";
 export function isProtectedMediaTarget(target: EventTarget | null) {
   return typeof Element !== "undefined" && target instanceof Element && Boolean(target.closest("img, video"));
@@ -115,38 +115,19 @@ function StorefrontShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     lastHrefRef.current = activeMobileTabHref;
   }, [activeMobileTabHref]);
-  useEffect(() => {
-    if (!scrubbing) return;
-    const onMove = (event: PointerEvent) => {
-      event.preventDefault();
-      const nav = tabBarRef.current;
-      if (!nav) return;
-      const rect = nav.getBoundingClientRect();
-      setScrubTab(tabProgressFromClientX(event.clientX, rect, mobileNavigation.length));
-      setHoverIndex(tabIndexFromClientX(event.clientX, rect, mobileNavigation.length));
-    };
-    const onUp = (event: PointerEvent) => {
-      goToTabAtX(event.clientX);
-      scrubRef.current = null;
-      setScrubbing(false);
-      setScrubTab(null);
-      setHoverIndex(null);
-    };
-    window.addEventListener("pointermove", onMove, { passive: false });
-    window.addEventListener("pointerup", onUp);
-    window.addEventListener("pointercancel", onUp);
-    return () => {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-      window.removeEventListener("pointercancel", onUp);
-    };
-  }, [scrubbing]);
   const clearTabPress = () => {
     if (pressTimerRef.current != null) {
       window.clearTimeout(pressTimerRef.current);
       pressTimerRef.current = null;
     }
     pendingPressRef.current = null;
+  };
+  const followFinger = (clientX: number) => {
+    const nav = tabBarRef.current;
+    if (!nav) return;
+    const rect = nav.getBoundingClientRect();
+    setScrubTab(tabProgressFromClientX(clientX, rect, mobileNavigation.length));
+    setHoverIndex(tabIndexFromClientX(clientX, rect, mobileNavigation.length));
   };
   const goToTabAtX = (clientX: number) => {
     const nav = tabBarRef.current;
@@ -161,22 +142,17 @@ function StorefrontShell({ children }: { children: ReactNode }) {
     setLocation(href);
     window.scrollTo({ top: 0, behavior: "auto" });
   };
-  const beginTabScrub = () => {
+  const beginTabScrub = (clientX?: number) => {
     const pending = pendingPressRef.current;
-    if (!pending) return;
+    if (!pending || scrubRef.current) return;
     scrubRef.current = { pointerId: pending.pointerId };
     suppressClickRef.current = true;
     setScrubbing(true);
-    const nav = tabBarRef.current;
-    if (nav) {
-      const rect = nav.getBoundingClientRect();
-      setScrubTab(tabProgressFromClientX(pending.startX, rect, mobileNavigation.length));
-      setHoverIndex(tabIndexFromClientX(pending.startX, rect, mobileNavigation.length));
-      try {
-        nav.setPointerCapture(pending.pointerId);
-      } catch {
-        /* window listeners take over */
-      }
+    followFinger(clientX ?? pending.startX);
+    try {
+      tabBarRef.current?.setPointerCapture(pending.pointerId);
+    } catch {
+      /* window listeners take over */
     }
     try {
       navigator.vibrate?.(10);
@@ -188,39 +164,42 @@ function StorefrontShell({ children }: { children: ReactNode }) {
     if (event.pointerType === "mouse" && event.button !== 0) return;
     clearTabPress();
     pendingPressRef.current = { startX: event.clientX, startY: event.clientY, pointerId: event.pointerId };
-    pressTimerRef.current = window.setTimeout(beginTabScrub, TAB_LONG_PRESS_MS);
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      /* iOS may refuse until move */
+    }
+    pressTimerRef.current = window.setTimeout(() => beginTabScrub(), TAB_LONG_PRESS_MS);
   };
   const onBarPointerMove = (event: ReactPointerEvent<HTMLElement>) => {
     const pending = pendingPressRef.current;
-    if (!scrubRef.current && pending) {
-      const dx = event.clientX - pending.startX;
-      const dy = event.clientY - pending.startY;
-      if (Math.abs(dy) > 14 && Math.abs(dy) > Math.abs(dx)) clearTabPress();
-      return;
+    if (!pending || event.pointerId !== pending.pointerId) return;
+    const dx = event.clientX - pending.startX;
+    const dy = event.clientY - pending.startY;
+    if (!scrubRef.current) {
+      if (Math.abs(dy) > 16 && Math.abs(dy) > Math.abs(dx)) {
+        clearTabPress();
+        return;
+      }
+      if (Math.abs(dx) < TAB_SCRUB_PX) return;
+      beginTabScrub(event.clientX);
     }
-    if (!scrubRef.current) return;
     event.preventDefault();
-    const nav = tabBarRef.current;
-    if (!nav) return;
-    const rect = nav.getBoundingClientRect();
-    setScrubTab(tabProgressFromClientX(event.clientX, rect, mobileNavigation.length));
-    setHoverIndex(tabIndexFromClientX(event.clientX, rect, mobileNavigation.length));
+    followFinger(event.clientX);
   };
   const onBarPointerUp = (event: ReactPointerEvent<HTMLElement>) => {
     const wasScrubbing = Boolean(scrubRef.current);
+    if (wasScrubbing) goToTabAtX(event.clientX);
     clearTabPress();
-    if (wasScrubbing) {
-      goToTabAtX(event.clientX);
-      try {
-        event.currentTarget.releasePointerCapture?.(event.pointerId);
-      } catch {
-        /* already released */
-      }
-    }
     scrubRef.current = null;
     setScrubbing(false);
     setScrubTab(null);
     setHoverIndex(null);
+    try {
+      event.currentTarget.releasePointerCapture?.(event.pointerId);
+    } catch {
+      /* already released */
+    }
   };
   const onTabClick = (event: { preventDefault: () => void; stopPropagation: () => void }) => {
     if (!suppressClickRef.current) return;

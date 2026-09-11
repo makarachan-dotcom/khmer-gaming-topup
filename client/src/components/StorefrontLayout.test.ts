@@ -87,9 +87,11 @@ describe("storefront media protection", () => {
   it("lets a long-press on the tab bar scrub left and right to another page", () => {
     const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
     expect(componentSource).toContain("TAB_LONG_PRESS_MS");
+    expect(componentSource).toContain("TAB_SCRUB_PX");
     expect(componentSource).toContain("onBarPointerDown");
     expect(componentSource).toContain("is-scrubbing");
     expect(componentSource).toContain("goToTabAtX");
+    expect(componentSource).toContain("followFinger");
     expect(componentSource).toContain("tabProgressFromClientX");
     expect(componentSource).toContain("setHoverIndex");
     expect(componentSource).not.toContain("TAB_ORDER_STORAGE_KEY");

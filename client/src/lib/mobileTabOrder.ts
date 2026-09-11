@@ -1,5 +1,6 @@
-/** Hold the tab bar, then slide left/right to change page. Buttons stay put. */
-export const TAB_LONG_PRESS_MS = 320;
+/** Hold the tab bar and slide; the page opens only when the finger lifts. */
+export const TAB_LONG_PRESS_MS = 180;
+export const TAB_SCRUB_PX = 12;
 
 export function tabIndexFromClientX(clientX: number, rect: { left: number; width: number }, count: number): number {
   if (count <= 0 || rect.width <= 0) return 0;

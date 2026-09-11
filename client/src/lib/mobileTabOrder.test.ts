@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { tabIndexFromClientX, tabProgressFromClientX } from "./mobileTabOrder";
+import { TAB_SCRUB_PX, tabIndexFromClientX, tabProgressFromClientX } from "./mobileTabOrder";
 
 describe("mobile tab scrub", () => {
   it("maps a finger position to a tab slot", () => {
@@ -16,5 +16,6 @@ describe("mobile tab scrub", () => {
     expect(tabProgressFromClientX(250, rect, 3)).toBeCloseTo(2, 5);
     expect(tabProgressFromClientX(-20, rect, 3)).toBe(0);
     expect(tabProgressFromClientX(400, rect, 3)).toBe(2);
+    expect(TAB_SCRUB_PX).toBeGreaterThan(0);
   });
 });
