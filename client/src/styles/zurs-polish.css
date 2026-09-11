@@ -61,20 +61,21 @@ img, svg, video, canvas { max-width: 100%; }
 /* Floating pill tab bar */
 .liquid-tabbar,
 .zurs-mobile-tabbar {
-  border: 1px solid rgba(24, 24, 21, 0.10) !important;
-  background: #ffffff !important;
-  box-shadow: 0 12px 28px rgba(24, 24, 21, 0.12) !important;
-  backdrop-filter: none;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.28);
+  box-shadow: 0 12px 28px rgba(24, 24, 21, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(28px) saturate(1.8);
+  -webkit-backdrop-filter: blur(28px) saturate(1.8);
 }
-.zurs-mobile-tab { color: #5c5c56 !important; }
+.zurs-mobile-tab { color: #3f3f3a !important; }
 .zurs-mobile-tab--active {
-  background: #161616 !important;
-  color: #ffffff !important;
-  box-shadow: none !important;
+  background: rgba(255, 255, 255, 0.72) !important;
+  color: #161616 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 4px 14px rgba(24, 24, 21, 0.10) !important;
 }
-.zurs-mobile-tab--active .zurs-tab-glyph-icon { color: #ffffff !important; }
+.zurs-mobile-tab--active .zurs-tab-glyph-icon { color: #161616 !important; }
 .zurs-mobile-tab--live-active {
-  background: #c99712 !important;
+  background: rgba(201, 151, 18, 0.78) !important;
   color: #1a1403 !important;
   box-shadow: none !important;
 }
