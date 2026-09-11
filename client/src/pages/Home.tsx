@@ -49,7 +49,7 @@ function SectionHeading({ eyebrow, title, description, aside }: { eyebrow: strin
       <div className="max-w-2xl">
         <p className="zurs-eyebrow font-bold uppercase">{eyebrow}</p>
         <h2 className="zp-heading mt-1.5 font-display text-xl font-bold leading-tight text-ink text-balance sm:text-2xl">{title}</h2>
-        {description ? <p className="mt-2 text-sm leading-6 text-ink-muted text-pretty">{description}</p> : null}
+        {description ? <p className="mt-2 hidden text-sm leading-6 text-ink-muted text-pretty sm:block">{description}</p> : null}
       </div>
       {aside}
     </div>
@@ -71,7 +71,7 @@ function HomeBanner() {
       {/* The artwork ships with its own transparent background and its own
         * blue edge, so nothing is painted behind it: no conic beam, no panel
         * fill, no gradient. Only the PNG itself is visible. */}
-      <div className="zurs-banner-frame zurs-banner-frame--bare relative isolate aspect-[16/7] overflow-hidden rounded-2xl sm:aspect-[16/6]">
+      <div className="zurs-banner-frame zurs-banner-frame--bare relative isolate aspect-[16/5.5] overflow-hidden rounded-2xl sm:aspect-[16/6]">
         {heroBanners.map((banner, index) => (
           <img
             key={banner.src}
@@ -217,7 +217,7 @@ function HomeTopupExperience() {
     [games],
   );
   return (
-    <section id="topup-games" className="container mt-8 pb-8 sm:mt-10 sm:pb-12">
+    <section id="topup-games" className="container mt-5 pb-28 sm:mt-10 sm:pb-12">
       <LoadingOverlay open={gamesQuery.isLoading} label="កំពុងរៀបចំបញ្ជីហ្គេម…" />
       <SectionHeading
         eyebrow="GAME TOP-UP"
