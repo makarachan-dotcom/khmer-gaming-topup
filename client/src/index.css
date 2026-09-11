@@ -1973,11 +1973,12 @@ body.product-sheet-open .contact-admin-fab {
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  gap: 0.1rem;
+  gap: 0.95rem;
   flex-shrink: 0;
   pointer-events: none;
   user-select: none;
   margin: 0;
+  padding-left: 0.5rem;
 }
 .zurs-home-sticker {
   display: block;
