@@ -350,16 +350,34 @@ async function telegramProviderPackages(game: TelegramSnapshotGame) {
 
 async function telegramProviderGameDetails(gameId: string): Promise<ProviderGameDetailsResponse> {
   const normalized = gameId.trim().toLowerCase();
-  const game = (await fetchBuiltInProviderGames()).find((item) => item.providerGameId === normalized);
-  if (!game) return { status: "unavailable", game: null, packages: [] };
-  // The owner can still switch the service off in Admin, same as any game.
   const availability = await providerAvailability();
-  if (availability.hiddenGameIds.includes(game.providerGameId)) return { status: "unavailable", game: null, packages: [] };
-  return {
-    status: "ready",
-    game: { id: game.providerGameId, name: game.name, region: "Global", provider: "FZR Cards", requiredFields: game.requiredFields },
-    packages: await telegramProviderPackages(game),
-  };
+  if (availability.hiddenGameIds.includes(normalized)) return { status: "unavailable", game: null, packages: [] };
+  const game = (await fetchBuiltInProviderGames()).find((item) => item.providerGameId === normalized);
+  if (game) {
+    const packages = await telegramProviderPackages(game);
+    if (packages.length) {
+      return {
+        status: "ready",
+        game: { id: game.providerGameId, name: game.name, region: "Global", provider: "FZR Cards", requiredFields: game.requiredFields },
+        packages,
+      };
+    }
+  }
+  const cached = await cachedProviderGameDetails(normalized);
+  if (cached) {
+    if (normalized === robloxRobuxGameId) {
+      return { ...cached, game: { ...cached.game, requiredFields: robloxAccountFields() } };
+    }
+    return cached;
+  }
+  if (normalized === robloxRobuxGameId) {
+    return {
+      status: "ready",
+      game: { id: robloxRobuxGameId, name: "Roblox Robux", region: "Global", provider: "FZR Cards", requiredFields: robloxAccountFields() },
+      packages: [],
+    };
+  }
+  return { status: "unavailable", game: null, packages: [] };
 }
 
 /*
@@ -930,7 +948,9 @@ async function cachedProviderGameDetails(gameId: string, includeInactive = false
     const telegramService = isTelegramProviderProduct(`${gameId} ${product.titleEn ?? ""} ${product.titleKh ?? ""}`);
     const requiredFields = telegramService
       ? [telegramUsernameField()]
-      : isMobileLegendsGame(gameId)
+      : gameId === robloxRobuxGameId || /roblox|robux/i.test(`${gameId} ${product.titleEn ?? ""}`)
+        ? robloxAccountFields()
+        : isMobileLegendsGame(gameId)
         ? mobileLegendsAccountFields()
         : [{ key: "player_id", label: "Player ID", placeholder: "Enter Player ID", required: true, kind: "text" as const }, ...(product.requiresZone ? [{ key: "server_id", label: "Server ID", placeholder: "Enter Server ID", required: true, kind: "text" as const }] : [])];
     return { status: "ready", game: { id: gameId, name: product.titleEn || product.titleKh, region: providerGameRegion(product.titleEn || product.titleKh), provider: "FZR Cards", requiredFields }, packages };

@@ -321,6 +321,18 @@ describe("provider catalog", () => {
     await expect(fetchProviderGameDetails("8_ball_pool", { includeInactive: true })).resolves.toEqual({ status: "ready", game: { id: "8_ball_pool", name: "8 Ball Pool", region: "Global", logoUrl: "https://cdn.example.test/8-ball-pool.png", provider: "FZR Cards", requiredFields: [{ key: "user_id", label: "User ID", required: true, kind: "text" }] }, packages: [{ id: providerPackageRecordId("8_ball_pool", "80_diamonds"), label: "80 Diamonds", amountLabel: "80 Diamonds", priceLabel: "$0.99", provider: "FZR Cards", paymentMethods: ["khqr", "bank"] }] });
   });
 
+  it("still opens Roblox with username and password when live manual-service offers are empty", async () => {
+    process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
+    process.env.FZR_CARDS_API_KEY = "server-only-key";
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, json: async () => ({ ok: true, kind: "topup", items: [], meta: { next_cursor: null, has_more: false }, items: [] }) })));
+    const result = await fetchProviderGameDetails("roblox_robux");
+    expect(result.status).toBe("ready");
+    if (result.status === "ready") {
+      expect(result.game).toMatchObject({ id: "roblox_robux", name: "Roblox Robux" });
+      expect(result.game.requiredFields.map((field) => field.key)).toEqual(["username", "password"]);
+    }
+  });
+
   it("merges every owner-enabled Mobile Legends family variant, including dynamic region IDs", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "server-only-key";
