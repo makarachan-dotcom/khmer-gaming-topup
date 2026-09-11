@@ -446,25 +446,20 @@
   display: inline-grid;
   place-items: center;
   overflow: visible;
-  filter: drop-shadow(0 2px 6px rgba(201, 151, 18, 0.5));
-}
-.zurs-verified-seal { display: block; overflow: visible; }
-.zurs-verified-seal__ring {
-  transform-origin: 18px 18px;
-  animation: zurs-verified-spin 2.6s linear infinite;
-}
-.zurs-verified-seal__face {
-  transform-origin: 18px 18px;
   animation: zurs-verified-laugh 1.35s ease-in-out infinite;
+  filter: drop-shadow(0 2px 8px rgba(201, 151, 18, 0.45));
 }
-@keyframes zurs-verified-spin {
-  to { transform: rotate(360deg); }
+.zurs-verified-name__mark .zcp-emoji-host,
+.zurs-verified-name__mark .zcp-emoji-lottie,
+.zurs-verified-name__mark .zcp-emoji-static {
+  animation: none;
+  filter: none;
 }
 @keyframes zurs-verified-laugh {
-  0%, 100% { transform: rotate(-8deg) translateY(0) scale(1); }
-  25% { transform: rotate(10deg) translateY(-1.2px) scale(1.1); }
-  50% { transform: rotate(-5deg) translateY(0) scale(0.96); }
-  75% { transform: rotate(8deg) translateY(-0.8px) scale(1.08); }
+  0%, 100% { transform: rotate(-10deg) translateY(0) scale(1); }
+  25% { transform: rotate(12deg) translateY(-2px) scale(1.14); }
+  50% { transform: rotate(-6deg) translateY(0) scale(0.96); }
+  75% { transform: rotate(9deg) translateY(-1px) scale(1.1); }
 }
 .zs-chat__member { color: inherit; font-weight: 700; }
 
@@ -892,9 +887,7 @@
   .wave-person__shadow,
   .wave-person__sparkle,
   .zs-chat__point,
-  .zurs-verified-name__mark,
-  .zurs-verified-seal__ring,
-  .zurs-verified-seal__face {
+  .zurs-verified-name__mark {
     animation: none !important;
     transition-duration: 1ms !important;
   }
