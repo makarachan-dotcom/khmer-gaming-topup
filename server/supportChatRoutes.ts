@@ -145,6 +145,7 @@ export function registerSupportChatRoutes(app: Express) {
     const [session, quota] = await Promise.all([getActiveSessionForUser(actor.id), supportQuotaState(actor.id)]);
     return res.json({
       authenticated: true,
+      displayName: actor.displayName,
       quota,
       session: session ? publicSession(session) : null,
     });

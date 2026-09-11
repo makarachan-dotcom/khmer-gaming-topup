@@ -4,6 +4,7 @@ import { formatCountdownKh } from "@/lib/loginGuard";
 import SupportOrb, { type SupportOrbMood } from "@/components/SupportOrb";
 import { AnimatedEmoji, QUICK_EMOJIS, splitEmojiOnly } from "@/components/AnimatedEmoji";
 import { ChatWarmth } from "@/components/ChatWarmth";
+import { VerifiedName } from "@/components/VerifiedName";
 import {
   SupportChatError,
   baseMimeType,
@@ -72,6 +73,7 @@ function timeOf(value: string) {
 export default function SupportChat({ open, onClose, seedTopic, seedOrderRef }: SupportChatProps) {
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(true);
+  const [memberName, setMemberName] = useState<string | null>(null);
   const [session, setSession] = useState<SupportSessionView | null>(null);
   const [quota, setQuota] = useState<SupportQuota | null>(null);
   const [topic, setTopic] = useState(seedTopic || TOPICS[3]);
@@ -115,6 +117,7 @@ export default function SupportChat({ open, onClose, seedTopic, seedOrderRef }: 
       .then((state) => {
         if (cancelled) return;
         setAuthenticated(state.authenticated);
+        setMemberName(state.displayName?.trim() ? state.displayName.trim() : null);
         setQuota(state.quota);
         setSession(state.session);
       })
@@ -292,7 +295,18 @@ export default function SupportChat({ open, onClose, seedTopic, seedOrderRef }: 
           <div className="zs-chat__ident">
             <p className="zs-chat__title">ជំនួយផ្ទាល់ Zurs</p>
             <p className="zs-chat__sub">
-              {session
+              {authenticated ? (
+                <span className="zs-chat__who">
+                  <VerifiedName name={memberName || "ZURS Member"} size={15} className="zs-chat__member" />
+                  {session
+                    ? session.status === "closed"
+                      ? " · ការឆាតបានបិទ"
+                      : session.status === "waiting"
+                        ? " · កំពុងរង់ចាំក្រុមជំនួយ"
+                        : " · ភ្ជាប់ជាមួយក្រុមជំនួយ"
+                    : " · សូមស្វាគមន៍"}
+                </span>
+              ) : session
                 ? session.status === "closed"
                   ? "ការឆាតបានបិទ"
                   : session.status === "waiting"
@@ -322,6 +336,9 @@ export default function SupportChat({ open, onClose, seedTopic, seedOrderRef }: 
               <p className="zs-chat__introTitle">សូមចូលគណនីជាមុនសិន</p>
               <p>ការឆាតជាមួយក្រុមជំនួយត្រូវការគណនី ដើម្បីយើងដឹងថាជាអ្នកណា។</p>
               <a className="zs-chat__cta" href="/api/auth/google?returnTo=%2Fchat">
+                <span className="zs-chat__point" aria-hidden="true">
+                  <AnimatedEmoji emoji="👉" size={22} />
+                </span>
                 ចូលគណនី
               </a>
             </div>

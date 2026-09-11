@@ -297,7 +297,8 @@
 
 .zs-chat__ident { flex: 1; min-width: 0; }
 .zs-chat__title { margin: 0; font-size: 0.88rem; font-weight: 700; }
-.zs-chat__sub { margin: 0; font-size: 0.7rem; color: var(--zs-muted); }
+.zs-chat__sub { margin: 0; font-size: 0.7rem; color: var(--zs-muted); overflow: hidden; }
+.zs-chat__who { display: inline-flex; align-items: center; gap: 4px; min-width: 0; max-width: 100%; }
 
 .zs-chat__end {
   flex: none;
@@ -361,12 +362,111 @@
 .zs-chat__introTitle { margin: 0; font-size: 0.98rem; font-weight: 700; color: var(--zs-text); }
 .zs-chat__introNote { margin: 0; font-size: 0.76rem; color: var(--zs-muted); }
 
+.zs-chat__scene {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 0;
+  margin: 0 auto 4px;
+  max-width: 100%;
+}
+.zs-chat__scene--together { padding-inline: 4px; }
+.zs-chat__person {
+  width: 88px;
+  height: 114px;
+  flex: none;
+  margin-bottom: 4px;
+  filter: drop-shadow(0 10px 16px rgba(2, 6, 23, 0.4));
+}
+.wave-person { width: 100%; height: 100%; display: block; overflow: visible; }
+.wave-person__body { transform-origin: 62px 150px; animation: wave-person-sway 4.8s ease-in-out infinite; }
+.wave-person__arm { transform-origin: 90px 78px; animation: wave-person-arm 4.8s ease-in-out infinite; }
+.wave-person__hand { transform-origin: 118px 34px; animation: wave-person-hand 4.8s ease-in-out infinite; }
+.wave-person__eyes { transform-origin: 63px 44px; animation: wave-person-blink 4.8s ease-in-out infinite; }
+.wave-person__shadow { transform-origin: 62px 170px; animation: wave-person-shadow 4.8s ease-in-out infinite; }
+.wave-person__sparkle { transform-origin: center; animation: wave-person-sparkle 4.8s ease-in-out infinite; }
+.wave-person__sparkle--late { animation-delay: -1.6s; }
+.wave-person__sparkle--later { animation-delay: -3.1s; }
+@keyframes wave-person-sway {
+  0%, 100% { transform: rotate(-2deg); }
+  50% { transform: rotate(3deg); }
+}
+@keyframes wave-person-arm {
+  0%, 100% { transform: rotate(-14deg); }
+  25% { transform: rotate(16deg); }
+  50% { transform: rotate(-6deg); }
+  75% { transform: rotate(18deg); }
+}
+@keyframes wave-person-hand {
+  0%, 100% { transform: rotate(-8deg); }
+  50% { transform: rotate(14deg); }
+}
+@keyframes wave-person-blink {
+  0%, 38%, 46%, 100% { transform: scaleY(1); }
+  42% { transform: scaleY(0.08); }
+}
+@keyframes wave-person-shadow {
+  0%, 100% { transform: scaleX(1); }
+  50% { transform: scaleX(1.08); }
+}
+@keyframes wave-person-sparkle {
+  0%, 100% { opacity: 0.35; transform: scale(0.85) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1.15) rotate(18deg); }
+}
+
+.zs-chat__point {
+  display: inline-grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  flex: none;
+  animation: zs-point 1.05s ease-in-out infinite;
+  filter: drop-shadow(0 4px 8px rgba(201, 151, 18, 0.35));
+}
+@keyframes zs-point {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  50% { transform: translateX(6px) rotate(10deg); }
+}
+
+.zurs-verified-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  max-width: 100%;
+}
+.zurs-verified-name__text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.zurs-verified-name__mark {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  overflow: visible;
+  animation: zurs-verified-pop 2.8s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
+}
+@keyframes zurs-verified-pop {
+  0%, 68%, 100% { transform: scale(1); }
+  76% { transform: scale(1.22); }
+  84% { transform: scale(0.92); }
+  92% { transform: scale(1.1); }
+}
+.zs-chat__member { color: inherit; font-weight: 700; }
+
 .zs-chat__warmth {
   position: relative;
   width: 168px;
   height: 148px;
   margin: 4px auto 6px;
   flex: none;
+}
+.zs-chat__scene--together .zs-chat__warmth {
+  width: 140px;
+  height: 128px;
+  margin: 0 0 6px;
 }
 .zs-chat__warmth::before {
   content: "";
@@ -449,6 +549,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
   margin-top: 4px;
   padding: 10px 20px;
   border: none;
@@ -760,7 +861,15 @@
   .zs-chat__orbit,
   .zs-chat__emojiTray,
   .zcp-emoji-lottie,
-  .zcp-emoji-static {
+  .zcp-emoji-static,
+  .wave-person__body,
+  .wave-person__arm,
+  .wave-person__hand,
+  .wave-person__eyes,
+  .wave-person__shadow,
+  .wave-person__sparkle,
+  .zs-chat__point,
+  .zurs-verified-name__mark {
     animation: none !important;
     transition-duration: 1ms !important;
   }

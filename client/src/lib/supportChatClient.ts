@@ -36,6 +36,7 @@ export type SupportQuota = {
 
 export type SupportState = {
   authenticated: boolean;
+  displayName?: string | null;
   quota: SupportQuota;
   session: SupportSessionView | null;
 };
