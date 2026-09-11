@@ -37,10 +37,20 @@ export default function Home() {
     <StorefrontLayout>
       <main className="zp-page">
         <Reveal as="section" index={0}><HomeBanner /></Reveal>
+        <HomeStickers />
         <Reveal as="section" index={1}><HomepageMedia /></Reveal>
         <Reveal as="section" index={2}><HomeTopupExperience /></Reveal>
       </main>
     </StorefrontLayout>
+  );
+}
+function HomeStickers() {
+  const reduce = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  return (
+    <div className="zurs-home-stickers" aria-hidden="true">
+      <video className="zurs-home-sticker zurs-home-sticker--wave" src="/stickers/nenkay-wave.webm" poster="/stickers/nenkay-wave.png" autoPlay={!reduce} loop muted playsInline />
+      <video className="zurs-home-sticker zurs-home-sticker--rest" src="/stickers/nenkay-rest.webm" poster="/stickers/nenkay-rest.png" autoPlay={!reduce} loop muted playsInline />
+    </div>
   );
 }
 function SectionHeading({ eyebrow, title, description, aside }: { eyebrow: string; title: string; description?: string; aside?: React.ReactNode }) {
