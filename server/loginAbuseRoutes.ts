@@ -37,6 +37,7 @@ import {
   type LoginIntent,
 } from "./loginAbuseGuard";
 import { describeRequestDevice } from "./deviceInsight";
+import { isDisposableEmail, parseLoginEmail } from "./disposableEmail";
 
 const CLAIM_TTL_MS = 10 * 60 * 1000;
 const claims = new Map<string, { fingerprint: string; expiresAt: number }>();
@@ -58,9 +59,7 @@ function secureHeaders(res: Response) {
 }
 
 function readEmail(value: unknown) {
-  if (typeof value !== "string") return null;
-  const email = value.trim().toLowerCase();
-  return email.length >= 5 && email.length <= 320 && /^\S+@\S+\.\S+$/.test(email) ? email : null;
+  return parseLoginEmail(value);
 }
 
 function readIntent(value: unknown): LoginIntent {
@@ -162,7 +161,13 @@ export function registerLoginAbuseRoutes(app: Express) {
    */
   app.post("/api/auth/login/request-code", async (req, res) => {
     secureHeaders(res);
+    const rawEmail = req.body?.email;
+    if (typeof rawEmail !== "string" || rawEmail.length > 320 || /[\r\n\0]/.test(rawEmail) || !parseLoginEmail(rawEmail)) {
+      return res.status(400).json({ code: "INVALID_EMAIL" });
+    }
     const actor = loginActorFromRequest(req);
+    if (!actor.email) return res.status(400).json({ code: "INVALID_EMAIL" });
+    if (isDisposableEmail(actor.email)) return sendRateLimited(res, 3600);
 
     const decision = await evaluateLoginAttempt({ actor, intent: "request" });
     if (!decision.allowed) return sendBlocked(res, decision);
@@ -170,10 +175,10 @@ export function registerLoginAbuseRoutes(app: Express) {
     const byIp = await consumeRateLimit({ bucket: rateLimitBuckets.loginOtpRequestIp, identifier: actor.ip, mode: "strict" });
     if (!byIp.allowed) return sendRateLimited(res, byIp.retryAfterSeconds);
 
-    if (actor.email) {
-      const byIdentity = await consumeRateLimit({ bucket: rateLimitBuckets.loginOtpRequestIdentity, identifier: actor.email, mode: "strict" });
-      if (!byIdentity.allowed) return sendRateLimited(res, byIdentity.retryAfterSeconds);
-    }
+    const byMinute = await consumeRateLimit({ bucket: rateLimitBuckets.loginOtpRequestIdentity, identifier: actor.email, mode: "strict" });
+    if (!byMinute.allowed) return sendRateLimited(res, byMinute.retryAfterSeconds);
+    const byHour = await consumeRateLimit({ bucket: rateLimitBuckets.loginOtpRequestIdentityHour, identifier: actor.email, mode: "strict" });
+    if (!byHour.allowed) return sendRateLimited(res, byHour.retryAfterSeconds);
 
     return res.json({ code: "OK", ...guardPayload(decision) });
   });

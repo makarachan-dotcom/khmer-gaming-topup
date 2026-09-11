@@ -179,6 +179,7 @@ async function callGuard(path: string, body: Record<string, unknown>) {
     const retryAfter = Number((payload as { retryAfter?: unknown })?.retryAfter ?? response.headers.get("retry-after") ?? 60);
     throw new LoginRateLimitedError(Number.isFinite(retryAfter) ? Math.max(1, Math.round(retryAfter)) : 60);
   }
+  if (response.status === 400) throw new Error("អ៊ីមែលមិនត្រឹមត្រូវ — សូមពិនិត្យម្តងទៀត។");
   // A 5xx must not lock a real customer out of their account: the server-side
   // guard still runs on the session exchange, which is the enforcing endpoint.
   if (!response.ok) return ALLOWED;

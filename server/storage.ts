@@ -239,7 +239,7 @@ export async function getAppwriteMediaFile(relKey: string): Promise<Response | n
     headers: appwriteHeaders(config),
     signal: AbortSignal.timeout(30_000),
   });
-  if (response.status === 404) return null;
+  if (response.status === 404 || response.status === 400 || response.status === 410) return null;
   if (response.status === 401 || response.status === 403) throw new Error(unavailableMessage(`Appwrite ${response.status}`));
   if (!response.ok) throw new Error(`Appwrite storage read failed (${response.status})`);
   return response;

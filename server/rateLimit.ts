@@ -82,7 +82,8 @@ export const rateLimitBuckets = {
   // "Send me a code" — keyed by IP.
   loginOtpRequestIp: { name: "loginreqip", limit: 12, windowSeconds: 600 },
   // "Send me a code" — keyed by the hashed email. One mailbox, few codes.
-  loginOtpRequestIdentity: { name: "loginreqid", limit: 4, windowSeconds: 900 },
+  loginOtpRequestIdentity: { name: "loginreqid", limit: 1, windowSeconds: 60 },
+  loginOtpRequestIdentityHour: { name: "loginreqid1h", limit: 3, windowSeconds: 3600 },
   // Each verify attempt, keyed by device fingerprint. Sits above the 5-strike
   // lockout so the lockout is what a human hits first, not an opaque 429.
   loginVerifyDevice: { name: "loginvfy", limit: 12, windowSeconds: 600 },
@@ -99,6 +100,9 @@ export const rateLimitBuckets = {
   adminSupportSend: { name: "adminsuppsend", limit: 300, windowSeconds: 300 },
   // Session exchange: the one endpoint that actually mints a ZURS cookie.
   loginSessionExchange: { name: "loginsess", limit: 20, windowSeconds: 600 },
+  // Public player-id lookup proxies to the game provider. Tight, per IP, so a
+  // tRPC batch cannot turn one HTTP request into dozens of upstream calls.
+  validatePlayer: { name: "validpid", limit: 20, windowSeconds: 60 },
 } as const satisfies Record<string, RateLimitBucket>;
 
 const memoryHits = new Map<string, number[]>();

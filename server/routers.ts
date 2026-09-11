@@ -6,7 +6,7 @@ import { adminProcedure, ownerProcedure, protectedProcedure, publicProcedure, ro
 import * as db from "./db";
 import { addOwnerLiveSpinTestEntry, announceLiveSpinEvent, createLiveSpinEvent, createOwnerLiveSpinTestEvent, endLiveSpinEvent, getLiveSpinAuditLog, getLiveSpinEvents, getLiveSpinOwnerEventDetail, getLiveSpinPrizeTiers, lockLiveSpinParticipants, revealLiveSpinPrize, saveLiveSpinConsolationGift, saveLiveSpinPrizeTier, saveLiveSpinSettings, skipLiveSpinWeek, startLiveSpinLobby } from "./liveSpinStore";
 import { advanceLiveSpinSequence, runLiveSpinSequence } from "./liveSpinSequence";
-import { fetchFzrProviderSyncSnapshot, fetchProviderGameDetails, fetchProviderGames, fetchProviderPackages, fetchProviderPreviewPackages, fetchPublicProviderPackagePreview, getProviderAvailabilityCatalog, getProviderCatalogStatus, setProviderAvailability, validateProviderPlayerIdentity } from "./providerCatalog";
+import { fetchFzrProviderSyncSnapshot, fetchProviderGameDetails, fetchProviderGames, fetchProviderPackages, fetchProviderPreviewPackages, fetchPublicProviderPackagePreview, getProviderAvailabilityCatalog, getProviderCatalogStatus, setProviderAvailability } from "./providerCatalog";
 import { toPublicPlayerIdentityResponse } from "./playerIdentityPrivacy";
 import { getProviderCredentialStatus } from "./providerCredentialStatus";
 import { encryptCredential } from "./credentialEnvelope";
@@ -20,7 +20,8 @@ import { createDiditHostedSession } from "./didit";
 import { disclosureRequestStatuses, fraudReportStatuses } from "./marketplaceSafety";
 import { deriveLocationRisk, resolveLocationCountry } from "./marketplaceLocation";
 import { createZursSession, getZursSessionCookieOptions, ZURS_SESSION_COOKIE } from "./zursSession";
-import { enforceRateLimitOrThrow, rateLimitBuckets } from "./rateLimit";
+import { enforceRateLimitOrThrow, rateLimitBuckets, clientIpFromRequest } from "./rateLimit";
+import { cachedValidateProviderPlayerIdentity } from "./playerIdentityCache";
 import { getPartnerCatalog, getPartnerProduct, getPartnerUsage, toPublicPartnerPreview, toPublicPartnerProduct, PartnerServiceError, getAdminPartnerCatalog, applyPartnerPriceOverride } from "./partnerCatalog";
 import { createPartnerServiceOrder, deliverPartnerService, submitCdkToken, confirmCdkUpgrade } from "./partnerOrders";
 import { getPartnerOverride, listPartnerOverrides, savePartnerOverride } from "./partnerOverrides";
@@ -113,7 +114,10 @@ export const appRouter = router({
     gameImages: publicProcedure.query(() => db.getProviderGameImageOverrides()),
     packagePreview: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120) })).query(({ input }) => fetchPublicProviderPackagePreview(input.gameId)),
     packages: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120), fields: z.record(z.string().trim().max(64), z.string().trim().min(1).max(256)).refine((fields) => Object.keys(fields).length <= 12, "Too many provider fields"), idAccuracyConfirmed: z.boolean().optional().default(false) })).mutation(({ input }) => fetchProviderPackages(input)),
-    validatePlayerId: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120), fields: z.record(z.string().trim().max(64), z.string().trim().min(1).max(256)).refine((fields) => Object.keys(fields).length <= 12, "Too many provider fields") })).mutation(async ({ input }) => toPublicPlayerIdentityResponse(await validateProviderPlayerIdentity(input))),
+    validatePlayerId: publicProcedure.input(z.object({ gameId: z.string().trim().min(1).max(120), fields: z.record(z.string().trim().max(64), z.string().trim().min(1).max(256)).refine((fields) => Object.keys(fields).length <= 12, "Too many provider fields") })).mutation(async ({ ctx, input }) => {
+      await enforceRateLimitOrThrow({ bucket: rateLimitBuckets.validatePlayer, identifier: clientIpFromRequest(ctx.req), mode: "strict" });
+      return toPublicPlayerIdentityResponse(await cachedValidateProviderPlayerIdentity(input));
+    }),
   }),
   marketplace: router({
     list: publicProcedure.input(z.object({ listingType: marketplaceType.optional(), game: z.string().max(120).optional(), search: z.string().max(120).optional() }).optional()).query(async ({ input }) => Promise.all((await db.listMarketplace(input ?? {})).map(async (listing) => {

@@ -271,6 +271,7 @@ describe("wiring", () => {
     expect(source).toContain("loginGuardProbe");
     expect(source).toContain("loginOtpRequestIp");
     expect(source).toContain("loginOtpRequestIdentity");
+    expect(source).toContain("loginOtpRequestIdentityHour");
     expect(source).toContain("loginVerifyDevice");
   });
 

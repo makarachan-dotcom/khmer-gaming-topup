@@ -35,6 +35,10 @@ export function registerStorageProxy(app: Express) {
       forgeUrl.searchParams.set("path", key);
       const forgeResp = await fetch(forgeUrl, { headers: { Authorization: `Bearer ${ENV.forgeApiKey}` } });
       if (!forgeResp.ok) {
+        if (forgeResp.status === 404 || forgeResp.status === 410) {
+          res.status(404).send("Stored media was not found");
+          return;
+        }
         const body = await forgeResp.text().catch(() => "");
         console.error(`[StorageProxy] forge error: ${forgeResp.status} ${body}`);
         res.status(502).send("Storage backend error");
@@ -49,6 +53,11 @@ export function registerStorageProxy(app: Express) {
       res.set("Cache-Control", "no-store");
       res.redirect(307, url);
     } catch (err) {
+      const message = err instanceof Error ? err.message : "";
+      if (/\b(404|410|not found)\b/i.test(message)) {
+        res.status(404).send("Stored media was not found");
+        return;
+      }
       console.error("[StorageProxy] failed:", err);
       res.status(502).send("Storage proxy error");
     }

@@ -20,12 +20,24 @@ function createAccount() {
   return new Account(client);
 }
 
+async function otpUserIdForEmail(email: string) {
+  const data = new TextEncoder().encode(email.trim().toLowerCase());
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  const hex = [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  return `e${hex.slice(0, 35)}`;
+}
+
 export async function requestAppwriteEmailOtp(email: string) {
   const account = createAccount();
+  const normalized = email.trim().toLowerCase();
   try {
-    const token = await account.createEmailToken({ userId: ID.unique(), email: email.trim().toLowerCase(), phrase: false });
+    const token = await account.createEmailToken({ userId: await otpUserIdForEmail(normalized), email: normalized, phrase: false });
     return { userId: token.userId };
   } catch (reason) {
+    if (reason instanceof AppwriteException && (reason.code === 409 || reason.type === "user_already_exists")) {
+      const token = await account.createEmailToken({ userId: ID.unique(), email: normalized, phrase: false });
+      return { userId: token.userId };
+    }
     if (reason instanceof AppwriteException) {
       // Log code/type only (no PII) so delivery issues are diagnosable in console.
       console.error("[OTP] createEmailToken failed:", reason.code, reason.type);

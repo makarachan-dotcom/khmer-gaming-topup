@@ -18,6 +18,9 @@ describe("rate limit buckets", () => {
     expect(rateLimitBuckets.beginPayment).toMatchObject({ limit: 5, windowSeconds: 60 });
     expect(rateLimitBuckets.paymentStatus).toMatchObject({ limit: 30, windowSeconds: 60 });
     expect(rateLimitBuckets.khqrWebhook).toMatchObject({ limit: 60, windowSeconds: 60 });
+    expect(rateLimitBuckets.validatePlayer).toMatchObject({ limit: 20, windowSeconds: 60 });
+    expect(rateLimitBuckets.loginOtpRequestIdentity).toMatchObject({ limit: 1, windowSeconds: 60 });
+    expect(rateLimitBuckets.loginOtpRequestIdentityHour).toMatchObject({ limit: 3, windowSeconds: 3600 });
   });
 
   it("rejects the attempt past the pay key limit from one address", async () => {

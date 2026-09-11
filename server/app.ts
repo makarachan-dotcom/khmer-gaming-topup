@@ -20,6 +20,7 @@ import { enforceIpBan } from "./ipBanGuard";
 import { clientIpFromRequest, consumeRateLimit, rateLimitBuckets, rateLimitMiddleware, sendRateLimited } from "./rateLimit";
 import { consumeWebhookNonce, isFreshWebhookTimestamp, releaseWebhookNonce, webhookReplayKey } from "./paymentSecurity";
 import { applyBackendSecurity, SECURITY_TXT } from "./edgeSecurity";
+import { capTrpcBatch } from "./trpcBatch";
 
 /**
  * Builds the shared Express application for the local long-running server and
@@ -116,6 +117,7 @@ export function createApp() {
   // throttled caller is rejected ahead of any authentication, provider or
   // database work. Session endpoints fail closed, public traffic fails open.
   app.use("/api/auth", rateLimitMiddleware({ bucket: rateLimitBuckets.auth, mode: "strict" }));
+  app.use("/api/trpc", capTrpcBatch);
   app.use("/api/trpc", rateLimitMiddleware({ bucket: rateLimitBuckets.trpcPublic, mode: "lenient" }));
   registerSecurePaymentLinkRoutes(app);
   // The managed hosting integration relies on Manus-only credentials. Vercel
@@ -173,5 +175,21 @@ export function createApp() {
       createContext,
     })
   );
+  app.use("/api", (req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    if (req.method === "GET" || req.method === "HEAD" || req.method === "OPTIONS") {
+      return res.status(404).json({ error: "not_found" });
+    }
+    return res.status(404).json({ error: "not_found" });
+  });
+  app.use((error: unknown, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (res.headersSent) return next(error);
+    const path = req.originalUrl || req.path || "";
+    if (path.startsWith("/api")) {
+      res.setHeader("Cache-Control", "no-store");
+      return res.status(500).json({ error: "internal_error" });
+    }
+    return next(error);
+  });
   return app;
 }
