@@ -11,7 +11,7 @@ import { trpc } from "@/lib/trpc";
 import { animate } from "animejs";
 import { ArrowUp, ChevronRight, LogIn, LogOut, WalletCards } from "lucide-react";
 import { FontEmojiBrand } from "@/components/FontEmojiBrand";
-import { PackEmoji, TabPackEmoji } from "@/components/PackEmoji";
+import { PackEmoji } from "@/components/PackEmoji";
 import { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { TAB_LONG_PRESS_MS, TAB_SCRUB_PX, tabIndexFromClientX, tabProgressFromClientX } from "@/lib/mobileTabOrder";
@@ -21,8 +21,8 @@ export function isProtectedMediaTarget(target: EventTarget | null) {
 }
 const mobileNavigation = [
   { href: "/", label: "ដើម", animation: "home" as const, pack: "diamond-blue" as const },
-  { href: "/topup", label: "ហាង", pack: "shopping-bag" as const },
-  { href: "/account", label: "គណនី", pack: "user-laptop" as const },
+  { href: "/topup", label: "ហាង", pack: "gift" as const },
+  { href: "/account", label: "គណនី", pack: "account-face" as const },
 ];
 // The <nav> below keeps its literal `grid-cols-2` base class because a source
 // contract test pins that exact string. tailwind-merge keeps the LAST of two
@@ -236,7 +236,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
               </span>
             ) : null}
             <Link href="/account" className="hidden h-9 max-w-48 items-center gap-2 rounded-full px-3 text-sm font-medium text-ink-muted transition hover:bg-panel-2 hover:text-ink sm:inline-flex">
-              <PackEmoji name="user-laptop" size={18} /><span className="truncate">{accountLabel}</span>
+              <PackEmoji name="account-face" size={18} /><span className="truncate">{accountLabel}</span>
             </Link>
             {isOwnerAdmin ? (
               <Link href="/admin" className="hidden h-9 items-center gap-1.5 rounded-full border border-line px-3 text-xs font-bold text-ink transition hover:border-neon/60 lg:inline-flex">
@@ -320,7 +320,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
             return (
               <Link key={href} href={href} draggable={false} aria-current={active ? "page" : undefined} className={classes} onClick={onTabClick}>
                 <span className="zurs-tab-glyph" aria-hidden="true">
-                  {active && animation ? <AnimatedGlyph name={animation} size={18} color="#062033" /> : <TabPackEmoji name={pack} size={22} />}
+                  {active && animation ? <AnimatedGlyph name={animation} size={18} color="#062033" /> : <PackEmoji name={pack} size={22} />}
                 </span>
                 <span className={cn("zurs-mobile-tab-label truncate", active ? "max-w-[4rem] opacity-100" : "max-w-0 opacity-0")}>{label}</span>
               </Link>

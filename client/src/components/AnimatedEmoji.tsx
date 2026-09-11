@@ -34,7 +34,7 @@ const LOCAL_PACK_BY_EMOJI: Record<string, string> = {
   "✅": "check-badge", "✨": "sparkles-z", "❗": "warning", "❤": "heart-red", "💗": "heart",
   "🌈": "rainbow", "📣": "megaphone", "☑": "verified", "🎁": "gift", "❓": "question",
   "🌐": "globe", "⚡": "lightning", "🌙": "moon", "💠": "gem-pink", "🔔": "bell",
-  "👤": "user-laptop", "🔑": "key", "⚙": "gear", "💬": "chat-smile", "ℹ": "info",
+  "👤": "user-laptop", "😊": "account-face", "🔑": "key", "⚙": "gear", "💬": "chat-smile", "ℹ": "info",
   "✏": "pencil", "📍": "pin", "📶": "wifi",
 };
 
