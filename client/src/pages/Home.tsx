@@ -1,4 +1,4 @@
-import StorefrontLayout, { CatalogSwitch } from "@/components/StorefrontLayout";
+import StorefrontLayout from "@/components/StorefrontLayout";
 import { Reveal } from "@/components/Reveal";
 import { AnimatedGlyph } from "@/components/AnimatedGlyph";
 import { GameLogoTicker } from "@/components/GameLogoTicker";
@@ -234,7 +234,6 @@ function HomeTopupExperience() {
         description="ស្វែងរកតាមឈ្មោះហ្គេម ឬមើលតែហ្គេមកម្ពុជា និង Global ដើម្បីចូលទៅកាន់ទំព័រ Top-up។"
         aside={
           <div className="flex shrink-0 items-center gap-2">
-            <CatalogSwitch active="games" />
             <HomeStickers />
             <div className="hidden items-center gap-3 rounded-2xl border border-line bg-panel px-4 py-2.5 sm:flex" aria-labelledby="accept-payment-title">
               <p id="accept-payment-title" className="text-xs font-bold tracking-[0.14em] text-ink-muted">ACCEPT PAYMENT</p>
@@ -250,8 +249,8 @@ function HomeTopupExperience() {
         </div>
       ) : games.length ? (
         <>
-          <div className="mt-5 grid gap-2.5 md:grid-cols-[minmax(0,1fr)_auto]">
-            <label className="relative block">
+          <div className="zurs-desktop-toolbar mt-5">
+            <label className="relative block zurs-desktop-toolbar__search">
               <span className="sr-only">ស្វែងរកហ្គេម</span>
               <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" aria-hidden="true" />
               <input
@@ -284,7 +283,7 @@ function HomeTopupExperience() {
             <GameLogoTicker logos={storeTickerLogos} />
           </div>
           {visibleGames.length ? (
-            <div className="zp-game-grid mt-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
+            <div className="zp-game-grid mt-5 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {catalogGroups.map((group) =>
                 group.games.length > 1
                   ? <ProviderGameCatalogGroup key={group.baseName} baseName={group.baseName} games={group.games} imageOverrides={imageOverrides} />

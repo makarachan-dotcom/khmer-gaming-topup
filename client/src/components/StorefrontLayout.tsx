@@ -30,14 +30,14 @@ const mobileNavigation = [
 // track - the base class stays untouched and the test stays honest.
 const mobileTabColumns = mobileNavigation.length > 2 ? "grid-cols-3" : "grid-cols-2";
 
-export function CatalogSwitch({ active }: { active: "games" | "digital" }) {
+export function CatalogSwitch({ active }: { active: "games" | "digital" | null }) {
   const item = (href: string, key: "games" | "digital", label: string, pack: "diamond-blue" | "gift") => (
     <Link
       href={href}
       aria-current={active === key ? "page" : undefined}
       className={cn(
-        "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-bold transition",
-        active === key ? "bg-neon text-neon-ink" : "text-ink-muted hover:bg-panel-2 hover:text-ink",
+        "zurs-catalog-switch__item inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-bold transition md:h-9 md:px-3.5 md:text-[13px]",
+        active === key ? "is-active bg-neon text-neon-ink" : "text-ink-muted hover:bg-panel-2 hover:text-ink",
       )}
     >
       <PackEmoji name={pack} size={15} />{label}
@@ -238,7 +238,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
       </div>
       {new Date().getMonth() === 11 ? <ChristmasOverlay /> : null}
       <header className="zurs-compact-header sticky top-2 z-50 mx-2 rounded-[1.25rem] border border-line bg-panel/90 backdrop-blur-xl sm:top-3 sm:mx-4 sm:rounded-2xl">
-        <div className="container flex h-11 items-center justify-between gap-2 sm:h-12">
+        <div className="zurs-desktop-bar container flex h-11 items-center justify-between gap-2 sm:h-12 lg:h-14">
           <Link href="/" className="flex min-w-0 shrink items-center gap-2" aria-label="ZURS.me home">
             <img src={logoUrl} alt="ZURS logo" className="h-7 w-7 shrink-0 rounded-full object-cover ring-1 ring-line sm:h-8 sm:w-8" />
             <div className={cn("storefront-header-title", playerTitle && "storefront-header-title--player")} aria-label={playerTitle || "ZURS.me"}>
@@ -248,7 +248,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
               <span className="storefront-header-title__player" title={playerTitle || undefined}>{playerTitle || "ZURS.me"}</span>
             </div>
           </Link>
-          <CatalogSwitch active={location === "/topup" || location.startsWith("/topup?") ? "digital" : "games"} />
+          <CatalogSwitch active={location === "/topup" || location.startsWith("/topup?") ? "digital" : location === "/" || location.startsWith("/topup/") ? "games" : null} />
           <nav className="flex items-center gap-2" aria-label="Account">
             <SupportMascot />
             {/* Legacy source-contract wording retained: Wallet កំពុងបិទជាបណ្តោះអាសន្ន. */}

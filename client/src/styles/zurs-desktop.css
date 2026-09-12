@@ -1,0 +1,57 @@
+/* Desktop storefront — usable width, a real header, and a two-pane top-up page.
+   Mobile rules are untouched; everything here is min-width: 768px or 1024px. */
+
+@media (min-width: 1024px) {
+  .container { max-width: 1180px; }
+  .zurs-desktop-bar {
+    display: grid !important;
+    grid-template-columns: minmax(10rem, 1fr) auto minmax(10rem, 1fr);
+    align-items: center;
+    gap: 1rem;
+    height: 3.5rem;
+  }
+  .zurs-desktop-bar > a:first-child { justify-self: start; }
+  .zurs-desktop-bar > .zurs-catalog-switch { justify-self: center; }
+  .zurs-desktop-bar > nav[aria-label="Account"] { justify-self: end; }
+  .zurs-catalog-switch {
+    gap: 0.2rem;
+    padding: 0.2rem;
+    border-radius: 999px;
+  }
+  .zurs-catalog-switch__item { min-width: 7.5rem; justify-content: center; }
+  .wallet-paused-control { display: none !important; }
+
+  .zurs-desktop-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .zp-game-grid { gap: 1rem; }
+  .zurs-game-card { padding: 0.5rem; }
+
+  .game-topup-workspace {
+    display: grid !important;
+    grid-template-columns: minmax(19rem, 23.5rem) minmax(0, 1fr);
+    gap: 1.35rem;
+    align-items: start;
+  }
+  .game-topup-container .surface.game-topup-workspace > * + * { margin-top: 0; }
+  .game-topup-id {
+    position: sticky;
+    top: 5.25rem;
+  }
+  .game-topup-packs { min-width: 0; }
+  .game-topup-workspace .package-category-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .game-topup-container { max-width: 1240px !important; }
+}
+
+@media (min-width: 1280px) {
+  .container { max-width: 1320px; }
+  .game-topup-container { max-width: 1360px !important; }
+  .game-topup-workspace .package-category-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zurs-game-card { transition: none; }
+}

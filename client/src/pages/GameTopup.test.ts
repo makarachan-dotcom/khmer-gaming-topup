@@ -257,6 +257,9 @@ describe("dedicated game top-up routes", () => {
     expect(identityLayoutForFields(identityFieldsForGame("mobile_legends", []))).toBe("pair");
     const page = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
     const css = readFileSync(join(process.cwd(), "client/src/styles/zurs-checkout.css"), "utf8");
+    expect(page).toContain("game-topup-workspace");
+    expect(page).toContain("game-topup-id");
+    expect(page).toContain("game-topup-packs");
     expect(page).toContain("IdentityFieldsGrid");
     expect(page).toContain("identity-secret__toggle");
     expect(page).toContain("មើលពាក្យសម្ងាត់");

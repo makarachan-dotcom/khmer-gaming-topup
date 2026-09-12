@@ -4,7 +4,6 @@ import { PackEmoji } from "@/components/PackEmoji";
 import { BrandMark, ServiceLogo, matchBrand } from "@/components/BrandMark";
 import { useSelectedProduct } from "@/contexts/SelectedProductContext";
 import { trpc } from "@/lib/trpc";
-import { CatalogSwitch } from "@/components/StorefrontLayout";
 import { useLocation } from "wouter";
 import { LangCopy, LangToggle, useLangCopy } from "@/components/LangCopy";
 
@@ -95,17 +94,14 @@ export function PartnerServicesShelf({ compact = false }: { compact?: boolean })
 
   return (
     <section className={compact ? "" : "container py-5 sm:py-8"} aria-label="Digital services">
-      <div className="flex flex-wrap items-end justify-between gap-3">
       <div className="max-w-2xl">
         <p className="zurs-eyebrow font-bold uppercase">DIGITAL SERVICES</p>
         <h1 className="mt-1 font-display text-xl font-bold text-ink sm:text-3xl" style={{ lineHeight: 1.45 }}>សេវាឌីជីថល</h1>
         <p className="mt-1.5 text-sm text-ink-muted" style={{ lineHeight: 1.65 }}>គណនី និង subscription — បន្ទាប់ពីបង់ប្រាក់ Admin បំពេញក្នុង ៥–១០ នាទី។</p>
       </div>
-      <CatalogSwitch active="digital" />
-      </div>
 
       {catalog.isLoading ? (
-        <div className="mt-4 grid grid-cols-2 gap-2.5 md:grid-cols-3 xl:grid-cols-4">
+        <div className="mt-4 grid grid-cols-2 gap-2.5 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {[1, 2, 3, 4].map((item) => (
             <div key={item} className="h-36 animate-pulse rounded-2xl border border-line bg-panel" />
           ))}
@@ -150,7 +146,7 @@ export function PartnerServicesShelf({ compact = false }: { compact?: boolean })
             </div>
           </div>
           {filtered.length ? (
-            <div className="mt-3 grid grid-cols-2 gap-2.5 md:grid-cols-3 xl:grid-cols-4">
+            <div className="mt-3 grid grid-cols-2 gap-2.5 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {filtered.map((product) => (
                 <article key={product.slug}>
                   <button type="button" onClick={() => setOpenSlug(product.slug)} className="zurs-svc-card">

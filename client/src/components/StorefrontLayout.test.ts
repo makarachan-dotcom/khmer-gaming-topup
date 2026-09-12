@@ -61,7 +61,8 @@ describe("storefront media protection", () => {
     expect(componentSource).toContain("hidden items-center gap-0.5");
     expect(componentSource).toContain("sm:inline-flex");
     expect(componentSource).toContain("សេវាឌីជីថល");
-    expect(homeSource).toContain('<CatalogSwitch active="games" />');
+    expect(componentSource).toContain("zurs-desktop-bar");
+    expect(homeSource).toContain("zurs-desktop-toolbar");
   });
 
   it("keeps the header wordmark compact and drops the bot bubble underneath so it cannot cover ZURS.me", () => {
