@@ -63,19 +63,76 @@ function applyStorefrontTheme(next: "dark" | "light") {
   if (meta) meta.setAttribute("content", next === "dark" ? "#101736" : "#f4f4f1");
 }
 
+function splashThemeFromButton(button: HTMLElement, next: "dark" | "light", withWave: boolean) {
+  const rect = button.getBoundingClientRect();
+  const x = rect.left + rect.width / 2;
+  const y = rect.top + rect.height / 2;
+  const radius = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y));
+  const root = document.documentElement;
+  root.style.setProperty("--theme-x", `${x}px`);
+  root.style.setProperty("--theme-y", `${y}px`);
+  root.style.setProperty("--theme-r", `${Math.ceil(radius + 32)}px`);
+  const layer = document.createElement("div");
+  layer.className = "zurs-theme-splash";
+  layer.setAttribute("aria-hidden", "true");
+  layer.style.setProperty("--theme-x", `${x}px`);
+  layer.style.setProperty("--theme-y", `${y}px`);
+  layer.style.setProperty("--theme-color", next === "dark" ? "#101736" : "#f4f4f1");
+  layer.style.setProperty("--theme-scale", `${Math.ceil((radius + 32) / 8)}`);
+  if (withWave) {
+    const wave = document.createElement("i");
+    wave.className = "zurs-theme-splash__wave";
+    layer.appendChild(wave);
+  }
+  const palette = next === "dark" ? ["#101736", "#c99712", "#f7f6f2", "#1c2a4d"] : ["#f4f4f1", "#c99712", "#ffffff", "#161616"];
+  for (let i = 0; i < 12; i++) {
+    const drop = document.createElement("span");
+    drop.className = "zurs-theme-splash__drop";
+    const angle = (i / 12) * Math.PI * 2 + (i % 3) * 0.18;
+    const dist = 48 + (i % 4) * 26;
+    drop.style.setProperty("--dx", `${Math.cos(angle) * dist}px`);
+    drop.style.setProperty("--dy", `${Math.sin(angle) * dist}px`);
+    drop.style.setProperty("--delay", `${i * 16}ms`);
+    drop.style.background = palette[i % palette.length];
+    layer.appendChild(drop);
+  }
+  document.body.appendChild(layer);
+  window.setTimeout(() => layer.remove(), 780);
+}
+
 function ThemeToggle() {
   const [theme, setTheme] = useState<"dark" | "light">(() => {
     if (typeof document === "undefined") return "dark";
     return document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark";
   });
+  const busyRef = useRef(false);
   return (
     <button
       type="button"
       className="zurs-theme-toggle"
-      onClick={() => {
+      onClick={(event) => {
+        if (busyRef.current) return;
         const next = theme === "dark" ? "light" : "dark";
-        setTheme(next);
-        applyStorefrontTheme(next);
+        const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const commit = () => {
+          setTheme(next);
+          applyStorefrontTheme(next);
+        };
+        if (reduced) {
+          commit();
+          return;
+        }
+        busyRef.current = true;
+        const doc = document as Document & { startViewTransition?: (update: () => void) => { finished: Promise<unknown> } };
+        splashThemeFromButton(event.currentTarget, next, !doc.startViewTransition);
+        const run = doc.startViewTransition ? doc.startViewTransition(commit).finished : Promise.resolve().then(() => {
+          window.setTimeout(commit, 220);
+        });
+        void Promise.resolve(run).finally(() => {
+          window.setTimeout(() => {
+            busyRef.current = false;
+          }, 280);
+        });
       }}
       aria-label={theme === "dark" ? "ប្ដូរទៅពន្លឺ" : "ប្ដូរទៅងងឹត"}
       title={theme === "dark" ? "Light" : "Dark"}

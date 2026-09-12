@@ -72,6 +72,67 @@ img, svg, video, canvas { max-width: 100%; }
   color: #9a6b00;
   outline: none;
 }
+.zurs-theme-toggle:active { transform: scale(0.94); }
+
+.zurs-theme-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  pointer-events: none;
+  overflow: hidden;
+}
+.zurs-theme-splash__wave {
+  position: absolute;
+  left: var(--theme-x);
+  top: var(--theme-y);
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border-radius: 999px;
+  background: var(--theme-color, #101736);
+  animation: zurs-theme-wave 640ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes zurs-theme-wave {
+  from { transform: scale(1); opacity: 1; }
+  72% { opacity: 1; }
+  to { transform: scale(var(--theme-scale, 180)); opacity: 0; }
+}
+.zurs-theme-splash__drop {
+  position: absolute;
+  left: var(--theme-x);
+  top: var(--theme-y);
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border-radius: 999px;
+  box-shadow: 0 0 10px currentColor;
+  animation: zurs-theme-drop 560ms cubic-bezier(0.18, 0.89, 0.32, 1.28) both;
+  animation-delay: var(--delay, 0ms);
+}
+@keyframes zurs-theme-drop {
+  0% { opacity: 0; transform: translate(0, 0) scale(0.35); }
+  28% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0.2); }
+}
+::view-transition-old(root) {
+  animation: none;
+  z-index: 1;
+  mix-blend-mode: normal;
+}
+::view-transition-new(root) {
+  animation: zurs-theme-wash 680ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  z-index: 2;
+  mix-blend-mode: normal;
+}
+@keyframes zurs-theme-wash {
+  from { clip-path: circle(0px at var(--theme-x, 50%) var(--theme-y, 50%)); }
+  to { clip-path: circle(var(--theme-r, 150vmax) at var(--theme-x, 50%) var(--theme-y, 50%)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .zurs-theme-splash { display: none !important; }
+  ::view-transition-old(root),
+  ::view-transition-new(root) { animation: none !important; }
+}
 
 /* =====================================================================
    B. Re-skin hard-coded dark surfaces → light + vibrant

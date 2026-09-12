@@ -248,6 +248,12 @@ describe("storefront media protection", () => {
     const gamer = readFileSync(join(process.cwd(), "client/src/styles/zurs-gamer.css"), "utf8");
     const polish = readFileSync(join(process.cwd(), "client/src/styles/zurs-polish.css"), "utf8");
     expect(componentSource).toContain("zurs-theme-toggle");
+    expect(componentSource).toContain("splashThemeFromButton");
+    expect(componentSource).toContain("startViewTransition");
+    expect(componentSource).toContain("zurs-theme-splash");
+    expect(polish).toContain("@keyframes zurs-theme-wash");
+    expect(polish).toContain("@keyframes zurs-theme-drop");
+    expect(polish).toContain("@keyframes zurs-theme-wave");
     expect(componentSource).toContain('localStorage.setItem("zurs-theme"');
     expect(documentSource).toContain('localStorage.getItem("zurs-theme")');
     expect(documentSource).toContain('data-theme="dark"');
