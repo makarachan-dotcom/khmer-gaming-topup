@@ -203,7 +203,7 @@ describe("dedicated game top-up routes", () => {
     expect(source).toContain("setSelectedPackageIdState(id)");
     expect(source).toContain("clearSelectedProduct();");
     expect(source).toContain("មើល និងជ្រើសកញ្ចប់បាន");
-    expect(source).toContain("មុនពេលបង្កើត order និងទូទាត់");
+    expect(source).toContain("zurs-step-note");
   });
 
   it("creates purchase context only after valid identity gates, never for admin preview", () => {
@@ -263,6 +263,7 @@ describe("dedicated game top-up routes", () => {
     expect(page).toContain("IdentityFieldsGrid");
     expect(page).toContain("identity-secret__toggle");
     expect(page).toContain("មើលពាក្យសម្ងាត់");
+    expect(page).toContain("zurs-id-hint");
     expect(css).toContain(".identity-fields--stack");
     expect(css).toContain(".identity-secret__toggle.is-open");
   });
@@ -342,13 +343,25 @@ describe("dedicated game top-up routes", () => {
     expect(source).toContain('if (verified && verified.status !== "ready") return verified.packages;');
   });
 
-  it("places payment-method preselection before the package list without blocking public preview", () => {
+  it("structures top-up as account, package, then KHQR payment", () => {
     const source = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
-    const preselectPosition = source.indexOf("{!adminPreviewActive && packages.length > 0 ? <PaymentMethodPreselect /> : null}");
-    const packagePosition = source.indexOf("<DiamondPackages packages={packages}");
+    const account = source.indexOf("zurs-step-head__kicker\">{/telegram/i.test(game.name) ? \"TELEGRAM SERVICE\" : \"ACCOUNT\"}");
+    const packs = source.indexOf("SELECT PACKAGE");
+    const pay = source.indexOf("បង់តាម KHQR");
+    const preselect = source.lastIndexOf("<PaymentMethodPreselect />");
+    const packages = source.indexOf("<DiamondPackages packages={packages}");
     expect(source).toContain('import { PaymentMethodPreselect } from "@/components/PaymentMethodGate"');
-    expect(preselectPosition).toBeGreaterThan(-1);
-    expect(packagePosition).toBeGreaterThan(preselectPosition);
+    expect(account).toBeGreaterThan(-1);
+    expect(packs).toBeGreaterThan(account);
+    expect(pay).toBeGreaterThan(packs);
+    expect(packages).toBeGreaterThan(-1);
+    expect(preselect).toBeGreaterThan(packages);
+    expect(source).toContain("zurs-id-hint");
     expect(source).toContain("setSelectedPaymentMethodId(null)");
+    const gamer = readFileSync(join(process.cwd(), "client/src/styles/zurs-gamer.css"), "utf8");
+    expect(gamer).toContain("--z-canvas: #101736");
+    expect(gamer).toContain("--z-cream: #f7f6f2");
+    expect(gamer).toContain("--z-neon: #c99712");
+    expect(gamer).toContain("min-height: 48px");
   });
 });
