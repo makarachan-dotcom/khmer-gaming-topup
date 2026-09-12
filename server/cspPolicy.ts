@@ -33,8 +33,9 @@ export function scriptSrcFromInlineHtml(html: string): string {
   return hashes.length > 0 ? `script-src 'self' ${hashes.join(" ")}` : "script-src 'self'";
 }
 
-/** Hashes of the three JSON-LD blocks currently in `client/index.html`. */
+/** Hashes of the theme boot script + JSON-LD blocks in `client/index.html`. */
 export const INDEX_JSONLD_SCRIPT_HASHES = [
+  "'sha256-+U+KeOqnnA8zLahzQixrM24Lo9APt32O2xG/tZFdHL0='",
   "'sha256-RNVq7KCFgdPTgiE2ccaasel0NNygecV5GIjMuAplKl8='",
   "'sha256-/A4iLe8qmlxaNjrdqCmaLpw29lK0pp9QMdV7p1No5Mg='",
   "'sha256-+2fpB4RRSi59XpvbtzRVb6BWOSv9U5x2j39nSlGychE='",
