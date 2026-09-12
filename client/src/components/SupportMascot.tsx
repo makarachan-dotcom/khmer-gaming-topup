@@ -5,9 +5,9 @@ import { Link } from "wouter";
  * Header mascot.
  *
  * Round 6: the mascot is a header control, not a floating overlay, and it no
- * longer opens an in-page sheet. Tapping it navigates to the dedicated /chat
- * page. The bubble still opens to the LEFT, glued to the mascot, and wraps
- * instead of clipping (round 5 behaviour, deliberately kept).
+ * Tapping it navigates to the dedicated /chat page. The greeting bubble hangs
+ * UNDER the mascot (not left across the ZURS.me wordmark) and wraps instead of
+ * clipping.
  */
 
 export type SupportChatRequest = { orderRef?: string | null; topic?: string | null };

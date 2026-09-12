@@ -64,6 +64,15 @@ describe("storefront media protection", () => {
     expect(homeSource).toContain('<CatalogSwitch active="games" />');
   });
 
+  it("keeps the header wordmark compact and drops the bot bubble underneath so it cannot cover ZURS.me", () => {
+    const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
+    const polish = readFileSync(join(process.cwd(), "client/src/styles/zurs-polish.css"), "utf8");
+    expect(componentSource).toContain('FontEmojiBrand text="ZURS.me" size={13}');
+    expect(componentSource).toContain("font-emoji-brand--header");
+    expect(polish).toContain("top: calc(100% + 7px) !important;");
+    expect(polish).toContain("zs-header-bubble-in");
+  });
+
   it("keeps a clean two-tab mobile bar after the Live Spin giveaway was retired", () => {
     const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
     const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
@@ -142,7 +151,7 @@ describe("storefront media protection", () => {
   it("renders the owner brand mark as a circle in the header and footer", () => {
     const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
     const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
-    expect(componentSource).toContain('alt="ZURS logo" className="h-8 w-8 shrink-0 rounded-full');
+    expect(componentSource).toContain('alt="ZURS logo" className="h-7 w-7 shrink-0 rounded-full');
     expect(componentSource).toContain('alt="ZURS STORE logo" className="h-10 w-10 shrink-0 rounded-full');
     expect(styleSource).toContain('.zurs-compact-header img[alt="ZURS logo"], .zurs-footer img[alt="ZURS STORE logo"] { border-radius: 999px; }');
   });

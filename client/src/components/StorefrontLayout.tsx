@@ -238,12 +238,12 @@ function StorefrontShell({ children }: { children: ReactNode }) {
       </div>
       {new Date().getMonth() === 11 ? <ChristmasOverlay /> : null}
       <header className="zurs-compact-header sticky top-2 z-50 mx-2 rounded-[1.25rem] border border-line bg-panel/90 backdrop-blur-xl sm:top-3 sm:mx-4 sm:rounded-2xl">
-        <div className="container flex h-12 items-center justify-between gap-3 sm:h-14">
-          <Link href="/" className="flex min-w-0 shrink items-center gap-2.5" aria-label="ZURS.me home">
-            <img src={logoUrl} alt="ZURS logo" className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-line sm:h-9 sm:w-9" />
+        <div className="container flex h-11 items-center justify-between gap-2 sm:h-12">
+          <Link href="/" className="flex min-w-0 shrink items-center gap-2" aria-label="ZURS.me home">
+            <img src={logoUrl} alt="ZURS logo" className="h-7 w-7 shrink-0 rounded-full object-cover ring-1 ring-line sm:h-8 sm:w-8" />
             <div className={cn("storefront-header-title", playerTitle && "storefront-header-title--player")} aria-label={playerTitle || "ZURS.me"}>
               <span className="storefront-header-title__default" aria-label="ZURS.me">
-                <FontEmojiBrand text="ZURS.me" size={18} />
+                <FontEmojiBrand text="ZURS.me" size={13} className="font-emoji-brand--header" />
               </span>
               <span className="storefront-header-title__player" title={playerTitle || undefined}>{playerTitle || "ZURS.me"}</span>
             </div>
