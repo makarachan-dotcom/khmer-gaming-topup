@@ -242,6 +242,20 @@ describe("storefront media protection", () => {
     expect(styleSource).toContain("bottom: calc(max(1.5rem, env(safe-area-inset-bottom)) + 4.1rem) !important;");
   });
 
+  it("lets shoppers switch dark gamer theme and the previous light cream UI", () => {
+    const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
+    const documentSource = readFileSync(join(process.cwd(), "client/index.html"), "utf8");
+    const gamer = readFileSync(join(process.cwd(), "client/src/styles/zurs-gamer.css"), "utf8");
+    const polish = readFileSync(join(process.cwd(), "client/src/styles/zurs-polish.css"), "utf8");
+    expect(componentSource).toContain("zurs-theme-toggle");
+    expect(componentSource).toContain('localStorage.setItem("zurs-theme"');
+    expect(documentSource).toContain('localStorage.getItem("zurs-theme")');
+    expect(documentSource).toContain('data-theme="dark"');
+    expect(gamer).toContain('html[data-theme="dark"]');
+    expect(polish).toContain("--z-canvas: #f4f4f1;");
+    expect(polish).toContain("color-scheme: light;");
+  });
+
   it("routes selected packages directly to the payment preview page and keeps KHQR creation behind final confirmation", () => {
     const layoutSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
     const checkoutSource = readFileSync(join(process.cwd(), "client/src/pages/Checkout.tsx"), "utf8");

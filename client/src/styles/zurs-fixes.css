@@ -157,7 +157,7 @@
 }
 .zurs-vault,
 .zurs-cdk {
-  background: #162040 !important;
+  background: #ffffff !important;
   border-color: rgba(24, 24, 21, 0.10) !important;
 }
 .zurs-vault__link,
@@ -308,7 +308,7 @@
   border-color: #c99712 !important;
 }
 .package-choice--selected .package-choice-surface {
-  background: rgba(201, 151, 18, 0.16) !important;
+  background: #fffef8 !important;
 }
 .package-choice-check {
   animation: zurs-pkg-check 360ms cubic-bezier(0.22, 1, 0.36, 1);

@@ -9,7 +9,7 @@ import { useSelectedProduct } from "@/contexts/SelectedProductContext";
 import { useStorefrontHeader } from "@/contexts/StorefrontHeaderContext";
 import { trpc } from "@/lib/trpc";
 import { animate } from "animejs";
-import { ArrowUp, ChevronRight, LogIn, LogOut, WalletCards } from "lucide-react";
+import { ArrowUp, ChevronRight, LogIn, LogOut, Moon, Sun, WalletCards } from "lucide-react";
 import { FontEmojiBrand } from "@/components/FontEmojiBrand";
 import { PackEmoji } from "@/components/PackEmoji";
 import { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode, useEffect, useRef, useState } from "react";
@@ -50,6 +50,41 @@ export function CatalogSwitch({ active }: { active: "games" | "digital" | null }
     </nav>
   );
 }
+
+function applyStorefrontTheme(next: "dark" | "light") {
+  document.documentElement.setAttribute("data-theme", next);
+  document.documentElement.style.colorScheme = next;
+  try {
+    localStorage.setItem("zurs-theme", next);
+  } catch {
+    /* private mode */
+  }
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute("content", next === "dark" ? "#101736" : "#f4f4f1");
+}
+
+function ThemeToggle() {
+  const [theme, setTheme] = useState<"dark" | "light">(() => {
+    if (typeof document === "undefined") return "dark";
+    return document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark";
+  });
+  return (
+    <button
+      type="button"
+      className="zurs-theme-toggle"
+      onClick={() => {
+        const next = theme === "dark" ? "light" : "dark";
+        setTheme(next);
+        applyStorefrontTheme(next);
+      }}
+      aria-label={theme === "dark" ? "ប្ដូរទៅពន្លឺ" : "ប្ដូរទៅងងឹត"}
+      title={theme === "dark" ? "Light" : "Dark"}
+    >
+      {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+    </button>
+  );
+}
+
 export function mobileTabHrefForPath(pathname: string) {
   const path = pathname.split("?")[0]?.split("#")[0] || "/";
   if (path === "/account" || path.startsWith("/account/") || path === "/wallet" || path === "/order-status") return "/account";
@@ -250,6 +285,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
           </Link>
           <CatalogSwitch active={location === "/topup" || location.startsWith("/topup?") ? "digital" : location === "/" || location.startsWith("/topup/") ? "games" : null} />
           <nav className="flex items-center gap-2" aria-label="Account">
+            <ThemeToggle />
             <SupportMascot />
             {/* Legacy source-contract wording retained: Wallet កំពុងបិទជាបណ្តោះអាសន្ន. */}
             {user ? (

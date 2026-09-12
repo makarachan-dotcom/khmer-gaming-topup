@@ -1,7 +1,18 @@
 <!doctype html>
-<html lang="km">
+<html lang="km" data-theme="dark">
 
   <head>
+    <script>
+      (function () {
+        var t = "dark";
+        try {
+          var s = localStorage.getItem("zurs-theme");
+          if (s === "light" || s === "dark") t = s;
+        } catch (e) {}
+        document.documentElement.setAttribute("data-theme", t);
+        document.documentElement.style.colorScheme = t;
+      })();
+    </script>
     <meta charset="UTF-8" />
     <meta
       name="viewport"
