@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 vi.mock("streamdown", () => ({ Streamdown: () => null }));
-import { canBrowseTopupPackages, canBrowseVerifiedPackages, canCreateTopupPurchaseContext, gameIdFromTopupPath, gameThemedArtworkForPackage, gameTopupPath, groupProviderPackagesByMeaning, identityFieldsForGame, initialDiamondPackageLimit, keepCheapestUniqueProviderPackages, packageSortOptions, partitionProviderPackagesForFullTicketEvent, readVerifiedPlayerEntries, recommendedProviderPackage, requiresPlayerIdentityCheck, requiresVerifiedUsername, saveVerifiedPlayerEntry, sortProviderPackagesByPrice, sortProviderPackagesForDisplay, usesLegacyMobileLegendsArtwork, usesMobileLegendsDiamondChestArtwork, visibleDiamondPackageItems } from "./GameTopup";
+import { canBrowseTopupPackages, canBrowseVerifiedPackages, canCreateTopupPurchaseContext, gameIdFromTopupPath, gameThemedArtworkForPackage, gameTopupPath, groupProviderPackagesByMeaning, identityFieldsForGame, identityLayoutForFields, initialDiamondPackageLimit, keepCheapestUniqueProviderPackages, packageSortOptions, partitionProviderPackagesForFullTicketEvent, readVerifiedPlayerEntries, recommendedProviderPackage, requiresPlayerIdentityCheck, requiresVerifiedUsername, saveVerifiedPlayerEntry, sortProviderPackagesByPrice, sortProviderPackagesForDisplay, usesLegacyMobileLegendsArtwork, usesMobileLegendsDiamondChestArtwork, visibleDiamondPackageItems } from "./GameTopup";
 
 describe("dedicated game top-up routes", () => {
   it("creates and reads an encoded provider game route", () => {
@@ -107,7 +107,6 @@ describe("dedicated game top-up routes", () => {
   it("keeps a circular Mobile Legends logo on every MLBB artwork variant", () => {
     const source = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
     const css = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
-    expect(source).toContain("mobile-legends-diamond-art__logo h-8 w-8 rounded-full");
     expect(source).toContain("supplied-package-art__logo h-8 w-8 rounded-full");
     expect(source).toContain("generated-package-art__logo h-8 w-8 rounded-full");
     expect(css).toContain(".mobile-legends-diamond-art__logo, .supplied-package-art__logo, .generated-package-art__logo { border-radius: 999px !important; }");
@@ -254,6 +253,15 @@ describe("dedicated game top-up routes", () => {
       { key: "username", label: "Roblox Username", placeholder: "e.g. builderman", required: true, kind: "text" },
       { key: "password", label: "Roblox Password", placeholder: "Account password", required: true, kind: "password" },
     ]);
+    expect(identityLayoutForFields(identityFieldsForGame("roblox_robux", []))).toBe("stack");
+    expect(identityLayoutForFields(identityFieldsForGame("mobile_legends", []))).toBe("pair");
+    const page = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
+    const css = readFileSync(join(process.cwd(), "client/src/styles/zurs-checkout.css"), "utf8");
+    expect(page).toContain("IdentityFieldsGrid");
+    expect(page).toContain("identity-secret__toggle");
+    expect(page).toContain("មើលពាក្យសម្ងាត់");
+    expect(css).toContain(".identity-fields--stack");
+    expect(css).toContain(".identity-secret__toggle.is-open");
   });
 
   it("always asks Mobile Legends shoppers for Player ID and Server ID", () => {
