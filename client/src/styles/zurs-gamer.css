@@ -205,11 +205,22 @@ html, body, .zurs-dotted-shell, #root {
 .identity-fields label > span:first-child { font-size: 13px !important; color: var(--z-cream) !important; }
 
 /* Package cards */
-.package-choice--clean .package-choice-surface,
-.package-choice-surface {
-  padding: 16px !important;
-  background: var(--z-panel-2) !important;
-  color: var(--z-cream) !important;
+.package-choice,
+.package-choice--gold,
+.package-choice--mlbb-diamonds,
+.package-choice--mlbb-bonus,
+.package-choice--mlbb-pass,
+.package-choice--mlbb-special {
+  background: var(--z-panel) !important;
+  border-color: var(--z-line) !important;
+  box-shadow: none !important;
+}
+.package-choice--recommended .package-choice-surface {
+  background: rgba(201, 151, 18, 0.12) !important;
+}
+.package-choice:hover {
+  border-color: rgba(201, 151, 18, 0.45) !important;
+  box-shadow: none !important;
 }
 .package-choice .text-slate-950,
 .package-choice .text-slate-500,
@@ -233,7 +244,10 @@ html, body, .zurs-dotted-shell, #root {
 }
 .package-category-browser,
 .package-category-browser__header {
-  color: var(--z-cream);
+  background: #162040 !important;
+  border-color: var(--z-line) !important;
+  box-shadow: none !important;
+  color: var(--z-cream) !important;
 }
 .package-category-tab {
   border-color: var(--z-line) !important;
@@ -388,6 +402,55 @@ html, body, .zurs-dotted-shell, #root {
 .payment-method-option--selected {
   border-color: #c99712 !important;
   background: rgba(201, 151, 18, 0.12) !important;
+}
+
+.package-choice--selected .package-choice-surface {
+  background: rgba(201, 151, 18, 0.16) !important;
+}
+.package-category-browser__title {
+  background: none !important;
+  -webkit-background-clip: unset !important;
+  background-clip: unset !important;
+  color: var(--z-cream) !important;
+}
+.package-category-browser__note { color: var(--z-ink-muted) !important; font-size: 12px !important; }
+.package-category-browser__total {
+  background: rgba(8, 12, 28, 0.55) !important;
+  border-color: rgba(201, 151, 18, 0.4) !important;
+  color: #f3d27a !important;
+}
+
+/* Product sheet + instructions — cream on navy, never black-on-navy or cream-on-white */
+.zurs-product-sheet__panel,
+.zurs-product-sheet__cta {
+  background: #162040 !important;
+  color: var(--z-cream) !important;
+  box-shadow: 0 18px 48px rgba(2, 6, 23, 0.45) !important;
+}
+.zurs-product-sheet__cta { box-shadow: 0 -12px 24px rgba(16, 23, 54, 0.9) !important; }
+.zurs-product-sheet__panel .text-ink,
+.zurs-product-sheet__panel h2,
+.zurs-product-sheet__panel p,
+.zurs-product-sheet__panel li {
+  color: var(--z-cream) !important;
+}
+.zurs-product-sheet__panel .text-ink-muted { color: var(--z-ink-muted) !important; }
+.zurs-lang-copy h3 { color: var(--z-neon) !important; font-size: 12px !important; }
+.zurs-lang-copy p {
+  color: var(--z-cream) !important;
+  font-size: 14px !important;
+  line-height: 1.65 !important;
+}
+.zurs-lang-toggle {
+  background: var(--z-panel-2) !important;
+  border: 1px solid var(--z-line);
+  border-radius: 999px;
+  padding: 2px;
+}
+.zurs-lang-toggle button { color: var(--z-ink-muted) !important; }
+.zurs-lang-toggle button.is-on {
+  background: var(--z-neon) !important;
+  color: var(--z-neon-ink) !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

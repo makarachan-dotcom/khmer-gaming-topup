@@ -365,5 +365,9 @@ describe("dedicated game top-up routes", () => {
     expect(gamer).toContain("min-height: 48px");
     expect(gamer).toContain(".zurs-dotted-shell .text-slate-950");
     expect(gamer).toContain(".checkout-qr-card { background: #fff !important;");
+    expect(gamer).toContain(".package-category-browser");
+    expect(gamer).toContain("background: #162040 !important");
+    expect(gamer).toContain(".zurs-lang-copy p");
+    expect(gamer).toContain(".zurs-product-sheet__panel");
   });
 });
