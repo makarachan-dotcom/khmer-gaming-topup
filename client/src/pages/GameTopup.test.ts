@@ -363,5 +363,7 @@ describe("dedicated game top-up routes", () => {
     expect(gamer).toContain("--z-cream: #f7f6f2");
     expect(gamer).toContain("--z-neon: #c99712");
     expect(gamer).toContain("min-height: 48px");
+    expect(gamer).toContain(".zurs-dotted-shell .text-slate-950");
+    expect(gamer).toContain(".checkout-qr-card { background: #fff !important;");
   });
 });
