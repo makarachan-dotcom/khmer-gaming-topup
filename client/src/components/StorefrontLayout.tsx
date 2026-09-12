@@ -51,6 +51,32 @@ export function CatalogSwitch({ active }: { active: "games" | "digital" | null }
   );
 }
 
+function applyStorefrontUi(next: "classic" | "gamer") {
+  document.documentElement.setAttribute("data-ui", next);
+  try {
+    document.cookie = `zurs-ui=${next}; Path=/; Max-Age=31536000; SameSite=Lax`;
+  } catch {
+    /* private mode */
+  }
+  if (next === "classic") {
+    document.documentElement.setAttribute("data-theme", "light");
+    document.documentElement.style.colorScheme = "light";
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", "#f4f4f1");
+  }
+}
+
+function StorefrontUiSync({ onUi }: { onUi: (ui: "classic" | "gamer") => void }) {
+  const remote = trpc.content.storefrontUi.useQuery(undefined, { staleTime: 30_000, refetchOnWindowFocus: true });
+  useEffect(() => {
+    const ui = remote.data?.ui === "gamer" ? "gamer" : remote.data?.ui === "classic" ? "classic" : null;
+    if (!ui) return;
+    applyStorefrontUi(ui);
+    onUi(ui);
+  }, [onUi, remote.data?.ui]);
+  return null;
+}
+
 function applyStorefrontTheme(next: "dark" | "light") {
   document.documentElement.setAttribute("data-theme", next);
   document.documentElement.style.colorScheme = next;
@@ -175,6 +201,9 @@ function StorefrontShell({ children }: { children: ReactNode }) {
   const { user, loading, logout } = useAuth();
   const { selectedProduct, selectedPaymentMethodId } = useSelectedProduct();
   const { playerTitle } = useStorefrontHeader();
+  const [storefrontUi, setStorefrontUi] = useState<"classic" | "gamer">(() => (
+    typeof document !== "undefined" && document.documentElement.getAttribute("data-ui") === "gamer" ? "gamer" : "classic"
+  ));
   const accountLabel = user?.displayName || user?.name || "គណនីខ្ញុំ";
   const isOwnerAdmin = user?.role === "admin" || user?.email?.trim().toLowerCase() === "chanmakara672@gmail.com";
   const googleSignInHref = `/api/auth/google?returnTo=${encodeURIComponent(location)}`;
@@ -329,6 +358,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
         ))}
       </div>
       {new Date().getMonth() === 11 ? <ChristmasOverlay /> : null}
+      <StorefrontUiSync onUi={setStorefrontUi} />
       <header className="zurs-compact-header sticky top-2 z-50 mx-2 rounded-[1.25rem] border border-line bg-panel/90 backdrop-blur-xl sm:top-3 sm:mx-4 sm:rounded-2xl">
         <div className="zurs-desktop-bar container flex h-11 items-center justify-between gap-2 sm:h-12 lg:h-14">
           <Link href="/" className="flex min-w-0 shrink items-center gap-2" aria-label="ZURS.me home">
@@ -342,7 +372,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
           </Link>
           <CatalogSwitch active={location === "/topup" || location.startsWith("/topup?") ? "digital" : location === "/" || location.startsWith("/topup/") ? "games" : null} />
           <nav className="flex items-center gap-2" aria-label="Account">
-            <ThemeToggle />
+            {storefrontUi === "gamer" ? <ThemeToggle /> : null}
             <SupportMascot />
             {/* Legacy source-contract wording retained: Wallet កំពុងបិទជាបណ្តោះអាសន្ន. */}
             {user ? (

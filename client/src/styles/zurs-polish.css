@@ -74,6 +74,17 @@ img, svg, video, canvas { max-width: 100%; }
 }
 .zurs-theme-toggle:active { transform: scale(0.94); }
 
+html[data-ui="classic"] .zurs-theme-toggle { display: none !important; }
+html[data-ui="classic"] .zurs-step-head,
+html[data-ui="classic"] .zurs-step-note,
+html[data-ui="classic"] .zurs-id-hint { display: none !important; }
+html[data-ui="classic"] .zurs-pay-card {
+  margin-top: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
 .zurs-theme-splash {
   position: fixed;
   inset: 0;

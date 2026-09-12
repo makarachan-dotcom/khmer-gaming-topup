@@ -3,7 +3,7 @@
    Remaps leftover light Tailwind + polish !important so text never sits
    black-on-navy or cream-on-white. */
 
-html[data-theme="dark"] {
+html[data-ui="gamer"][data-theme="dark"] {
   --z-canvas: #101736;
   --z-panel: #162040;
   --z-panel-2: #1c2a4d;
@@ -37,20 +37,20 @@ html[data-theme="dark"] {
   color-scheme: dark;
 }
 
-html[data-theme="dark"],
-html[data-theme="dark"] body,
-html[data-theme="dark"] .zurs-dotted-shell,
-html[data-theme="dark"] #root {
+html[data-ui="gamer"][data-theme="dark"],
+html[data-ui="gamer"][data-theme="dark"] body,
+html[data-ui="gamer"][data-theme="dark"] .zurs-dotted-shell,
+html[data-ui="gamer"][data-theme="dark"] #root {
   background: #101736 !important;
   color: #f7f6f2 !important;
 }
-html[data-theme="dark"] body:has(.min-h-screen.bg-slate-50),
-html[data-theme="dark"] body:has(.min-h-screen.bg-slate-50) #root {
+html[data-ui="gamer"][data-theme="dark"] body:has(.min-h-screen.bg-slate-50),
+html[data-ui="gamer"][data-theme="dark"] body:has(.min-h-screen.bg-slate-50) #root {
   background: #f4f4f1 !important;
   color: #161616 !important;
 }
 
-html[data-theme="dark"] {
+html[data-ui="gamer"][data-theme="dark"] {
 
 .surface, .glass-panel, .zurs-mobile-glass {
   background: var(--z-panel) !important;

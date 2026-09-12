@@ -1631,6 +1631,28 @@ export async function saveSiteContent(input: { contentKey: string; titleKh?: str
   return { success: true };
 }
 
+export const storefrontUiContentKey = "storefront-ui";
+export type StorefrontUiSkin = "classic" | "gamer";
+
+export async function getStorefrontUi(): Promise<StorefrontUiSkin> {
+  const db = await getDb();
+  if (!db) return "classic";
+  const rows = await db.select({ bodyKh: siteContent.bodyKh, isActive: siteContent.isActive }).from(siteContent).where(eq(siteContent.contentKey, storefrontUiContentKey)).limit(1);
+  const row = rows[0];
+  return row?.isActive && row.bodyKh === "gamer" ? "gamer" : "classic";
+}
+
+export async function setStorefrontUi(input: { ui: StorefrontUiSkin; updatedByUserId: number }) {
+  await saveSiteContent({
+    contentKey: storefrontUiContentKey,
+    titleKh: "Storefront UI",
+    bodyKh: input.ui,
+    isActive: true,
+    updatedByUserId: input.updatedByUserId,
+  });
+  return { ui: input.ui };
+}
+
 function isSafeArtworkMediaUrl(mediaUrl: string) {
   if (mediaUrl.startsWith("/api/media/") || mediaUrl.startsWith("/manus-storage/")) return true;
   try { return new URL(mediaUrl).protocol === "https:"; } catch { return false; }
