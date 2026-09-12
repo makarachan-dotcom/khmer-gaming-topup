@@ -453,6 +453,30 @@ html, body, .zurs-dotted-shell, #root {
   color: var(--z-neon-ink) !important;
 }
 
+.contact-admin-sheet,
+.contact-admin-sheet__header,
+.contact-admin-card {
+  background: #162040 !important;
+  color: var(--z-cream) !important;
+  border-color: var(--z-line) !important;
+}
+.contact-admin-sheet__title,
+.contact-admin-card__name,
+.contact-admin-card__meta dd { color: var(--z-cream) !important; }
+.contact-admin-sheet__lead { color: var(--z-ink-muted) !important; }
+.tg-profile {
+  background: var(--z-panel-2) !important;
+  border-color: var(--z-line) !important;
+}
+.tg-profile__name { color: var(--z-cream) !important; }
+.tg-profile__handle { color: var(--z-ink-muted) !important; }
+.pm-chosen-bar__text { color: var(--z-cream) !important; }
+.pm-chosen-bar__change {
+  background: var(--z-panel) !important;
+  color: var(--z-cream) !important;
+  border-color: var(--z-line) !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .zbtn--primary, .identity-fields input { transition: none; }
 }
