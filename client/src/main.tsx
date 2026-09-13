@@ -20,6 +20,7 @@ import "./styles/zurs-desktop.css";
 // stops the mobile overlap of mascot + lock chip + step-dot glow.
 import "./styles/zurs-login-refined.css";
 import "./styles/zurs-gamer.css";
+import "./styles/zurs-skins.css";
 
 function loadOptionalAnalytics() {
   const endpoint = import.meta.env.VITE_ANALYTICS_ENDPOINT?.trim();

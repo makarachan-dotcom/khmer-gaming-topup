@@ -1,0 +1,271 @@
+/* Four extra storefront LAYOUTS (not just palettes).
+   classic = original. gamer = existing 3-step dark.
+   soft = readable list. luxe = centered boutique.
+   night = split pane. neon = featured showcase. */
+
+html[data-ui-family="light"] .zurs-theme-toggle { display: none !important; }
+html[data-ui-family="light"] .zurs-step-head,
+html[data-ui-family="light"] .zurs-step-note,
+html[data-ui-family="light"] .zurs-id-hint { display: none !important; }
+html[data-ui-family="light"] .zurs-pay-card {
+  margin-top: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+/* —— Guide: one-column list, large type —— */
+html[data-ui="soft"] {
+  --z-canvas: #f6f1e4;
+  --z-panel: #fffdf8;
+  --background: #f6f1e4;
+}
+html[data-ui="soft"] body,
+html[data-ui="soft"] .zurs-dotted-shell,
+html[data-ui="soft"] #root { background: #f6f1e4 !important; }
+html[data-ui="soft"] .zp-heading { font-size: 1.45rem !important; }
+html[data-ui="soft"] .zp-game-grid,
+html[data-ui="soft"] .package-category-grid,
+html[data-ui="soft"] .package-section [class*="grid-cols"] {
+  grid-template-columns: 1fr !important;
+  max-width: 38rem;
+}
+html[data-ui="soft"] .zurs-game-card {
+  display: grid !important;
+  grid-template-columns: 6.25rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.7rem !important;
+}
+html[data-ui="soft"] .zurs-game-card-media {
+  aspect-ratio: 1 !important;
+  min-height: 5.4rem;
+  border-radius: 1rem !important;
+}
+html[data-ui="soft"] .identity-fields,
+html[data-ui="soft"] .identity-fields--stack {
+  grid-template-columns: 1fr !important;
+}
+html[data-ui="soft"] .identity-fields input,
+html[data-ui="soft"] .zbtn--primary {
+  min-height: 3.15rem;
+  font-size: 1rem;
+}
+html[data-ui="soft"] .package-choice-surface {
+  display: grid !important;
+  grid-template-columns: 4.6rem minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 0.85rem;
+  text-align: left;
+}
+html[data-ui="soft"] .package-choice-surface .pkg-art,
+html[data-ui="soft"] .package-choice-surface .generated-package-art,
+html[data-ui="soft"] .package-choice-surface .supplied-package-art {
+  grid-column: 1;
+  grid-row: 1 / span 4;
+  width: 4.6rem;
+  height: 4.6rem;
+  margin: 0 !important;
+}
+html[data-ui="soft"] .package-choice__price {
+  grid-column: 3;
+  grid-row: 1 / span 4;
+  align-self: center;
+  font-size: 1.05rem !important;
+}
+html[data-ui="soft"] .game-detail-hero { min-height: 7.5rem !important; }
+
+/* —— Boutique: narrow centered shop —— */
+html[data-ui="luxe"] {
+  --z-canvas: #fbf6ea;
+  --z-panel: #fffaf0;
+}
+html[data-ui="luxe"] body,
+html[data-ui="luxe"] .zurs-dotted-shell,
+html[data-ui="luxe"] #root { background: #fbf6ea !important; }
+html[data-ui="luxe"] .zp-page,
+html[data-ui="luxe"] .game-topup-container,
+html[data-ui="luxe"] .container {
+  max-width: 36rem !important;
+  margin-inline: auto;
+}
+html[data-ui="luxe"] .zp-game-grid {
+  grid-template-columns: 1fr 1fr !important;
+  gap: 1.1rem !important;
+}
+html[data-ui="luxe"] .package-category-grid,
+html[data-ui="luxe"] .package-section [class*="grid-cols"] {
+  grid-template-columns: 1fr !important;
+  gap: 0.85rem !important;
+}
+html[data-ui="luxe"] .zurs-game-card,
+html[data-ui="luxe"] .package-choice,
+html[data-ui="luxe"] .surface,
+html[data-ui="luxe"] .game-topup-workspace {
+  border: 1px solid rgba(201, 151, 18, 0.35) !important;
+  box-shadow: 0 14px 36px rgba(122, 84, 8, 0.08);
+  border-radius: 1.35rem !important;
+}
+html[data-ui="luxe"] .package-choice-surface {
+  display: flex !important;
+  align-items: center;
+  gap: 1rem;
+  text-align: left;
+}
+html[data-ui="luxe"] .package-choice-surface .pkg-art,
+html[data-ui="luxe"] .package-choice-surface .generated-package-art,
+html[data-ui="luxe"] .package-choice-surface .supplied-package-art {
+  width: 4.4rem;
+  height: 4.4rem;
+  margin: 0 !important;
+  flex: 0 0 4.4rem;
+}
+html[data-ui="luxe"] .package-choice__price {
+  margin-left: auto;
+  font-size: 1.12rem !important;
+  color: #9a6b00 !important;
+}
+html[data-ui="luxe"] .zurs-compact-header {
+  border-color: rgba(201, 151, 18, 0.28) !important;
+}
+html[data-ui="luxe"] .zbtn--primary {
+  letter-spacing: 0.04em;
+}
+
+/* —— Split: two-pane desk (ID | packages) —— */
+html[data-ui="night"] {
+  --z-canvas: #070b16;
+  --z-panel: #101624;
+  --z-panel-2: #161d2e;
+  --background: #070b16;
+}
+html[data-ui="night"],
+html[data-ui="night"] body,
+html[data-ui="night"] .zurs-dotted-shell,
+html[data-ui="night"] #root {
+  background: #070b16 !important;
+  color: #f4f1e8 !important;
+}
+html[data-ui="night"] .game-detail-hero {
+  min-height: 15rem !important;
+  border-radius: 0 0 1.6rem 1.6rem !important;
+}
+@media (min-width: 900px) {
+  html[data-ui="night"] .game-topup-workspace {
+    display: grid !important;
+    grid-template-columns: minmax(17rem, 0.88fr) minmax(22rem, 1.2fr);
+    gap: 1.15rem;
+    align-items: start;
+  }
+  html[data-ui="night"] .game-topup-id {
+    position: sticky;
+    top: 5.4rem;
+  }
+  html[data-ui="night"] .package-category-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+  html[data-ui="night"] .zp-game-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+}
+html[data-ui="night"] .zurs-compact-header {
+  background: rgba(7, 11, 22, 0.9) !important;
+  border-color: rgba(247, 246, 242, 0.08) !important;
+}
+html[data-ui="night"] .zurs-pay-card {
+  position: sticky;
+  bottom: 5.2rem;
+  z-index: 20;
+}
+
+/* —— Showcase: featured first card, cinematic —— */
+html[data-ui="neon"] {
+  --z-canvas: #0a1022;
+  --z-panel: #121a33;
+  --z-neon: #46d8ff;
+  --background: #0a1022;
+}
+html[data-ui="neon"],
+html[data-ui="neon"] body,
+html[data-ui="neon"] .zurs-dotted-shell,
+html[data-ui="neon"] #root {
+  background: #0a1022 !important;
+  color: #eef8ff !important;
+}
+html[data-ui="neon"] .zp-game-grid > :first-child {
+  grid-column: 1 / -1;
+}
+html[data-ui="neon"] .zp-game-grid > :first-child .zurs-game-card-media {
+  aspect-ratio: 21 / 9 !important;
+  min-height: 9rem;
+}
+html[data-ui="neon"] .package-category-grid > :first-child {
+  grid-column: 1 / -1;
+}
+html[data-ui="neon"] .package-category-grid > :first-child .package-choice-surface {
+  display: grid !important;
+  grid-template-columns: 7.5rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.9rem 1rem;
+  text-align: left;
+  padding: 1rem !important;
+}
+html[data-ui="neon"] .package-category-grid > :first-child .pkg-art,
+html[data-ui="neon"] .package-category-grid > :first-child .generated-package-art,
+html[data-ui="neon"] .package-category-grid > :first-child .supplied-package-art {
+  width: 7.5rem;
+  height: 7.5rem;
+  margin: 0 !important;
+}
+html[data-ui="neon"] .package-category-grid > :first-child .package-choice__price {
+  font-size: 1.35rem !important;
+  color: #46d8ff !important;
+}
+html[data-ui="neon"] .zurs-game-card,
+html[data-ui="neon"] .package-choice,
+html[data-ui="neon"] .surface {
+  border-radius: 1.65rem !important;
+  border-color: rgba(70, 216, 255, 0.22) !important;
+}
+html[data-ui="neon"] .zbtn--primary {
+  box-shadow: 0 0 22px rgba(70, 216, 255, 0.28);
+}
+html[data-ui="neon"] .package-category-tabs {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  gap: 0.45rem;
+  padding-bottom: 0.2rem;
+}
+html[data-ui="neon"] .game-detail-hero {
+  min-height: 13.5rem !important;
+  border: 1px solid rgba(70, 216, 255, 0.2);
+}
+
+html[data-ui="night"] .min-h-screen.bg-slate-50,
+html[data-ui="neon"] .min-h-screen.bg-slate-50 { background: #f4f4f1 !important; color: #161616 !important; }
+
+.ui-skin-preview {
+  display: grid;
+  height: 2.7rem;
+  gap: 3px;
+  border-radius: 0.65rem;
+  padding: 5px;
+  overflow: hidden;
+}
+.ui-skin-preview--classic { grid-template-columns: 1fr 1fr; background: #eceae3; }
+.ui-skin-preview--classic::before,
+.ui-skin-preview--classic::after { content: ""; background: #fff; border-radius: 4px; }
+.ui-skin-preview--soft { grid-template-rows: 1fr 1fr 1fr; background: #f0e6cc; }
+.ui-skin-preview--soft::before,
+.ui-skin-preview--soft::after { content: ""; background: #fff; border-radius: 3px; }
+.ui-skin-preview--luxe { grid-template-columns: 1fr; background: #f7ecd0; place-items: stretch; }
+.ui-skin-preview--luxe::before { content: ""; margin: 4px; border: 1px solid #c99712; border-radius: 6px; background: #fffaf0; }
+.ui-skin-preview--gamer { grid-template-columns: 1fr; background: #101736; }
+.ui-skin-preview--gamer::before { content: ""; margin: 3px; border-radius: 5px; background: linear-gradient(#c99712, #1c2a4d); }
+.ui-skin-preview--night { grid-template-columns: 0.7fr 1fr; background: #070b16; }
+.ui-skin-preview--night::before,
+.ui-skin-preview--night::after { content: ""; background: #161d2e; border-radius: 4px; }
+.ui-skin-preview--neon { grid-template-rows: 1.4fr 0.7fr; background: #0a1022; }
+.ui-skin-preview--neon::before { content: ""; background: linear-gradient(90deg, #46d8ff, #c99712); border-radius: 5px; }
+.ui-skin-preview--neon::after { content: ""; background: #121a33; border-radius: 4px; }

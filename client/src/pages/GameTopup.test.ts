@@ -359,7 +359,7 @@ describe("dedicated game top-up routes", () => {
     expect(source).toContain("zurs-id-hint");
     expect(source).toContain("setSelectedPaymentMethodId(null)");
     const gamer = readFileSync(join(process.cwd(), "client/src/styles/zurs-gamer.css"), "utf8");
-    expect(gamer).toContain('html[data-ui="gamer"][data-theme="dark"]');
+    expect(gamer).toContain('html[data-ui-family="dark"][data-theme="dark"]');
     expect(gamer).toContain("--z-canvas: #101736");
     expect(gamer).toContain("--z-cream: #f7f6f2");
     expect(gamer).toContain("--z-neon: #c99712");

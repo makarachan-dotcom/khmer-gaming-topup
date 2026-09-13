@@ -11,6 +11,7 @@ import { CalendarClock, Check, CircleAlert, Copy, CreditCard, Gift, PackageCheck
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useLocation } from "wouter";
 import { LoadingV2 } from "@/components/OutlineLoader";
+import { applyStorefrontUi, parseStorefrontUi, STOREFRONT_UI_META } from "@/lib/storefrontUi";
 
 const adminEmail = "chanmakara672@gmail.com";
 const tabs = ["overview", "orders", "listings", "catalog", "digital", "operations"] as const;
@@ -24,31 +25,29 @@ function StorefrontUiControl({ isOwner }: { isOwner: boolean }) {
   const current = trpc.content.storefrontUi.useQuery();
   const save = trpc.admin.setStorefrontUi.useMutation({
     onSuccess: (result) => {
-      const ui = result.ui === "gamer" ? "gamer" : "classic";
-      document.documentElement.setAttribute("data-ui", ui);
-      try { document.cookie = `zurs-ui=${ui}; Path=/; Max-Age=31536000; SameSite=Lax`; } catch { /* private mode */ }
-      if (ui === "classic") {
-        document.documentElement.setAttribute("data-theme", "light");
-        document.documentElement.style.colorScheme = "light";
-      }
+      applyStorefrontUi(parseStorefrontUi(result.ui));
       void utils.content.storefrontUi.invalidate();
     },
   });
-  const ui = current.data?.ui === "gamer" ? "gamer" : "classic";
-  const pick = (next: "classic" | "gamer") => {
-    if (!isOwner || save.isPending || next === ui) return;
-    save.mutate({ ui: next });
-  };
+  const ui = parseStorefrontUi(current.data?.ui);
   return (
     <section className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm sm:p-5">
       <p className="text-[10px] font-extrabold tracking-[0.14em] text-amber-800">STOREFRONT UI</p>
-      <h2 className="mt-1 text-sm font-bold text-slate-950">ប្ដូររូបរាងហាងសាធារណៈ</h2>
-      <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-600">Classic គឺ UI ចាស់ដែលអតិថិជនស្គាល់។ Gamer គឺ UI ថ្មី (dark + ៣ជំហាន)។ មានតែ Owner ទេដែលប្ដូរបាន ហើយវាអនុវត្តលើគ្រប់អ្នកទិញ។</p>
-      <div className="mt-3 flex flex-wrap gap-2">
-        <button type="button" disabled={!isOwner || save.isPending} onClick={() => pick("classic")} className={`h-10 rounded-xl px-4 text-xs font-bold ${ui === "classic" ? "bg-slate-950 text-white" : "border border-slate-200 bg-white text-slate-700"}`}>Classic · UI ចាស់</button>
-        <button type="button" disabled={!isOwner || save.isPending} onClick={() => pick("gamer")} className={`h-10 rounded-xl px-4 text-xs font-bold ${ui === "gamer" ? "bg-slate-950 text-white" : "border border-slate-200 bg-white text-slate-700"}`}>Gamer · UI ថ្មី</button>
+      <h2 className="mt-1 text-sm font-bold text-slate-950">ទម្រង់ហាងសាធារណៈ · ៦ បែប</h2>
+      <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-600">ប្ដូរទម្រង់ layout ទាំងស្រុង មិនមែនតែពណ៌។ Classic សម្រាប់អតិថិជនចាស់។ Showcase សម្រាប់អតិថិជនថ្មី។ មានតែ Owner ទេដែលប្ដូរបាន។</p>
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {STOREFRONT_UI_META.map((skin) => {
+          const on = ui === skin.id;
+          return (
+            <button key={skin.id} type="button" disabled={!isOwner || save.isPending} onClick={() => { if (isOwner && !save.isPending && skin.id !== ui) save.mutate({ ui: skin.id }); }} className={`rounded-2xl border p-3 text-left ${on ? "border-slate-950 bg-slate-950 text-white" : "border-slate-200 bg-white text-slate-800"}`}>
+              <span className={`ui-skin-preview ui-skin-preview--${skin.id}`} aria-hidden="true" />
+              <p className="mt-2 text-[11px] font-extrabold">{skin.name} · {skin.kh}</p>
+              <p className={`mt-0.5 text-[10px] leading-4 ${on ? "text-white/70" : "text-slate-500"}`}>{skin.hint}</p>
+            </button>
+          );
+        })}
       </div>
-      <p className="mt-2 text-[11px] font-semibold text-slate-500">{isOwner ? (save.isPending ? "កំពុងរក្សាទុក…" : ui === "gamer" ? "អតិថិជនកំពុងឃើញ UI ថ្មី" : "អតិថិជនកំពុងឃើញ UI ចាស់") : "Owner only"}</p>
+      <p className="mt-2 text-[11px] font-semibold text-slate-500">{isOwner ? (save.isPending ? "កំពុងរក្សាទុក…" : `កំពុងបង្ហាញ · ${STOREFRONT_UI_META.find((item) => item.id === ui)?.name}`) : "Owner only"}</p>
       {save.error ? <p className="mt-2 text-xs font-semibold text-rose-700">{save.error.message}</p> : null}
     </section>
   );

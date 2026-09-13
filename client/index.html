@@ -1,18 +1,20 @@
 <!doctype html>
-<html lang="km" data-ui="classic" data-theme="light">
+<html lang="km" data-ui="classic" data-ui-family="light" data-theme="light">
 
   <head>
     <script>
       (function () {
+        var a = { classic: 1, soft: 1, luxe: 1, gamer: 1, night: 1, neon: 1 };
         var ui = "classic";
         try {
           var m = document.cookie.match(/(?:^|; )zurs-ui=([^;]*)/);
-          if (m && m[1] === "gamer") ui = "gamer";
+          if (m && a[m[1]]) ui = m[1];
         } catch (e) {}
+        var dark = ui === "gamer" || ui === "night" || ui === "neon";
         document.documentElement.setAttribute("data-ui", ui);
-        var t = "light";
+        document.documentElement.setAttribute("data-ui-family", dark ? "dark" : "light");
+        var t = dark ? "dark" : "light";
         if (ui === "gamer") {
-          t = "dark";
           try {
             var s = localStorage.getItem("zurs-theme");
             if (s === "light" || s === "dark") t = s;

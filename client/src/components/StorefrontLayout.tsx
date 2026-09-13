@@ -12,6 +12,7 @@ import { animate } from "animejs";
 import { ArrowUp, ChevronRight, LogIn, LogOut, Moon, Sun, WalletCards } from "lucide-react";
 import { FontEmojiBrand } from "@/components/FontEmojiBrand";
 import { PackEmoji } from "@/components/PackEmoji";
+import { applyStorefrontUi, parseStorefrontUi, readStorefrontUi, type StorefrontUiSkin } from "@/lib/storefrontUi";
 import { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { TAB_LONG_PRESS_MS, TAB_SCRUB_PX, tabIndexFromClientX, tabProgressFromClientX } from "@/lib/mobileTabOrder";
@@ -51,26 +52,11 @@ export function CatalogSwitch({ active }: { active: "games" | "digital" | null }
   );
 }
 
-function applyStorefrontUi(next: "classic" | "gamer") {
-  document.documentElement.setAttribute("data-ui", next);
-  try {
-    document.cookie = `zurs-ui=${next}; Path=/; Max-Age=31536000; SameSite=Lax`;
-  } catch {
-    /* private mode */
-  }
-  if (next === "classic") {
-    document.documentElement.setAttribute("data-theme", "light");
-    document.documentElement.style.colorScheme = "light";
-    const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute("content", "#f4f4f1");
-  }
-}
-
-function StorefrontUiSync({ onUi }: { onUi: (ui: "classic" | "gamer") => void }) {
+function StorefrontUiSync({ onUi }: { onUi: (ui: StorefrontUiSkin) => void }) {
   const remote = trpc.content.storefrontUi.useQuery(undefined, { staleTime: 30_000, refetchOnWindowFocus: true });
   useEffect(() => {
-    const ui = remote.data?.ui === "gamer" ? "gamer" : remote.data?.ui === "classic" ? "classic" : null;
-    if (!ui) return;
+    if (!remote.data?.ui) return;
+    const ui = parseStorefrontUi(remote.data.ui);
     applyStorefrontUi(ui);
     onUi(ui);
   }, [onUi, remote.data?.ui]);
@@ -201,9 +187,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
   const { user, loading, logout } = useAuth();
   const { selectedProduct, selectedPaymentMethodId } = useSelectedProduct();
   const { playerTitle } = useStorefrontHeader();
-  const [storefrontUi, setStorefrontUi] = useState<"classic" | "gamer">(() => (
-    typeof document !== "undefined" && document.documentElement.getAttribute("data-ui") === "gamer" ? "gamer" : "classic"
-  ));
+  const [storefrontUi, setStorefrontUi] = useState<StorefrontUiSkin>(() => readStorefrontUi());
   const accountLabel = user?.displayName || user?.name || "គណនីខ្ញុំ";
   const isOwnerAdmin = user?.role === "admin" || user?.email?.trim().toLowerCase() === "chanmakara672@gmail.com";
   const googleSignInHref = `/api/auth/google?returnTo=${encodeURIComponent(location)}`;

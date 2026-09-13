@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const EXPECTED = [
-  "'sha256-V7QpbdJNwHdtWxcMBy53J1v1bu5cwuf9xTr3hEyCDd0='",
+  "'sha256-M1hxKy77n4W5qR7Zyia6sr9tfxljigVWqNfWGKbCUWo='",
   "'sha256-RNVq7KCFgdPTgiE2ccaasel0NNygecV5GIjMuAplKl8='",
   "'sha256-/A4iLe8qmlxaNjrdqCmaLpw29lK0pp9QMdV7p1No5Mg='",
   "'sha256-+2fpB4RRSi59XpvbtzRVb6BWOSv9U5x2j39nSlGychE='",

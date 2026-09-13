@@ -17,6 +17,7 @@ import { checkBakongKhqrPayment, createBakongKhqrPayment, registerBakongKhqrWork
 import { getKhqrReconciliationDisposition, getKhqrWalletReconciliationDisposition } from "./khqrReconciliation";
 import { assertOrderAmountIntegrity, assertPackagePriceIntegrity, assessOrderVelocity, moneyEquals } from "./paymentSecurity";
 import { applyShopPriceLadder, shopLadderUnitPrice } from "@shared/packagePriceLadder";
+import { parseStorefrontUi, type StorefrontUiSkin } from "@shared/storefrontUi";
 import type { FzrProviderSyncSnapshot, SmmProviderCatalogResponse } from "./providerCatalog";
 import { submitSmmProviderOrder, submitFzrTopupOrder } from "./providerCatalog";
 import { publicPartnerDelivery } from "../shared/partnerDelivery";
@@ -1632,14 +1633,15 @@ export async function saveSiteContent(input: { contentKey: string; titleKh?: str
 }
 
 export const storefrontUiContentKey = "storefront-ui";
-export type StorefrontUiSkin = "classic" | "gamer";
+export type { StorefrontUiSkin };
 
 export async function getStorefrontUi(): Promise<StorefrontUiSkin> {
   const db = await getDb();
   if (!db) return "classic";
   const rows = await db.select({ bodyKh: siteContent.bodyKh, isActive: siteContent.isActive }).from(siteContent).where(eq(siteContent.contentKey, storefrontUiContentKey)).limit(1);
   const row = rows[0];
-  return row?.isActive && row.bodyKh === "gamer" ? "gamer" : "classic";
+  if (!row?.isActive) return "classic";
+  return parseStorefrontUi(row.bodyKh);
 }
 
 export async function setStorefrontUi(input: { ui: StorefrontUiSkin; updatedByUserId: number }) {
