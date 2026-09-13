@@ -9,5 +9,7 @@ describe("DashboardLayout browser-storage guard", () => {
     expect(source).toContain("window.localStorage.getItem(SIDEBAR_WIDTH_KEY)");
     expect(source).toContain("window.localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString())");
     expect(source).toContain("Storage can be unavailable");
+    expect(source).toContain('root.setAttribute("data-admin", "1")');
+    expect(source).toContain("zurs-admin min-h-screen bg-slate-50");
   });
 });

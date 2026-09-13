@@ -1067,6 +1067,65 @@ html[data-theme="dark"] .selected-product-action-bar {
   }
 }
 
+/* Admin stays the original light dashboard. Storefront skins never restyle it. */
+html[data-admin="1"],
+html[data-admin="1"][data-ui],
+html[data-admin="1"][data-ui-family],
+html[data-admin="1"][data-theme],
+html[data-admin="1"][data-ui-family="dark"][data-theme="dark"] {
+  color-scheme: light !important;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary: #4f46e5;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #0f172a;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #eef2ff;
+  --accent-foreground: #312e81;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #4f46e5;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0f172a;
+  --sidebar-accent: #f1f5f9;
+  --sidebar-accent-foreground: #0f172a;
+  --sidebar-border: #e2e8f0;
+  --sidebar-primary: #4f46e5;
+  --sidebar-primary-foreground: #ffffff;
+  --z-canvas: #f8fafc;
+  --z-panel: #ffffff;
+  --z-panel-2: #f8fafc;
+  --z-line: #e2e8f0;
+  --z-ink: #0f172a;
+  --z-ink-muted: #64748b;
+  --z-cream: #0f172a;
+  --z-neon: #4f46e5;
+  --z-neon-ink: #ffffff;
+}
+html[data-admin="1"],
+html[data-admin="1"] body,
+html[data-admin="1"] #root,
+html[data-admin="1"][data-ui] body,
+html[data-admin="1"][data-ui] #root,
+html[data-admin="1"][data-ui-family][data-theme] body,
+html[data-admin="1"][data-ui-family][data-theme] #root,
+html[data-admin="1"][data-ui-family="dark"][data-theme="dark"] body,
+html[data-admin="1"][data-ui-family="dark"][data-theme="dark"] #root {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+}
+html[data-admin="1"] .zurs-admin,
+html[data-admin="1"] .min-h-screen.bg-slate-50 {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+}
+
 /* Fast paint: skip offscreen card work, cheaper glass on weak phones. */
 body:has(.zurs-dotted-shell) :is(.zurs-game-card, .package-choice) {
   content-visibility: auto;

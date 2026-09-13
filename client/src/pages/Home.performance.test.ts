@@ -60,5 +60,7 @@ describe("storefront image loading performance", () => {
     expect(polish).toContain('html[data-pkg-ui="trio"]');
     expect(polish).toContain('html[data-pkg-ui="premium"]');
     expect(polish).toContain("account-history-panel article");
+    expect(polish).toContain('html[data-admin="1"]');
+    expect(polish).toContain(".zurs-admin");
   });
 });

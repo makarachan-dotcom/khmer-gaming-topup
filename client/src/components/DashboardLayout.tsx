@@ -74,6 +74,12 @@ export default function DashboardLayout({
     }
   }, [sidebarWidth]);
 
+  useEffect(() => {
+    const root = document.documentElement;
+    root.setAttribute("data-admin", "1");
+    return () => root.removeAttribute("data-admin");
+  }, []);
+
   if (loading) {
     return <DashboardLayoutSkeleton />
   }
@@ -104,6 +110,7 @@ export default function DashboardLayout({
   }
 
   return (
+    <div className="zurs-admin min-h-screen bg-slate-50">
     <SidebarProvider
       style={
         {
@@ -116,6 +123,7 @@ export default function DashboardLayout({
         {children}
       </DashboardLayoutContent>
     </SidebarProvider>
+    </div>
   );
 }
 
