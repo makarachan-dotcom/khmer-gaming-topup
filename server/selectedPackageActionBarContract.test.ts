@@ -17,6 +17,9 @@ describe("selected package mobile action bar", () => {
     expect(layout).toContain("បន្តបង់ប្រាក់");
     expect(layout).toContain('pack: "shopping-bag"');
     expect(layout).toContain("zurs-pay-anchor");
+    expect(layout).toContain("onPickPayment");
+    expect(layout).toContain("ជ្រើសរើសវិធីបង់ប្រាក់");
+    expect(layout).toContain("scrollIntoView");
     expect(layout).toContain("disabled aria-disabled=\"true\"");
     expect(layout).toContain("ProviderGameArtwork");
     expect(layout).toContain("selected-product-action-bar");

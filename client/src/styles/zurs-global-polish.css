@@ -1046,4 +1046,10 @@ main.zp-page {
   }
 }
 
+#zurs-pay-anchor.is-seek {
+  outline: 2px solid var(--z-neon, #c99712);
+  outline-offset: 6px;
+  border-radius: 1.25rem;
+}
+
 

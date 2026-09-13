@@ -495,9 +495,9 @@ describe("storefront media protection", () => {
       "paymentMethodName={selectedPaymentMethod?.name ?? null}"
     );
     expect(layoutSource).toContain("សូមជ្រើសវិធីបង់ប្រាក់");
-    expect(layoutSource).toContain(
-      'title="សូមជ្រើសវិធីបង់ប្រាក់នៅខាងលើកញ្ចប់"'
-    );
+    expect(layoutSource).toContain("ជ្រើសរើសវិធីបង់ប្រាក់");
+    expect(layoutSource).toContain("onPickPayment");
+    expect(layoutSource).toContain("scrollIntoView");
     expect(checkoutSource).toContain('const preview = orderId === "preview"');
     expect(checkoutSource).toContain(
       "<PaymentPreview product={selectedProduct}"

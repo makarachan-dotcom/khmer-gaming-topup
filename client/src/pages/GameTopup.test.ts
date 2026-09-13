@@ -359,6 +359,7 @@ describe("dedicated game top-up routes", () => {
     expect(source).toContain('id="zurs-pay-anchor"');
     expect(source).toContain("PayContinueInsideCard");
     expect(source).toContain("បន្តបង់ប្រាក់");
+    expect(source).toContain("ជ្រើសរើសវិធីបង់ប្រាក់");
     expect(source).toContain("zurs-id-hint");
     expect(source).toContain("setSelectedPaymentMethodId(null)");
     const gamer = readFileSync(join(process.cwd(), "client/src/styles/zurs-gamer.css"), "utf8");

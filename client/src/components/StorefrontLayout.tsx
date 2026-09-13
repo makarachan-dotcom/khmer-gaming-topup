@@ -227,6 +227,16 @@ function StorefrontShell({ children }: { children: ReactNode }) {
   const isTopupRoute = location.startsWith("/topup/");
   const [payAnchorVisible, setPayAnchorVisible] = useState(false);
   const showPayDock = isTopupRoute && Boolean(selectedProduct) && payAnchorVisible;
+  const scrollToPayment = () => {
+    const el = document.getElementById("zurs-pay-anchor");
+    if (!el) return;
+    el.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+      block: "center",
+    });
+    el.classList.add("is-seek");
+    window.setTimeout(() => el.classList.remove("is-seek"), 1100);
+  };
   // Round 9: the no-refund policy must be acknowledged before the checkout screen
   // opens, and the dialog itself offers a direct route into live support.
   useEffect(() => {
@@ -265,29 +275,30 @@ function StorefrontShell({ children }: { children: ReactNode }) {
       setPayAnchorVisible(false);
       return;
     }
-    let io: IntersectionObserver | null = null;
-    let observed: Element | null = null;
-    const connect = () => {
-      const el = document.getElementById("zurs-pay-anchor");
-      if (el === observed) return;
-      io?.disconnect();
-      io = null;
-      observed = el;
-      if (!el) {
+    const update = () => {
+      const packs = document.querySelector(".game-topup-packs");
+      const pay = document.getElementById("zurs-pay-anchor");
+      if (!packs) {
         setPayAnchorVisible(false);
         return;
       }
-      io = new IntersectionObserver(([entry]) => {
-        setPayAnchorVisible(Boolean(entry?.isIntersecting));
-      }, { threshold: 0.18, rootMargin: "0px 0px -12% 0px" });
-      io.observe(el);
+      const vh = window.innerHeight || 1;
+      const packsTop = packs.getBoundingClientRect().top;
+      const payBottom = (pay ?? packs).getBoundingClientRect().bottom;
+      // Switch as soon as packages enter the lower screen — do not wait until
+      // the buyer has scrolled to the page bottom. Restore the tabbar once they
+      // scroll back to identity or fully past the payment card.
+      setPayAnchorVisible(packsTop < vh * 0.72 && payBottom > vh * 0.16);
     };
-    connect();
-    const mo = new MutationObserver(connect);
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    const mo = new MutationObserver(update);
     mo.observe(document.body, { childList: true, subtree: true });
     return () => {
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
       mo.disconnect();
-      io?.disconnect();
     };
   }, [isTopupRoute, location]);
   const clearTabPress = () => {
@@ -476,7 +487,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
         * the button that actually creates the KHQR, so the shell never blocks
         * a selection behind a dialog. */}
       {showPayDock ? <SelectedProductActionBar
-        product={selectedProduct} paymentMethodName={selectedPaymentMethod?.name ?? null} isAuthenticated={Boolean(user)} isAuthenticationLoading={loading} signInHref={googleSignInHref} onContinue={() => setLocation("/checkout/preview")} /> : (
+        product={selectedProduct} paymentMethodName={selectedPaymentMethod?.name ?? null} isAuthenticated={Boolean(user)} isAuthenticationLoading={loading} signInHref={googleSignInHref} onContinue={() => setLocation("/checkout/preview")} onPickPayment={scrollToPayment} /> : (
         <nav
           ref={tabBarRef}
           className={cn("liquid-tabbar zurs-mobile-tabbar fixed bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-1/2 z-40 grid h-14 w-full -translate-x-1/2 grid-cols-2 gap-0.5 rounded-full p-1 sm:hidden", mobileTabColumns, scrubbing && "is-scrubbing")}
@@ -537,8 +548,9 @@ type ActionBarProps = {
   isAuthenticationLoading: boolean;
   signInHref: string;
   onContinue: () => void;
+  onPickPayment: () => void;
 };
-function SelectedProductActionBar({ product, paymentMethodName, isAuthenticated, isAuthenticationLoading, signInHref, onContinue }: ActionBarProps) {
+function SelectedProductActionBar({ product, paymentMethodName, isAuthenticated, isAuthenticationLoading, signInHref, onContinue, onPickPayment }: ActionBarProps) {
   const expanded = Boolean(product);
   const pill = "inline-flex h-10 shrink-0 items-center gap-1 rounded-xl px-3 text-xs font-bold";
   return (
@@ -557,7 +569,7 @@ function SelectedProductActionBar({ product, paymentMethodName, isAuthenticated,
             ) : isAuthenticated ? paymentMethodName ? (
               <button type="button" onClick={onContinue} className={cn(pill, "bg-neon text-neon-ink transition hover:brightness-110")}><PackEmoji name="shopping-bag" size={16} />បន្តបង់ប្រាក់</button>
             ) : (
-              <button type="button" disabled aria-disabled="true" title="សូមជ្រើសវិធីបង់ប្រាក់នៅខាងលើកញ្ចប់" className={cn(pill, "bg-panel-2 text-ink-muted")}><WalletCards className="h-3.5 w-3.5" />ជ្រើសវិធីបង់</button>
+              <button type="button" onClick={onPickPayment} className={cn(pill, "bg-neon text-neon-ink transition hover:brightness-110")}><WalletCards className="h-3.5 w-3.5" />ជ្រើសរើសវិធីបង់ប្រាក់</button>
             ) : (
               <a href={signInHref} className={cn(pill, "bg-neon text-neon-ink")}><LogIn className="h-3.5 w-3.5" />ចូលគណនី</a>
             )}

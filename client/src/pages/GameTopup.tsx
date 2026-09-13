@@ -302,6 +302,16 @@ function PayContinueInsideCard() {
   const paymentMethods = trpc.payments.methods.useQuery(undefined, { staleTime: 30_000, refetchInterval: 15_000 });
   const selectedPaymentMethod = (paymentMethods.data ?? []).find((method) => method.id === selectedPaymentMethodId) ?? null;
   const googleSignInHref = `/api/auth/google?returnTo=${encodeURIComponent(location)}`;
+  const scrollToMethods = () => {
+    const el = document.getElementById("zurs-pay-anchor");
+    if (!el) return;
+    el.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+      block: "center",
+    });
+    el.classList.add("is-seek");
+    window.setTimeout(() => el.classList.remove("is-seek"), 1100);
+  };
   if (!selectedProduct) return null;
   return (
     <div className="zurs-pay-continue">
@@ -310,7 +320,7 @@ function PayContinueInsideCard() {
       ) : user ? selectedPaymentMethod ? (
         <button type="button" onClick={() => setLocation("/checkout/preview")} className="zurs-pay-continue__btn zurs-pay-continue__btn--go"><PackEmoji name="shopping-bag" size={22} />បន្តបង់ប្រាក់</button>
       ) : (
-        <p className="zurs-pay-continue__hint">សូមជ្រើស KHQR ខាងលើ មុនបន្តបង់ប្រាក់</p>
+        <button type="button" onClick={scrollToMethods} className="zurs-pay-continue__btn zurs-pay-continue__btn--go"><PackEmoji name="shopping-bag" size={22} />ជ្រើសរើសវិធីបង់ប្រាក់</button>
       ) : (
         <a href={googleSignInHref} className="zurs-pay-continue__btn zurs-pay-continue__btn--go"><PackEmoji name="shopping-bag" size={22} />ចូលគណនី</a>
       )}
