@@ -38,7 +38,7 @@ export const INDEX_JSONLD_SCRIPT_HASHES = [
   "'sha256-DlJZr1MoWzXsIPXL6OzXbGc4tt7yeGWrGKNtl3senyQ='",
   "'sha256-RNVq7KCFgdPTgiE2ccaasel0NNygecV5GIjMuAplKl8='",
   "'sha256-/A4iLe8qmlxaNjrdqCmaLpw29lK0pp9QMdV7p1No5Mg='",
-  "'sha256-+2fpB4RRSi59XpvbtzRVb6BWOSv9U5x2j39nSlGychE='",
+  "'sha256-4u7hi3T6ri73I65/MsKxA/avQMYE7H0RqMs3IH7UL8s='",
 ] as const;
 
 const HTML_CSP_AFTER_SCRIPT = [
