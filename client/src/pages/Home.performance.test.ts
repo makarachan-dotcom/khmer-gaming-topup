@@ -55,5 +55,7 @@ describe("storefront image loading performance", () => {
     expect(packSource).toContain("IntersectionObserver");
     expect(polish).toContain("content-visibility: auto");
     expect(polish).toContain("blur(16px)");
+    expect(polish).toContain(".zurs-dotted-shell > footer.zurs-footer");
+    expect(polish).toContain("#topup-games");
   });
 });

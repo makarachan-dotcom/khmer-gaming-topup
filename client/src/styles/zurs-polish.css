@@ -215,10 +215,12 @@ img, svg, video, canvas { max-width: 100%; }
    ===================================================================== */
 main, .container, .game-topup-container { max-width: 100%; }
 
-/* Reserve room so the centred tab bar never covers the last row of content */
+/* Reserve room so the centred tab bar never covers the last row of content.
+   The shell already uses pb-[calc(5rem+env(safe-area-inset-bottom))]; extra
+   main padding stacked a huge empty band between catalog/form and footer. */
 @media (max-width: 639px) {
   main, .game-topup-container {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 6.5rem) !important;
+    padding-bottom: 0.75rem !important;
   }
 }
 

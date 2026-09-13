@@ -93,7 +93,7 @@ export function PartnerServicesShelf({ compact = false }: { compact?: boolean })
     `inline-flex h-7 shrink-0 items-center rounded-full px-2.5 text-[10px] font-bold transition ${active ? "bg-neon text-neon-ink" : "bg-panel-2 text-ink-muted"}`;
 
   return (
-    <section className={compact ? "" : "container py-5 sm:py-8"} aria-label="Digital services">
+    <section className={compact ? "" : "container pt-5 pb-3 sm:pt-7 sm:pb-4"} aria-label="Digital services">
       <div className="max-w-2xl">
         <p className="zurs-eyebrow font-bold uppercase">DIGITAL SERVICES</p>
         <h1 className="mt-1 font-display text-xl font-bold text-ink sm:text-3xl" style={{ lineHeight: 1.45 }}>សេវាឌីជីថល</h1>
