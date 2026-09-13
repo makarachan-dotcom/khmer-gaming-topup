@@ -10,7 +10,7 @@ describe("Home provider product-card clarity", () => {
     const identity = fs.readFileSync(path.join(projectRoot, "client/src/components/ProviderGameIdentity.tsx"), "utf8");
     const topup = fs.readFileSync(path.join(projectRoot, "client/src/pages/GameTopup.tsx"), "utf8");
 
-    expect(home).toContain('className="h-11 w-11 rounded-xl"');
+    expect(home).toContain("zurs-game-card-fallback h-11 w-11 rounded-xl");
     expect(home).toContain('id: "free_fire", name: "Free Fire"');
     expect(home).toContain("showFlag={false}");
     expect(home).toContain("showCountryFlag={false}");

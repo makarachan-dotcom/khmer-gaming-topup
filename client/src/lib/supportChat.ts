@@ -84,15 +84,14 @@ export function supportChatTopicLabel(topic: string) {
 
 /**
  * Time-of-day greeting for the header mascot, in the visitor's own clock.
- * The storefront serves Cambodia, so the Khmer line leads and the English line
- * ("Good morning" / "Good afternoon") is what the request asked to show.
+ * The storefront is Khmer-first: `kh` is what the bubble shows.
  */
 export function mascotGreeting(now: Date = new Date()) {
   const hour = now.getHours();
-  if (hour < 12) return { en: "Good morning", kh: "អរុណសួស្តី", icon: "🌅" };
-  if (hour < 17) return { en: "Good afternoon", kh: "ទិវាសួស្តី", icon: "☀️" };
-  if (hour < 21) return { en: "Good evening", kh: "សាយណ្ហសួស្តី", icon: "🌇" };
-  return { en: "Good night", kh: "រាត្រីសួស្តី", icon: "🌙" };
+  if (hour < 12) return { en: "Good morning", kh: "សួស្តីព្រឹក", icon: "🌅" };
+  if (hour < 17) return { en: "Good afternoon", kh: "សួស្តីរសៀល", icon: "☀️" };
+  if (hour < 21) return { en: "Good evening", kh: "សួស្តីល្ងាច", icon: "🌇" };
+  return { en: "Good night", kh: "សួស្តីយប់", icon: "🌙" };
 }
 
 export const MASCOT_HELP_TEXT = "ត្រូវការជំនួយ?";

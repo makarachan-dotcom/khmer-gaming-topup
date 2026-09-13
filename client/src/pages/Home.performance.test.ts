@@ -19,7 +19,8 @@ describe("storefront image loading performance", () => {
     expect(homeSource).toContain('loading="lazy"');
     expect(homeSource).toContain('decoding="async"');
     expect(homeSource).toContain('sizes="(max-width: 639px) 50vw');
-    expect(homeSource).toContain('aspect-[16/10]');
+    expect(homeSource).toContain("aspect-square");
+    expect(homeSource).not.toContain("aspect-[16/10]");
   });
 
   it("keeps the Weekly Loyalty Giveaway card out of the public Home page", () => {
@@ -31,6 +32,8 @@ describe("storefront image loading performance", () => {
   it("uses an address-free Accept Payment strip with a right-aligned KHQR logo", () => {
     const homeSource = readFileSync(resolve(process.cwd(), "client/src/pages/Home.tsx"), "utf8");
     expect(homeSource).toContain("ACCEPT PAYMENT");
+    expect(homeSource).toContain("zurs-pay-badge");
+    expect(homeSource).toContain("zurs-pay-badge__bakong");
     expect(homeSource).toContain('src={khqrLogoUrl}');
     expect(homeSource).toContain('alt="KHQR"');
     expect(homeSource).not.toContain("zurs-game-count");
@@ -62,6 +65,24 @@ describe("storefront image loading performance", () => {
     expect(polish).toContain("account-history-panel article");
     expect(polish).toContain('html[data-admin="1"]');
     expect(polish).toContain(".zurs-admin");
+    expect(polish).toContain(".latin-label");
+    expect(polish).toContain(".zurs-game-card-fallback");
+    expect(polish).toContain("min-height: 48px");
+    expect(polish).toContain(".zurs-search-sticky");
+    expect(polish).toContain(".zurs-pay-badge");
+    expect(polish).toContain("grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr)");
+  });
+
+  it("keeps the home hero CTA, square tiles, and labelled search in Khmer", () => {
+    const homeSource = readFileSync(resolve(process.cwd(), "client/src/pages/Home.tsx"), "utf8");
+    expect(homeSource).toContain("បញ្ចូលពេជ្យ ឥឡូវនេះ");
+    expect(homeSource).toContain("សេវាឌីជីថល");
+    expect(homeSource).toContain("latin-label");
+    expect(homeSource).toContain("zurs-search-sticky");
+    expect(homeSource).toContain("ស្វែងរកហ្គេម");
+    expect(homeSource).toContain("zurs-game-skel");
+    expect(homeSource).toContain("grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6");
+    expect(homeSource).toContain("zurs-game-card-fallback");
   });
 });
 
@@ -77,5 +98,18 @@ describe("public user pages stay Khmer and themed", () => {
     expect(account).not.toContain("Connect with Email</a>");
     expect(wallet).toContain("bg-panel");
     expect(wallet).toContain("text-ink");
+  });
+
+  it("localizes the header greeting and keeps a single ZURS.me wordmark", () => {
+    const mascot = readFileSync(resolve(process.cwd(), "client/src/components/SupportMascot.tsx"), "utf8");
+    const header = readFileSync(resolve(process.cwd(), "client/src/components/HeaderMascot.tsx"), "utf8");
+    const layout = readFileSync(resolve(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
+    const ticker = readFileSync(resolve(process.cwd(), "client/src/components/GameLogoTicker.tsx"), "utf8");
+    expect(mascot).toContain("សួស្តីរសៀល");
+    expect(mascot).not.toContain("Good afternoon");
+    expect(header).toContain("greeting.kh");
+    expect(layout).toContain('storefront-header-title__player sr-only');
+    expect(ticker).toContain('aria-hidden="true"');
+    expect(ticker).not.toContain("            {logo.name}");
   });
 });

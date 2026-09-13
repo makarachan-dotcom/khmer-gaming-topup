@@ -90,8 +90,8 @@ export function HeaderMascot() {
   }, []);
 
   const helping = phase === "help";
-  const bubbleText = helping ? MASCOT_HELP_TEXT : greeting.en;
-  const bubbleSub = helping ? "ចុចនៅទីនេះដើម្បីជ្រេកាមួយក្រុមជំនួយ" : greeting.kh;
+  const bubbleText = helping ? MASCOT_HELP_TEXT : greeting.kh;
+  const bubbleSub = helping ? "ចុចនៅទីនេះដើម្បីនិយាយជាមួយក្រុមជំនួយ" : "";
 
   return (
     <span className="zp-mascot-shell">

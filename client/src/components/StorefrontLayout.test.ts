@@ -315,6 +315,7 @@ describe("storefront media protection", () => {
     );
     expect(documentSource).toContain("family=Hanuman");
     expect(documentSource).toContain("family=Kantumruy+Pro");
+    expect(documentSource).toContain("family=Noto+Sans+Khmer");
     expect(styleSource).toContain('font-family: "Hanuman", "Kantumruy Pro"');
     expect(styleSource).toContain("prefers-reduced-motion: no-preference");
   });
@@ -330,10 +331,13 @@ describe("storefront media protection", () => {
     );
     expect(componentSource).toContain("រក្សាសិទ្ធិគ្រប់យ៉ាងដោយ zurs.me");
     expect(componentSource).toContain("បង្កើតឡើងដោយ CHAN MEKARA");
-    expect(componentSource).toContain(
-      "border-t border-white/12 pt-3 text-center"
-    );
-    expect(componentSource).not.toContain("zurs-footer-meta");
+    expect(componentSource).toContain("zurs-footer-meta");
+    expect(componentSource).toContain("zurs-footer-nav");
+    expect(componentSource).toContain("គោលការណ៍ឯកជនភាព");
+    expect(componentSource).toContain("លក្ខខណ្ឌប្រើប្រាស់");
+    expect(componentSource).not.toContain("Privacy Policy");
+    expect(componentSource).not.toContain("Terms of Service");
+    expect(componentSource).toContain("border-t border-line pt-3");
     expect(componentSource).toContain(
       "https://www.facebook.com/share/19QooXtndH/?mibextid=wwXIfr"
     );
@@ -341,15 +345,6 @@ describe("storefront media protection", () => {
       'aria-label="បើកទំព័រ Facebook របស់ ZURS"'
     );
     expect(componentSource).toContain("bg-[#1877F2]");
-    expect(componentSource).toContain(
-      "mt-3 flex items-center justify-center gap-2 text-center"
-    );
-    expect(componentSource).toContain(
-      "mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2"
-    );
-    expect(componentSource).toContain(
-      "group mx-auto mt-3 flex h-10 w-fit items-center"
-    );
     expect(styleSource).toContain("oklch(0.82 0.15 84)");
   });
 
