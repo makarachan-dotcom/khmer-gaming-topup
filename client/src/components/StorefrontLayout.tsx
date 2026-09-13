@@ -12,7 +12,7 @@ import { animate } from "animejs";
 import { ArrowUp, ChevronRight, LogIn, LogOut, Moon, Sun, WalletCards } from "lucide-react";
 import { FontEmojiBrand } from "@/components/FontEmojiBrand";
 import { PackEmoji } from "@/components/PackEmoji";
-import { applyStorefrontUi, parseStorefrontUi, readStorefrontUi, type StorefrontUiSkin } from "@/lib/storefrontUi";
+import { applyPackageUi, applyStorefrontUi, parsePackageUi, parseStorefrontUi, readStorefrontUi, type StorefrontUiSkin } from "@/lib/storefrontUi";
 import { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { TAB_LONG_PRESS_MS, TAB_SCRUB_PX, tabIndexFromClientX, tabProgressFromClientX } from "@/lib/mobileTabOrder";
@@ -22,8 +22,8 @@ export function isProtectedMediaTarget(target: EventTarget | null) {
 }
 const mobileNavigation = [
   { href: "/", label: "ដើម", animation: "home" as const, pack: "diamond-blue" as const },
-  { href: "/topup", label: "ហាង", pack: "gift" as const },
-  { href: "/account", label: "គណនី", pack: "account-face" as const },
+  { href: "/topup", label: "ហាង", pack: "shopping-bag" as const },
+  { href: "/account", label: "គណនី", pack: "user-laptop" as const },
 ];
 // The <nav> below keeps its literal `grid-cols-2` base class because a source
 // contract test pins that exact string. tailwind-merge keeps the LAST of two
@@ -55,11 +55,20 @@ export function CatalogSwitch({ active }: { active: "games" | "digital" | null }
 function StorefrontUiSync({ onUi }: { onUi: (ui: StorefrontUiSkin) => void }) {
   const remote = trpc.content.storefrontUi.useQuery(undefined, { staleTime: 30_000, refetchOnWindowFocus: true });
   useEffect(() => {
+    try {
+      const m = document.cookie.match(/(?:^|; )zurs-pkg=([^;]*)/);
+      if (m?.[1]) applyPackageUi(parsePackageUi(decodeURIComponent(m[1])));
+    } catch {
+      /* private mode */
+    }
+  }, []);
+  useEffect(() => {
     if (!remote.data?.ui) return;
     const ui = parseStorefrontUi(remote.data.ui);
     applyStorefrontUi(ui);
     onUi(ui);
-  }, [onUi, remote.data?.ui]);
+    applyPackageUi(parsePackageUi(remote.data.packageUi));
+  }, [onUi, remote.data?.packageUi, remote.data?.ui]);
   return null;
 }
 
@@ -208,6 +217,8 @@ function StorefrontShell({ children }: { children: ReactNode }) {
   const [scrubTab, setScrubTab] = useState<number | null>(null);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const isTopupRoute = location.startsWith("/topup/");
+  const [payAnchorVisible, setPayAnchorVisible] = useState(false);
+  const showPayDock = isTopupRoute && Boolean(selectedProduct) && payAnchorVisible;
   // Round 9: the no-refund policy must be acknowledged before the checkout screen
   // opens, and the dialog itself offers a direct route into live support.
   useEffect(() => {
@@ -241,6 +252,36 @@ function StorefrontShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     lastHrefRef.current = activeMobileTabHref;
   }, [activeMobileTabHref]);
+  useEffect(() => {
+    if (!isTopupRoute) {
+      setPayAnchorVisible(false);
+      return;
+    }
+    let io: IntersectionObserver | null = null;
+    let observed: Element | null = null;
+    const connect = () => {
+      const el = document.getElementById("zurs-pay-anchor");
+      if (el === observed) return;
+      io?.disconnect();
+      io = null;
+      observed = el;
+      if (!el) {
+        setPayAnchorVisible(false);
+        return;
+      }
+      io = new IntersectionObserver(([entry]) => {
+        setPayAnchorVisible(Boolean(entry?.isIntersecting));
+      }, { threshold: 0.18, rootMargin: "0px 0px -12% 0px" });
+      io.observe(el);
+    };
+    connect();
+    const mo = new MutationObserver(connect);
+    mo.observe(document.body, { childList: true, subtree: true });
+    return () => {
+      mo.disconnect();
+      io?.disconnect();
+    };
+  }, [isTopupRoute, location]);
   const clearTabPress = () => {
     if (pressTimerRef.current != null) {
       window.clearTimeout(pressTimerRef.current);
@@ -426,7 +467,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
         * The no-refund acknowledgement moved onto that preview screen, next to
         * the button that actually creates the KHQR, so the shell never blocks
         * a selection behind a dialog. */}
-      {isTopupRoute ? <SelectedProductActionBar
+      {showPayDock ? <SelectedProductActionBar
         product={selectedProduct} paymentMethodName={selectedPaymentMethod?.name ?? null} isAuthenticated={Boolean(user)} isAuthenticationLoading={loading} signInHref={googleSignInHref} onContinue={() => setLocation("/checkout/preview")} /> : (
         <nav
           ref={tabBarRef}
@@ -494,7 +535,7 @@ function SelectedProductActionBar({ product, paymentMethodName, isAuthenticated,
   const pill = "inline-flex h-10 shrink-0 items-center gap-1 rounded-xl px-3 text-xs font-bold";
   return (
     <aside className={cn("selected-product-action-bar fixed bottom-2 left-1/2 z-40 flex h-[3.75rem] -translate-x-1/2 items-center gap-2 rounded-2xl p-2", expanded ? "selected-product-action-bar--expanded" : "selected-product-action-bar--compact")} aria-label="Selected package action bar" aria-live="polite">
-      <span className="selected-product-action-bar__compact-content text-ink-muted"><WalletCards className="h-4 w-4" /><span>ជ្រើសកញ្ចប់</span><ChevronRight className="h-4 w-4" /></span>
+      <span className="selected-product-action-bar__compact-content text-ink-muted"><PackEmoji name="shopping-bag" size={18} /><span>ជ្រើសកញ្ចប់</span><ChevronRight className="h-4 w-4" /></span>
       <div className="selected-product-action-bar__expanded-content">
         {product ? (
           <>
@@ -506,7 +547,7 @@ function SelectedProductActionBar({ product, paymentMethodName, isAuthenticated,
             {isAuthenticationLoading ? (
               <button type="button" disabled aria-disabled="true" className={cn(pill, "bg-panel-2 text-ink-muted")}><OutlineLoader size={14} color="#8d97b2" />កំពុងពិនិត្យ</button>
             ) : isAuthenticated ? paymentMethodName ? (
-              <button type="button" onClick={onContinue} className={cn(pill, "bg-neon text-neon-ink transition hover:brightness-110")}><ChevronRight className="h-3.5 w-3.5" />បន្ត</button>
+              <button type="button" onClick={onContinue} className={cn(pill, "bg-neon text-neon-ink transition hover:brightness-110")}><PackEmoji name="shopping-bag" size={16} />បន្តបង់ប្រាក់</button>
             ) : (
               <button type="button" disabled aria-disabled="true" title="សូមជ្រើសវិធីបង់ប្រាក់នៅខាងលើកញ្ចប់" className={cn(pill, "bg-panel-2 text-ink-muted")}><WalletCards className="h-3.5 w-3.5" />ជ្រើសវិធីបង់</button>
             ) : (

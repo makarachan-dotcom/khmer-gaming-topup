@@ -17,7 +17,7 @@ import { checkBakongKhqrPayment, createBakongKhqrPayment, registerBakongKhqrWork
 import { getKhqrReconciliationDisposition, getKhqrWalletReconciliationDisposition } from "./khqrReconciliation";
 import { assertOrderAmountIntegrity, assertPackagePriceIntegrity, assessOrderVelocity, moneyEquals } from "./paymentSecurity";
 import { applyShopPriceLadder, shopLadderUnitPrice } from "@shared/packagePriceLadder";
-import { parseStorefrontUi, type StorefrontUiSkin } from "@shared/storefrontUi";
+import { parsePackageUi, parseStorefrontUi, type StorefrontUiSkin } from "@shared/storefrontUi";
 import type { FzrProviderSyncSnapshot, SmmProviderCatalogResponse } from "./providerCatalog";
 import { submitSmmProviderOrder, submitFzrTopupOrder } from "./providerCatalog";
 import { publicPartnerDelivery } from "../shared/partnerDelivery";
@@ -1656,6 +1656,7 @@ export async function saveSiteContent(input: { contentKey: string; titleKh?: str
 }
 
 export const storefrontUiContentKey = "storefront-ui";
+export const packageUiContentKey = "storefront-package-ui";
 export type { StorefrontUiSkin };
 
 export async function getStorefrontUi(): Promise<StorefrontUiSkin> {
@@ -1676,6 +1677,26 @@ export async function setStorefrontUi(input: { ui: StorefrontUiSkin; updatedByUs
     updatedByUserId: input.updatedByUserId,
   });
   return { ui: input.ui };
+}
+
+export async function getPackageUi() {
+  const db = await getDb();
+  if (!db) return parsePackageUi("compact");
+  const rows = await db.select({ bodyKh: siteContent.bodyKh, isActive: siteContent.isActive }).from(siteContent).where(eq(siteContent.contentKey, packageUiContentKey)).limit(1);
+  const row = rows[0];
+  if (!row?.isActive) return parsePackageUi("compact");
+  return parsePackageUi(row.bodyKh);
+}
+
+export async function setPackageUi(input: { density: ReturnType<typeof parsePackageUi>; updatedByUserId: number }) {
+  await saveSiteContent({
+    contentKey: packageUiContentKey,
+    titleKh: "Package UI",
+    bodyKh: input.density,
+    isActive: true,
+    updatedByUserId: input.updatedByUserId,
+  });
+  return { density: input.density };
 }
 
 function isSafeArtworkMediaUrl(mediaUrl: string) {

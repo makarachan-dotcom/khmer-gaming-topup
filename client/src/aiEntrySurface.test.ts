@@ -9,7 +9,8 @@ describe("compact banner and AI-free public storefront", () => {
     expect(home).toContain("xftKPqLVBztUvpUZ.png");
     expect(home).toContain("mMwkxBRkmMXfalck.png");
     expect(home).not.toContain("storage.manus.com/manus-storage");
-    expect(home).toContain("setInterval");
+    expect(home).toContain("zurs-banner-slide--pan");
+    expect(home).toContain("/zurs-banner.png");
     expect(home).toContain("prefers-reduced-motion: reduce");
     expect(home).not.toContain("startLogin");
     expect(home).not.toContain("Sign in");

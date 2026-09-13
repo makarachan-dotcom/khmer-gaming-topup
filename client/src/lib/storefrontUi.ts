@@ -1,17 +1,22 @@
 import {
   isDarkStorefrontUi,
+  parsePackageUi,
   parseStorefrontUi,
+  type PackageUiDensity,
   type StorefrontUiSkin,
 } from "@shared/storefrontUi";
 
 export {
+  PACKAGE_UI_DENSITIES,
+  PACKAGE_UI_META,
   STOREFRONT_UI_META,
   STOREFRONT_UI_SKINS,
   isDarkStorefrontUi,
   isStorefrontUiSkin,
+  parsePackageUi,
   parseStorefrontUi,
 } from "@shared/storefrontUi";
-export type { StorefrontUiSkin } from "@shared/storefrontUi";
+export type { PackageUiDensity, StorefrontUiSkin } from "@shared/storefrontUi";
 
 export function applyStorefrontUi(next: StorefrontUiSkin) {
   const dark = isDarkStorefrontUi(next);
@@ -48,6 +53,16 @@ export function applyStorefrontUi(next: StorefrontUiSkin) {
           ? "#f7f2fa"
           : "#f4f4f1";
   if (meta) meta.setAttribute("content", color);
+}
+
+export function applyPackageUi(next: PackageUiDensity) {
+  const density = parsePackageUi(next);
+  document.documentElement.setAttribute("data-pkg-ui", density);
+  try {
+    document.cookie = `zurs-pkg=${density}; Path=/; Max-Age=31536000; SameSite=Lax`;
+  } catch {
+    /* private mode */
+  }
 }
 
 export function readStorefrontUi(): StorefrontUiSkin {

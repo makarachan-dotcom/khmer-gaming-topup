@@ -22,7 +22,7 @@ describe("mobile liquid-glass and particle contract", () => {
     const css = source("client/src/index.css");
     expect(home).toContain("zurs-mobile-glass group block rounded-2xl");
     expect(home).toContain("zurs-mobile-glass h-11 w-full");
-    expect(home).toContain("zurs-mobile-glass flex gap-1");
+    expect(home).toContain("zurs-search-field");
     expect(css).toContain(".zurs-mobile-glass");
   });
 });

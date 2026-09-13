@@ -194,3 +194,37 @@ export function isDarkStorefrontUi(ui: StorefrontUiSkin) {
     "solar",
   ].includes(ui);
 }
+
+export const PACKAGE_UI_DENSITIES = ["compact", "cozy", "roomy"] as const;
+export type PackageUiDensity = (typeof PACKAGE_UI_DENSITIES)[number];
+export const PACKAGE_UI_META: Array<{
+  id: PackageUiDensity;
+  name: string;
+  kh: string;
+  hint: string;
+}> = [
+  {
+    id: "compact",
+    name: "Compact",
+    kh: "តូចល្មម",
+    hint: "កាតតូច ស្រួលចុច និងអូសមើលកញ្ចប់ច្រើន",
+  },
+  {
+    id: "cozy",
+    name: "Cozy",
+    kh: "ស្មើ",
+    hint: "ទំហំកណ្ដាល សម្រាប់អានស្លាក និងតម្លៃ",
+  },
+  {
+    id: "roomy",
+    name: "Roomy",
+    kh: "ធំ",
+    hint: "កាតធំ រូបច្បាស់ សម្រាប់អេក្រង់ធំ",
+  },
+];
+const PKG_SET = new Set<string>(PACKAGE_UI_DENSITIES);
+export function parsePackageUi(
+  value: string | null | undefined
+): PackageUiDensity {
+  return value && PKG_SET.has(value) ? (value as PackageUiDensity) : "compact";
+}

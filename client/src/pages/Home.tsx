@@ -6,7 +6,7 @@ import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { OutlineLoader } from "@/components/OutlineLoader";
 import { OverflowMarquee } from "@/components/OverflowMarquee";
 import { ProviderGameArtwork, ProviderGameRegion } from "@/components/ProviderGameIdentity";
-import { filterProviderGames, groupProviderGamesByBaseName, orderProviderGames, providerGameBaseName, providerGameVariantLabel, type ProviderGameFilter } from "@/lib/providerPresentation";
+import { filterProviderGames, groupProviderGamesByBaseName, orderProviderGames, providerGameBaseName, providerGameVariantLabel } from "@/lib/providerPresentation";
 import { trpc } from "@/lib/trpc";
 import { subscribeToPublicAssetChanges } from "@/lib/publicAssetBroadcast";
 import { khqrLogoUrl } from "@/lib/mobileLegendsAssets";
@@ -31,7 +31,6 @@ const heroBanners = [
     alt: "ZURS.me · TOPUP DIAMOND & SMM",
   },
 ];
-const heroRotationMs = 6500;
 export default function Home() {
   return (
     <StorefrontLayout>
@@ -66,35 +65,23 @@ function SectionHeading({ eyebrow, title, description, aside }: { eyebrow: strin
 }
 function HomeBanner() {
   const [loaded, setLoaded] = useState(false);
-  const [active, setActive] = useState(0);
-  // Gentle automatic rotation between the two supplied banners. Visitors who
-  // ask for reduced motion keep the first artwork and never see a swap.
-  useEffect(() => {
-    if (typeof window === "undefined" || heroBanners.length < 2) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const timer = window.setInterval(() => setActive((current) => (current + 1) % heroBanners.length), heroRotationMs);
-    return () => window.clearInterval(timer);
-  }, []);
   return (
     <section className="container pt-4 sm:pt-6" aria-label="ZURS banner">
       {/* The artwork ships with its own transparent background and its own
         * blue edge, so nothing is painted behind it: no conic beam, no panel
-        * fill, no gradient. Only the PNG itself is visible. */}
-      <div className="zurs-banner-frame zurs-banner-frame--bare relative isolate aspect-[16/5.5] overflow-hidden rounded-2xl sm:aspect-[16/6]">
-        {heroBanners.map((banner, index) => (
-          <img
-            key={banner.src}
-            src={banner.src}
-            alt={banner.alt}
-            aria-hidden={index === active ? undefined : true}
-            className={`zurs-banner-slide absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${index === active ? "opacity-100" : "opacity-0"} ${loaded ? "is-loaded" : ""}`}
-            onLoad={() => setLoaded(true)}
-            loading={index === 0 ? "eager" : "lazy"}
-            fetchPriority={index === 0 ? "high" : "auto"}
-            decoding="async"
-            sizes="100vw"
-          />
-        ))}
+        * fill, no gradient. Only the PNG itself is visible. A slow left-to-right
+        * pan keeps a single image feeling alive. */}
+      <div className="zurs-banner-frame zurs-banner-frame--bare zurs-banner-frame--pan relative isolate aspect-[16/5.5] overflow-hidden rounded-2xl sm:aspect-[16/6]">
+        <img
+          src={heroBanners[0]!.src}
+          alt={heroBanners[0]!.alt}
+          className={`zurs-banner-slide zurs-banner-slide--pan absolute inset-0 h-full w-full object-cover ${loaded ? "is-loaded" : ""}`}
+          onLoad={() => setLoaded(true)}
+          loading="eager"
+          fetchPriority="high"
+          decoding="async"
+          sizes="100vw"
+        />
       </div>
     </section>
   );
@@ -200,21 +187,15 @@ function ProviderGameCatalogGroup({ baseName, games, imageOverrides }: { baseNam
     </section>
   );
 }
-const catalogFilters: Array<{ value: ProviderGameFilter; label: string }> = [
-  { value: "all", label: "ទាំងអស់" },
-  { value: "cambodia", label: "កម្ពុជា" },
-  { value: "global", label: "Global" },
-];
 function HomeTopupExperience() {
   const utils = trpc.useUtils();
   const gamesQuery = trpc.provider.games.useQuery();
   const gameImages = trpc.provider.gameImages.useQuery(undefined, { staleTime: 0, refetchInterval: 5_000 });
   const [query, setQuery] = useState("");
-  const [regionFilter, setRegionFilter] = useState<ProviderGameFilter>("all");
   useEffect(() => subscribeToPublicAssetChanges((area) => { if (area === "game-images") void utils.provider.gameImages.invalidate(); }), [utils]);
   const games = orderProviderGames(gamesQuery.data?.games ?? []);
-  const visibleGames = useMemo(() => filterProviderGames(games, query, regionFilter), [games, query, regionFilter]);
-  const hasFilters = Boolean(query.trim()) || regionFilter !== "all";
+  const visibleGames = useMemo(() => filterProviderGames(games, query, "all"), [games, query]);
+  const hasFilters = Boolean(query.trim());
   const imageOverrides = useMemo(() => new Map((gameImages.data ?? []).map((item) => [item.gameId, item])), [gameImages.data]);
   const catalogGroups = useMemo(() => groupProviderGamesByBaseName(visibleGames), [visibleGames]);
   // Round 9: the marquee used to print every raw provider variant, so shoppers
@@ -231,7 +212,7 @@ function HomeTopupExperience() {
       <SectionHeading
         eyebrow="GAME TOP-UP"
         title="ជ្រើសរើសហ្គេមរបស់អ្នក"
-        description="ស្វែងរកតាមឈ្មោះហ្គេម ឬមើលតែហ្គេមកម្ពុជា និង Global ដើម្បីចូលទៅកាន់ទំព័រ Top-up។"
+        description="ស្វែងរកតាមឈ្មោះហ្គេម ដើម្បីចូលទៅកាន់ទំព័រ Top-up។"
         aside={
           <div className="flex shrink-0 items-center gap-2">
             <HomeStickers />
@@ -265,19 +246,6 @@ function HomeTopupExperience() {
                 </button>
               ) : null}
             </label>
-            <div className="zurs-mobile-glass flex gap-1 zurs-filter-pills overflow-x-auto rounded-xl p-1" role="group" aria-label="តម្រៀបតាមតំបន់">
-              {catalogFilters.map((filter) => (
-                <button
-                  key={filter.value}
-                  type="button"
-                  onClick={() => setRegionFilter(filter.value)}
-                  aria-pressed={regionFilter === filter.value}
-                  className={`h-9 shrink-0 rounded-lg px-3.5 text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon ${regionFilter === filter.value ? "bg-neon text-neon-ink" : "text-ink-muted hover:bg-panel-2 hover:text-ink"}`}
-                >
-                  {filter.label}
-                </button>
-              ))}
-            </div>
           </div>
           <div className="mt-4 hidden overflow-hidden sm:block">
             <GameLogoTicker logos={storeTickerLogos} />
@@ -294,9 +262,9 @@ function HomeTopupExperience() {
             <div className="mt-5 rounded-2xl border border-dashed border-line bg-panel p-8 text-center">
               <Search className="mx-auto h-6 w-6 text-neon" aria-hidden="true" />
               <p className="mt-3 text-sm font-bold text-ink">មិនមានហ្គេមត្រូវនឹងការស្វែងរកទេ</p>
-              <p className="mt-1 text-xs leading-5 text-ink-muted">សូមពិនិត្យអក្ខរាវិរុទ្ធ ឬប្ដូរតំបន់ស្វែងរករបស់អ្នក។</p>
+              <p className="mt-1 text-xs leading-5 text-ink-muted">សូមពិនិត្យអក្ខរាវិរុទ្ធ ឬសាកល្បងឈ្មោះហ្គេមផ្សេង។</p>
               {hasFilters ? (
-                <button type="button" onClick={() => { setQuery(""); setRegionFilter("all"); }} className="mt-4 inline-flex h-9 items-center rounded-full bg-neon px-4 text-xs font-bold text-neon-ink">បង្ហាញហ្គេមទាំងអស់</button>
+                <button type="button" onClick={() => setQuery("")} className="mt-4 inline-flex h-9 items-center rounded-full bg-neon px-4 text-xs font-bold text-neon-ink">បង្ហាញហ្គេមទាំងអស់</button>
               ) : null}
             </div>
           )}

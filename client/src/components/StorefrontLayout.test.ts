@@ -188,9 +188,11 @@ describe("storefront media protection", () => {
       join(process.cwd(), "client/src/components/PackEmoji.tsx"),
       "utf8"
     );
-    expect(componentSource).toContain('pack: "gift"');
-    expect(componentSource).toContain('pack: "account-face"');
+    expect(componentSource).toContain('pack: "shopping-bag"');
+    expect(componentSource).toContain('pack: "user-laptop"');
     expect(componentSource).not.toContain("TabPackEmoji");
+    expect(packSource).toContain('"shopping-bag": { emoji: "🛍️"');
+    expect(packSource).toContain('"user-laptop": { emoji: "👤"');
     expect(packSource).toContain('"account-face": { emoji: "😊"');
     expect(packSource).not.toContain('"shopping-bag": { emoji: "🛒"');
     expect(packSource).not.toContain('"user-laptop": { emoji: "👋"');
@@ -446,12 +448,17 @@ describe("storefront media protection", () => {
       "utf8"
     );
     expect(admin).toContain("StorefrontUiControl");
+    expect(admin).toContain("PackageUiControl");
+    expect(admin).toContain("គ្រប់គ្រងui កញ្ចប់");
     expect(admin).toContain("STOREFRONT_UI_META");
+    expect(admin).toContain("PACKAGE_UI_META");
     expect(admin).toContain("ជ្រើសរើសទម្រង់ហាងសាធារណៈ");
     expect(router).toContain(
       'z.enum(["classic", "soft", "luxe", "ios", "material", "editorial", "zen", "commerce", "gamer", "night", "neon", "midnight", "aurora", "arcade", "obsidian", "solar"])'
     );
     expect(router).toContain("storefrontUi: publicProcedure.query");
+    expect(router).toContain("setPackageUi");
+    expect(router).toContain('z.enum(["compact", "cozy", "roomy"])');
     expect(skins).toContain('html[data-ui="soft"]');
     expect(skins).toContain('html[data-ui="luxe"]');
     expect(skins).toContain('html[data-ui="night"]');

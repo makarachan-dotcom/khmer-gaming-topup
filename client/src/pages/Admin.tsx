@@ -31,7 +31,10 @@ import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useLocation } from "wouter";
 import { LoadingV2 } from "@/components/OutlineLoader";
 import {
+  applyPackageUi,
   applyStorefrontUi,
+  PACKAGE_UI_META,
+  parsePackageUi,
   parseStorefrontUi,
   STOREFRONT_UI_META,
 } from "@/lib/storefrontUi";
@@ -160,6 +163,7 @@ function AdminWorkspace({
       {visibleTab === "overview" && (
         <>
           <StorefrontUiControl isOwner={isOwner} />
+          <PackageUiControl isOwner={isOwner} />
           <Overview data={overview.data} loading={overview.isLoading} />
           <SalesTrend data={overview.data?.salesTrend ?? []} />
         </>
@@ -296,6 +300,77 @@ function StorefrontUiControl({ isOwner }: { isOwner: boolean }) {
         <a href="/" target="_blank" rel="noreferrer">
           បើកមើលហាង ↗
         </a>
+      </div>
+      {save.error ? (
+        <p className="bg-rose-50 px-5 py-3 text-xs font-semibold text-rose-700">
+          {save.error.message}
+        </p>
+      ) : null}
+    </section>
+  );
+}
+function PackageUiControl({ isOwner }: { isOwner: boolean }) {
+  const utils = trpc.useUtils();
+  const current = trpc.content.storefrontUi.useQuery();
+  const save = trpc.admin.setPackageUi.useMutation({
+    onSuccess: result => {
+      applyPackageUi(parsePackageUi(result.density));
+      void utils.content.storefrontUi.invalidate();
+    },
+  });
+  const density = parsePackageUi(current.data?.packageUi);
+  return (
+    <section className="package-ui-studio mt-6 overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
+      <div className="package-ui-studio__hero p-4 sm:p-6">
+        <p className="text-[10px] font-black tracking-[.18em] text-amber-700">
+          PACKAGE CARD STUDIO
+        </p>
+        <h2 className="mt-2 font-display text-xl font-bold text-slate-950 sm:text-2xl">
+          គ្រប់គ្រងui កញ្ចប់
+        </h2>
+        <p className="mt-2 max-w-3xl text-xs leading-6 text-slate-600">
+          ជ្រើសទំហំកាតកញ្ចប់សម្រាប់ហាងសាធារណៈ។ Compact ស្រួលចុចលើទូរស័ព្ទ · Cozy
+          អានងាយ · Roomy សម្រាប់អេក្រង់ធំ។
+        </p>
+      </div>
+      <div className="package-ui-studio__grid">
+        {PACKAGE_UI_META.map(item => {
+          const on = density === item.id;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              disabled={!isOwner || save.isPending}
+              onClick={() => {
+                if (isOwner && !save.isPending && item.id !== density)
+                  save.mutate({ density: item.id });
+              }}
+              className={`package-ui-card package-ui-card--${item.id} ${on ? "is-selected" : ""}`}
+            >
+              <span className="package-ui-card__preview" aria-hidden="true">
+                <i />
+                <i />
+                <i />
+                <i />
+              </span>
+              <span className="package-ui-card__head">
+                <b>{item.name}</b>
+                <small>{item.kh}</small>
+              </span>
+              <span className="package-ui-card__hint">{item.hint}</span>
+              <span className="package-ui-card__check">✓</span>
+            </button>
+          );
+        })}
+      </div>
+      <div className="package-ui-studio__footer">
+        <span>
+          {isOwner
+            ? save.isPending
+              ? "កំពុងរក្សាទុក និង publish…"
+              : `Live package UI · ${PACKAGE_UI_META.find(x => x.id === density)?.name}`
+            : "Owner only · preview available"}
+        </span>
       </div>
       {save.error ? (
         <p className="bg-rose-50 px-5 py-3 text-xs font-semibold text-rose-700">

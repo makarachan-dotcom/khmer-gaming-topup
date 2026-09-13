@@ -202,8 +202,8 @@ describe("dedicated game top-up routes", () => {
     const source = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
     expect(source).toContain("setSelectedPackageIdState(id)");
     expect(source).toContain("clearSelectedProduct();");
-    expect(source).toContain("មើល និងជ្រើសកញ្ចប់បាន");
-    expect(source).toContain("zurs-step-note");
+    expect(source).not.toContain("មើល និងជ្រើសកញ្ចប់បាន");
+    expect(source).not.toContain("zurs-step-note");
   });
 
   it("creates purchase context only after valid identity gates, never for admin preview", () => {
@@ -356,6 +356,9 @@ describe("dedicated game top-up routes", () => {
     expect(pay).toBeGreaterThan(packs);
     expect(packages).toBeGreaterThan(-1);
     expect(preselect).toBeGreaterThan(packages);
+    expect(source).toContain('id="zurs-pay-anchor"');
+    expect(source).toContain("PayContinueInsideCard");
+    expect(source).toContain("បន្តបង់ប្រាក់");
     expect(source).toContain("zurs-id-hint");
     expect(source).toContain("setSelectedPaymentMethodId(null)");
     const gamer = readFileSync(join(process.cwd(), "client/src/styles/zurs-gamer.css"), "utf8");
