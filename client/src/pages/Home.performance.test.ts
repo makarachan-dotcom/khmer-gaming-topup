@@ -64,3 +64,18 @@ describe("storefront image loading performance", () => {
     expect(polish).toContain(".zurs-admin");
   });
 });
+
+describe("public user pages stay Khmer and themed", () => {
+  it("uses storefront chrome and Khmer copy on 404, account, and wallet", () => {
+    const notFound = readFileSync(resolve(process.cwd(), "client/src/pages/NotFound.tsx"), "utf8");
+    const account = readFileSync(resolve(process.cwd(), "client/src/pages/Account.tsx"), "utf8");
+    const wallet = readFileSync(resolve(process.cwd(), "client/src/pages/Wallet.tsx"), "utf8");
+    expect(notFound).toContain("StorefrontLayout");
+    expect(notFound).toContain("រកមិនឃើញទំព័រនេះ");
+    expect(notFound).not.toContain("Page Not Found");
+    expect(account).toContain("ចូលតាមអ៊ីមែល");
+    expect(account).not.toContain("Connect with Email</a>");
+    expect(wallet).toContain("bg-panel");
+    expect(wallet).toContain("text-ink");
+  });
+});

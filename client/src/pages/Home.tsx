@@ -28,7 +28,7 @@ import { PackEmoji } from "@/components/PackEmoji";
 const heroBanners = [
   {
     src: "/zurs-banner.png",
-    alt: "ZURS.me · TOPUP DIAMOND & SMM",
+    alt: "ZURS.me · បញ្ចូលពេជ្យ និងសេវាឌីជីថល",
   },
 ];
 export default function Home() {
