@@ -6,7 +6,8 @@ describe("storefront image loading performance", () => {
   it("preloads the critical banner and connects to its CDN before app rendering", () => {
     const documentSource = readFileSync(resolve(process.cwd(), "client/index.html"), "utf8");
     expect(documentSource).toContain('rel="preconnect" href="https://files.manuscdn.com"');
-    expect(documentSource).toContain('rel="preload" as="image"');
+    expect(documentSource).toContain('rel="preload"');
+    expect(documentSource).toContain('as="image"');
     expect(documentSource).toContain('fetchpriority="high"');
   });
 

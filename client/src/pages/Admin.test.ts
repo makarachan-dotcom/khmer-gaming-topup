@@ -15,7 +15,8 @@ describe("owner-only KHQR test offer", () => {
     expect(adminPage).toContain("trpc.orders.createAdminKhqrTest.useMutation");
     expect(adminPage).toContain("trpc.orders.beginPayment.useMutation");
     expect(adminPage).toContain('if (!isOwner || !acknowledged || busy) return;');
-    expect(adminPage).toContain('isOwner ? "បង្កើត KHQR Test $0.02" : "Owner only"');
+    expect(adminPage).toContain("បង្កើត KHQR Test $0.02");
+    expect(adminPage).toContain("Owner only");
     expect(router).toContain("createAdminKhqrTest: ownerProcedure");
     expect(db).toContain("noProviderFulfillment");
   });

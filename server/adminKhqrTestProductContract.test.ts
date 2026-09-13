@@ -34,6 +34,7 @@ describe("admin KHQR test product", () => {
     expect(admin).toContain("checked={acknowledged}");
     expect(admin).toContain("window.confirm(");
     expect(admin).toContain("$0.02");
-    expect(admin).toContain("isOwner ? \"បង្កើត KHQR Test $0.02\" : \"Owner only\"");
+    expect(admin).toContain("បង្កើត KHQR Test $0.02");
+    expect(admin).toContain("Owner only");
   });
 });

@@ -35,7 +35,7 @@ export function scriptSrcFromInlineHtml(html: string): string {
 
 /** Hashes of the theme boot script + JSON-LD blocks in `client/index.html`. */
 export const INDEX_JSONLD_SCRIPT_HASHES = [
-  "'sha256-M1hxKy77n4W5qR7Zyia6sr9tfxljigVWqNfWGKbCUWo='",
+  "'sha256-oX0LMxZkiVgDCcZe8Lj7Gi5FEOEi9XCRxGU2QgId3eQ='",
   "'sha256-RNVq7KCFgdPTgiE2ccaasel0NNygecV5GIjMuAplKl8='",
   "'sha256-/A4iLe8qmlxaNjrdqCmaLpw29lK0pp9QMdV7p1No5Mg='",
   "'sha256-+2fpB4RRSi59XpvbtzRVb6BWOSv9U5x2j39nSlGychE='",

@@ -1,18 +1,45 @@
 <!doctype html>
 <html lang="km" data-ui="classic" data-ui-family="light" data-theme="light">
-
   <head>
     <script>
       (function () {
-        var a = { classic: 1, soft: 1, luxe: 1, gamer: 1, night: 1, neon: 1 };
+        var a = {
+          classic: 1,
+          soft: 1,
+          luxe: 1,
+          ios: 1,
+          material: 1,
+          editorial: 1,
+          zen: 1,
+          commerce: 1,
+          gamer: 1,
+          night: 1,
+          neon: 1,
+          midnight: 1,
+          aurora: 1,
+          arcade: 1,
+          obsidian: 1,
+          solar: 1,
+        };
         var ui = "classic";
         try {
           var m = document.cookie.match(/(?:^|; )zurs-ui=([^;]*)/);
           if (m && a[m[1]]) ui = m[1];
         } catch (e) {}
-        var dark = ui === "gamer" || ui === "night" || ui === "neon";
+        var dark =
+          ui === "gamer" ||
+          ui === "night" ||
+          ui === "neon" ||
+          ui === "midnight" ||
+          ui === "aurora" ||
+          ui === "arcade" ||
+          ui === "obsidian" ||
+          ui === "solar";
         document.documentElement.setAttribute("data-ui", ui);
-        document.documentElement.setAttribute("data-ui-family", dark ? "dark" : "light");
+        document.documentElement.setAttribute(
+          "data-ui-family",
+          dark ? "dark" : "light"
+        );
         var t = dark ? "dark" : "light";
         if (ui === "gamer") {
           try {
@@ -27,14 +54,17 @@
     <meta charset="UTF-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, viewport-fit=cover, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
     <title>Zurs Store — Top Up MLBB Diamond ភ្លាមៗ | zurs.me</title>
     <meta
       name="description"
-      content="Zurs Store (TopUp KH) — បញ្ចូល Diamond MLBB និងសេវាឌីជីថល ភ្លាមៗ ២៤ម៉ោង បង់ប្រាក់តាម Bakong KHQR។ Instant and secure MLBB diamond top up in Cambodia." />
+      content="Zurs Store (TopUp KH) — បញ្ចូល Diamond MLBB និងសេវាឌីជីថល ភ្លាមៗ ២៤ម៉ោង បង់ប្រាក់តាម Bakong KHQR។ Instant and secure MLBB diamond top up in Cambodia."
+    />
     <meta
       name="keywords"
-      content="zurs, zurs store, zurs mlbb, zurs kh, topup kh, top up game cambodia, mlbb top up khmer, បញ្ចូលដាយម៉ុន, KHQR, Bakong" />
+      content="zurs, zurs store, zurs mlbb, zurs kh, topup kh, top up game cambodia, mlbb top up khmer, បញ្ចូលដាយម៉ុន, KHQR, Bakong"
+    />
     <meta name="robots" content="index, follow, max-image-preview:large" />
     <meta name="theme-color" content="#0a0f1e" />
     <link rel="canonical" href="https://www.zurs.me/" />
@@ -45,10 +75,14 @@
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Zurs Store" />
     <meta property="og:url" content="https://www.zurs.me/" />
-    <meta property="og:title" content="Zurs Store — Top Up MLBB Diamond ភ្លាមៗ" />
+    <meta
+      property="og:title"
+      content="Zurs Store — Top Up MLBB Diamond ភ្លាមៗ"
+    />
     <meta
       property="og:description"
-      content="បញ្ចូល Diamond MLBB និងសេវាឌីជីថល ភ្លាមៗ ២៤ម៉ោង បង់ប្រាក់តាម Bakong KHQR។" />
+      content="បញ្ចូល Diamond MLBB និងសេវាឌីជីថល ភ្លាមៗ ២៤ម៉ោង បង់ប្រាក់តាម Bakong KHQR។"
+    />
     <meta property="og:image" content="https://www.zurs.me/og-cover.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
@@ -56,10 +90,14 @@
     <meta property="og:locale:alternate" content="en_US" />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Zurs Store — Top Up MLBB Diamond ភ្លាមៗ" />
+    <meta
+      name="twitter:title"
+      content="Zurs Store — Top Up MLBB Diamond ភ្លាមៗ"
+    />
     <meta
       name="twitter:description"
-      content="បញ្ចូល Diamond MLBB និងសេវាឌីជីថល ភ្លាមៗ ២៤ម៉ោង បង់ប្រាក់តាម Bakong KHQR។" />
+      content="បញ្ចូល Diamond MLBB និងសេវាឌីជីថល ភ្លាមៗ ២៤ម៉ោង បង់ប្រាក់តាម Bakong KHQR។"
+    />
     <meta name="twitter:image" content="https://www.zurs.me/og-cover.png" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -67,8 +105,16 @@
     <link rel="dns-prefetch" href="https://reseller.fazercards.com" />
     <link rel="preconnect" href="https://reseller.fazercards.com" crossorigin />
     <link rel="preconnect" href="https://files.manuscdn.com" crossorigin />
-    <link rel="preload" as="image" href="https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/xftKPqLVBztUvpUZ.png" fetchpriority="high" />
-    <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@400;500;600;700;800&family=Chakra+Petch:wght@500;600;700&family=Moul&family=Hanuman:wght@400;700&display=swap" rel="stylesheet" />
+    <link
+      rel="preload"
+      as="image"
+      href="https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/xftKPqLVBztUvpUZ.png"
+      fetchpriority="high"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@400;500;600;700;800&family=Chakra+Petch:wght@500;600;700&family=Moul&family=Hanuman:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
     <!--
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -163,20 +209,23 @@
         <h1>Zurs Store</h1>
         <h2>បញ្ចូល Diamond MLBB ភ្លាមៗនៅកម្ពុជា</h2>
         <p>
-          Zurs Store (TopUp KH) ជាហាងបញ្ចូលទឹកប្រាក់ហ្គេម និងសេវាឌីជីថលនៅកម្ពុជា។
-          យើងផ្តល់សេវាបញ្ចូល Diamond សម្រាប់ Mobile Legends: Bang Bang ភ្លាមៗ ២៤ម៉ោង
-          ក្នុងមួយថ្ងៃ ជាមួយតម្លៃសមរម្យ និងការបញ្ជាក់ការបញ្ជាទិញដោយស្វ័យប្រវត្តិ។
+          Zurs Store (TopUp KH) ជាហាងបញ្ចូលទឹកប្រាក់ហ្គេម
+          និងសេវាឌីជីថលនៅកម្ពុជា។ យើងផ្តល់សេវាបញ្ចូល Diamond សម្រាប់ Mobile
+          Legends: Bang Bang ភ្លាមៗ ២៤ម៉ោង ក្នុងមួយថ្ងៃ ជាមួយតម្លៃសមរម្យ
+          និងការបញ្ជាក់ការបញ្ជាទិញដោយស្វ័យប្រវត្តិ។
         </p>
         <h3>របៀបបញ្ចូល</h3>
         <p>
           បញ្ចូល Player ID និង Zone ID របស់អ្នក ជ្រើសរើសកញ្ចប់ Diamond
           រួចបង់ប្រាក់តាម Bakong KHQR ដោយស្កេនជាមួយកម្មវិធីធនាគាររបស់អ្នក។
-          បន្ទាប់ពីការបង់ប្រាក់ត្រូវបានបញ្ជាក់ Diamond នឹងចូលទៅគណនីហ្គេមរបស់អ្នកភ្លាមៗ។
+          បន្ទាប់ពីការបង់ប្រាក់ត្រូវបានបញ្ជាក់ Diamond
+          នឹងចូលទៅគណនីហ្គេមរបស់អ្នកភ្លាមៗ។
         </p>
         <h3>ហេតុអ្វីជ្រើសរើស Zurs</h3>
         <p>
-          តម្លៃច្បាស់លាស់ គ្មានថ្លៃលាក់បាំង ការបញ្ជូនរហ័ស និងផ្នែកជំនួយជាភាសាខ្មែរ។
-          រាល់ការបង់ប្រាក់ធ្វើឡើងតាមប្រព័ន្ធ KHQR ដែលមានសុវត្ថិភាព។
+          តម្លៃច្បាស់លាស់ គ្មានថ្លៃលាក់បាំង ការបញ្ជូនរហ័ស
+          និងផ្នែកជំនួយជាភាសាខ្មែរ។ រាល់ការបង់ប្រាក់ធ្វើឡើងតាមប្រព័ន្ធ KHQR
+          ដែលមានសុវត្ថិភាព។
         </p>
         <nav>
           <a href="/">ទំព័រដើម</a>
@@ -187,5 +236,4 @@
     </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
-
 </html>

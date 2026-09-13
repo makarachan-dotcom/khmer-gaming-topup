@@ -2,11 +2,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 vi.mock("streamdown", () => ({ Streamdown: () => null }));
-import { isProtectedMediaTarget, mobileTabHrefForPath } from "./StorefrontLayout";
+import {
+  isProtectedMediaTarget,
+  mobileTabHrefForPath,
+} from "./StorefrontLayout";
 
 class MediaElement {
   constructor(private readonly media: boolean) {}
-  closest(selector: string) { return this.media && selector === "img, video" ? this : null; }
+  closest(selector: string) {
+    return this.media && selector === "img, video" ? this : null;
+  }
 }
 
 describe("storefront media protection", () => {
@@ -20,16 +25,28 @@ describe("storefront media protection", () => {
   });
 
   it("removes the unwanted Wireframe OUTLINE decoration from the header", () => {
-    const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
-    const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
+    const componentSource = readFileSync(
+      join(process.cwd(), "client/src/components/StorefrontLayout.tsx"),
+      "utf8"
+    );
+    const styleSource = readFileSync(
+      join(process.cwd(), "client/src/index.css"),
+      "utf8"
+    );
     expect(componentSource).not.toContain("fx-contour");
     expect(componentSource).not.toContain("OUTLINE");
     expect(styleSource).not.toContain(".fx-contour");
   });
 
   it("uses the animated Font Emoji ZURS.me wordmark rather than the former Topographic brand", () => {
-    const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
-    const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
+    const componentSource = readFileSync(
+      join(process.cwd(), "client/src/components/StorefrontLayout.tsx"),
+      "utf8"
+    );
+    const styleSource = readFileSync(
+      join(process.cwd(), "client/src/index.css"),
+      "utf8"
+    );
     expect(componentSource).toContain('<FontEmojiBrand text="ZURS.me"');
     expect(componentSource).toContain('aria-label="ZURS.me"');
     expect(componentSource).not.toContain("fx-topographic");
@@ -39,14 +56,27 @@ describe("storefront media protection", () => {
   });
 
   it("keeps AnimatedGlyph hooks unconditional before the activity-only fast path", () => {
-    const componentSource = readFileSync(join(process.cwd(), "client/src/components/AnimatedGlyph.tsx"), "utf8");
-    expect(componentSource.indexOf("useState")).toBeLessThan(componentSource.indexOf('name === "activity"'));
-    expect(componentSource.indexOf("useEffect")).toBeLessThan(componentSource.indexOf('name === "activity"'));
+    const componentSource = readFileSync(
+      join(process.cwd(), "client/src/components/AnimatedGlyph.tsx"),
+      "utf8"
+    );
+    expect(componentSource.indexOf("useState")).toBeLessThan(
+      componentSource.indexOf('name === "activity"')
+    );
+    expect(componentSource.indexOf("useEffect")).toBeLessThan(
+      componentSource.indexOf('name === "activity"')
+    );
   });
 
   it("removes the Gaming & Digital subtitle and retains a clean AI-free mobile tab bar", () => {
-    const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
-    const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
+    const componentSource = readFileSync(
+      join(process.cwd(), "client/src/components/StorefrontLayout.tsx"),
+      "utf8"
+    );
+    const styleSource = readFileSync(
+      join(process.cwd(), "client/src/index.css"),
+      "utf8"
+    );
     expect(componentSource).not.toContain("GAMING &amp; DIGITAL");
     expect(componentSource).toContain("zurs-mobile-tabbar");
     expect(componentSource).toContain("zurs-mobile-tab--active");
@@ -55,8 +85,14 @@ describe("storefront media protection", () => {
   });
 
   it("exposes a desktop-only catalog switch so Digital Services is reachable without the mobile tab bar", () => {
-    const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
-    const homeSource = readFileSync(join(process.cwd(), "client/src/pages/Home.tsx"), "utf8");
+    const componentSource = readFileSync(
+      join(process.cwd(), "client/src/components/StorefrontLayout.tsx"),
+      "utf8"
+    );
+    const homeSource = readFileSync(
+      join(process.cwd(), "client/src/pages/Home.tsx"),
+      "utf8"
+    );
     expect(componentSource).toContain("zurs-catalog-switch");
     expect(componentSource).toContain("hidden items-center gap-0.5");
     expect(componentSource).toContain("sm:inline-flex");
@@ -66,32 +102,52 @@ describe("storefront media protection", () => {
   });
 
   it("keeps the header wordmark compact and drops the bot bubble underneath so it cannot cover ZURS.me", () => {
-    const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
-    const polish = readFileSync(join(process.cwd(), "client/src/styles/zurs-polish.css"), "utf8");
-    expect(componentSource).toContain('FontEmojiBrand text="ZURS.me" size={13}');
+    const componentSource = readFileSync(
+      join(process.cwd(), "client/src/components/StorefrontLayout.tsx"),
+      "utf8"
+    );
+    const polish = readFileSync(
+      join(process.cwd(), "client/src/styles/zurs-polish.css"),
+      "utf8"
+    );
+    expect(componentSource).toContain(
+      'FontEmojiBrand text="ZURS.me" size={13}'
+    );
     expect(componentSource).toContain("font-emoji-brand--header");
     expect(polish).toContain("top: calc(100% + 7px) !important;");
     expect(polish).toContain("zs-header-bubble-in");
   });
 
   it("keeps a clean two-tab mobile bar after the Live Spin giveaway was retired", () => {
-    const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
-    const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
+    const componentSource = readFileSync(
+      join(process.cwd(), "client/src/components/StorefrontLayout.tsx"),
+      "utf8"
+    );
+    const styleSource = readFileSync(
+      join(process.cwd(), "client/src/index.css"),
+      "utf8"
+    );
     expect(componentSource).not.toContain("zurs-mobile-tab-indicator");
-    expect(componentSource).not.toContain('"--mobile-tab-index": activeMobileTabIndex');
+    expect(componentSource).not.toContain(
+      '"--mobile-tab-index": activeMobileTabIndex'
+    );
     expect(styleSource).toContain(".zurs-mobile-tab--active");
     expect(componentSource).not.toContain('href: "/live-spin"');
     expect(componentSource).toContain("zurs-mobile-tab-label");
     expect(componentSource).toContain("zurs-tab-glyph");
     expect(componentSource).not.toContain("zurs-tab-live-ping");
-    expect(componentSource).toContain('const tabKind = href === "/" ? "home" : "account";');
+    expect(componentSource).toContain(
+      'const tabKind = href === "/" ? "home" : "account";'
+    );
     expect(componentSource).toContain("zurs-mobile-tab--${tabKind}");
     expect(componentSource).not.toContain("zurs-mobile-tabbar--live");
     expect(styleSource).not.toContain("zurs-mobile-tab-indicator-enter");
     expect(styleSource).toContain("tab-icon-active");
     expect(styleSource).toContain("zurs-tab-glyph-pop");
     expect(styleSource).toContain("zurs-tab-glyph-bob");
-    expect(styleSource).toContain("@media (prefers-reduced-motion: no-preference)");
+    expect(styleSource).toContain(
+      "@media (prefers-reduced-motion: no-preference)"
+    );
   });
 
   it("keeps Home active across Top-up paths and assigns account-owned routes to Account", () => {
@@ -105,7 +161,10 @@ describe("storefront media protection", () => {
   });
 
   it("lets a long-press on the tab bar scrub left and right to another page", () => {
-    const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
+    const componentSource = readFileSync(
+      join(process.cwd(), "client/src/components/StorefrontLayout.tsx"),
+      "utf8"
+    );
     expect(componentSource).toContain("TAB_LONG_PRESS_MS");
     expect(componentSource).toContain("TAB_SCRUB_PX");
     expect(componentSource).toContain("onBarPointerDown");
@@ -121,8 +180,14 @@ describe("storefront media protection", () => {
   });
 
   it("uses a shop bag for Store and a person mark for Account", () => {
-    const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
-    const packSource = readFileSync(join(process.cwd(), "client/src/components/PackEmoji.tsx"), "utf8");
+    const componentSource = readFileSync(
+      join(process.cwd(), "client/src/components/StorefrontLayout.tsx"),
+      "utf8"
+    );
+    const packSource = readFileSync(
+      join(process.cwd(), "client/src/components/PackEmoji.tsx"),
+      "utf8"
+    );
     expect(componentSource).toContain('pack: "gift"');
     expect(componentSource).toContain('pack: "account-face"');
     expect(componentSource).not.toContain("TabPackEmoji");
@@ -132,10 +197,20 @@ describe("storefront media protection", () => {
   });
 
   it("uses a compact two-item rounded mobile tab bar and no public AI entry", () => {
-    const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
-    const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
-    expect(componentSource).toContain("storefront-scroll-top fixed z-[270] grid h-11 w-11");
-    expect(componentSource).toContain("grid h-14 w-full -translate-x-1/2 grid-cols-2");
+    const componentSource = readFileSync(
+      join(process.cwd(), "client/src/components/StorefrontLayout.tsx"),
+      "utf8"
+    );
+    const styleSource = readFileSync(
+      join(process.cwd(), "client/src/index.css"),
+      "utf8"
+    );
+    expect(componentSource).toContain(
+      "storefront-scroll-top fixed z-[270] grid h-11 w-11"
+    );
+    expect(componentSource).toContain(
+      "grid h-14 w-full -translate-x-1/2 grid-cols-2"
+    );
     expect(styleSource).toContain("width: min(calc(100vw - 1.5rem), 21rem)");
     expect(componentSource).toContain("gap-0.5");
     expect(componentSource).not.toContain('href: "/ai"');
@@ -144,22 +219,46 @@ describe("storefront media protection", () => {
     expect(styleSource).toContain("safe-area-inset-bottom");
     expect(styleSource).toContain("right: auto");
     expect(styleSource).toContain("left: 50%");
-    expect(styleSource).toContain("bottom: max(0.5rem, env(safe-area-inset-bottom))");
-    expect(styleSource).toContain("@media (min-width: 640px) { .zurs-mobile-tabbar { display: none !important; } }");
-    expect(styleSource).toContain("transform 300ms cubic-bezier(0.23, 1, 0.32, 1)");
+    expect(styleSource).toContain(
+      "bottom: max(0.5rem, env(safe-area-inset-bottom))"
+    );
+    expect(styleSource).toContain(
+      "@media (min-width: 640px) { .zurs-mobile-tabbar { display: none !important; } }"
+    );
+    expect(styleSource).toContain(
+      "transform 300ms cubic-bezier(0.23, 1, 0.32, 1)"
+    );
   });
 
   it("renders the owner brand mark as a circle in the header and footer", () => {
-    const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
-    const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
-    expect(componentSource).toContain('alt="ZURS logo" className="h-7 w-7 shrink-0 rounded-full');
-    expect(componentSource).toContain('alt="ZURS STORE logo" className="h-10 w-10 shrink-0 rounded-full');
-    expect(styleSource).toContain('.zurs-compact-header img[alt="ZURS logo"], .zurs-footer img[alt="ZURS STORE logo"] { border-radius: 999px; }');
+    const componentSource = readFileSync(
+      join(process.cwd(), "client/src/components/StorefrontLayout.tsx"),
+      "utf8"
+    );
+    const styleSource = readFileSync(
+      join(process.cwd(), "client/src/index.css"),
+      "utf8"
+    );
+    expect(componentSource).toContain(
+      'alt="ZURS logo" className="h-7 w-7 shrink-0 rounded-full'
+    );
+    expect(componentSource).toContain(
+      'alt="ZURS STORE logo" className="h-10 w-10 shrink-0 rounded-full'
+    );
+    expect(styleSource).toContain(
+      '.zurs-compact-header img[alt="ZURS logo"], .zurs-footer img[alt="ZURS STORE logo"] { border-radius: 999px; }'
+    );
   });
 
   it("uses a matching rounded top header without changing desktop controls", () => {
-    const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
-    const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
+    const componentSource = readFileSync(
+      join(process.cwd(), "client/src/components/StorefrontLayout.tsx"),
+      "utf8"
+    );
+    const styleSource = readFileSync(
+      join(process.cwd(), "client/src/index.css"),
+      "utf8"
+    );
     expect(componentSource).toContain("zurs-compact-header sticky top-2");
     expect(componentSource).toContain("rounded-[1.25rem]");
     expect(styleSource).toContain("position: sticky !important");
@@ -167,8 +266,14 @@ describe("storefront media protection", () => {
   });
 
   it("uses a banner-aligned particle field with staggered reduced-motion-safe twinkles", () => {
-    const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
-    const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
+    const componentSource = readFileSync(
+      join(process.cwd(), "client/src/components/StorefrontLayout.tsx"),
+      "utf8"
+    );
+    const styleSource = readFileSync(
+      join(process.cwd(), "client/src/index.css"),
+      "utf8"
+    );
     expect(componentSource).toContain("zurs-particle-field");
     expect(componentSource).toContain("particleSlots");
     expect(styleSource).toContain("zurs-particle-twinkle");
@@ -177,9 +282,17 @@ describe("storefront media protection", () => {
   });
 
   it("layers a lightweight Christmas garland and snowfall above the public storefront without blocking interactions", () => {
-    const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
-    const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
-    expect(componentSource).toContain("{new Date().getMonth() === 11 ? <ChristmasOverlay /> : null}");
+    const componentSource = readFileSync(
+      join(process.cwd(), "client/src/components/StorefrontLayout.tsx"),
+      "utf8"
+    );
+    const styleSource = readFileSync(
+      join(process.cwd(), "client/src/index.css"),
+      "utf8"
+    );
+    expect(componentSource).toContain(
+      "{new Date().getMonth() === 11 ? <ChristmasOverlay /> : null}"
+    );
     expect(componentSource).toContain("ChristmasOverlay");
     expect(componentSource).toContain("christmasSnowSlots");
     expect(componentSource).toContain("zurs-christmas-garland");
@@ -190,8 +303,14 @@ describe("storefront media protection", () => {
   });
 
   it("uses Kantumruy Pro for the storefront and Hanuman for long Khmer copy", () => {
-    const documentSource = readFileSync(join(process.cwd(), "client/index.html"), "utf8");
-    const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
+    const documentSource = readFileSync(
+      join(process.cwd(), "client/index.html"),
+      "utf8"
+    );
+    const styleSource = readFileSync(
+      join(process.cwd(), "client/src/index.css"),
+      "utf8"
+    );
     expect(documentSource).toContain("family=Hanuman");
     expect(documentSource).toContain("family=Kantumruy+Pro");
     expect(styleSource).toContain('font-family: "Hanuman", "Kantumruy Pro"');
@@ -199,26 +318,56 @@ describe("storefront media protection", () => {
   });
 
   it("keeps the footer credits inside the dark card and uses the requested Facebook destination", () => {
-    const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
-    const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
+    const componentSource = readFileSync(
+      join(process.cwd(), "client/src/components/StorefrontLayout.tsx"),
+      "utf8"
+    );
+    const styleSource = readFileSync(
+      join(process.cwd(), "client/src/index.css"),
+      "utf8"
+    );
     expect(componentSource).toContain("រក្សាសិទ្ធិគ្រប់យ៉ាងដោយ zurs.me");
     expect(componentSource).toContain("បង្កើតឡើងដោយ CHAN MEKARA");
-    expect(componentSource).toContain("border-t border-white/12 pt-3 text-center");
+    expect(componentSource).toContain(
+      "border-t border-white/12 pt-3 text-center"
+    );
     expect(componentSource).not.toContain("zurs-footer-meta");
-    expect(componentSource).toContain("https://www.facebook.com/share/19QooXtndH/?mibextid=wwXIfr");
-    expect(componentSource).toContain('aria-label="បើកទំព័រ Facebook របស់ ZURS"');
+    expect(componentSource).toContain(
+      "https://www.facebook.com/share/19QooXtndH/?mibextid=wwXIfr"
+    );
+    expect(componentSource).toContain(
+      'aria-label="បើកទំព័រ Facebook របស់ ZURS"'
+    );
     expect(componentSource).toContain("bg-[#1877F2]");
-    expect(componentSource).toContain("mt-3 flex items-center justify-center gap-2 text-center");
-    expect(componentSource).toContain("mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2");
-    expect(componentSource).toContain("group mx-auto mt-3 flex h-10 w-fit items-center");
+    expect(componentSource).toContain(
+      "mt-3 flex items-center justify-center gap-2 text-center"
+    );
+    expect(componentSource).toContain(
+      "mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2"
+    );
+    expect(componentSource).toContain(
+      "group mx-auto mt-3 flex h-10 w-fit items-center"
+    );
     expect(styleSource).toContain("oklch(0.82 0.15 84)");
   });
 
   it("retires the storefront Contact Admin dock and locks the mobile viewport scale", () => {
-    const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
-    const contactSource = readFileSync(join(process.cwd(), "client/src/components/ContactAdminControl.tsx"), "utf8");
-    const documentSource = readFileSync(join(process.cwd(), "client/index.html"), "utf8");
-    const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
+    const componentSource = readFileSync(
+      join(process.cwd(), "client/src/components/StorefrontLayout.tsx"),
+      "utf8"
+    );
+    const contactSource = readFileSync(
+      join(process.cwd(), "client/src/components/ContactAdminControl.tsx"),
+      "utf8"
+    );
+    const documentSource = readFileSync(
+      join(process.cwd(), "client/index.html"),
+      "utf8"
+    );
+    const styleSource = readFileSync(
+      join(process.cwd(), "client/src/index.css"),
+      "utf8"
+    );
     // Round 6: the bottom Telegram help dock was removed from the storefront.
     // Support is reached from the header mascot, which links to /chat, and
     // Telegram is offered inside the chat once the daily allowance is spent.
@@ -234,19 +383,39 @@ describe("storefront media protection", () => {
     expect(styleSource).toContain(".contact-admin-fab--payment");
     expect(styleSource).toContain(".contact-admin-fab--hide-mobile");
     expect(styleSource).toContain("touch-action: pan-x pan-y");
-    expect(componentSource).toContain("storefront-scroll-top fixed z-[270] grid");
+    expect(componentSource).toContain(
+      "storefront-scroll-top fixed z-[270] grid"
+    );
     expect(componentSource).not.toContain("fixed right-4 z-[45] hidden");
-    expect(styleSource).toContain("Storefront utility controls: explicit right-side anchors keep them clear of the footer and mobile action bar.");
+    expect(styleSource).toContain(
+      "Storefront utility controls: explicit right-side anchors keep them clear of the footer and mobile action bar."
+    );
     expect(styleSource).toContain(".storefront-scroll-top {");
-    expect(styleSource).toContain(".contact-admin-fab__label { display: inline; }");
-    expect(styleSource).toContain("bottom: calc(max(1.5rem, env(safe-area-inset-bottom)) + 4.1rem) !important;");
+    expect(styleSource).toContain(
+      ".contact-admin-fab__label { display: inline; }"
+    );
+    expect(styleSource).toContain(
+      "bottom: calc(max(1.5rem, env(safe-area-inset-bottom)) + 4.1rem) !important;"
+    );
   });
 
   it("lets shoppers switch dark gamer theme and the previous light cream UI", () => {
-    const componentSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
-    const documentSource = readFileSync(join(process.cwd(), "client/index.html"), "utf8");
-    const gamer = readFileSync(join(process.cwd(), "client/src/styles/zurs-gamer.css"), "utf8");
-    const polish = readFileSync(join(process.cwd(), "client/src/styles/zurs-polish.css"), "utf8");
+    const componentSource = readFileSync(
+      join(process.cwd(), "client/src/components/StorefrontLayout.tsx"),
+      "utf8"
+    );
+    const documentSource = readFileSync(
+      join(process.cwd(), "client/index.html"),
+      "utf8"
+    );
+    const gamer = readFileSync(
+      join(process.cwd(), "client/src/styles/zurs-gamer.css"),
+      "utf8"
+    );
+    const polish = readFileSync(
+      join(process.cwd(), "client/src/styles/zurs-polish.css"),
+      "utf8"
+    );
     expect(componentSource).toContain("zurs-theme-toggle");
     expect(componentSource).toContain("splashThemeFromButton");
     expect(componentSource).toContain("startViewTransition");
@@ -261,39 +430,73 @@ describe("storefront media protection", () => {
     expect(gamer).toContain('html[data-ui-family="dark"][data-theme="dark"]');
     expect(componentSource).toContain("StorefrontUiSync");
     expect(componentSource).toContain("trpc.content.storefrontUi");
-    expect(componentSource).toContain("storefrontUi === \"gamer\" ? <ThemeToggle");
-    const admin = readFileSync(join(process.cwd(), "client/src/pages/Admin.tsx"), "utf8");
-    const router = readFileSync(join(process.cwd(), "server/routers.ts"), "utf8");
-    const skins = readFileSync(join(process.cwd(), "client/src/styles/zurs-skins.css"), "utf8");
+    expect(componentSource).toContain(
+      'storefrontUi === "gamer" ? <ThemeToggle'
+    );
+    const admin = readFileSync(
+      join(process.cwd(), "client/src/pages/Admin.tsx"),
+      "utf8"
+    );
+    const router = readFileSync(
+      join(process.cwd(), "server/routers.ts"),
+      "utf8"
+    );
+    const skins = readFileSync(
+      join(process.cwd(), "client/src/styles/zurs-skins.css"),
+      "utf8"
+    );
     expect(admin).toContain("StorefrontUiControl");
     expect(admin).toContain("STOREFRONT_UI_META");
-    expect(admin).toContain("ទម្រង់ហាងសាធារណៈ · ៦ បែប");
-    expect(router).toContain('z.enum(["classic", "soft", "luxe", "gamer", "night", "neon"])');
+    expect(admin).toContain("ជ្រើសរើសទម្រង់ហាងសាធារណៈ");
+    expect(router).toContain(
+      'z.enum(["classic", "soft", "luxe", "ios", "material", "editorial", "zen", "commerce", "gamer", "night", "neon", "midnight", "aurora", "arcade", "obsidian", "solar"])'
+    );
     expect(router).toContain("storefrontUi: publicProcedure.query");
     expect(skins).toContain('html[data-ui="soft"]');
     expect(skins).toContain('html[data-ui="luxe"]');
     expect(skins).toContain('html[data-ui="night"]');
     expect(skins).toContain('html[data-ui="neon"]');
-    expect(skins).toContain("grid-template-columns: minmax(17rem, 0.88fr) minmax(22rem, 1.2fr)");
+    expect(skins).toContain(
+      "grid-template-columns: minmax(17rem, 0.88fr) minmax(22rem, 1.2fr)"
+    );
     expect(skins).toContain(".zp-game-grid > :first-child");
     expect(polish).toContain("--z-canvas: #f4f4f1;");
     expect(polish).toContain("color-scheme: light;");
   });
 
   it("routes selected packages directly to the payment preview page and keeps KHQR creation behind final confirmation", () => {
-    const layoutSource = readFileSync(join(process.cwd(), "client/src/components/StorefrontLayout.tsx"), "utf8");
-    const checkoutSource = readFileSync(join(process.cwd(), "client/src/pages/Checkout.tsx"), "utf8");
-    const styleSource = readFileSync(join(process.cwd(), "client/src/index.css"), "utf8");
-    expect(layoutSource).toContain('onContinue={() => setLocation("/checkout/preview")}');
-    expect(layoutSource).toContain("paymentMethodName={selectedPaymentMethod?.name ?? null}");
+    const layoutSource = readFileSync(
+      join(process.cwd(), "client/src/components/StorefrontLayout.tsx"),
+      "utf8"
+    );
+    const checkoutSource = readFileSync(
+      join(process.cwd(), "client/src/pages/Checkout.tsx"),
+      "utf8"
+    );
+    const styleSource = readFileSync(
+      join(process.cwd(), "client/src/index.css"),
+      "utf8"
+    );
+    expect(layoutSource).toContain(
+      'onContinue={() => setLocation("/checkout/preview")}'
+    );
+    expect(layoutSource).toContain(
+      "paymentMethodName={selectedPaymentMethod?.name ?? null}"
+    );
     expect(layoutSource).toContain("សូមជ្រើសវិធីបង់ប្រាក់");
-    expect(layoutSource).toContain("title=\"សូមជ្រើសវិធីបង់ប្រាក់នៅខាងលើកញ្ចប់\"");
+    expect(layoutSource).toContain(
+      'title="សូមជ្រើសវិធីបង់ប្រាក់នៅខាងលើកញ្ចប់"'
+    );
     expect(checkoutSource).toContain('const preview = orderId === "preview"');
-    expect(checkoutSource).toContain("<PaymentPreview product={selectedProduct}");
+    expect(checkoutSource).toContain(
+      "<PaymentPreview product={selectedProduct}"
+    );
     expect(checkoutSource).toContain("បញ្ជាក់ និងបង្កើត KHQR");
     expect(checkoutSource).toContain("trpc.orders.createTopup.useMutation()");
     expect(checkoutSource).toContain('fetch("/api/pay/security/check/key"');
-    expect(checkoutSource).toContain("setLocation(`/pay/${encodeURIComponent(link.token)}`)");
+    expect(checkoutSource).toContain(
+      "setLocation(`/pay/${encodeURIComponent(link.token)}`)"
+    );
     expect(styleSource).toContain(".checkout-preview-hero");
     expect(styleSource).toContain(".checkout-preview-confirm");
   });
