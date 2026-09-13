@@ -12,7 +12,7 @@ export type LadderPackage = {
 };
 
 export function packageAmountAndUnit(label: string, amountLabel: string) {
-  const text = `${amountLabel} ${label}`.toLowerCase().replace(/,/g, "");
+  const text = `${amountLabel} ${label}`.toLowerCase().replace(/,/g, "").replace(/ពេជ្យ|ពេជ្រ/g, " diamond ");
   if (/\b(?:weekly|daily|monthly|membership|subscription|pass|promo|special|event|crate)\b/.test(text)) return null;
 
   const bonus = text.match(/(\d+(?:\.\d+)?)(?:\s*[a-z]+)?\s*\+\s*(\d+(?:\.\d+)?)\s*([a-z]+)/);
@@ -30,6 +30,14 @@ export function packageAmountAndUnit(label: string, amountLabel: string) {
     if (!best || amount > best.amount) best = { amount, unit };
   }
   return best;
+}
+
+/** One shop card per amount+unit. Extra words (region, first top-up) do not create a second price. */
+export function packageIdentityKey(label: string, amountLabel = "") {
+  const measure = packageAmountAndUnit(label, amountLabel);
+  if (measure) return `qty:${measure.amount}:${measure.unit}`;
+  const name = `${label} ${amountLabel}`.toLowerCase().replace(/ពេជ្យ|ពេជ្រ/g, "diamond").replace(/[^a-z0-9.]+/g, " ").replace(/\s+/g, " ").trim();
+  return `name:${name}`;
 }
 
 function readPackagePrice(item: LadderPackage) {

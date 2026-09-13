@@ -1,3 +1,5 @@
+import { packageAmountAndUnit } from "@shared/packagePriceLadder";
+
 export const goldDiamondChestArtworkUrl = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663905831999/ynsfRvMWPhvlHFjn.png";
 export const khqrLogoUrl = "/khqr-logo.svg";
 
@@ -7,6 +9,8 @@ export function isMobileLegendsGlobalGame(gameId: string) {
 }
 
 export function mobileLegendsDiamondAmount(label: string, amountLabel: string) {
+  const measure = packageAmountAndUnit(label, amountLabel);
+  if (measure?.unit === "diamond") return measure.amount;
   const values = `${label} ${amountLabel}`.match(/\d[\d,]*/g) ?? [];
   if (!values.length) return null;
   return values.map((value) => Number(value.replace(/,/g, ""))).filter(Number.isFinite).sort((left, right) => right - left)[0] ?? null;

@@ -13,6 +13,9 @@ describe("Mobile Legends package presentation", () => {
   it("derives an editable diamond quantity from provider package text", () => {
     expect(mobileLegendsDiamondAmount("11,483 Diamonds", "11,483 + bonus")).toBe(11483);
     expect(mobileLegendsDiamondLabel("9288 Diamonds", "9288")).toBe("9,288 ពេជ្យ");
+    expect(mobileLegendsDiamondAmount("250 + 25 Diamonds", "250 + 25 Diamonds")).toBe(275);
+    expect(mobileLegendsDiamondLabel("250 + 25 Diamonds", "250 + 25 Diamonds")).toBe("275 ពេជ្យ");
+
   });
 
   it("selects a visual tone from the verified package type without changing package labels", () => {

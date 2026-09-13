@@ -22,7 +22,9 @@ describe("admin catalog matches the public storefront", () => {
     const unique = keepCheapestAdminOffers([
       { id: "high", amountLabel: "100 Diamonds", basePriceUsd: "1.00", profitMarginPercent: "0", priceUsd: "1.20", isActive: true, providerAuthorized: true },
       { id: "low", amountLabel: "100 Diamonds", basePriceUsd: "0.80", profitMarginPercent: "0", priceUsd: "0.95", isActive: true, providerAuthorized: true },
+      { id: "first", amountLabel: "100 Diamonds (First Top-Up)", basePriceUsd: "1.10", profitMarginPercent: "0", priceUsd: "1.30", isActive: true, providerAuthorized: true },
       { id: "weekly", amountLabel: "Weekly Membership", basePriceUsd: "2.00", profitMarginPercent: "0", priceUsd: "2.20", isActive: true, providerAuthorized: true },
+
     ]);
     expect(unique.map((item) => item.id)).toEqual(["low", "weekly"]);
   });

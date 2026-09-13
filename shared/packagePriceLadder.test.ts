@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyShopPriceLadder, packageAmountAndUnit, shopLadderUnitPrice, shopPriceFromUsd } from "./packagePriceLadder";
+import { applyShopPriceLadder, packageAmountAndUnit, packageIdentityKey, shopLadderUnitPrice, shopPriceFromUsd } from "./packagePriceLadder";
 
 describe("shop price ladder", () => {
   it("lifts a bigger diamond pack that is cheaper than a smaller one", () => {
@@ -51,4 +51,18 @@ describe("shop price ladder", () => {
     expect(smoothed.find((item) => item.id === "mid")?.priceLabel).toBe("$0.28");
     expect(smoothed.find((item) => item.id === "bonus")?.priceLabel).toBe("$2.85");
   });
+
+
+  it("treats Khmer diamond copy as the same unit as Diamonds", () => {
+    expect(packageAmountAndUnit("86 ពេជ្យ", "86 ពេជ្យ")).toEqual({ amount: 86, unit: "diamond" });
+    expect(packageAmountAndUnit("86 Diamond", "86 Diamond")).toEqual({ amount: 86, unit: "diamond" });
+  });
+
+  it("keeps one identity for the same diamond amount even when labels differ", () => {
+    expect(packageIdentityKey("86 Diamonds", "86 Diamonds")).toBe(packageIdentityKey("86 Diamond", "86 ពេជ្យ"));
+    expect(packageIdentityKey("86 Diamonds", "86 Diamonds")).toBe(packageIdentityKey("86 Diamonds (First Top-Up)", "86 Diamonds"));
+    expect(packageIdentityKey("250 + 25 Diamonds", "250 + 25 Diamonds")).not.toBe(packageIdentityKey("250 Diamonds", "250 Diamonds"));
+    expect(packageIdentityKey("Weekly Pass", "Weekly Pass")).not.toBe(packageIdentityKey("2x Weekly", "2x Weekly"));
+  });
+
 });

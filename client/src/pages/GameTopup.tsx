@@ -26,7 +26,7 @@ import { subscribeToPackageArtworkChanges } from "@/lib/packageArtworkBroadcast"
 import { subscribeToPackagePricingChanges } from "@/lib/packagePricingBroadcast";
 import { subscribeToPublicAssetChanges } from "@/lib/publicAssetBroadcast";
 import { officialPackageArtFor } from "@/lib/officialPackageArt";
-import { applyShopPriceLadder } from "@shared/packagePriceLadder";
+import { applyShopPriceLadder, packageIdentityKey } from "@shared/packagePriceLadder";
 import { isMobileLegendsAdventureGame, withoutMlbbAdventurePackages } from "@shared/mlbbAdventure";
 import { checkoutPackageQuantity, expandStackableWeeklyPackages, stripWeeklyMultiplierLabel } from "@/lib/stackableWeeklyPackages";
 import { PackageClickAlert } from "@/components/PackageClickAlert";
@@ -636,14 +636,7 @@ function isCurrencyPackage(item: ProviderPackage) {
 }
 
 export function providerPackageIdentityKey(item: Pick<ProviderPackage, "label" | "amountLabel">) {
-  const pack = item as ProviderPackage;
-  const kind = isPassPackage(pack) ? "pass" : isBonusPackage(pack) ? "bonus" : isSpecialPackage(pack) ? "special" : "std";
-  const amount = item.amountLabel.toLowerCase().replace(/[^a-z0-9.]+/g, " ").replace(/\s+/g, " ").trim();
-  const label = item.label.toLowerCase().replace(/[^a-z0-9.]+/g, " ").replace(/\s+/g, " ").trim();
-  const numbers = (amount.match(/\d+(?:\.\d+)?/g) ?? []).join("-");
-  const unit = (amount.match(/[a-z]+/g) ?? []).join("");
-  if (numbers) return `${kind}:${numbers}:${unit}`;
-  return `${kind}:${label || amount}`;
+  return packageIdentityKey(item.label, item.amountLabel);
 }
 
 export function keepCheapestUniqueProviderPackages<T extends ProviderPackage>(items: T[]) {

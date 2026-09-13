@@ -4,6 +4,7 @@ import { AnimatedBackButton } from "@/components/AnimatedBackButton";
 import { OutlineLoader } from "@/components/OutlineLoader";
 import { notifyPackagePricingChanged } from "@/lib/packagePricingBroadcast";
 import { withoutMlbbAdventurePackages } from "@shared/mlbbAdventure";
+import { packageIdentityKey } from "@shared/packagePriceLadder";
 import { trpc } from "@/lib/trpc";
 import {
   CalendarDays,
@@ -164,11 +165,7 @@ export function storefrontCatalogFamily(source: {
 }
 
 function offerIdentityKey(offer: Offer) {
-  const amount = String(offer.amountLabel ?? "").toLowerCase().replace(/[^a-z0-9.]+/g, " ").replace(/\s+/g, " ").trim();
-  const numbers = (amount.match(/\d+(?:\.\d+)?/g) ?? []).join("-");
-  const unit = (amount.match(/[a-z]+/g) ?? []).join("");
-  if (numbers) return `${numbers}:${unit}`;
-  return amount || offer.id;
+  return packageIdentityKey(String(offer.amountLabel ?? ""), String(offer.amountLabel ?? ""));
 }
 
 export function keepCheapestAdminOffers(offers: Offer[]) {

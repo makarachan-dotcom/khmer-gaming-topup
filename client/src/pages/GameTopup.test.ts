@@ -37,6 +37,25 @@ describe("dedicated game top-up routes", () => {
     expect(keepCheapestUniqueProviderPackages(packages).map((item) => item.id)).toEqual(["premium-month-low", "stars-500-low", "stars-750"]);
   });
 
+  it("drops the expensive copy when two diamond packs are the same amount", () => {
+    const packages = [
+      { id: "d86-high", label: "86 Diamonds", amountLabel: "86 Diamonds", priceLabel: "$1.28" },
+      { id: "d86-low", label: "86 Diamond", amountLabel: "86 ពេជ្យ", priceLabel: "$1.10" },
+      { id: "d86-bonus-label", label: "86 Diamonds (First Top-Up)", amountLabel: "86 Diamonds", priceLabel: "$1.40" },
+      { id: "d172", label: "172 Diamonds", amountLabel: "172 Diamonds", priceLabel: "$2.10" },
+      { id: "first-275", label: "250 + 25 Diamonds", amountLabel: "250 + 25 Diamonds", priceLabel: "$3.10" },
+      { id: "d250", label: "250 Diamonds", amountLabel: "250 Diamonds", priceLabel: "$2.90" },
+      { id: "weekly", label: "Weekly Pass", amountLabel: "Weekly Pass", priceLabel: "$1.59" },
+    ];
+    expect(keepCheapestUniqueProviderPackages(packages).map((item) => item.id)).toEqual([
+      "d86-low",
+      "weekly",
+      "d172",
+      "d250",
+      "first-275",
+    ]);
+  });
+
   it("groups provider packages by their genuine meaning, including Elite Pass", () => {
     const packages = [
       { id: "ff-weekly", label: "Weekly Membership", amountLabel: "Weekly Membership", priceLabel: "$2.20" },
