@@ -195,7 +195,7 @@ export function isDarkStorefrontUi(ui: StorefrontUiSkin) {
   ].includes(ui);
 }
 
-export const PACKAGE_UI_DENSITIES = ["compact", "cozy", "roomy"] as const;
+export const PACKAGE_UI_DENSITIES = ["compact", "cozy", "roomy", "trio", "premium"] as const;
 export type PackageUiDensity = (typeof PACKAGE_UI_DENSITIES)[number];
 export const PACKAGE_UI_META: Array<{
   id: PackageUiDensity;
@@ -220,6 +220,18 @@ export const PACKAGE_UI_META: Array<{
     name: "Roomy",
     kh: "ធំ",
     hint: "កាតធំ រូបច្បាស់ សម្រាប់អេក្រង់ធំ",
+  },
+  {
+    id: "trio",
+    name: "Trio",
+    kh: "៣ ក្នុងមួយជួរ",
+    hint: "បីកញ្ចប់ក្នុងមួយជួរ ស្រួលមើលច្រើនលឿន",
+  },
+  {
+    id: "premium",
+    name: "Premium",
+    kh: "Premium Edition",
+    hint: "កាតតូចល្មម មាសស្អាតជាងគេ",
   },
 ];
 const PKG_SET = new Set<string>(PACKAGE_UI_DENSITIES);

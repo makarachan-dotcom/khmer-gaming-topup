@@ -462,7 +462,7 @@ describe("storefront media protection", () => {
     );
     expect(router).toContain("storefrontUi: publicProcedure.query");
     expect(router).toContain("setPackageUi");
-    expect(router).toContain('z.enum(["compact", "cozy", "roomy"])');
+    expect(router).toContain('z.enum(["compact", "cozy", "roomy", "trio", "premium"])');
     expect(skins).toContain('html[data-ui="soft"]');
     expect(skins).toContain('html[data-ui="luxe"]');
     expect(skins).toContain('html[data-ui="night"]');

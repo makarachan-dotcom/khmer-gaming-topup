@@ -55,11 +55,11 @@
         document.documentElement.style.colorScheme = t;
         try {
           var pkg = localStorage.getItem("zurs-pkg");
-          if (pkg !== "compact" && pkg !== "cozy" && pkg !== "roomy") {
+          if (pkg !== "compact" && pkg !== "cozy" && pkg !== "roomy" && pkg !== "trio" && pkg !== "premium") {
             var pm = document.cookie.match(/(?:^|; )zurs-pkg=([^;]*)/);
             pkg = pm ? pm[1] : "";
           }
-          if (pkg === "compact" || pkg === "cozy" || pkg === "roomy") {
+          if (pkg === "compact" || pkg === "cozy" || pkg === "roomy" || pkg === "trio" || pkg === "premium") {
             document.documentElement.setAttribute("data-pkg-ui", pkg);
           }
         } catch (e) {}

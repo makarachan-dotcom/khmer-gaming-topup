@@ -330,7 +330,8 @@ function PackageUiControl({ isOwner }: { isOwner: boolean }) {
         </h2>
         <p className="mt-2 max-w-3xl text-xs leading-6 text-slate-600">
           ជ្រើសទំហំកាតកញ្ចប់សម្រាប់ហាងសាធារណៈ។ Compact ស្រួលចុចលើទូរស័ព្ទ · Cozy
-          អានងាយ · Roomy សម្រាប់អេក្រង់ធំ។
+          អានងាយ · Roomy សម្រាប់អេក្រង់ធំ · Trio បីកញ្ចប់ក្នុងមួយជួរ · Premium
+          Edition តូចល្មមស្អាតជាងគេ។
         </p>
       </div>
       <div className="package-ui-studio__grid">

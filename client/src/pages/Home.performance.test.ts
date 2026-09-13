@@ -57,5 +57,8 @@ describe("storefront image loading performance", () => {
     expect(polish).toContain("blur(16px)");
     expect(polish).toContain(".zurs-dotted-shell > footer.zurs-footer");
     expect(polish).toContain("#topup-games");
+    expect(polish).toContain('html[data-pkg-ui="trio"]');
+    expect(polish).toContain('html[data-pkg-ui="premium"]');
+    expect(polish).toContain("account-history-panel article");
   });
 });
