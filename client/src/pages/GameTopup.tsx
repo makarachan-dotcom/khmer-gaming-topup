@@ -15,6 +15,7 @@ import { SelectedPackageCheck } from "@/components/SelectedPackageCheck";
 import { countryFlagForRegion, providerPackageBadge } from "@/lib/providerPresentation";
 import { buildPackageCategories, categoryLabelForPackage, filterPackagesByCategory, type PackageCategory } from "@/lib/packageCategories";
 import { goldDiamondChestArtworkUrl, isMobileLegendsGlobalGame, mobileLegendsDiamondLabel, mobileLegendsPackageTone } from "@/lib/mobileLegendsAssets";
+import { khmerDiamondCopy } from "@/lib/khmerDiamondCopy";
 import { isPubgTopupGame, pubgUcArtworkForAmount, pubgUcDisplayAmount, pubgUcFallbackArtwork } from "@/lib/pubgUcAssets";
 import { suppliedProductArtworkForPackage } from "@/lib/suppliedProductArtwork";
 import { generatedPackageArtworkForPackage, type GeneratedPackageArtworkKind } from "@/lib/generatedPackageArtwork";
@@ -671,9 +672,9 @@ function PackageCard({ item, selected, onSelect, gameId, gameName, gameLogoUrl, 
   const mobileLegendsTone = mobileLegends ? mobileLegendsPackageTone(item.label, item.amountLabel) : null;
   const officialArt = officialPackageArtFor(gameId, gameName, item.label, item.amountLabel);
   const suppliedArtwork = artworkOverrides[item.id] ?? suppliedProductArtworkForPackage(gameId, item.amountLabel, item.label);
-  const packageAmount = mobileLegends ? diamondLabel : pubg ? pubgUcDisplayAmount(item.amountLabel) : item.amountLabel;
-  const showAmount = Boolean(packageAmount && packageAmount.trim().toLowerCase() !== item.label.trim().toLowerCase());
-  return <article className="min-w-0"><button type="button" aria-pressed={selected} title={`${gameName} · ${item.label} · ${item.priceLabel}`} onClick={onSelect} className={`package-choice package-choice--clean package-choice--gold ${mobileLegendsTone ? `package-choice--mlbb-${mobileLegendsTone}` : ""} ${recommended && !selected ? "package-choice--recommended" : ""} w-full text-left ${selected ? "package-choice--selected" : ""}`}><span className="package-choice-surface block rounded-[0.7rem] p-2.5"><PackageRibbonBadge offerId={item.id} />{selected ? <SelectedPackageCheck size={18} className="package-choice-check" /> : null}<SafePackageArt src={suppliedArtwork} fallbackSrc={officialArt} alt={`${gameName} ${item.amountLabel}`} showLogo={mobileLegends} gameName={gameName} gameLogoUrl={gameLogoUrl} /><OverflowMarquee text={item.label} className="mt-1.5 text-[11px] font-extrabold leading-4 text-slate-950" /><p className="package-choice__amount mt-0.5 truncate text-[10px] font-medium text-slate-500">{showAmount ? packageAmount : "\u00a0"}</p><span className="package-choice__price mt-1 block text-sm font-extrabold text-amber-800">{item.priceLabel}</span><span className="package-choice-badges">{recommended && !selected ? <span className="package-badge package-badge--recommended package-choice-recommendation"><Flame className="h-3 w-3" />ពេញនិយម</span> : null}{badge ? <span className={`package-badge package-badge--${badge.tone}`}>{badge.label}</span> : null}</span></span></button></article>;
+  const packageAmount = khmerDiamondCopy(mobileLegends ? diamondLabel : pubg ? pubgUcDisplayAmount(item.amountLabel) : item.amountLabel);
+  const showAmount = Boolean(packageAmount && packageAmount.trim().toLowerCase() !== khmerDiamondCopy(item.label).trim().toLowerCase());
+  return <article className="min-w-0"><button type="button" aria-pressed={selected} title={`${gameName} · ${khmerDiamondCopy(item.label)} · ${item.priceLabel}`} onClick={onSelect} className={`package-choice package-choice--clean package-choice--gold ${mobileLegendsTone ? `package-choice--mlbb-${mobileLegendsTone}` : ""} ${recommended && !selected ? "package-choice--recommended" : ""} w-full text-left ${selected ? "package-choice--selected" : ""}`}><span className="package-choice-surface block rounded-[0.7rem] p-2.5"><PackageRibbonBadge offerId={item.id} />{selected ? <SelectedPackageCheck size={18} className="package-choice-check" /> : null}<SafePackageArt src={suppliedArtwork} fallbackSrc={officialArt} alt={`${gameName} ${khmerDiamondCopy(item.amountLabel)}`} showLogo={mobileLegends} gameName={gameName} gameLogoUrl={gameLogoUrl} /><OverflowMarquee text={khmerDiamondCopy(item.label)} className="mt-1.5 text-[11px] font-extrabold leading-4 text-slate-950" /><p className="package-choice__amount mt-0.5 truncate text-[10px] font-medium text-slate-500">{showAmount ? packageAmount : "\u00a0"}</p><span className="package-choice__price mt-1 block text-sm font-extrabold text-amber-800">{item.priceLabel}</span><span className="package-choice-badges">{recommended && !selected ? <span className="package-badge package-badge--recommended package-choice-recommendation"><Flame className="h-3 w-3" />ពេញនិយម</span> : null}{badge ? <span className={`package-badge package-badge--${badge.tone}`}>{badge.label}</span> : null}</span></span></button></article>;
 }
 
 /** The owner-customisable banner that sits on top of a single package card. */
@@ -738,7 +739,7 @@ function DiamondPackages({ packages, status, selectedPackageId, onSelect, gameId
   const selectedPackage = useMemo(() => gamePackages.find((item) => item.id === selectedPackageId) ?? null, [gamePackages, selectedPackageId]);
   const searchValue = packageSearch.trim().toLocaleLowerCase();
   const visiblePackages = useMemo(
-    () => sortProviderPackagesForDisplay(searchValue ? gamePackages.filter((item) => (item.label + " " + item.amountLabel + " " + item.priceLabel).toLocaleLowerCase().includes(searchValue)) : filterPackagesByCategory(gamePackages, selectedCategoryId, categoryOverrides), packageSort, recommendedPackage?.id ?? null),
+    () => sortProviderPackagesForDisplay(searchValue ? gamePackages.filter((item) => khmerDiamondCopy(`${item.label} ${item.amountLabel} ${item.priceLabel}`).toLocaleLowerCase().includes(searchValue) || `${item.label} ${item.amountLabel} ${item.priceLabel}`.toLocaleLowerCase().includes(searchValue)) : filterPackagesByCategory(gamePackages, selectedCategoryId, categoryOverrides), packageSort, recommendedPackage?.id ?? null),
     [categoryOverrides, gamePackages, packageSort, recommendedPackage?.id, searchValue, selectedCategoryId],
   );
 
@@ -793,7 +794,7 @@ function DiamondPackages({ packages, status, selectedPackageId, onSelect, gameId
           {selectedPackage ? <div className="package-selection-summary" role="status" aria-live="polite">
             <span className="package-selection-summary__mark" aria-hidden="true"><Check className="h-4 w-4" /></span>
             <div className="min-w-0 flex-1">
-              <p className="package-selection-summary__label">{selectedPackage.label}</p>
+              <p className="package-selection-summary__label">{khmerDiamondCopy(selectedPackage.label)}</p>
               <p className="package-selection-summary__hint">ជ្រើសរើសរួច · ចុច «បន្ត» ខាងក្រោមដើម្បីទូទាត់តាម KHQR</p>
             </div>
             <span className="package-selection-summary__price">{selectedPackage.priceLabel}</span>

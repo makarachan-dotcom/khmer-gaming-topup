@@ -13,8 +13,8 @@ import type { AnimationItem } from "lottie-web";
 export const PACK_EMOJI = {
   fire: { emoji: "🔥", label: "Popular" },
   gamepad: { emoji: "🎯", label: "Game" },
-  gem: { emoji: "💎", label: "Diamonds" },
-  "diamond-blue": { emoji: "💎", label: "Diamond" },
+  gem: { emoji: "💎", label: "ពេជ្យ" },
+  "diamond-blue": { emoji: "💎", label: "ពេជ្យ" },
   star: { emoji: "⭐", label: "Star" },
   crown: { emoji: "👑", label: "Admin" },
   clock: { emoji: "⏰", label: "Processing time" },

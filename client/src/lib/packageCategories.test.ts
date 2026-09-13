@@ -10,7 +10,7 @@ const packages = [
 
 describe("package category presentation", () => {
   it("derives useful default categories from package data", () => {
-    expect(packages.map(automaticPackageCategoryLabel)).toEqual(["Diamond", "Weekly Card", "Super Offer", "កញ្ចប់ពិសេស"]);
+    expect(packages.map(automaticPackageCategoryLabel)).toEqual(["ពេជ្យ", "Weekly Card", "Super Offer", "កញ្ចប់ពិសេស"]);
   });
 
   it("automatically separates monthly and elite packages into useful filters", () => {
@@ -54,8 +54,9 @@ describe("package category presentation", () => {
       { id: "weekly", label: "Weekly Pass", amountLabel: "Weekly Pass" },
       { id: "twilight", label: "Twilight Pass", amountLabel: "Twilight Pass" },
     ];
-    expect(mlbb.map(automaticPackageCategoryLabel)).toEqual(["Diamond", "Diamond", "Super Offer", "Weekly Card", "Twilight Pass"]);
+    expect(mlbb.map(automaticPackageCategoryLabel)).toEqual(["ពេជ្យ", "ពេជ្យ", "Super Offer", "Weekly Card", "Twilight Pass"]);
     expect(filterPackagesByCategory(mlbb, "diamond").map((item) => item.id)).toEqual(["d10", "d86"]);
+    expect(filterPackagesByCategory(mlbb, "ពេជ្យ").map((item) => item.id)).toEqual(["d10", "d86"]);
     expect(filterPackagesByCategory(mlbb, "weekly card").map((item) => item.id)).toEqual(["weekly"]);
     expect(filterPackagesByCategory(mlbb, "twilight pass").map((item) => item.id)).toEqual(["twilight"]);
     expect(filterPackagesByCategory(mlbb, "super offer").map((item) => item.id)).toEqual(["limited"]);

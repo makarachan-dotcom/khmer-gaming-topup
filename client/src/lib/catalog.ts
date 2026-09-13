@@ -13,13 +13,13 @@ export type GameProduct = {
 
 export const games: GameProduct[] = [
   {
-    id: "mlbb", name: "Mobile Legends", khmerName: "Mobile Legends", currency: "Diamonds", accent: "from-[#4468ed] to-[#6c4ee8]", icon: "ML",
-    packageLabel: "ពេជ្រ",
+    id: "mlbb", name: "Mobile Legends", khmerName: "Mobile Legends", currency: "ពេជ្យ", accent: "from-[#4468ed] to-[#6c4ee8]", icon: "ML",
+    packageLabel: "ពេជ្យ",
     packages: [{ id: "ml-86", amount: "86", price: 1.29 }, { id: "ml-172", amount: "172", price: 2.49 }, { id: "ml-344", amount: "344", price: 4.79, featured: true }, { id: "ml-706", amount: "706", price: 9.69 }],
   },
   {
-    id: "free-fire", name: "Free Fire", khmerName: "Free Fire", currency: "Diamonds", accent: "from-[#ef6037] to-[#e5ae2f]", icon: "FF",
-    packageLabel: "ពេជ្រ",
+    id: "free-fire", name: "Free Fire", khmerName: "Free Fire", currency: "ពេជ្យ", accent: "from-[#ef6037] to-[#e5ae2f]", icon: "FF",
+    packageLabel: "ពេជ្យ",
     packages: [{ id: "ff-100", amount: "100", price: 0.99 }, { id: "ff-310", amount: "310", price: 2.89 }, { id: "ff-520", amount: "520", price: 4.69, featured: true }, { id: "ff-1060", amount: "1,060", price: 9.19 }],
   },
   {

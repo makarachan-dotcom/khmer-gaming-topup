@@ -14,7 +14,7 @@ export function mobileLegendsDiamondAmount(label: string, amountLabel: string) {
 
 export function mobileLegendsDiamondLabel(label: string, amountLabel: string) {
   const amount = mobileLegendsDiamondAmount(label, amountLabel);
-  return amount ? `${amount.toLocaleString("en-US")} Diamonds` : amountLabel || label;
+  return amount ? `${amount.toLocaleString("en-US")} ពេជ្យ` : amountLabel || label;
 }
 
 export type MobileLegendsPackageTone = "diamonds" | "bonus" | "pass" | "special";

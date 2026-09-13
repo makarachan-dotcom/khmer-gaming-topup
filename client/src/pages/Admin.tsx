@@ -5,6 +5,7 @@ import { AdminDeliveryForm } from "@/components/AdminDeliveryForm";
 import { ServiceLogo } from "@/components/BrandMark";
 import { isCdkOrder, readAdminCdkToken } from "@shared/cdkToken";
 import { formatUsd } from "@/lib/display";
+import { khmerDiamondCopy } from "@/lib/khmerDiamondCopy";
 import { prepareAdminImage } from "@/lib/adminImageUpload";
 import { trpc } from "@/lib/trpc";
 import {
@@ -944,7 +945,7 @@ function Catalog({ isOwner }: { isOwner: boolean }) {
                 {game.packages.map(pkg => (
                   <PriceRow
                     key={pkg.id}
-                    label={`${pkg.amountLabel} ${game.currencyLabel}`}
+                    label={`${khmerDiamondCopy(pkg.amountLabel)} ${khmerDiamondCopy(game.currencyLabel)}`}
                     price={pkg.priceUsd}
                     active={pkg.isActive}
                     onSave={(price, active) =>

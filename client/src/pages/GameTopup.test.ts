@@ -72,7 +72,7 @@ describe("dedicated game top-up routes", () => {
     expect(source).toContain('className="package-choice-surface block rounded-[0.7rem] p-2.5"');
     expect(source).toContain('className="package-category-grid grid grid-cols-2 gap-2.5 sm:grid-cols-3"');
     expect(source).toContain('<PackageCard key={item.id} item={item}');
-    expect(source).toContain('OverflowMarquee text={item.label}');
+    expect(source).toContain("OverflowMarquee text={khmerDiamondCopy(item.label)}");
     expect(source).not.toContain("function CategoryPackageCard(");
     expect(source).not.toContain("package-category-choice__icon");
   });

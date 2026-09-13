@@ -13,6 +13,7 @@ import { ArrowUp, ChevronRight, LogIn, LogOut, Moon, Sun, WalletCards } from "lu
 import { FontEmojiBrand } from "@/components/FontEmojiBrand";
 import { PackEmoji } from "@/components/PackEmoji";
 import { applyPackageUi, applyStorefrontUi, dismissStorefrontBoot, parsePackageUi, parseStorefrontUi, readStorefrontUi, type StorefrontUiSkin } from "@/lib/storefrontUi";
+import { khmerDiamondCopy } from "@/lib/khmerDiamondCopy";
 import { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { TAB_LONG_PRESS_MS, TAB_SCRUB_PX, tabIndexFromClientX, tabProgressFromClientX } from "@/lib/mobileTabOrder";
@@ -561,8 +562,8 @@ function SelectedProductActionBar({ product, paymentMethodName, isAuthenticated,
           <>
             <ProviderGameArtwork name={product.gameName} logoUrl={product.gameLogoUrl} priority className="h-11 w-11 shrink-0 rounded-xl" iconClassName="h-5 w-5" />
             <div className="min-w-0 flex-1">
-              <OverflowMarquee text={product.label} className="text-xs font-extrabold text-ink" />
-              <OverflowMarquee text={`${product.amountLabel} · ${product.priceLabel} · ${paymentMethodName ? `បង់៖ ${paymentMethodName}` : "សូមជ្រើសវិធីបង់ប្រាក់"}`} className="mt-0.5 text-xs font-semibold text-ink-muted" />
+              <OverflowMarquee text={khmerDiamondCopy(product.label)} className="text-xs font-extrabold text-ink" />
+              <OverflowMarquee text={`${khmerDiamondCopy(product.amountLabel)} · ${product.priceLabel} · ${paymentMethodName ? `បង់៖ ${paymentMethodName}` : "សូមជ្រើសវិធីបង់ប្រាក់"}`} className="mt-0.5 text-xs font-semibold text-ink-muted" />
             </div>
             {isAuthenticationLoading ? (
               <button type="button" disabled aria-disabled="true" className={cn(pill, "bg-panel-2 text-ink-muted")}><OutlineLoader size={14} color="#8d97b2" />កំពុងពិនិត្យ</button>

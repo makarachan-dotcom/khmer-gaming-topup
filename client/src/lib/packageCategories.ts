@@ -10,7 +10,7 @@ export type PackageCategory = {
   count: number;
 };
 
-const automaticCategoryOrder = ["Diamond", "Token", "Weekly Card", "Twilight Pass", "Monthly Pack", "Elite Pack", "Super Offer", "កញ្ចប់ពិសេស"];
+const automaticCategoryOrder = ["ពេជ្យ", "Token", "Weekly Card", "Twilight Pass", "Monthly Pack", "Elite Pack", "Super Offer", "កញ្ចប់ពិសេស"];
 
 function packageWords(item: Pick<CategoryPackage, "label" | "amountLabel">) {
   return `${item.label} ${item.amountLabel}`.toLowerCase();
@@ -58,7 +58,7 @@ export function automaticPackageCategoryLabel(item: Pick<CategoryPackage, "label
   if (isWeeklyPackage(item)) return "Weekly Card";
   if (isTwilightPackage(item)) return "Twilight Pass";
   if (isElitePackage(item)) return "Elite Pack";
-  if (isDiamondPackage(item)) return "Diamond";
+  if (isDiamondPackage(item)) return "ពេជ្យ";
   if (/\b(?:bonus|first\s*top[\s-]*up|extra|limited|value\s*pack|bundle)\b/.test(copy) || /\+\s*\d[\d,]*(?:\s*[a-z]+)?\b/.test(copy)) return "Super Offer";
   if (/\b(?:promo|special|discount|sale|event|exclusive|full\s*ticket)\b/.test(copy)) return "កញ្ចប់ពិសេស";
   if (isTokenCurrencyPackage(item)) return "Token";
@@ -72,6 +72,7 @@ export function categoryLabelForPackage(item: CategoryPackage, overrides: Readon
   const automatic = automaticPackageCategoryLabel(item);
   if (!override) return automatic;
   if (override.toLocaleLowerCase() === "diamond" && !isDiamondPackage(item)) return automatic;
+  if (override === "ពេជ្យ" && !isDiamondPackage(item)) return automatic;
   return override;
 }
 
@@ -95,9 +96,9 @@ export function filterPackagesByCategory<T extends CategoryPackage>(items: T[], 
   if (!categoryId || categoryId === "all") return items;
   const selected = categoryId.trim().toLocaleLowerCase();
   return items.filter((item) => {
+    if (selected === "diamond" || selected === "ពេជ្យ") return isDiamondPackage(item);
     const label = categoryLabelForPackage(item, overrides).toLocaleLowerCase();
     if (label !== selected) return false;
-    if (selected === "diamond") return isDiamondPackage(item);
     if (selected === "weekly card") return isWeeklyPackage(item);
     if (selected === "twilight pass") return isTwilightPackage(item);
     return true;
