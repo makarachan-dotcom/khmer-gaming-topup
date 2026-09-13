@@ -83,15 +83,13 @@ body {
 @media (prefers-reduced-motion: no-preference) {
   .zp-reveal {
     opacity: 0;
-    transform: translateY(20px) scale(0.99);
-    filter: blur(5px);
-    transition: opacity 640ms var(--zp-ease-out), transform 640ms var(--zp-ease-out), filter 640ms var(--zp-ease-out);
-    transition-delay: calc(var(--zp-i, 0) * 75ms);
-    will-change: opacity, transform, filter;
+    transform: translateY(8px);
+    transition: opacity 220ms var(--zp-ease-out), transform 220ms var(--zp-ease-out);
+    transition-delay: calc(var(--zp-i, 0) * 40ms);
   }
   .zp-reveal--in { opacity: 1; transform: none; filter: none; }
-  .zp-page { animation: zp-page-in 460ms var(--zp-ease-out) both; }
-  @keyframes zp-page-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  .zp-page { animation: zp-page-in 180ms var(--zp-ease-out) both; }
+  @keyframes zp-page-in { from { opacity: 0; } to { opacity: 1; } }
 }
 @media (prefers-reduced-motion: reduce) {
   .zp-reveal { opacity: 1; transform: none; filter: none; }

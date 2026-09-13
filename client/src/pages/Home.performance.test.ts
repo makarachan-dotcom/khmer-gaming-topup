@@ -37,4 +37,23 @@ describe("storefront image loading performance", () => {
     expect(homeSource).not.toContain("payment-location");
     expect(homeSource).not.toContain("zurs-status-notice");
   });
+
+  it("slides the boot curtain away immediately and reuses a cached game list", () => {
+    const documentSource = readFileSync(resolve(process.cwd(), "client/index.html"), "utf8");
+    const homeSource = readFileSync(resolve(process.cwd(), "client/src/pages/Home.tsx"), "utf8");
+    const uiSource = readFileSync(resolve(process.cwd(), "client/src/lib/storefrontUi.ts"), "utf8");
+    const packSource = readFileSync(resolve(process.cwd(), "client/src/components/PackEmoji.tsx"), "utf8");
+    const polish = readFileSync(resolve(process.cwd(), "client/src/styles/zurs-global-polish.css"), "utf8");
+    expect(documentSource).toContain('id="zurs-boot"');
+    expect(documentSource).toContain("zurs-ready");
+    expect(documentSource).toContain('localStorage.getItem("zurs-ui")');
+    expect(uiSource).toContain("dismissStorefrontBoot");
+    expect(homeSource).toContain("zurs-games-v1");
+    expect(homeSource).toContain("placeholderData: readCachedGames");
+    expect(homeSource).toContain("staleTime: 60_000");
+    expect(packSource).toContain("progressiveLoad: true");
+    expect(packSource).toContain("IntersectionObserver");
+    expect(polish).toContain("content-visibility: auto");
+    expect(polish).toContain("blur(16px)");
+  });
 });

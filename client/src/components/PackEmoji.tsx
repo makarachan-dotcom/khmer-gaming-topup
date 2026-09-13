@@ -135,7 +135,12 @@ function loadPackAnimation(name: PackEmojiName): Promise<unknown | null> {
 }
 
 export function prefersStaticEmoji() {
-  return typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return false;
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return true;
+  const nav = navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } };
+  if (nav.connection?.saveData) return true;
+  const type = nav.connection?.effectiveType;
+  return type === "2g" || type === "slow-2g";
 }
 
 const CHATGPT_PETAL =
@@ -188,21 +193,42 @@ export const PackEmoji = memo(function PackEmoji({
   speed?: number;
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
+  const wrapRef = useRef<HTMLSpanElement | null>(null);
   const meta = PACK_EMOJI[name];
   const isBrand = BRAND_PACKS.has(name);
   const [staticFrame, setStaticFrame] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(prefersStaticEmoji);
   const [pngFailed, setPngFailed] = useState(false);
+  const [armed, setArmed] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const update = () => setReduceMotion(media.matches);
+    const update = () => setReduceMotion(prefersStaticEmoji());
     update();
     media.addEventListener("change", update);
     return () => media.removeEventListener("change", update);
   }, []);
+
+  useEffect(() => {
+    const node = wrapRef.current;
+    if (!node || typeof IntersectionObserver === "undefined") {
+      setArmed(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setArmed(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "64px" },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [name]);
 
   useEffect(() => {
     setPngFailed(false);
@@ -212,6 +238,7 @@ export const PackEmoji = memo(function PackEmoji({
       setStaticFrame(true);
       return;
     }
+    if (!armed) return;
     let cancelled = false;
     let animation: AnimationItem | null = null;
     setStaticFrame(false);
@@ -236,6 +263,7 @@ export const PackEmoji = memo(function PackEmoji({
             loop,
             autoplay: true,
             animationData: data,
+            rendererSettings: { progressiveLoad: true, hideOnTransparent: true },
           });
           if (speed && speed > 0) animation.setSpeed(speed);
           setPlaying(true);
@@ -248,7 +276,7 @@ export const PackEmoji = memo(function PackEmoji({
       cancelled = true;
       animation?.destroy();
     };
-  }, [name, loop, speed, reduceMotion, isBrand]);
+  }, [name, loop, speed, reduceMotion, isBrand, armed]);
 
   if (!meta) return null;
   if (name === "svc-chatgpt") return <ChatGptLogo size={size} className={className} label={meta.label} />;
@@ -260,6 +288,7 @@ export const PackEmoji = memo(function PackEmoji({
 
   return (
     <span
+      ref={wrapRef}
       role="img"
       aria-label={meta.label}
       className={`pack-emoji ${staticFrame ? "pack-emoji--static" : ""} ${className}`}

@@ -93,7 +93,7 @@ export default function GameTopup() {
   const gameId = gameIdFromTopupPath(location);
   const localCategoryPreview = import.meta.env.DEV && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("categoryPreview") === "1";
   const gameInput = useMemo(() => ({ gameId }), [gameId]);
-  const gameQuery = trpc.provider.gameDetails.useQuery(gameInput, { enabled: Boolean(gameId) });
+  const gameQuery = trpc.provider.gameDetails.useQuery(gameInput, { enabled: Boolean(gameId), staleTime: 60_000 });
   const gameImages = trpc.provider.gameImages.useQuery(undefined, { staleTime: 0, refetchInterval: 5_000 });
   const paymentReadiness = trpc.payments.readiness.useQuery();
   const { user } = useAuth();

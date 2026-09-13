@@ -124,6 +124,18 @@ function HomepageMedia() {
   );
 }
 type CatalogGame = { id: string; name: string; region?: string; logoUrl?: string };
+const GAMES_CACHE_KEY = "zurs-games-v1";
+function readCachedGames(): { games: CatalogGame[] } | undefined {
+  try {
+    const raw = sessionStorage.getItem(GAMES_CACHE_KEY);
+    if (!raw) return undefined;
+    const parsed = JSON.parse(raw) as { games?: unknown };
+    if (!Array.isArray(parsed.games)) return undefined;
+    return parsed as { games: CatalogGame[] };
+  } catch {
+    return undefined;
+  }
+}
 function HomeGameCard({ game, displayName, imageOverrides }: { game: CatalogGame; displayName?: string; imageOverrides?: Map<string, ProviderGameImageOverride> }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
@@ -189,10 +201,18 @@ function ProviderGameCatalogGroup({ baseName, games, imageOverrides }: { baseNam
 }
 function HomeTopupExperience() {
   const utils = trpc.useUtils();
-  const gamesQuery = trpc.provider.games.useQuery();
+  const gamesQuery = trpc.provider.games.useQuery(undefined, { staleTime: 60_000, placeholderData: readCachedGames });
   const gameImages = trpc.provider.gameImages.useQuery(undefined, { staleTime: 0, refetchInterval: 5_000 });
   const [query, setQuery] = useState("");
   useEffect(() => subscribeToPublicAssetChanges((area) => { if (area === "game-images") void utils.provider.gameImages.invalidate(); }), [utils]);
+  useEffect(() => {
+    if (!gamesQuery.data?.games) return;
+    try {
+      sessionStorage.setItem(GAMES_CACHE_KEY, JSON.stringify(gamesQuery.data));
+    } catch {
+      /* private mode */
+    }
+  }, [gamesQuery.data]);
   const games = orderProviderGames(gamesQuery.data?.games ?? []);
   const visibleGames = useMemo(() => filterProviderGames(games, query, "all"), [games, query]);
   const hasFilters = Boolean(query.trim());
@@ -208,7 +228,7 @@ function HomeTopupExperience() {
   );
   return (
     <section id="topup-games" className="container mt-5 pb-10 sm:mt-10 sm:pb-12">
-      <LoadingOverlay open={gamesQuery.isLoading} label="កំពុងរៀបចំបញ្ជីហ្គេម…" />
+      <LoadingOverlay open={gamesQuery.isLoading && !gamesQuery.data} label="កំពុងរៀបចំបញ្ជីហ្គេម…" />
       <SectionHeading
         eyebrow="GAME TOP-UP"
         title="ជ្រើសរើសហ្គេមរបស់អ្នក"

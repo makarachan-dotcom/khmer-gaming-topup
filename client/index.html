@@ -23,8 +23,12 @@
         };
         var ui = "classic";
         try {
-          var m = document.cookie.match(/(?:^|; )zurs-ui=([^;]*)/);
-          if (m && a[m[1]]) ui = m[1];
+          var ls = localStorage.getItem("zurs-ui");
+          if (ls && a[ls]) ui = ls;
+          else {
+            var m = document.cookie.match(/(?:^|; )zurs-ui=([^;]*)/);
+            if (m && a[m[1]]) ui = m[1];
+          }
         } catch (e) {}
         var dark =
           ui === "gamer" ||
@@ -49,6 +53,26 @@
         }
         document.documentElement.setAttribute("data-theme", t);
         document.documentElement.style.colorScheme = t;
+        try {
+          var pkg = localStorage.getItem("zurs-pkg");
+          if (pkg !== "compact" && pkg !== "cozy" && pkg !== "roomy") {
+            var pm = document.cookie.match(/(?:^|; )zurs-pkg=([^;]*)/);
+            pkg = pm ? pm[1] : "";
+          }
+          if (pkg === "compact" || pkg === "cozy" || pkg === "roomy") {
+            document.documentElement.setAttribute("data-pkg-ui", pkg);
+          }
+        } catch (e) {}
+        setTimeout(function () {
+          document.documentElement.classList.add("zurs-ready");
+          var b = document.getElementById("zurs-boot");
+          if (b) {
+            b.classList.add("is-out");
+            setTimeout(function () {
+              b.remove();
+            }, 240);
+          }
+        }, 1800);
       })();
     </script>
     <meta charset="UTF-8" />
@@ -100,6 +124,50 @@
     />
     <meta name="twitter:image" content="https://www.zurs.me/og-cover.png" />
 
+    <style>
+      #zurs-boot {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: grid;
+        place-items: center;
+        background: #f4f4f1;
+        pointer-events: none;
+        transform: translate3d(0, 0, 0);
+        transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.18s ease;
+      }
+      html[data-theme="dark"] #zurs-boot {
+        background: #101020;
+      }
+      #zurs-boot.is-out,
+      html.zurs-ready #zurs-boot {
+        transform: translate3d(0, -110%, 0);
+        opacity: 0;
+      }
+      #zurs-boot i {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: #c99712;
+        box-shadow: 14px 0 0 #c99712, -14px 0 0 #c99712;
+        animation: zurs-boot-dots 0.62s ease-in-out infinite;
+      }
+      @keyframes zurs-boot-dots {
+        50% {
+          opacity: 0.28;
+          transform: scale(0.86);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #zurs-boot {
+          transition: none;
+        }
+        #zurs-boot i {
+          animation: none;
+        }
+      }
+    </style>
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="dns-prefetch" href="https://reseller.fazercards.com" />
@@ -112,7 +180,7 @@
       fetchpriority="high"
     />
     <link
-      href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@400;500;600;700;800&family=Chakra+Petch:wght@500;600;700&family=Moul&family=Hanuman:wght@400;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@400;600;700&family=Chakra+Petch:wght@600;700&family=Moul&family=Hanuman:wght@400;700&display=swap"
       rel="stylesheet"
     />
     <!--
@@ -197,6 +265,7 @@
   </head>
 
   <body>
+    <div id="zurs-boot" aria-hidden="true"><i></i></div>
     <div id="root">
       <!-- ============================================================
            SEO FALLBACK — លុប block នេះបើប្តូរទៅ prerender ពេលក្រោយ

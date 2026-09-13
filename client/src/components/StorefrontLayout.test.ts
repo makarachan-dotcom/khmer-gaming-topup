@@ -429,9 +429,13 @@ describe("storefront media protection", () => {
     expect(documentSource).toContain('localStorage.getItem("zurs-theme")');
     expect(documentSource).toContain('data-ui="classic"');
     expect(documentSource).toContain("zurs-ui=");
+    expect(documentSource).toContain('localStorage.getItem("zurs-ui")');
+    expect(documentSource).toContain('id="zurs-boot"');
+    expect(documentSource).toContain("zurs-ready");
     expect(gamer).toContain('html[data-ui-family="dark"][data-theme="dark"]');
     expect(componentSource).toContain("StorefrontUiSync");
     expect(componentSource).toContain("trpc.content.storefrontUi");
+    expect(componentSource).toContain("dismissStorefrontBoot");
     expect(componentSource).toContain(
       'storefrontUi === "gamer" ? <ThemeToggle'
     );

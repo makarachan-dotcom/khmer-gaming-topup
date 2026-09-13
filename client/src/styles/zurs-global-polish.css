@@ -8,7 +8,7 @@ body:has(.zurs-dotted-shell) {
   -webkit-font-smoothing: antialiased;
 }
 body:has(.zurs-dotted-shell) .zp-page {
-  animation: zp-page-in 0.44s var(--z-ease) both;
+  animation: zp-page-in 0.18s var(--z-ease) both;
 }
 body:has(.zurs-dotted-shell) main {
   isolation: isolate;
@@ -70,11 +70,9 @@ body:has(.zurs-dotted-shell) :is(.bg-rose-50, .bg-amber-50, .bg-emerald-50) {
 @keyframes zp-page-in {
   from {
     opacity: 0;
-    transform: translateY(10px);
   }
   to {
     opacity: 1;
-    transform: none;
   }
 }
 
@@ -798,8 +796,8 @@ html[data-pkg-ui="roomy"] .package-choice .supplied-package-art {
       0 16px 40px rgba(8, 12, 28, 0.28),
       inset 0 1px 0 rgba(255, 255, 255, 0.78),
       inset 0 -1px 0 rgba(255, 255, 255, 0.16) !important;
-    -webkit-backdrop-filter: blur(36px) saturate(1.85) !important;
-    backdrop-filter: blur(36px) saturate(1.85) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(1.35) !important;
+    backdrop-filter: blur(16px) saturate(1.35) !important;
   }
   html[data-theme="dark"] .zurs-dotted-shell .zurs-mobile-tabbar,
   html[data-theme="dark"] .zurs-dotted-shell .zurs-mobile-tabbar.liquid-tabbar {
@@ -1002,6 +1000,25 @@ html[data-theme="dark"] .selected-product-action-bar {
   .zurs-banner-slide--pan {
     width: 100% !important;
     transform: none !important;
+  }
+}
+
+/* Fast paint: skip offscreen card work, cheaper glass on weak phones. */
+body:has(.zurs-dotted-shell) :is(.zurs-game-card, .package-choice) {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 11rem;
+}
+@media (prefers-reduced-transparency: reduce), (update: slow) {
+  .zurs-dotted-shell .zurs-mobile-tabbar,
+  .zurs-dotted-shell .zurs-mobile-tabbar.liquid-tabbar,
+  .zurs-compact-header {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .zurs-banner-slide--pan {
+    animation: none !important;
   }
 }
 

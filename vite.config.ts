@@ -176,6 +176,14 @@ export default defineConfig(({ mode }) => ({
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
     chunkSizeWarningLimit: 400,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules/lottie-web")) return "lottie";
+          return undefined;
+        },
+      },
+    },
   },
   server: {
     host: true,

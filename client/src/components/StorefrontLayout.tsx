@@ -12,7 +12,7 @@ import { animate } from "animejs";
 import { ArrowUp, ChevronRight, LogIn, LogOut, Moon, Sun, WalletCards } from "lucide-react";
 import { FontEmojiBrand } from "@/components/FontEmojiBrand";
 import { PackEmoji } from "@/components/PackEmoji";
-import { applyPackageUi, applyStorefrontUi, parsePackageUi, parseStorefrontUi, readStorefrontUi, type StorefrontUiSkin } from "@/lib/storefrontUi";
+import { applyPackageUi, applyStorefrontUi, dismissStorefrontBoot, parsePackageUi, parseStorefrontUi, readStorefrontUi, type StorefrontUiSkin } from "@/lib/storefrontUi";
 import { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { TAB_LONG_PRESS_MS, TAB_SCRUB_PX, tabIndexFromClientX, tabProgressFromClientX } from "@/lib/mobileTabOrder";
@@ -53,9 +53,14 @@ export function CatalogSwitch({ active }: { active: "games" | "digital" | null }
 }
 
 function StorefrontUiSync({ onUi }: { onUi: (ui: StorefrontUiSkin) => void }) {
-  const remote = trpc.content.storefrontUi.useQuery(undefined, { staleTime: 30_000, refetchOnWindowFocus: true });
+  const remote = trpc.content.storefrontUi.useQuery(undefined, { staleTime: 5 * 60_000, refetchOnWindowFocus: true });
   useEffect(() => {
     try {
+      const stored = localStorage.getItem("zurs-pkg");
+      if (stored) {
+        applyPackageUi(parsePackageUi(stored));
+        return;
+      }
       const m = document.cookie.match(/(?:^|; )zurs-pkg=([^;]*)/);
       if (m?.[1]) applyPackageUi(parsePackageUi(decodeURIComponent(m[1])));
     } catch {
@@ -197,6 +202,9 @@ function StorefrontShell({ children }: { children: ReactNode }) {
   const { selectedProduct, selectedPaymentMethodId } = useSelectedProduct();
   const { playerTitle } = useStorefrontHeader();
   const [storefrontUi, setStorefrontUi] = useState<StorefrontUiSkin>(() => readStorefrontUi());
+  useEffect(() => {
+    dismissStorefrontBoot();
+  }, []);
   const accountLabel = user?.displayName || user?.name || "គណនីខ្ញុំ";
   const isOwnerAdmin = user?.role === "admin" || user?.email?.trim().toLowerCase() === "chanmakara672@gmail.com";
   const googleSignInHref = `/api/auth/google?returnTo=${encodeURIComponent(location)}`;

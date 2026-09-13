@@ -7,6 +7,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { SelectedProductProvider } from "./contexts/SelectedProductContext";
 import { StorefrontHeaderProvider } from "./contexts/StorefrontHeaderContext";
+import { dismissStorefrontBoot } from "./lib/storefrontUi";
 import Home from "./pages/Home";
 const AdminMarketplaceSafety = lazy(() => import("@/pages/AdminMarketplaceSafety"));
 import Account from "./pages/Account";
@@ -85,6 +86,9 @@ function Router() {
 // - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
 
 function App() {
+  useEffect(() => {
+    dismissStorefrontBoot();
+  }, []);
   return (
     <ErrorBoundary>
       <ThemeProvider
