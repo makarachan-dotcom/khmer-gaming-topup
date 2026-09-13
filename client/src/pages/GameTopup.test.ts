@@ -349,8 +349,13 @@ describe("dedicated game top-up routes", () => {
     expect(source).toContain("package-choice-recommendation");
     expect(source).toContain("package-selection-summary");
     expect(source).toContain("<PackageClickAlert");
-    expect(source).toContain("setAccountCheckAlert(true)");
-    expect(source).toContain("សូមពិនិត្យឈ្មោះគណនីជាមុនសិន");
+    expect(source).toContain("packageHasClickAlert");
+    expect(source).toContain("setAccountCheckAlert(Boolean(item && packageHasClickAlert(item)))");
+    expect(source).toContain("accountVerified={identityVerified}");
+    expect(source).toContain("hidden={identityCollapsed}");
+    expect(source).not.toContain("setAccountCheckAlert(true)");
+    expect(source).not.toContain("hidden={fieldsReady}");
+    expect(source).not.toContain("សូមពិនិត្យឈ្មោះគណនីជាមុនសិន");
     expect(source).toContain("package-grid-skeleton");
     expect(source).toContain("<PackageGridSkeleton />");
     expect(source).toContain("refetchInterval: 15_000");

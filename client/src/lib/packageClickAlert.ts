@@ -49,13 +49,22 @@ function bundleClickNote(copy: string) {
   return "";
 }
 
-export function packageClickAlertCopy(item: AlertPackage) {
+/** Product-specific note only. Diamonds have none; weekly / elite / monthly do. */
+export function productPackageNote(item: AlertPackage) {
   const weeklyCount = weeklyPassStackCount(item);
-  const copy = packageCopy(item);
-  const note = weeklyCount > 0 ? weeklyPassClickNote(weeklyCount) : bundleClickNote(copy);
+  return weeklyCount > 0 ? weeklyPassClickNote(weeklyCount) : bundleClickNote(packageCopy(item));
+}
+
+export function packageHasClickAlert(item: AlertPackage) {
+  return Boolean(productPackageNote(item));
+}
+
+export function packageClickAlertCopy(item: AlertPackage, options: { accountVerified?: boolean } = {}) {
+  const note = productPackageNote(item);
+  const accountLine = note && !options.accountVerified ? packageAccountCheckNoticeKh : "";
   return {
     title: item.label,
     priceLabel: item.priceLabel,
-    body: [note, packageAccountCheckNoticeKh].filter(Boolean).join("\n\n"),
+    body: [note, accountLine].filter(Boolean).join("\n\n"),
   };
 }

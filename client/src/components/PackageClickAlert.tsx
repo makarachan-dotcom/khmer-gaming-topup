@@ -2,7 +2,7 @@ import { CircleAlert, Check } from "lucide-react";
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { khmerDiamondCopy } from "@/lib/khmerDiamondCopy";
-import { packageClickAlertCopy } from "@/lib/packageClickAlert";
+import { packageClickAlertCopy, packageHasClickAlert } from "@/lib/packageClickAlert";
 
 export const packageClickAlertAgreeKh = "យល់ព្រម";
 
@@ -13,8 +13,8 @@ type AlertPackage = {
   quantity?: number;
 };
 
-export function PackageClickAlert({ open, item, onClose }: { open: boolean; item: AlertPackage | null; onClose: () => void }) {
-  const copy = item ? packageClickAlertCopy(item) : null;
+export function PackageClickAlert({ open, item, onClose, accountVerified = false }: { open: boolean; item: AlertPackage | null; onClose: () => void; accountVerified?: boolean }) {
+  const copy = item && packageHasClickAlert(item) ? packageClickAlertCopy(item, { accountVerified }) : null;
 
   useEffect(() => {
     if (!open || !copy) return;
@@ -32,7 +32,7 @@ export function PackageClickAlert({ open, item, onClose }: { open: boolean; item
     };
   }, [copy, onClose, open]);
 
-  if (!open || !copy || typeof document === "undefined") return null;
+  if (!open || !copy || !copy.body || typeof document === "undefined") return null;
 
   return createPortal(
     <div className="refund-dialog package-click-alert" role="alertdialog" aria-modal="true" aria-labelledby="package-click-alert-title" aria-describedby="package-click-alert-body">
