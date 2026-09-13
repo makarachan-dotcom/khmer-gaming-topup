@@ -1217,8 +1217,14 @@ export async function fulfillTopupOrder(orderId: string): Promise<{ delivered: b
   const details = (order.details && typeof order.details === "object" ? order.details : {}) as Record<string, unknown>;
   // Admin test purchases and anything explicitly flagged never touch a provider.
   if (details.noProviderFulfillment === true || details.testPurchase === true) return { delivered: false, reason: "no_provider_fulfillment" };
-  // Idempotency: never submit the same order to the provider twice.
-  if (typeof details.providerOrderId === "string" && details.providerOrderId) return { delivered: true };
+  // Idempotency: never submit the same completed fulfilment twice. Roblox still
+  // needs the operator chat if a previous attempt created the FZR order without
+  // posting the login (the production bug: paid, marked submitted, no Robux).
+  const existingProviderOrderId = typeof details.providerOrderId === "string" ? details.providerOrderId : "";
+  const robloxNeedsChat = details.providerChatSent !== true && Boolean(typeof details.accountPassword === "string" && details.accountPassword) && (
+    /roblox|robux/i.test(order.productName) || /roblox|robux/i.test(String(details.gameProductId ?? ""))
+  );
+  if (existingProviderOrderId && !robloxNeedsChat) return { delivered: true };
   // Only fulfil orders whose payment is recognised.
   if (!["paid", "delivered"].includes(order.status)) return { delivered: false, reason: "not_paid" };
   const packageId = typeof details.packageId === "string" ? details.packageId : "";
@@ -1236,10 +1242,27 @@ export async function fulfillTopupOrder(orderId: string): Promise<{ delivered: b
   const categoryId = parsed[1]!;
   const offerId = parsed[2]!;
   const accountPassword = typeof details.accountPassword === "string" ? details.accountPassword : "";
-  const result = await submitFzrTopupOrder({ categoryId, offerId, playerId, serverId: zoneId || null, password: accountPassword || null });
+  const result = await submitFzrTopupOrder({
+    categoryId,
+    offerId,
+    playerId,
+    serverId: zoneId || null,
+    password: accountPassword || null,
+    idempotencyKey: `zurs-${orderId}`,
+    existingOrderId: existingProviderOrderId || null,
+  });
   if (result.status === "submitted") {
     const { accountPassword: _secret, ...safeDetails } = details;
-    await db.update(orders).set({ status: "delivered", details: { ...safeDetails, providerOrderId: result.providerOrderId, providerFulfillment: "submitted", providerFulfillmentAt: new Date().toISOString() } }).where(eq(orders.id, orderId));
+    await db.update(orders).set({
+      status: "delivered",
+      details: {
+        ...safeDetails,
+        providerOrderId: result.providerOrderId,
+        providerFulfillment: "submitted",
+        providerChatSent: true,
+        providerFulfillmentAt: new Date().toISOString(),
+      },
+    }).where(eq(orders.id, orderId));
     await appendOrderStatusEvent({ orderId, eventType: "provider_submitted", status: "delivered", actorType: "provider", providerReference: result.providerOrderId, messageKh: "កញ្ចប់ត្រូវបានបញ្ជូន និងដឹកជញ្ជូនទៅគណនីហ្គេមរបស់អ្នកដោយស្វ័យប្រវត្តិ។" });
     return { delivered: true };
   }
@@ -1272,7 +1295,7 @@ export async function updateOrderStatus(input: { orderId: string; status: OrderS
   // provider delivery as the KHQR worker path (idempotent; flags manual review
   // on failure). Manually setting "delivered" is a human override and is NOT
   // re-sent to the provider.
-  if (order.orderType === "topup" && input.status === "paid" && order.status !== "paid") { try { await fulfillTopupOrder(input.orderId); } catch { /* fulfillTopupOrder flags manual review on failure */ } }
+  if (order.orderType === "topup" && input.status === "paid" && ["paid", "awaiting_payment"].includes(order.status)) { try { await fulfillTopupOrder(input.orderId); } catch { /* fulfillTopupOrder flags manual review on failure */ } }
   if (order.status !== input.status) await appendOrderStatusEvent({ orderId: input.orderId, eventType: "status_changed", status: input.status, actorType: input.actorUserId ? "admin" : "system", messageKh: statusMessageKh(input.status) });
   return { success: true };
 }

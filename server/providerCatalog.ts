@@ -467,44 +467,97 @@ export async function fetchBuiltInProviderGames(): Promise<TelegramSnapshotGame[
 
 /**
  * Roblox fulfilment. manual_<serviceId>~<productId> is unpacked back into the two
- * ids the provider needs, and the buyer's Roblox username travels in `fields` so
- * the operator knows where to deliver.
+ * ids the provider needs. FazerCards operators fulfil Robux through the order
+ * CHAT (multipart `body`), not the undocumented fields map — posting only
+ * `{ manual_service_id, product_id }` left paid orders sitting with no login,
+ * which is why customers paid and never received Robux.
  */
-async function submitRobloxProviderOrder(input: { categoryId: string; offerId: string; username: string; password: string }): Promise<{ status: "submitted"; providerOrderId: string } | { status: "unavailable" } | { status: "error" }> {
-  const username = input.username.trim().replace(/^@+/, "");
+async function submitRobloxProviderOrder(input: { categoryId: string; offerId: string; username: string; password: string; idempotencyKey?: string | null; existingOrderId?: string | null }): Promise<{ status: "submitted"; providerOrderId: string } | { status: "unavailable" } | { status: "error" }> {
+  const username = input.username.trim().replace(/^@+/, "").replace(/\s+/g, "");
   const password = input.password.trim();
   // Roblox usernames are 3-20 characters of letters, digits and underscore.
   if (!/^[A-Za-z0-9_]{3,20}$/.test(username) || password.length < 4 || password.length > 200) return { status: "error" };
   const parsed = /^manual_([^~]+)~(.+)$/.exec(input.offerId);
   if (!parsed) return { status: "error" };
   try {
-    const response = await fzrRequest("/api/v2/manual-services/order", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        manual_service_id: parsed[1],
-        product_id: parsed[2],
-        fields: {
-          username,
-          roblox_username: username,
-          login: username,
-          password,
-          roblox_password: password,
-        },
-      }),
-    });
-    if (!response) return { status: "unavailable" };
-    const order = fzrTopupOrderSchema.safeParse(response);
-    if (!order.success) {
-      console.warn(`[roblox-order] ${input.categoryId}/${input.offerId}: unexpected response keys=${Object.keys((response ?? {}) as Record<string, unknown>).join(",")} raw=${JSON.stringify(response).slice(0, 400)}`);
-      return { status: "error" };
+    let providerOrderId = input.existingOrderId?.trim() || "";
+    if (!providerOrderId) {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (input.idempotencyKey) headers["Idempotency-Key"] = input.idempotencyKey.slice(0, 120);
+      const response = await fzrRequest("/api/v2/manual-services/order", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          manual_service_id: parsed[1],
+          product_id: parsed[2],
+          fields: {
+            username,
+            roblox_username: username,
+            login: username,
+            password,
+            roblox_password: password,
+          },
+        }),
+      });
+      if (!response) return { status: "unavailable" };
+      const order = fzrTopupOrderSchema.safeParse(response);
+      if (!order.success) {
+        console.warn(`[roblox-order] ${input.categoryId}/${input.offerId}: unexpected response keys=${Object.keys((response ?? {}) as Record<string, unknown>).join(",")}`);
+        return { status: "error" };
+      }
+      providerOrderId = order.data.order_id;
     }
-    return { status: "submitted", providerOrderId: order.data.order_id };
+    const chat = await sendRobloxOperatorChat(providerOrderId, username, password);
+    if (chat === "unavailable") return { status: "unavailable" };
+    if (chat === "error") return { status: "error" };
+    return { status: "submitted", providerOrderId };
   } catch (error) {
     const status = error instanceof FzrRequestError ? error.status : 0;
-    console.warn(`[roblox-order] ${input.categoryId}/${input.offerId}: request failed status=${status} ${(error as Error)?.message ?? String(error)}`);
+    console.warn(`[roblox-order] ${input.categoryId}/${input.offerId}: request failed status=${status}`);
     return status && status !== 429 && status < 500 ? { status: "error" } : { status: "unavailable" };
   }
+}
+
+/** Operator chat is how FazerCards actually receives the Roblox login. Never log the body. */
+async function sendRobloxOperatorChat(providerOrderId: string, username: string, password: string): Promise<"ok" | "unavailable" | "error"> {
+  const form = new FormData();
+  form.append("body", `Roblox username: ${username}\nRoblox password: ${password}`);
+  try {
+    const response = await fzrFormRequest(`/api/v2/manual-services/orders/${encodeURIComponent(providerOrderId)}/chat`, form);
+    if (!response) return "unavailable";
+    return "ok";
+  } catch (error) {
+    const status = error instanceof FzrRequestError ? error.status : 0;
+    if (status === 404) {
+      try {
+        const retry = await fzrFormRequest(`/api/v2/manual-services/order/${encodeURIComponent(providerOrderId)}/chat`, form);
+        if (!retry) return "unavailable";
+        return "ok";
+      } catch (retryError) {
+        const retryStatus = retryError instanceof FzrRequestError ? retryError.status : 0;
+        console.warn(`[roblox-order] chat fallback failed status=${retryStatus}`);
+        return retryStatus && retryStatus !== 429 && retryStatus < 500 ? "error" : "unavailable";
+      }
+    }
+    console.warn(`[roblox-order] chat failed status=${status}`);
+    return status && status !== 429 && status < 500 ? "error" : "unavailable";
+  }
+}
+
+async function fzrFormRequest(path: string, form: FormData) {
+  const baseUrl = process.env.FZR_CARDS_API_BASE_URL;
+  const apiKey = await resolveProviderCredential("fazercards", process.env.FZR_CARDS_API_KEY);
+  if (!baseUrl || !apiKey) return null;
+  const response = await fetch(`${baseUrl}${path}`, {
+    method: "POST",
+    headers: { "X-API-Key": apiKey },
+    body: form,
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!response.ok) throw new FzrRequestError(response.status);
+  const text = await response.text();
+  if (!text.trim()) return { ok: true };
+  try { return JSON.parse(text) as unknown; } catch { return { ok: true }; }
 }
 
 export function isWantedProviderProduct(text: string) {
@@ -1596,7 +1649,7 @@ const fzrTopupOrderSchema = z.preprocess(coerceFzrOrderPayload, z.object({
   status: z.union([z.string(), z.number()]).transform(String).optional(),
 }));
 
-export async function submitFzrTopupOrder(input: { categoryId: string; offerId: string; playerId: string; serverId: string | null; password?: string | null }): Promise<{ status: "submitted"; providerOrderId: string } | { status: "unavailable" } | { status: "error" }> {
+export async function submitFzrTopupOrder(input: { categoryId: string; offerId: string; playerId: string; serverId: string | null; password?: string | null; idempotencyKey?: string | null; existingOrderId?: string | null }): Promise<{ status: "submitted"; providerOrderId: string } | { status: "unavailable" } | { status: "error" }> {
   try {
     if (!input.categoryId.trim() || !input.offerId.trim() || !input.playerId.trim()) return { status: "error" };
     // Telegram Stars / Premium are NOT sold through /topups/order. FazerCards
@@ -1605,10 +1658,19 @@ export async function submitFzrTopupOrder(input: { categoryId: string; offerId: 
     // is rejected, which would mean a PAID order is never delivered.
     const builtInCategoryId = input.categoryId.trim().toLowerCase();
     if (isTelegramServiceGameId(builtInCategoryId)) return await submitTelegramProviderOrder({ categoryId: builtInCategoryId, offerId: input.offerId.trim(), username: input.playerId });
-    // Robux is fulfilled by an operator through /manual-services/order, so it must
-    // NOT be posted to /topups/order either. The operator logs in with username
-    // and password from the storefront form.
-    if (builtInCategoryId === robloxRobuxGameId) return await submitRobloxProviderOrder({ categoryId: builtInCategoryId, offerId: input.offerId.trim(), username: input.playerId, password: input.password ?? "" });
+    // Robux is fulfilled by an operator through /manual-services/order + chat, so
+    // it must NOT be posted to /topups/order. The operator logs in with username
+    // and password from the storefront form, delivered via the order chat thread.
+    if (builtInCategoryId === robloxRobuxGameId || /^manual_/.test(input.offerId.trim()) || /roblox|robux/i.test(builtInCategoryId)) {
+      return await submitRobloxProviderOrder({
+        categoryId: builtInCategoryId,
+        offerId: input.offerId.trim(),
+        username: input.playerId,
+        password: input.password ?? "",
+        idempotencyKey: input.idempotencyKey,
+        existingOrderId: input.existingOrderId,
+      });
+    }
     const fields: Record<string, string> = { player_id: input.playerId.trim() };
     if (input.serverId && input.serverId.trim()) fields.server_id = input.serverId.trim();
     const body: Record<string, unknown> = { category_id: input.categoryId.trim(), offer_id: input.offerId.trim(), fields };
