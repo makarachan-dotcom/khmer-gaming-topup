@@ -136,7 +136,7 @@ describe("dedicated game top-up routes", () => {
     const source = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
     expect(source).toContain("function SafePackageArt");
     expect(source).toContain("isMissingStaticArtwork");
-    expect(source).toContain("suppliedProductArtworkForPackage(gameId, item.amountLabel, item.label)");
+    expect(source).toContain("suppliedProductArtworkForPackage(gameId, artAmount, artLabel)");
     expect(source).toContain("officialPackageArtFor");
   });
 
@@ -329,10 +329,22 @@ describe("dedicated game top-up routes", () => {
     expect(source).toContain("package-choice--recommended");
     expect(source).toContain("package-choice-recommendation");
     expect(source).toContain("package-selection-summary");
+    expect(source).toContain("<PackageClickAlert");
+    expect(source).toContain("setAccountCheckAlert(true)");
+    expect(source).toContain("សូមពិនិត្យឈ្មោះគណនីជាមុនសិន");
     expect(source).toContain("package-grid-skeleton");
     expect(source).toContain("<PackageGridSkeleton />");
     expect(source).toContain("refetchInterval: 15_000");
     expect(source).toContain("subscribeToPackagePricingChanges");
+  });
+
+  it("sends stacked weekly quantity through checkout instead of hardcoding 1", () => {
+    const checkout = readFileSync(join(process.cwd(), "client/src/pages/Checkout.tsx"), "utf8");
+    const gate = readFileSync(join(process.cwd(), "client/src/components/PaymentMethodGate.tsx"), "utf8");
+    expect(checkout).toContain("quantity: checkoutPackageQuantity(product.quantity)");
+    expect(checkout).not.toContain("quantity: 1 });");
+    expect(gate).toContain("quantity: checkoutPackageQuantity(product.quantity)");
+    expect(gate).not.toContain("quantity: 1 });");
   });
 
   it("always prefers the freshest auto-refreshing package source so admin prices win", () => {

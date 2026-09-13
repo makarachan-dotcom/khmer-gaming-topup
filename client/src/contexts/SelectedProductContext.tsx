@@ -13,6 +13,7 @@ export type SelectedProduct = {
   playerName?: string;
   requiresVerifiedPlayerName?: boolean;
   kind?: "game" | "partner";
+  quantity?: number;
   partnerSlug?: string;
   deliveryType?: string;
   durationDays?: number | null;
@@ -59,7 +60,9 @@ const SelectedProductContext = createContext<SelectedProductContextValue | null>
 function isSelectedProduct(value: unknown): value is SelectedProduct {
   if (!value || typeof value !== "object") return false;
   const product = value as Record<string, unknown>;
-  return ["id", "label", "amountLabel", "priceLabel", "gameName"].every((key) => typeof product[key] === "string");
+  if (!["id", "label", "amountLabel", "priceLabel", "gameName"].every((key) => typeof product[key] === "string")) return false;
+  if (product.quantity !== undefined && (typeof product.quantity !== "number" || !Number.isInteger(product.quantity) || product.quantity < 1 || product.quantity > 9)) return false;
+  return true;
 }
 
 function readPersistedCheckoutContext(): PersistedCheckoutContext {

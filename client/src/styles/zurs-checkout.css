@@ -269,6 +269,8 @@ body.refund-dialog-open .zurs-mobile-tabbar {
 }
 .refund-dialog__decline { border: 1px solid rgba(148, 163, 184, 0.28); background: transparent; color: #c8d0ec; }
 .refund-dialog__agree { background: #c99712; color: #1a1403; }
+.package-click-alert__body { white-space: pre-line; }
+.package-click-alert__actions { grid-template-columns: 1fr; }
 .refund-dialog__decline:hover,
 .refund-dialog__agree:hover { transform: translateY(-1px); filter: brightness(1.06); }
 

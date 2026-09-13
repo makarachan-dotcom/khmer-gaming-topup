@@ -101,7 +101,7 @@ describe("Roblox fulfilment wiring", () => {
     const db = readFileSync(resolve(process.cwd(), "server/db.ts"), "utf8");
     const catalog = readFileSync(resolve(process.cwd(), "server/providerCatalog.ts"), "utf8");
     expect(db).toContain("providerChatSent");
-    expect(db).toContain('idempotencyKey: `zurs-${orderId}`');
+    expect(db).toContain("fzrIdempotencyKey(orderId, i, quantity)");
     expect(db).toContain("robloxNeedsChat");
     const robloxFn = catalog.slice(catalog.indexOf("async function submitRobloxProviderOrder"), catalog.indexOf("export function isWantedProviderProduct"));
     expect(robloxFn).toContain("sendRobloxOperatorChat");

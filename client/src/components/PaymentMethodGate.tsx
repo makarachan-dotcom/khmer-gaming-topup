@@ -4,6 +4,7 @@ import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { PaymentMethodIcon } from "@/components/PaymentMethodIcon";
 import { SelectedProduct, useSelectedProduct } from "@/contexts/SelectedProductContext";
+import { checkoutPackageQuantity } from "@/lib/stackableWeeklyPackages";
 
 type PaymentMethod = {
   id: string;
@@ -98,7 +99,7 @@ export function PaymentMethodGate({ product, open, onOpenChange }: { product: Se
     }
     try {
       setCheckoutError(null);
-      const order = await createTopup.mutateAsync({ packageId: product.id, playerId: product.playerId, zoneId: product.zoneId || undefined, accountPassword: product.accountPassword || undefined, quantity: 1 });
+      const order = await createTopup.mutateAsync({ packageId: product.id, playerId: product.playerId, zoneId: product.zoneId || undefined, accountPassword: product.accountPassword || undefined, quantity: checkoutPackageQuantity(product.quantity) });
       const session = await beginPayment.mutateAsync({ orderId: order.id });
       clearSelectedProduct();
       close();
@@ -135,6 +136,7 @@ function PaymentSummary({ product, method }: { product: SelectedProduct; method:
   return <div className="payment-method-gate__review">
     <div className="payment-method-gate__review-card"><span className="grid h-10 w-10 place-items-center rounded-xl bg-cyan-50 text-cyan-700"><CreditCard className="h-5 w-5" /></span><div><p className="text-xs font-extrabold text-slate-950">{product.gameName}</p><p className="mt-0.5 text-[11px] text-slate-600">{product.label}</p></div><strong>{product.priceLabel}</strong></div>
     <div className="payment-method-gate__review-line"><span>កញ្ចប់</span><strong>{product.amountLabel}</strong></div>
+    {checkoutPackageQuantity(product.quantity) > 1 ? <div className="payment-method-gate__review-line"><span>បរិមាណ</span><strong>{String(checkoutPackageQuantity(product.quantity))}</strong></div> : null}
     <div className="payment-method-gate__review-line"><span>វិធីបង់ប្រាក់</span><strong>{method.name}</strong></div>
   </div>;
 }

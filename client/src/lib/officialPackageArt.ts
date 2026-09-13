@@ -55,6 +55,7 @@ export function officialPackageArtFor(gameId: string, gameName: string, label: s
   if (/twilight/.test(text)) return art.mlbbTwilight;
   if (/weekly\s*lite/.test(text)) return art.ffWeekly;
   if (/weekly/.test(text) && /pass|membership|card/.test(text)) return isMlbb ? art.mlbbWeekly : art.ffWeekly;
+  if (/\bweekly\b/.test(text) && !/\b(?:twilight|elite|epic|bundle|starlight|monthly|lite)\b/.test(text)) return isMlbb ? art.mlbbWeekly : art.ffWeekly;
   if (/monthly|vip\s*pass|elite\s*pass|season\s*pass|premium\s*pass/.test(text)) return art.ffMonthly;
   if (/\b(?:crate|lucky\s*bag|chest|bundle|event pack|promo)\b/.test(text) && !/\bdiamonds?\b/.test(text)) return art.specialCrate;
   if (isPubg) return art.pubgUc;

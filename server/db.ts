@@ -20,6 +20,7 @@ import { applyShopPriceLadder, shopLadderUnitPrice } from "@shared/packagePriceL
 import { parsePackageUi, parseStorefrontUi, type StorefrontUiSkin } from "@shared/storefrontUi";
 import type { FzrProviderSyncSnapshot, SmmProviderCatalogResponse } from "./providerCatalog";
 import { submitSmmProviderOrder, submitFzrTopupOrder } from "./providerCatalog";
+import { fzrIdempotencyKey, readSubmittedProviderOrderIds, topupOrderQuantity } from "./topupFulfillment";
 import { publicPartnerDelivery } from "../shared/partnerDelivery";
 import { publicCdkStatus, redactCdkSecret } from "../shared/cdkToken";
 
@@ -587,7 +588,8 @@ export async function createTopupOrder(input: { userId: number; packageId: strin
   const subtotal = ((unitMinor * input.quantity) / 100).toFixed(2);
   assertOrderAmountIntegrity({ amount: subtotal, currency: "USD" });
   const id = nanoid(); const orderNumber = buildOrderNumber(); const trackingCode = buildTrackingCode();
-  await db.insert(orders).values({ id, orderNumber, trackingCode, userId: input.userId, orderType: "topup", status: "pending", subtotal, productName: `${item.game.titleEn} • ${item.package.amountLabel} ${item.game.currencyLabel}`, details: { packageId: item.package.id, gameProductId: item.game.id, playerId: input.playerId.trim(), zoneId: input.zoneId?.trim() ?? null, accountPassword: input.accountPassword?.trim() || null, quantity: input.quantity } });
+  const amountLabel = input.quantity > 1 ? `${item.package.amountLabel} ×${input.quantity}` : item.package.amountLabel;
+  await db.insert(orders).values({ id, orderNumber, trackingCode, userId: input.userId, orderType: "topup", status: "pending", subtotal, productName: `${item.game.titleEn} • ${amountLabel} ${item.game.currencyLabel}`, details: { packageId: item.package.id, gameProductId: item.game.id, playerId: input.playerId.trim(), zoneId: input.zoneId?.trim() ?? null, accountPassword: input.accountPassword?.trim() || null, quantity: input.quantity } });
   await appendOrderStatusEvent({ orderId: id, eventType: "order_created", status: "pending", actorType: "customer", messageKh: statusMessageKh("pending") });
   return { id, orderNumber, trackingCode, amount: subtotal, status: "pending" as const };
 }
@@ -1217,6 +1219,8 @@ export async function fulfillTopupOrder(orderId: string): Promise<{ delivered: b
   const details = (order.details && typeof order.details === "object" ? order.details : {}) as Record<string, unknown>;
   // Admin test purchases and anything explicitly flagged never touch a provider.
   if (details.noProviderFulfillment === true || details.testPurchase === true) return { delivered: false, reason: "no_provider_fulfillment" };
+  const quantity = topupOrderQuantity(details);
+  const submittedIds = readSubmittedProviderOrderIds(details);
   // Idempotency: never submit the same completed fulfilment twice. Roblox still
   // needs the operator chat if a previous attempt created the FZR order without
   // posting the login (the production bug: paid, marked submitted, no Robux).
@@ -1224,14 +1228,14 @@ export async function fulfillTopupOrder(orderId: string): Promise<{ delivered: b
   const robloxNeedsChat = details.providerChatSent !== true && Boolean(typeof details.accountPassword === "string" && details.accountPassword) && (
     /roblox|robux/i.test(order.productName) || /roblox|robux/i.test(String(details.gameProductId ?? ""))
   );
-  if (existingProviderOrderId && !robloxNeedsChat) return { delivered: true };
+  if (submittedIds.length >= quantity && !robloxNeedsChat) return { delivered: true };
   // Only fulfil orders whose payment is recognised.
   if (!["paid", "delivered"].includes(order.status)) return { delivered: false, reason: "not_paid" };
   const packageId = typeof details.packageId === "string" ? details.packageId : "";
   const playerId = typeof details.playerId === "string" ? details.playerId.trim() : "";
   const zoneId = typeof details.zoneId === "string" ? details.zoneId.trim() : "";
-  const flagManualReview = async (reason: string) => {
-    await db.update(orders).set({ details: { ...details, providerFulfillment: "failed", providerFulfillmentReason: reason, providerFulfillmentAt: new Date().toISOString() } }).where(eq(orders.id, orderId));
+  const flagManualReview = async (reason: string, extra: Record<string, unknown> = {}) => {
+    await db.update(orders).set({ details: { ...details, ...extra, providerFulfillment: "failed", providerFulfillmentReason: reason, providerFulfillmentAt: new Date().toISOString() } }).where(eq(orders.id, orderId));
     await appendOrderStatusEvent({ orderId, eventType: "provider_fulfillment_failed", status: order.status as OrderStatus, actorType: "system", messageKh: topupManualReviewMessageKh });
   };
   if (!packageId || !playerId) { await flagManualReview("missing_order_details"); return { delivered: false, reason: "missing_order_details" }; }
@@ -1242,32 +1246,39 @@ export async function fulfillTopupOrder(orderId: string): Promise<{ delivered: b
   const categoryId = parsed[1]!;
   const offerId = parsed[2]!;
   const accountPassword = typeof details.accountPassword === "string" ? details.accountPassword : "";
-  const result = await submitFzrTopupOrder({
-    categoryId,
-    offerId,
-    playerId,
-    serverId: zoneId || null,
-    password: accountPassword || null,
-    idempotencyKey: `zurs-${orderId}`,
-    existingOrderId: existingProviderOrderId || null,
-  });
-  if (result.status === "submitted") {
-    const { accountPassword: _secret, ...safeDetails } = details;
-    await db.update(orders).set({
-      status: "delivered",
-      details: {
-        ...safeDetails,
-        providerOrderId: result.providerOrderId,
-        providerFulfillment: "submitted",
-        providerChatSent: true,
-        providerFulfillmentAt: new Date().toISOString(),
-      },
-    }).where(eq(orders.id, orderId));
-    await appendOrderStatusEvent({ orderId, eventType: "provider_submitted", status: "delivered", actorType: "provider", providerReference: result.providerOrderId, messageKh: "កញ្ចប់ត្រូវបានបញ្ជូន និងដឹកជញ្ជូនទៅគណនីហ្គេមរបស់អ្នកដោយស្វ័យប្រវត្តិ។" });
-    return { delivered: true };
+  const start = submittedIds.length >= quantity && robloxNeedsChat ? Math.max(0, quantity - 1) : submittedIds.length;
+  for (let i = start; i < quantity; i++) {
+    const result = await submitFzrTopupOrder({
+      categoryId,
+      offerId,
+      playerId,
+      serverId: zoneId || null,
+      password: accountPassword || null,
+      idempotencyKey: fzrIdempotencyKey(orderId, i, quantity),
+      existingOrderId: quantity <= 1 ? (existingProviderOrderId || null) : (submittedIds[i] ?? null),
+    });
+    if (result.status !== "submitted") {
+      await flagManualReview(result.status, { providerOrderIds: submittedIds, providerOrderId: submittedIds[submittedIds.length - 1] ?? (existingProviderOrderId || undefined) });
+      return { delivered: false, reason: result.status };
+    }
+    if (i < submittedIds.length) submittedIds[i] = result.providerOrderId;
+    else submittedIds.push(result.providerOrderId);
   }
-  await flagManualReview(result.status);
-  return { delivered: false, reason: result.status };
+  const { accountPassword: _secret, ...safeDetails } = details;
+  await db.update(orders).set({
+    status: "delivered",
+    details: {
+      ...safeDetails,
+      providerOrderId: submittedIds[submittedIds.length - 1],
+      providerOrderIds: submittedIds,
+      providerFulfillment: "submitted",
+      providerChatSent: true,
+      providerFulfillmentAt: new Date().toISOString(),
+      providerFulfillmentCount: submittedIds.length,
+    },
+  }).where(eq(orders.id, orderId));
+  await appendOrderStatusEvent({ orderId, eventType: "provider_submitted", status: "delivered", actorType: "provider", providerReference: submittedIds.join(","), messageKh: quantity > 1 ? `កញ្ចប់ត្រូវបានបញ្ជូន ${quantity} ដង និងដឹកជញ្ជូនទៅគណនីហ្គេមរបស់អ្នកដោយស្វ័យប្រវត្តិ។` : "កញ្ចប់ត្រូវបានបញ្ជូន និងដឹកជញ្ជូនទៅគណនីហ្គេមរបស់អ្នកដោយស្វ័យប្រវត្តិ។" });
+  return { delivered: true };
 }
 
 export async function updateOrderStatus(input: { orderId: string; status: OrderStatus; actorUserId?: number }) {
