@@ -412,7 +412,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
               <span className="storefront-header-title__default" aria-label="ZURS.me">
                 <FontEmojiBrand text="ZURS.me" size={13} className="font-emoji-brand--header" />
               </span>
-              {playerTitle ? <span className="storefront-header-title__player" title={playerTitle}>{playerTitle}</span> : <span className="storefront-header-title__player sr-only">ZURS.me</span>}
+              <span className="storefront-header-title__player" title={playerTitle || undefined}>{playerTitle || "ZURS.me"}</span>
             </div>
           </Link>
           <CatalogSwitch active={location === "/topup" || location.startsWith("/topup?") ? "digital" : location === "/" || location.startsWith("/topup/") ? "games" : null} />
@@ -454,27 +454,27 @@ function StorefrontShell({ children }: { children: ReactNode }) {
             <div className="flex min-w-0 items-start gap-3.5">
               <img src={logoUrl} alt="ZURS STORE logo" className="h-10 w-10 shrink-0 rounded-full object-cover ring-1 ring-line" />
               <div className="min-w-0">
-                <p className="flex items-center gap-1.5 font-display text-sm font-extrabold text-ink"><PackEmoji name="diamond-blue" size={16} />ZURS STORE</p>
-                <p className="khmer-body mt-1 max-w-md text-sm leading-7 text-ink-muted">សេវាកម្មហ្គេម និងឌីជីថល សម្រាប់អ្នកលេងកម្ពុជា។ ទូទាត់តាម KHQR ផ្លូវការ។</p>
+                <p className="flex items-center gap-1.5 font-display text-sm font-extrabold tracking-wide text-ink"><PackEmoji name="diamond-blue" size={16} />ZURS STORE</p>
+                <p className="khmer-body mt-1 max-w-md text-xs leading-5 text-ink-muted">សេវាកម្មហ្គេម និងឌីជីថល សម្រាប់អ្នកលេងកម្ពុជា។ ទូទាត់តាម KHQR ផ្លូវការ។</p>
               </div>
             </div>
-            <nav aria-label="តំណភ្ជាប់ផ្នែកចុងទំព័រ" className="zurs-footer-nav mt-4 flex flex-col items-start gap-2 text-sm font-semibold sm:mt-0">
-              <Link href="/privacy" onClick={() => window.scrollTo({ top: 0, behavior: "auto" })} className="zurs-footer-link">គោលការណ៍ឯកជនភាព</Link>
-              <Link href="/terms" onClick={() => window.scrollTo({ top: 0, behavior: "auto" })} className="zurs-footer-link">លក្ខខណ្ឌប្រើប្រាស់</Link>
-              <p className="flex items-center gap-2 text-sm font-semibold text-ink-muted"><PackEmoji name="shield-check" size={18} /><span className="khmer-tight">សេវាកម្មរហ័ស និងមានទំនុកចិត្ត</span></p>
+            <p className="mt-3 flex items-center justify-center gap-2 text-center text-xs font-semibold text-ink-muted">
+              <PackEmoji name="shield-check" size={18} /><span className="khmer-tight">សេវាកម្មរហ័ស និងមានទំនុកចិត្ត</span>
+            </p>
+            <nav aria-label="Footer links" className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs font-semibold">
+              <Link href="/privacy" onClick={() => window.scrollTo({ top: 0, behavior: "auto" })} className="zurs-footer-link">Privacy Policy</Link>
+              <Link href="/terms" onClick={() => window.scrollTo({ top: 0, behavior: "auto" })} className="zurs-footer-link">Terms of Service</Link>
             </nav>
-            <div className="zurs-footer-meta mt-4 sm:mt-0">
             <a href="https://www.facebook.com/share/19QooXtndH/?mibextid=wwXIfr" target="_blank" rel="noreferrer" aria-label="បើកទំព័រ Facebook របស់ ZURS"
-              className="group flex h-10 w-fit items-center gap-2 rounded-full border border-line bg-panel-2 py-1 pl-1 pr-4 text-xs font-semibold text-ink transition hover:border-neon/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon">
+              className="group mx-auto mt-3 flex h-10 w-fit items-center gap-2 rounded-full border border-line bg-panel-2 py-1 pl-1 pr-4 text-xs font-semibold text-ink transition hover:border-neon/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon">
               <span className="grid h-8 w-8 place-items-center rounded-full bg-[#1877F2] text-white" aria-hidden="true">
                 <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current"><path d="M13.5 21v-8h2.75l.41-3H13.5V8.08c0-.87.24-1.46 1.5-1.46h1.79V3.94c-.31-.04-1.37-.13-2.61-.13-2.58 0-4.35 1.57-4.35 4.46V10H7v3h2.83v8h3.67Z" /></svg>
               </span>
               <span>Facebook</span>
             </a>
-            <div className="mt-4 border-t border-line pt-3">
-              <p className="khmer-tight text-[13px] font-medium text-ink-muted">រក្សាសិទ្ធិគ្រប់យ៉ាងដោយ zurs.me</p>
-              <p className="khmer-tight mt-1 text-[12px] font-medium text-ink-muted">បង្កើតឡើងដោយ CHAN MEKARA</p>
-            </div>
+            <div className="mt-4 border-t border-white/12 pt-3 text-center">
+              <p className="khmer-tight text-xs font-medium text-ink-muted">រក្សាសិទ្ធិគ្រប់យ៉ាងដោយ zurs.me</p>
+              <p className="khmer-tight mt-1 text-xs font-medium text-ink-muted/70">បង្កើតឡើងដោយ CHAN MEKARA</p>
             </div>
           </div>
         </div>
@@ -506,7 +506,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
             const shownHref = previewHref ?? activeMobileTabHref;
             const active = shownHref === href;
             const tabKind = href === "/" ? "home" : "account";
-            const classes = cn(`zurs-mobile-tab zurs-mobile-tab--${tabKind} relative z-10 flex h-full min-h-12 min-w-0 items-center justify-center gap-1.5 rounded-full px-2 py-1 text-xs font-bold`, href === "/topup" && "zurs-mobile-tab--store", active ? "zurs-mobile-tab--active" : "hover:text-ink");
+            const classes = cn(`zurs-mobile-tab zurs-mobile-tab--${tabKind} relative z-10 flex min-w-0 items-center justify-center gap-1.5 rounded-full px-2 py-1 text-xs font-bold`, href === "/topup" && "zurs-mobile-tab--store", active ? "zurs-mobile-tab--active" : "hover:text-ink");
             return (
               <Link key={href} href={href} draggable={false} aria-current={active ? "page" : undefined} className={classes} onClick={onTabClick}>
                 <span className="zurs-tab-glyph" aria-hidden="true">

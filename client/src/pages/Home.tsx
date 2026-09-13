@@ -42,19 +42,6 @@ export default function Home() {
     </StorefrontLayout>
   );
 }
-function AcceptPaymentBadge({ id, className = "" }: { id: string; className?: string }) {
-  return (
-    <div className={`zurs-pay-badge ${className}`} aria-labelledby={id}>
-      <p id={id} className="latin-label">ACCEPT PAYMENT</p>
-      <span className="zurs-pay-badge__row">
-        <span className="zurs-pay-badge__mark">
-          <img src={khqrLogoUrl} alt="KHQR" className="zurs-pay-badge__logo" width={72} height={24} loading="eager" decoding="async" />
-        </span>
-        <span className="zurs-pay-badge__mark zurs-pay-badge__bakong">Bakong</span>
-      </span>
-    </div>
-  );
-}
 function HomeStickers() {
   const reduce = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   return (
@@ -64,12 +51,12 @@ function HomeStickers() {
     </div>
   );
 }
-function SectionHeading({ eyebrow, title, description, aside, heading: Heading = "h2" }: { eyebrow: string; title: string; description?: string; aside?: React.ReactNode; heading?: "h1" | "h2" }) {
+function SectionHeading({ eyebrow, title, description, aside }: { eyebrow: string; title: string; description?: string; aside?: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-3">
       <div className="min-w-0 flex-1 max-w-2xl">
-        <p className="latin-label zurs-eyebrow">{eyebrow}</p>
-        <Heading className="zp-heading mt-1.5 font-display font-bold leading-tight text-ink text-balance">{title}</Heading>
+        <p className="zurs-eyebrow font-bold uppercase">{eyebrow}</p>
+        <h2 className="zp-heading mt-1.5 font-display text-xl font-bold leading-tight text-ink text-balance sm:text-2xl">{title}</h2>
         {description ? <p className="mt-2 hidden text-sm leading-6 text-ink-muted text-pretty sm:block">{description}</p> : null}
       </div>
       {aside}
@@ -96,10 +83,6 @@ function HomeBanner() {
           sizes="100vw"
         />
       </div>
-      <div className="mt-4 flex flex-wrap gap-2">
-        <a href="#topup-games" className="zbtn zbtn--primary inline-flex h-11 items-center px-4 text-sm font-bold">បញ្ចូលពេជ្យ ឥឡូវនេះ</a>
-        <Link href="/topup" className="zbtn zbtn--secondary inline-flex h-11 items-center px-4 text-sm font-bold">សេវាឌីជីថល</Link>
-      </div>
     </section>
   );
 }
@@ -124,7 +107,7 @@ function HomepageMedia() {
                   ) : (
                     <img className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]" src={media} alt={item.titleKh ?? "ZURS STORE media"} loading="lazy" decoding="async" sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 33vw" />
                   )}
-                  <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-canvas/80 px-2 py-1 latin-label text-ink backdrop-blur">
+                  <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-canvas/80 px-2 py-1 text-xs font-bold text-ink backdrop-blur">
                     {video ? <><Video className="h-3 w-3" />VIDEO</> : <><ImageIcon className="h-3 w-3" />PROMO</>}
                   </span>
                 </div>
@@ -176,20 +159,18 @@ function HomeGameCard({ game, displayName, imageOverrides }: { game: CatalogGame
         href={gameTopupPath(game.id)}
         className={`zurs-mobile-glass group block rounded-2xl zurs-game-card h-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon ${popular ? "zurs-game-card--popular" : ""}`}
       >
-        <div className="zurs-game-card-media relative aspect-square overflow-hidden rounded-[14px]" style={{ "--game-accent": originalArtwork?.accent ?? "#38bdf8" } as React.CSSProperties}>
+        <div className="zurs-game-card-media relative aspect-[16/10] overflow-hidden rounded-xl" style={{ "--game-accent": originalArtwork?.accent ?? "#38bdf8" } as React.CSSProperties}>
           {originalArtwork ? (
-            <img src={originalArtwork.src} alt="" className="zurs-game-card-art" style={{ objectPosition: originalArtwork.position ?? "center" }} loading={visible ? "eager" : "lazy"} fetchPriority={popular && visible ? "high" : "auto"} decoding="async" sizes="(max-width: 639px) 50vw, (max-width: 1023px) 25vw, 16vw" />
-          ) : logoUrl ? (
-            <img src={logoUrl} alt="" className="zurs-game-card-art zurs-game-card-art--logo" loading={visible ? "eager" : "lazy"} decoding="async" />
+            <img src={originalArtwork.src} alt="" className="zurs-game-card-art" style={{ objectPosition: originalArtwork.position ?? "center" }} loading={visible ? "eager" : "lazy"} fetchPriority={popular && visible ? "high" : "auto"} decoding="async" sizes="(max-width: 639px) 50vw, (max-width: 1023px) 33vw, 25vw" />
           ) : (
-            <span className="zurs-game-card-fallback h-11 w-11 rounded-xl" aria-hidden="true">{gameLabel.trim().charAt(0).toUpperCase()}</span>
+            <ProviderGameArtwork name={game.name} region={game.region} logoUrl={logoUrl} className="h-11 w-11 rounded-xl" showCountryFlag={false} />
           )}
           <span className="zurs-game-card-overlay" aria-hidden="true" />
           {popular ? <span className="zurs-game-card-popular"><PackEmoji name="fire" size={13} />ពេញនិយម</span> : null}
         </div>
         <span className="block min-w-0 px-1 pb-1 pt-2.5">
           <OverflowMarquee text={gameLabel} className="block text-sm font-bold leading-5 text-ink" />
-          <ProviderGameRegion name={game.name} region={game.region} className="zurs-game-card-meta mt-0.5 text-xs text-ink-muted" showFlag={false} />
+          <ProviderGameRegion name={game.name} region={game.region} className="mt-0.5 text-xs text-ink-muted" showFlag={false} />
         </span>
       </Link>
     </div>
@@ -249,58 +230,48 @@ function HomeTopupExperience() {
     <section id="topup-games" className="container mt-5 pb-3 sm:mt-8 sm:pb-4">
       <LoadingOverlay open={gamesQuery.isLoading && !gamesQuery.data} label="កំពុងរៀបចំបញ្ជីហ្គេម…" />
       <SectionHeading
-        heading="h1"
         eyebrow="GAME TOP-UP"
         title="ជ្រើសរើសហ្គេមរបស់អ្នក"
         description="ស្វែងរកតាមឈ្មោះហ្គេម ដើម្បីចូលទៅកាន់ទំព័រ Top-up។"
         aside={
           <div className="flex shrink-0 items-center gap-2">
             <HomeStickers />
-            <AcceptPaymentBadge id="accept-payment-title" className="hidden sm:flex" />
+            <div className="hidden items-center gap-3 rounded-2xl border border-line bg-panel px-4 py-2.5 sm:flex" aria-labelledby="accept-payment-title">
+              <p id="accept-payment-title" className="text-xs font-bold tracking-[0.14em] text-ink-muted">ACCEPT PAYMENT</p>
+              <span className="rounded-lg bg-ink p-1.5"><img src={khqrLogoUrl} alt="KHQR" className="h-6 w-auto max-w-24 object-contain" loading="eager" decoding="async" /></span>
+            </div>
           </div>
         }
       />
-      <AcceptPaymentBadge id="accept-payment-mobile" className="mt-3 sm:hidden" />
-      {gamesQuery.isLoading && !gamesQuery.data ? (
-        <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6" aria-hidden="true">
-          {Array.from({ length: 8 }).map((_, index) => (
-            <span key={index} className="zurs-game-skel block overflow-hidden rounded-2xl border border-line bg-panel">
-              <span className="block aspect-square bg-panel-2" />
-              <span className="block h-10 px-2 py-2"><span className="block h-3 w-3/4 rounded bg-panel-2" /></span>
-            </span>
-          ))}
-        </div>
-      ) : gamesQuery.isLoading ? (
+      {gamesQuery.isLoading ? (
         <div className="mt-5 grid min-h-36 place-items-center rounded-2xl border border-line bg-panel text-xs text-ink-muted">
           <OutlineLoader size={30} color="#c99712" />
           <span className="mt-2">កំពុងរៀបចំបញ្ជីហ្គេម…</span>
         </div>
       ) : games.length ? (
         <>
-          <div className="zurs-desktop-toolbar zurs-search-sticky mt-5">
-            <label className="block zurs-desktop-toolbar__search">
-              <span className="mb-1.5 block text-sm font-semibold text-ink">ស្វែងរកហ្គេម</span>
-              <span className="relative block">
+          <div className="zurs-desktop-toolbar mt-5">
+            <label className="relative block zurs-desktop-toolbar__search">
+              <span className="sr-only">ស្វែងរកហ្គេម</span>
               <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" aria-hidden="true" />
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="ស្វែងរកហ្គេម…"
-                className="zurs-mobile-glass h-11 w-full min-h-11 zurs-search-field rounded-xl py-2 pl-10 pr-10 text-sm text-ink outline-none placeholder:text-ink-muted focus-visible:ring-2 focus-visible:ring-neon"
+                className="zurs-mobile-glass h-11 w-full zurs-search-field rounded-xl py-2 pl-10 pr-10 text-sm text-ink outline-none placeholder:text-ink-muted focus-visible:ring-2 focus-visible:ring-neon"
               />
               {query ? (
                 <button type="button" onClick={() => setQuery("")} aria-label="សម្អាតការស្វែងរក" className="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-lg text-ink-muted transition hover:bg-panel-2 hover:text-ink">
                   <X className="h-4 w-4" />
                 </button>
               ) : null}
-              </span>
             </label>
           </div>
           <div className="mt-4 hidden overflow-hidden sm:block">
             <GameLogoTicker logos={storeTickerLogos} />
           </div>
           {visibleGames.length ? (
-            <div className="zp-game-grid mt-5 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6">
+            <div className="zp-game-grid mt-5 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {catalogGroups.map((group) =>
                 group.games.length > 1
                   ? <ProviderGameCatalogGroup key={group.baseName} baseName={group.baseName} games={group.games} imageOverrides={imageOverrides} />
