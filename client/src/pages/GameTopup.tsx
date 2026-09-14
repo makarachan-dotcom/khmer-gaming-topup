@@ -13,7 +13,8 @@ import { useStorefrontHeader } from "@/contexts/StorefrontHeaderContext";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { SelectedPackageCheck } from "@/components/SelectedPackageCheck";
 import { countryFlagForRegion, providerPackageBadge } from "@/lib/providerPresentation";
-import { buildPackageCategories, categoryLabelForPackage, filterPackagesByCategory, type PackageCategory } from "@/lib/packageCategories";
+import { buildPackageCategories, filterPackagesByCategory, groupPackagesByCategory, type PackageCategory } from "@/lib/packageCategories";
+import { packageCardHeader } from "@/lib/packageCardHeader";
 import { goldDiamondChestArtworkUrl, isMobileLegendsGlobalGame, mobileLegendsDiamondLabel, mobileLegendsPackageTone } from "@/lib/mobileLegendsAssets";
 import { khmerDiamondCopy } from "@/lib/khmerDiamondCopy";
 import { isPubgTopupGame, pubgUcArtworkForAmount, pubgUcDisplayAmount, pubgUcFallbackArtwork } from "@/lib/pubgUcAssets";
@@ -697,9 +698,10 @@ function PackageCard({ item, selected, onSelect, gameId, gameName, gameLogoUrl, 
   const officialArt = officialPackageArtFor(gameId, gameName, artLabel, artAmount);
   const offerId = item.sourceOfferId ?? item.id;
   const suppliedArtwork = artworkOverrides[offerId] ?? suppliedProductArtworkForPackage(gameId, artAmount, artLabel);
+  const header = packageCardHeader(item);
   const packageAmount = khmerDiamondCopy(mobileLegends ? diamondLabel : pubg ? pubgUcDisplayAmount(item.amountLabel) : item.amountLabel);
-  const showAmount = Boolean(packageAmount && packageAmount.trim().toLowerCase() !== khmerDiamondCopy(item.label).trim().toLowerCase());
-  return <article className="min-w-0"><button type="button" aria-pressed={selected} title={`${gameName} · ${khmerDiamondCopy(item.label)} · ${item.priceLabel}`} onClick={onSelect} className={`package-choice package-choice--clean package-choice--gold ${mobileLegendsTone ? `package-choice--mlbb-${mobileLegendsTone}` : ""} ${recommended && !selected ? "package-choice--recommended" : ""} w-full text-left ${selected ? "package-choice--selected" : ""}`}><span className="package-choice-surface block rounded-[0.7rem] p-2.5"><PackageRibbonBadge offerId={offerId} />{selected ? <SelectedPackageCheck size={18} className="package-choice-check" /> : null}<SafePackageArt src={suppliedArtwork} fallbackSrc={officialArt} alt={`${gameName} ${khmerDiamondCopy(item.amountLabel)}`} showLogo={mobileLegends} gameName={gameName} gameLogoUrl={gameLogoUrl} /><OverflowMarquee text={khmerDiamondCopy(item.label)} className="mt-1.5 text-[11px] font-extrabold leading-4 text-slate-950" /><p className="package-choice__amount mt-0.5 truncate text-[10px] font-medium text-slate-500">{showAmount ? packageAmount : "\u00a0"}</p><span className="package-choice__price mt-1 block text-sm font-extrabold text-amber-800">{item.priceLabel}</span><span className="package-choice-badges">{recommended && !selected ? <span className="package-badge package-badge--recommended package-choice-recommendation"><Flame className="h-3 w-3" />ពេញនិយម</span> : null}{badge ? <span className={`package-badge package-badge--${badge.tone}`}>{badge.label}</span> : null}</span></span></button></article>;
+  const showAmount = Boolean(packageAmount && !header.replace(/💎/g, "").toLowerCase().includes(packageAmount.replace(/💎/g, "").trim().toLowerCase()));
+  return <article className="min-w-0"><button type="button" aria-pressed={selected} title={`${gameName} · ${header} · ${item.priceLabel}`} onClick={onSelect} className={`package-choice package-choice--clean package-choice--gold ${mobileLegendsTone ? `package-choice--mlbb-${mobileLegendsTone}` : ""} ${recommended && !selected ? "package-choice--recommended" : ""} w-full text-left ${selected ? "package-choice--selected" : ""}`}><span className="package-choice-surface block rounded-[0.7rem] p-2.5"><PackageRibbonBadge offerId={offerId} />{selected ? <SelectedPackageCheck size={18} className="package-choice-check" /> : null}<SafePackageArt src={suppliedArtwork} fallbackSrc={officialArt} alt={`${gameName} ${header}`} showLogo={mobileLegends} gameName={gameName} gameLogoUrl={gameLogoUrl} /><OverflowMarquee text={header} className="package-choice__header mt-1.5 text-[11px] font-extrabold leading-4 text-slate-950" /><p className="package-choice__amount mt-0.5 truncate text-[10px] font-medium text-slate-500">{showAmount ? packageAmount : "\u00a0"}</p><span className="package-choice__price mt-1 block text-sm font-extrabold text-amber-800">{item.priceLabel}</span><span className="package-choice-badges">{recommended && !selected ? <span className="package-badge package-badge--recommended package-choice-recommendation"><Flame className="h-3 w-3" />ពេញនិយម</span> : null}{badge ? <span className={`package-badge package-badge--${badge.tone}`}>{badge.label}</span> : null}</span></span></button></article>;
 }
 
 /** The owner-customisable banner that sits on top of a single package card. */
@@ -709,12 +711,22 @@ function PackageRibbonBadge({ offerId }: { offerId: string }) {
   return <span className={`pkg-ribbon pkg-ribbon--${ribbon.tone}`}>{ribbon.label}</span>;
 }
 
-function PackageSection({ title, description, icon: Icon, items, selectedPackageId, onSelect, gameId, gameName, gameLogoUrl, progressive = false }: { title: string; description?: string | null; icon: typeof Gem; items: ProviderPackage[]; selectedPackageId: string; onSelect: (item: ProviderPackage) => void; gameId: string; gameName: string; gameLogoUrl?: string; progressive?: boolean }) {
-  const [expanded, setExpanded] = useState(false);
+function packageGroupIcon(label: string) {
+  const key = label.toLocaleLowerCase();
+  if (key.includes("weekly")) return CalendarClock;
+  if (key.includes("twilight") || key.includes("ស្គិន") || key.includes("skin")) return Sparkles;
+  if (key.includes("bundle") || key.includes("elite") || key.includes("monthly")) return Crown;
+  if (key.includes("ពិសេស") || key.includes("special")) return Gift;
+  if (key.includes("offer") || key.includes("super")) return BadgePercent;
+  if (key.includes("token")) return Box;
+  return Gem;
+}
+
+function PackageSection({ title, items, selectedPackageId, onSelect, gameId, gameName, gameLogoUrl, recommendedId = "" }: { title: string; items: ProviderPackage[]; selectedPackageId: string; onSelect: (item: ProviderPackage) => void; gameId: string; gameName: string; gameLogoUrl?: string; recommendedId?: string }) {
   if (!items.length) return null;
-  const visibleItems = progressive ? visibleDiamondPackageItems(items, expanded) : items;
-  const hiddenCount = items.length - visibleItems.length;
-  return <section className="package-section"><div className="package-section-header flex items-center gap-2"><span className="diamond-title-icon"><Icon className="h-3.5 w-3.5" /></span><div className="min-w-0"><p className="text-xs font-extrabold text-slate-950">{title}</p>{description ? <p className="mt-0.5 text-[10px] leading-4 text-slate-500">{description}</p> : null}</div><span className="ml-auto shrink-0 rounded-full bg-white/75 px-2 py-0.5 text-[9px] font-bold text-slate-500">{items.length}</span></div><div className={visibleItems.length === 1 ? "mx-auto mt-3 grid w-full max-w-[11.5rem] grid-cols-1 gap-2" : "mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3"}>{visibleItems.map((item) => <PackageCard key={item.id} item={item} selected={selectedPackageId === item.id} onSelect={() => onSelect(item)} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} />)}</div>{progressive && items.length > initialDiamondPackageLimit ? <button type="button" aria-expanded={expanded} onClick={() => setExpanded((current) => !current)} className="package-see-more mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-indigo-100 bg-white/80 px-3 text-xs font-extrabold text-indigo-800 shadow-sm"><span>{expanded ? "បង្រួមកញ្ចប់" : `មើលបន្ថែម ${hiddenCount} កញ្ចប់`}</span><ChevronDown className={`package-see-more__icon h-4 w-4 ${expanded ? "package-see-more__icon--expanded" : ""}`} /></button> : null}</section>;
+  const headingId = `package-group-${title.toLocaleLowerCase().replace(/\s+/g, "-")}`;
+  const Icon = packageGroupIcon(title);
+  return <section className="package-group" aria-labelledby={headingId}><header className="package-group__head"><span className="package-group__mark" aria-hidden="true"><Icon className="h-3.5 w-3.5" /></span><h3 id={headingId} className="package-group__title">{title}</h3><span className="package-group__count">{items.length}</span></header><div className="package-category-grid grid grid-cols-2 gap-2.5 sm:grid-cols-3">{items.map((item) => <PackageCard key={item.id} item={item} selected={selectedPackageId === item.id} recommended={Boolean(recommendedId) && items.length > 1 && item.id === recommendedId} onSelect={() => onSelect(item)} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} />)}</div></section>;
 }
 
 /**
@@ -767,6 +779,7 @@ function DiamondPackages({ packages, status, selectedPackageId, onSelect, gameId
     () => sortProviderPackagesForDisplay(searchValue ? gamePackages.filter((item) => khmerDiamondCopy(`${item.label} ${item.amountLabel} ${item.priceLabel}`).toLocaleLowerCase().includes(searchValue) || `${item.label} ${item.amountLabel} ${item.priceLabel}`.toLocaleLowerCase().includes(searchValue)) : filterPackagesByCategory(gamePackages, selectedCategoryId, categoryOverrides), packageSort, recommendedPackage?.id ?? null),
     [categoryOverrides, gamePackages, packageSort, recommendedPackage?.id, searchValue, selectedCategoryId],
   );
+  const visibleGroups = useMemo(() => groupPackagesByCategory(visiblePackages, categoryOverrides), [categoryOverrides, visiblePackages]);
 
   useEffect(() => {
     if (selectedCategoryId !== "all" && !categoryTabs.some((category) => category.id === selectedCategoryId)) setSelectedCategoryId("all");
@@ -813,13 +826,13 @@ function DiamondPackages({ packages, status, selectedPackageId, onSelect, gameId
               <span>{visiblePackages.length} កញ្ចប់</span>
             </div>
           </section>
-          <div key={searchValue ? `search:${searchValue}` : `${selectedCategoryId}:${packageSort}`} className="package-category-grid grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-            {visiblePackages.map((item) => <PackageCard key={item.id} item={item} selected={selectedPackageId === item.id} recommended={visiblePackages.length > 1 && item.id === recommendedPackage?.id} onSelect={() => onSelect(item.id, item)} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} />)}
+          <div key={searchValue ? `search:${searchValue}` : `${selectedCategoryId}:${packageSort}`} className="package-groups">
+            {visibleGroups.map((group) => <PackageSection key={group.id} title={group.label} items={group.items} selectedPackageId={selectedPackageId} onSelect={(item) => onSelect(item.id, item)} gameId={gameId} gameName={gameName} gameLogoUrl={gameLogoUrl} recommendedId={recommendedPackage?.id ?? ""} />)}
           </div>
           {selectedPackage ? <div className="package-selection-summary" role="status" aria-live="polite">
             <span className="package-selection-summary__mark" aria-hidden="true"><Check className="h-4 w-4" /></span>
             <div className="min-w-0 flex-1">
-              <p className="package-selection-summary__label">{khmerDiamondCopy(selectedPackage.label)}</p>
+              <p className="package-selection-summary__label">{packageCardHeader(selectedPackage)}</p>
               <p className="package-selection-summary__hint">ជ្រើសរើសរួច · ចុច «បន្ត» ខាងក្រោមដើម្បីទូទាត់តាម KHQR</p>
             </div>
             <span className="package-selection-summary__price">{selectedPackage.priceLabel}</span>

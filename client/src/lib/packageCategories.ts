@@ -10,23 +10,33 @@ export type PackageCategory = {
   count: number;
 };
 
-const automaticCategoryOrder = ["ពេជ្យ", "Token", "Weekly Card", "Twilight Pass", "Monthly Pack", "Elite Pack", "Super Offer", "កញ្ចប់ពិសេស"];
+const automaticCategoryOrder = ["ពេជ្យ", "Token", "Weekly Pass", "Twilight Pass", "Bundle", "Monthly Pack", "Elite Pack", "Super Offer", "កញ្ចប់ពិសេស"];
 
 function packageWords(item: Pick<CategoryPackage, "label" | "amountLabel">) {
   return `${item.label} ${item.amountLabel}`.toLowerCase();
 }
 
 export function normalizePackageCategoryLabel(value: string) {
-  return value.trim().replace(/\s+/g, " ").slice(0, 80);
+  const label = value.trim().replace(/\s+/g, " ").slice(0, 80);
+  if (/^weekly card$/i.test(label)) return "Weekly Pass";
+  return label;
+}
+
+function isBundlePackage(item: Pick<CategoryPackage, "label" | "amountLabel">) {
+  const copy = packageWords(item);
+  if (/\bbundle\b/.test(copy)) return true;
+  if (/\bweekly\b/.test(copy) && /\belite\b/.test(copy)) return true;
+  if (/\bmonthly\b/.test(copy) && /\b(?:epic|elite|bundle)\b/.test(copy)) return true;
+  return false;
 }
 
 function isWeeklyPackage(item: Pick<CategoryPackage, "label" | "amountLabel">) {
   const copy = packageWords(item);
-  return /\bweekly\b/.test(copy) && !/\btwilight\b/.test(copy);
+  return /\bweekly\b/.test(copy) && !/\btwilight\b/.test(copy) && !isBundlePackage(item);
 }
 
 function isMonthlyPackage(item: Pick<CategoryPackage, "label" | "amountLabel">) {
-  return /\bmonthly\b/.test(packageWords(item));
+  return /\bmonthly\b/.test(packageWords(item)) && !isBundlePackage(item);
 }
 
 function isTwilightPackage(item: Pick<CategoryPackage, "label" | "amountLabel">) {
@@ -35,7 +45,7 @@ function isTwilightPackage(item: Pick<CategoryPackage, "label" | "amountLabel">)
 
 function isElitePackage(item: Pick<CategoryPackage, "label" | "amountLabel">) {
   const copy = packageWords(item);
-  if (isWeeklyPackage(item) || isMonthlyPackage(item) || isTwilightPackage(item)) return false;
+  if (isWeeklyPackage(item) || isMonthlyPackage(item) || isTwilightPackage(item) || isBundlePackage(item)) return false;
   return /\b(?:elite|premium|starlight)\b/.test(copy);
 }
 
@@ -47,19 +57,20 @@ export function isDiamondPackage(item: Pick<CategoryPackage, "label" | "amountLa
 
 function isTokenCurrencyPackage(item: Pick<CategoryPackage, "label" | "amountLabel">) {
   const copy = packageWords(item);
-  if (isDiamondPackage(item) || isWeeklyPackage(item) || isMonthlyPackage(item) || isTwilightPackage(item) || isElitePackage(item)) return false;
+  if (isDiamondPackage(item) || isWeeklyPackage(item) || isMonthlyPackage(item) || isTwilightPackage(item) || isElitePackage(item) || isBundlePackage(item)) return false;
   return /\b(?:uc|robux|stars?|tokens?|coins?)\b/.test(copy);
 }
 
 /** A readable fallback until an Admin assigns a category to the individual offer. */
 export function automaticPackageCategoryLabel(item: Pick<CategoryPackage, "label" | "amountLabel">) {
   const copy = packageWords(item);
+  if (isBundlePackage(item)) return "Bundle";
   if (isMonthlyPackage(item)) return "Monthly Pack";
-  if (isWeeklyPackage(item)) return "Weekly Card";
+  if (isWeeklyPackage(item)) return "Weekly Pass";
   if (isTwilightPackage(item)) return "Twilight Pass";
   if (isElitePackage(item)) return "Elite Pack";
   if (isDiamondPackage(item)) return "ពេជ្យ";
-  if (/\b(?:bonus|first\s*top[\s-]*up|extra|limited|value\s*pack|bundle)\b/.test(copy) || /\+\s*\d[\d,]*(?:\s*[a-z]+)?\b/.test(copy)) return "Super Offer";
+  if (/\b(?:bonus|first\s*top[\s-]*up|extra|limited|value\s*pack)\b/.test(copy) || /\+\s*\d[\d,]*(?:\s*[a-z]+)?\b/.test(copy)) return "Super Offer";
   if (/\b(?:promo|special|discount|sale|event|exclusive|full\s*ticket)\b/.test(copy)) return "កញ្ចប់ពិសេស";
   if (isTokenCurrencyPackage(item)) return "Token";
   return "Super Offer";
@@ -94,13 +105,27 @@ export function buildPackageCategories(items: CategoryPackage[], overrides: Read
 
 export function filterPackagesByCategory<T extends CategoryPackage>(items: T[], categoryId: string, overrides: ReadonlyMap<string, string> | Record<string, string> = {}) {
   if (!categoryId || categoryId === "all") return items;
-  const selected = categoryId.trim().toLocaleLowerCase();
+  const selected = categoryId.trim().toLocaleLowerCase() === "weekly card" ? "weekly pass" : categoryId.trim().toLocaleLowerCase();
   return items.filter((item) => {
     if (selected === "diamond" || selected === "ពេជ្យ") return isDiamondPackage(item);
     const label = categoryLabelForPackage(item, overrides).toLocaleLowerCase();
     if (label !== selected) return false;
-    if (selected === "weekly card") return isWeeklyPackage(item);
+    if (selected === "weekly pass") return isWeeklyPackage(item);
     if (selected === "twilight pass") return isTwilightPackage(item);
+    if (selected === "bundle") return isBundlePackage(item);
     return true;
   });
+}
+
+export function groupPackagesByCategory<T extends CategoryPackage>(items: T[], overrides: ReadonlyMap<string, string> | Record<string, string> = {}) {
+  const buckets = new Map<string, T[]>();
+  for (const item of items) {
+    const id = categoryLabelForPackage(item, overrides).toLocaleLowerCase();
+    const list = buckets.get(id) ?? [];
+    list.push(item);
+    buckets.set(id, list);
+  }
+  return buildPackageCategories(items, overrides)
+    .map((category) => ({ ...category, items: buckets.get(category.id) ?? [] }))
+    .filter((group) => group.items.length);
 }

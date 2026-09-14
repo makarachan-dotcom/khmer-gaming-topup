@@ -240,6 +240,14 @@ html[data-ui-family="dark"][data-theme="dark"] {
   font-size: 1.05rem;
   font-weight: 700;
 }
+.package-group__title,
+.package-choice .package-choice__header {
+  color: var(--z-cream) !important;
+}
+.package-group__count {
+  background: rgba(247, 246, 242, 0.08) !important;
+  color: var(--z-ink-muted) !important;
+}
 .package-choice--selected,
 .package-choice--selected .package-choice-surface {
   border-color: #c99712 !important;

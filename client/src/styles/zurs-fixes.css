@@ -246,11 +246,13 @@
   transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), border-color 220ms ease, box-shadow 220ms ease;
 }
 .package-category-grid:not(.package-grid-skeleton),
-.package-section .grid {
+.package-section .grid,
+.package-group .package-category-grid {
   align-items: stretch;
 }
 .package-category-grid:not(.package-grid-skeleton) > article,
-.package-section .grid > article {
+.package-section .grid > article,
+.package-group .package-category-grid > article {
   display: flex;
   height: 100%;
 }
