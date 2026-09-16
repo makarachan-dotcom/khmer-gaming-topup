@@ -336,7 +336,9 @@ async function telegramProviderPackages(game: TelegramSnapshotGame) {
     const rowsByQuantity = new Map<string, { amountLabel: string; priceUsd: string }>();
     adminCatalog.games.forEach((product: { packages: Array<{ id: string; amountLabel: string; priceUsd: string; isActive: boolean; providerSource?: string | null }> }) => {
       product.packages.forEach((item) => {
-        if (item.isActive && String(item.providerSource ?? "").startsWith(`fzr_cards:${game.providerGameId}:`)) {
+        // Admin pricing is authoritative for every active package in this game,
+        // including packages added manually without a FazerCards providerSource.
+        if (item.isActive) {
           const row = { amountLabel: item.amountLabel, priceUsd: item.priceUsd };
           rows.set(item.id, row);
           const key = packageIdentityKey(item.amountLabel, item.amountLabel);
