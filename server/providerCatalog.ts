@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { resolveProviderCredential } from "./providerCredentialResolver";
 import { getAppwriteProviderAvailability, getAppwriteProviderCatalog, isAppwriteStoreConfigured, type AppwriteProviderCatalog, updateAppwriteProviderAvailability } from "./appwriteStore";
 import { getActiveProviderPackageIds, getAdminSyncedProviderPackages, getPublicSyncedProviderPackages } from "./db";
-import { keepCheapestEquivalentPackages } from "@shared/packagePriceLadder";
+import { keepCheapestEquivalentPackages, packageIdentityKey } from "@shared/packagePriceLadder";
 import { isMobileLegendsAdventureGame, isRegularMobileLegendsVariant, withoutMlbbAdventurePackages } from "@shared/mlbbAdventure";
 
 export const providerFieldSchema = z.object({
@@ -333,14 +333,21 @@ async function telegramProviderPackages(game: TelegramSnapshotGame) {
     const { getAdminCatalog } = await import("./db");
     const adminCatalog = await getAdminCatalog();
     const rows = new Map<string, { amountLabel: string; priceUsd: string }>();
+    const rowsByQuantity = new Map<string, { amountLabel: string; priceUsd: string }>();
     adminCatalog.games.forEach((product: { packages: Array<{ id: string; amountLabel: string; priceUsd: string; isActive: boolean; providerSource?: string | null }> }) => {
       product.packages.forEach((item) => {
-        if (item.isActive && String(item.providerSource ?? "").startsWith(`fzr_cards:${game.providerGameId}:`)) rows.set(item.id, { amountLabel: item.amountLabel, priceUsd: item.priceUsd });
+        if (item.isActive && String(item.providerSource ?? "").startsWith(`fzr_cards:${game.providerGameId}:`)) {
+          const row = { amountLabel: item.amountLabel, priceUsd: item.priceUsd };
+          rows.set(item.id, row);
+          const key = packageIdentityKey(item.amountLabel, item.amountLabel);
+          const current = rowsByQuantity.get(key);
+          if (!current || Number(row.priceUsd) < Number(current.priceUsd)) rowsByQuantity.set(key, row);
+        }
       });
     });
     if (!rows.size) return keepCheapestEquivalentPackages(livePackages);
     return keepCheapestEquivalentPackages(livePackages.map((item) => {
-      const row = rows.get(item.id);
+      const row = rows.get(item.id) ?? rowsByQuantity.get(packageIdentityKey(item.label, item.amountLabel));
       return row ? { ...item, label: row.amountLabel, amountLabel: row.amountLabel, priceLabel: `$${Number(row.priceUsd).toFixed(2)}` } : item;
     }));
   } catch {
