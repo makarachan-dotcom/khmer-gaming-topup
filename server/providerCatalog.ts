@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { resolveProviderCredential } from "./providerCredentialResolver";
 import { getAppwriteProviderAvailability, getAppwriteProviderCatalog, isAppwriteStoreConfigured, type AppwriteProviderCatalog, updateAppwriteProviderAvailability } from "./appwriteStore";
 import { getActiveProviderPackageIds, getAdminSyncedProviderPackages, getPublicSyncedProviderPackages } from "./db";
-import { applyShopPriceLadder } from "@shared/packagePriceLadder";
+import { applyShopPriceLadder, keepCheapestEquivalentPackages } from "@shared/packagePriceLadder";
 import { isMobileLegendsAdventureGame, isRegularMobileLegendsVariant, withoutMlbbAdventurePackages } from "@shared/mlbbAdventure";
 
 export const providerFieldSchema = z.object({
@@ -888,9 +888,17 @@ function isMobileLegendsFamilyGame(gameId: string) {
 }
 
 function regularMobileLegendsPackages<T extends { id?: string; label?: string; amountLabel?: string; name?: string }>(gameId: string, packages: T[]) {
-  if (isMobileLegendsAdventureGame(gameId)) return packages;
-  if (isMobileLegendsFamilyGame(gameId) || isRegularMobileLegendsVariant(gameId)) return withoutMlbbAdventurePackages(packages);
-  return packages;
+  const filtered = isMobileLegendsAdventureGame(gameId)
+    ? packages
+    : isMobileLegendsFamilyGame(gameId) || isRegularMobileLegendsVariant(gameId)
+      ? withoutMlbbAdventurePackages(packages)
+      : packages;
+  return keepCheapestEquivalentPackages(filtered.map((item) => ({
+    ...item,
+    id: item.id ?? "",
+    label: item.label ?? item.amountLabel ?? item.name ?? "",
+    amountLabel: item.amountLabel ?? item.label ?? item.name ?? "",
+  }))) as T[];
 }
 
 function isRegularMobileLegendsFamilyVariant(game: { id: string; name?: string }) {
@@ -1129,7 +1137,7 @@ export async function fetchProviderGameDetails(gameId: string, options: { includ
       const cached = await cachedProviderGameDetails(gameId, options.includeInactive);
       if (cached && cached.status === "ready" && cached.packages.length) return cached;
     }
-    return { status: "ready", game: { id: gameId, name: resolvedName, region: providerGameRegion(resolvedName), logoUrl: payload.data.imageurl, provider: "FZR Cards", requiredFields: /^free_fire(?:_|$)/i.test(gameId) ? freeFireIdentityFields(fields) : isMobileLegendsGame(gameId) ? mobileLegendsAccountFields(fields) : fields }, packages: regularMobileLegendsPackages(gameId, livePackages) };
+    return { status: "ready", game: { id: gameId, name: resolvedName, region: providerGameRegion(resolvedName), logoUrl: payload.data.imageurl, provider: "FZR Cards", requiredFields: /^free_fire(?:_|$)/i.test(gameId) ? freeFireIdentityFields(fields) : isMobileLegendsGame(gameId) ? mobileLegendsAccountFields(fields) : fields }, packages: regularMobileLegendsPackages(gameId, livePackages) as z.infer<typeof providerPackageSchema>[] };
   } catch {
     return (await cachedProviderGameDetails(gameId, options.includeInactive)) ?? { status: "error", game: null, packages: [] };
   }

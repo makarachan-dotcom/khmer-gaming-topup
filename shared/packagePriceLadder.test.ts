@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyShopPriceLadder, packageAmountAndUnit, packageIdentityKey, shopLadderUnitPrice, shopPriceFromUsd } from "./packagePriceLadder";
+import { applyShopPriceLadder, keepCheapestEquivalentPackages, packageAmountAndUnit, packageIdentityKey, shopLadderUnitPrice, shopPriceFromUsd } from "./packagePriceLadder";
 
 describe("shop price ladder", () => {
   it("lifts a bigger diamond pack that is cheaper than a smaller one", () => {
@@ -64,6 +64,14 @@ describe("shop price ladder", () => {
     expect(packageIdentityKey("250 + 25 Diamonds", "250 + 25 Diamonds")).not.toBe(packageIdentityKey("250 Diamonds", "250 Diamonds"));
     expect(packageIdentityKey("50 + 5 Diamonds", "50 + 5 Diamonds")).toBe(packageIdentityKey("55 Diamonds", "55 Diamonds"));
     expect(packageIdentityKey("Weekly Pass", "Weekly Pass")).not.toBe(packageIdentityKey("2x Weekly", "2x Weekly"));
+  });
+
+  it("publishes only the cheapest equivalent offer to shoppers", () => {
+    const visible = keepCheapestEquivalentPackages([
+      { id: "expensive", label: "50 + 5 Diamonds", amountLabel: "50 + 5 Diamonds", priceLabel: "$1.20" },
+      { id: "cheap", label: "55 Diamonds", amountLabel: "55 Diamonds", priceLabel: "$0.99" },
+    ]);
+    expect(visible.map((item) => item.id)).toEqual(["cheap"]);
   });
 
 });

@@ -50,6 +50,20 @@ function readPackagePrice(item: LadderPackage) {
   return Number.isFinite(parsed) ? parsed : Number.POSITIVE_INFINITY;
 }
 
+/** Return only the cheapest offer for each received-quantity/package identity. */
+export function keepCheapestEquivalentPackages<T extends LadderPackage>(items: T[]) {
+  const cheapest = new Map<string, { item: T; price: number }>();
+  for (const item of items) {
+    const price = readPackagePrice(item);
+    const key = packageIdentityKey(item.label, item.amountLabel);
+    const current = cheapest.get(key);
+    if (!current || price < current.price || (price === current.price && item.id.localeCompare(current.item.id) < 0)) {
+      cheapest.set(key, { item, price });
+    }
+  }
+  return [...cheapest.values()].map(({ item }) => item);
+}
+
 /** Round up to the next cent so the ladder stays a clean shop price. */
 export function shopPriceFromUsd(value: number) {
   return Number((Math.ceil(value * 100 - 1e-9) / 100).toFixed(2));
