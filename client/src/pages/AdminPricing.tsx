@@ -146,8 +146,15 @@ function normalizedName(value?: string | null) {
     .toLowerCase();
 }
 
+function providerGameIdOf(game: GameGroup) {
+  const source = (game.packages ?? []).map(offer => offer.providerSource ?? "").find(value => value.startsWith("fzr_cards:"));
+  return source?.match(/^fzr_cards:([^:]+):/)?.[1] ?? "";
+}
+
 function gameLabelOf(group: GameGroup) {
-  return group.titleKh?.trim() || group.titleEn?.trim() || "Provider product";
+  const title = group.titleKh?.trim() || group.titleEn?.trim() || "Provider product";
+  const providerId = providerGameIdOf(group);
+  return providerId ? `${title} · ${providerId}` : title;
 }
 
 /** Same families the storefront shows as one game, instead of regional FazerCards splits. */
@@ -425,8 +432,8 @@ function PricingWorkspace() {
   const publicGames = useMemo(
     () =>
       storefrontCatalogGames.filter(game => {
-        const family = storefrontCatalogFamily(game);
-        if (family) return rawAvailabilityGames.some(item => item.isActive && storefrontCatalogFamily(item)?.id === family.id);
+        const providerId = providerGameIdOf(game);
+        if (providerId) return rawAvailabilityGames.some(item => item.id === providerId && item.isActive);
         return publicGameNames.has(normalizedName(game.titleEn)) || publicGameNames.has(normalizedName(game.titleKh));
       }),
     [storefrontCatalogGames, publicGameNames, rawAvailabilityGames]
@@ -449,18 +456,15 @@ function PricingWorkspace() {
     [publicGames]
   );
   const gameReadiness = useMemo<GameReadiness[]>(() => {
-    const catalogByName = new Map<string, GameGroup>();
+    const catalogByProviderId = new Map<string, GameGroup>();
     for (const game of storefrontCatalogGames) {
-      const en = normalizedName(game.titleEn);
-      const kh = normalizedName(game.titleKh);
-      if (en) catalogByName.set(en, game);
-      if (kh) catalogByName.set(kh, game);
+      const providerId = providerGameIdOf(game);
+      if (providerId) catalogByProviderId.set(providerId, game);
     }
     return storefrontAvailabilityGames.map(item => {
-      const family = storefrontCatalogFamily(item);
-      const matched = family
-        ? storefrontCatalogGames.find(game => storefrontCatalogFamily(game)?.id === family.id)
-        : catalogByName.get(normalizedName(item.name));
+      // Never fall back to the generic display name: several provider servers
+      // are all called "Mobile Legends", especially when they have 0 offers.
+      const matched = catalogByProviderId.get(item.id);
       const authorized = (matched?.packages ?? []).filter(
         offer => offer.providerAuthorized
       );
@@ -474,7 +478,7 @@ function PricingWorkspace() {
             : "needs_sync";
       return {
         providerId: item.id,
-        label: matched ? gameLabelOf(matched) : item.name,
+        label: matched ? gameLabelOf(matched) : `${item.name} · ${item.id}`,
         inShop: item.isActive,
         authorizedCount: authorized.length,
         activeCount: activeOffers.length,
