@@ -94,6 +94,17 @@ const fzrOffersSchema = z.preprocess(coerceRawOffersPayload, z.object({
   imageurl: z.string().trim().url().refine((url) => url.startsWith("https://")).optional().catch(undefined),
 }));
 
+function providerQuantityKey(label: string, amountLabel: string) {
+  const identity = packageIdentityKey(label, amountLabel);
+  const text = `${label} ${amountLabel}`.toLowerCase().replace(/,/g, "").replace(/ពេជ្យ|ពេជ្រ/g, "diamond").trim();
+  const numbers = Array.from(text.matchAll(/\d+(?:\.\d+)?/g), (match) => Number(match[0])).filter(Number.isFinite);
+  if (numbers.length && (/(?:diamond|\+)/i.test(text) || /^[\d\s+./-]+$/.test(text))) {
+    const amount = text.includes("+") ? numbers.reduce((sum, value) => sum + value, 0) : Math.max(...numbers);
+    return `qty:diamond:${amount}`;
+  }
+  return identity;
+}
+
 const smmGlobServiceSchema = z.object({
   service: z.union([z.string(), z.number()]).transform(String).pipe(z.string().trim().min(1).max(80)),
   name: z.string().trim().min(1).max(500),
@@ -341,7 +352,7 @@ async function telegramProviderPackages(game: TelegramSnapshotGame) {
         if (item.isActive) {
           const row = { amountLabel: item.amountLabel, priceUsd: item.priceUsd };
           rows.set(item.id, row);
-          const key = packageIdentityKey(item.amountLabel, item.amountLabel);
+          const key = providerQuantityKey(item.amountLabel, item.amountLabel);
           const current = rowsByQuantity.get(key);
           if (!current || Number(row.priceUsd) < Number(current.priceUsd)) rowsByQuantity.set(key, row);
         }
@@ -349,7 +360,7 @@ async function telegramProviderPackages(game: TelegramSnapshotGame) {
     });
     if (!rows.size) return keepCheapestEquivalentPackages(livePackages);
     return keepCheapestEquivalentPackages(livePackages.map((item) => {
-      const row = rows.get(item.id) ?? rowsByQuantity.get(packageIdentityKey(item.label, item.amountLabel));
+      const row = rows.get(item.id) ?? rowsByQuantity.get(providerQuantityKey(item.label, item.amountLabel));
       return row ? { ...item, label: row.amountLabel, amountLabel: row.amountLabel, priceLabel: `$${Number(row.priceUsd).toFixed(2)}` } : item;
     }));
   } catch {
