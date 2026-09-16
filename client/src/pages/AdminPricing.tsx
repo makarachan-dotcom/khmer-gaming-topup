@@ -4,7 +4,7 @@ import { AnimatedBackButton } from "@/components/AnimatedBackButton";
 import { OutlineLoader } from "@/components/OutlineLoader";
 import { notifyPackagePricingChanged } from "@/lib/packagePricingBroadcast";
 import { withoutMlbbAdventurePackages } from "@shared/mlbbAdventure";
-import { packageIdentityKey } from "@shared/packagePriceLadder";
+import { packageAmountAndUnit, packageIdentityKey } from "@shared/packagePriceLadder";
 import { trpc } from "@/lib/trpc";
 import {
   CalendarDays,
@@ -176,12 +176,20 @@ function offerIdentityKey(offer: Offer) {
 }
 
 export function keepCheapestAdminOffers(offers: Offer[]) {
-  const cheapest = new Map<string, Offer>();
-  for (const offer of [...offers].sort((left, right) => toNumber(left.priceUsd) - toNumber(right.priceUsd) || left.id.localeCompare(right.id))) {
+  // Keep every provider offer visible in Admin. Within the same normalized
+  // quantity (including `50 + 5` == `55`), put the cheapest first so the first
+  // row is the preferred offer and the remaining rows remain visible as
+  // reserves instead of being silently discarded from the control panel.
+  const groups = new Map<string, Offer[]>();
+  for (const offer of offers) {
     const key = offerIdentityKey(offer);
-    if (!cheapest.has(key)) cheapest.set(key, offer);
+    const group = groups.get(key) ?? [];
+    group.push(offer);
+    groups.set(key, group);
   }
-  return [...cheapest.values()];
+  return [...groups.values()]
+    .flatMap(group => [...group].sort((left, right) => toNumber(left.priceUsd) - toNumber(right.priceUsd) || left.id.localeCompare(right.id)))
+    .sort((left, right) => (packageAmountAndUnit(left.amountLabel ?? "", left.amountLabel ?? "")?.amount ?? Number.POSITIVE_INFINITY) - (packageAmountAndUnit(right.amountLabel ?? "", right.amountLabel ?? "")?.amount ?? Number.POSITIVE_INFINITY) || toNumber(left.priceUsd) - toNumber(right.priceUsd) || left.id.localeCompare(right.id));
 }
 
 export function groupCatalogGamesLikeStorefront(games: GameGroup[]) {
@@ -1235,6 +1243,15 @@ function GamePricingCard({
   onDeleteOffer: (offerId: string) => void;
 }) {
   const offers = game.packages ?? [];
+  const preferredOfferIds = new Set<string>();
+  const seenQuantities = new Set<string>();
+  for (const offer of [...offers].sort((left, right) => toNumber(left.priceUsd) - toNumber(right.priceUsd) || left.id.localeCompare(right.id))) {
+    const quantityKey = offerIdentityKey(offer);
+    if (!seenQuantities.has(quantityKey)) {
+      seenQuantities.add(quantityKey);
+      preferredOfferIds.add(offer.id);
+    }
+  }
   const editable = offers.filter(offer => offer.providerAuthorized);
   const live = editable.filter(offer => offer.isActive).length;
   const firstMargin = editable[0]?.profitMarginPercent ?? "10.00";
@@ -1320,6 +1337,7 @@ function GamePricingCard({
                 }
                 onSave={values => onSaveOffer(offer, values)}
                 onDelete={() => onDeleteOffer(offer.id)}
+                reserve={!preferredOfferIds.has(offer.id)}
               />
             ))
           ) : (
@@ -1338,11 +1356,13 @@ function OfferEditor({
   label,
   onSave,
   onDelete,
+  reserve = false,
 }: {
   offer: Offer;
   label: string;
   onSave: (values: OfferValues) => void;
   onDelete: () => void;
+  reserve?: boolean;
 }) {
   const [base, setBase] = useState(offer.basePriceUsd);
   const [margin, setMargin] = useState(offer.profitMarginPercent);
@@ -1384,10 +1404,13 @@ function OfferEditor({
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-xs font-extrabold text-slate-900">
-            {label}
-          </p>
-          <p
+            <p className="truncate text-xs font-extrabold text-slate-900">
+              {label}
+            </p>
+            <p className={`mt-1 text-[10px] font-extrabold ${reserve ? "text-slate-500" : "text-emerald-700"}`}>
+              {reserve ? "បម្រុង — ប្រើបើកញ្ចប់ថោកបាត់" : "អាទិភាព — តម្លៃថោកបំផុត"}
+            </p>
+            <p
             className={`mt-1 text-[10px] font-bold ${canEdit ? "text-emerald-700" : "text-amber-700"}`}
           >
             {canEdit

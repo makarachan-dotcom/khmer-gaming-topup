@@ -62,6 +62,7 @@ describe("shop price ladder", () => {
     expect(packageIdentityKey("86 Diamonds", "86 Diamonds")).toBe(packageIdentityKey("86 Diamond", "86 ពេជ្យ"));
     expect(packageIdentityKey("86 Diamonds", "86 Diamonds")).toBe(packageIdentityKey("86 Diamonds (First Top-Up)", "86 Diamonds"));
     expect(packageIdentityKey("250 + 25 Diamonds", "250 + 25 Diamonds")).not.toBe(packageIdentityKey("250 Diamonds", "250 Diamonds"));
+    expect(packageIdentityKey("50 + 5 Diamonds", "50 + 5 Diamonds")).toBe(packageIdentityKey("55 Diamonds", "55 Diamonds"));
     expect(packageIdentityKey("Weekly Pass", "Weekly Pass")).not.toBe(packageIdentityKey("2x Weekly", "2x Weekly"));
   });
 

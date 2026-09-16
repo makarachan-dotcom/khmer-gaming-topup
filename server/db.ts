@@ -16,7 +16,7 @@ import { getPublicPaymentReadiness } from "./paymentReadiness";
 import { checkBakongKhqrPayment, createBakongKhqrPayment, registerBakongKhqrWorkerWatch } from "./bakongKhqr";
 import { getKhqrReconciliationDisposition, getKhqrWalletReconciliationDisposition } from "./khqrReconciliation";
 import { assertOrderAmountIntegrity, assertPackagePriceIntegrity, assessOrderVelocity, moneyEquals } from "./paymentSecurity";
-import { applyShopPriceLadder, shopLadderUnitPrice } from "@shared/packagePriceLadder";
+import { applyShopPriceLadder, packageAmountAndUnit, shopLadderUnitPrice } from "@shared/packagePriceLadder";
 import { parsePackageUi, parseStorefrontUi, type StorefrontUiSkin } from "@shared/storefrontUi";
 import type { FzrProviderSyncSnapshot, SmmProviderCatalogResponse } from "./providerCatalog";
 import { submitSmmProviderOrder, submitFzrTopupOrder } from "./providerCatalog";
@@ -403,9 +403,42 @@ export async function syncFzrCatalog(snapshot: Extract<FzrProviderSyncSnapshot, 
       if (existing[0]) {
         const margin = String(existing[0].profitMarginPercent);
         await db.update(gamePackages).set({ amountLabel: offer.name, providerAuthorized: true, providerSource: source, basePriceUsd: offer.priceUsd, priceUsd: salePriceFromMargin(offer.priceUsd, margin), sortOrder: offerOrder }).where(eq(gamePackages.id, packageId));
-      } else {
-        await db.insert(gamePackages).values({ id: packageId, productId: gameId, amountLabel: offer.name, providerAuthorized: true, providerSource: source, basePriceUsd: offer.priceUsd, profitMarginPercent: "0.00", priceUsd: offer.priceUsd, featured: false, isActive: true, sortOrder: offerOrder });
-        offersImported += 1;
+    } else {
+      await db.insert(gamePackages).values({ id: packageId, productId: gameId, amountLabel: offer.name, providerAuthorized: true, providerSource: source, basePriceUsd: offer.priceUsd, profitMarginPercent: "0.00", priceUsd: offer.priceUsd, featured: false, isActive: true, sortOrder: offerOrder });
+      offersImported += 1;
+    }
+  }
+    // The provider snapshot is authoritative for this game. Offers that
+    // disappeared from FazerCards must not remain orderable in our database.
+    const providerPrefix = `fzr_cards:${game.providerGameId}:`;
+    const syncedRows = await db.select({ id: gamePackages.id, amountLabel: gamePackages.amountLabel, basePriceUsd: gamePackages.basePriceUsd, providerSource: gamePackages.providerSource }).from(gamePackages).where(eq(gamePackages.productId, gameId));
+    const currentSources = new Set(game.offers.map((offer) => `fzr_cards:${game.providerGameId}:${offer.providerOfferId}`));
+    for (const row of syncedRows) {
+      if (row.providerSource?.startsWith(providerPrefix) && !currentSources.has(row.providerSource)) {
+        await db.update(gamePackages).set({ providerAuthorized: false, isActive: false }).where(eq(gamePackages.id, row.id));
+      }
+    }
+
+    // For equivalent quantities, the cheapest provider offer is the live
+    // choice and the more expensive rows remain as reserves. This normalizes
+    // bonus labels such as `50 + 5 Diamonds` to the same quantity as `55
+    // Diamonds`, while keeping different package families (weekly/promo/etc.)
+    // separate through packageAmountAndUnit's null/name fallback.
+    const refreshedRows = await db.select({ id: gamePackages.id, amountLabel: gamePackages.amountLabel, priceUsd: gamePackages.priceUsd, providerAuthorized: gamePackages.providerAuthorized }).from(gamePackages).where(eq(gamePackages.productId, gameId));
+    const equivalentGroups = new Map<string, typeof refreshedRows>();
+    for (const row of refreshedRows) {
+      if (!row.providerAuthorized) continue;
+      const measure = packageAmountAndUnit(row.amountLabel, row.amountLabel);
+      if (!measure) continue;
+      const key = `${measure.amount}:${measure.unit}`;
+      const group = equivalentGroups.get(key) ?? [];
+      group.push(row);
+      equivalentGroups.set(key, group);
+    }
+    for (const group of equivalentGroups.values()) {
+      group.sort((left, right) => Number(left.priceUsd) - Number(right.priceUsd) || left.id.localeCompare(right.id));
+      for (let index = 0; index < group.length; index += 1) {
+        await db.update(gamePackages).set({ isActive: index === 0 }).where(eq(gamePackages.id, group[index]!.id));
       }
     }
   }
