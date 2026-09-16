@@ -178,65 +178,29 @@ export function keepCheapestAdminOffers(offers: Offer[]) {
 }
 
 export function groupCatalogGamesLikeStorefront(games: GameGroup[]) {
-  const families = new Map<string, GameGroup>();
-  const singles: GameGroup[] = [];
-  for (const game of games) {
-    const family = storefrontCatalogFamily(game);
-    if (!family) {
-      singles.push(game);
-      continue;
-    }
-    const existing = families.get(family.id);
-    if (!existing) {
-      families.set(family.id, {
-        ...game,
-        id: family.id,
-        titleEn: family.titleEn,
-        titleKh: family.titleKh,
-        packages: [...(game.packages ?? [])],
-      });
-      continue;
-    }
-    existing.packages = [...(existing.packages ?? []), ...(game.packages ?? [])];
-    existing.isActive = Boolean(existing.isActive || game.isActive);
-  }
-  return [...families.values(), ...singles].map((game) => ({
+  // Keep the provider game ID as the control boundary. FazerCards can expose
+  // multiple Mobile Legends servers/regions (and similarly named variants for
+  // other games); merging them here makes one Admin save affect an ambiguous
+  // mixed package list. The database already stores each provider game and its
+  // offers separately, so Admin must render the same separation.
+  return games.map((game) => ({
     ...game,
-    packages: keepCheapestAdminOffers(game.id === "mobile_legends" ? withoutMlbbAdventurePackages(game.packages ?? []) : (game.packages ?? [])),
+    packages: keepCheapestAdminOffers(
+      game.id === "mobile_legends" ? withoutMlbbAdventurePackages(game.packages ?? []) : (game.packages ?? []),
+    ),
   }));
 }
 
 export function groupAvailabilityLikeStorefront(games: AvailabilityItem[]) {
-  const families = new Map<string, AvailabilityItem & { variantIds: string[] }>();
-  const singles: Array<AvailabilityItem & { variantIds: string[] }> = [];
-  for (const game of games) {
-    const family = storefrontCatalogFamily(game);
-    if (!family) {
-      singles.push({ ...game, variantIds: [game.id] });
-      continue;
-    }
-    const existing = families.get(family.id);
-    if (!existing) {
-      families.set(family.id, {
-        id: family.id,
-        name: family.titleEn,
-        category: game.category,
-        isActive: game.isActive,
-        variantIds: [game.id],
-      });
-      continue;
-    }
-    existing.variantIds.push(game.id);
-    existing.isActive = existing.isActive || game.isActive;
-  }
-  return [...families.values(), ...singles];
+  // Availability toggles are also per provider game/server. Never collapse
+  // variants into a family because that would hide which server is enabled.
+  return games.map((game) => ({ ...game, variantIds: [game.id] }));
 }
 
 export function expandStorefrontProviderIds(providerId: string, games: AvailabilityItem[]) {
-  const family = storefrontCatalogFamily({ id: providerId, name: providerId });
-  if (!family) return [providerId];
-  const variants = games.filter((item) => storefrontCatalogFamily(item)?.id === family.id).map((item) => item.id);
-  return variants.length ? variants : [providerId];
+  // The selected ID is already the exact FazerCards game/server ID.
+  void games;
+  return [providerId];
 }
 
 /** A margin string the storefront policy accepts: 0-7 with at most two decimals; 0 is reserved for no-profit packages. */
