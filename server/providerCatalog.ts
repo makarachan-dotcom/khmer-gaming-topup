@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { resolveProviderCredential } from "./providerCredentialResolver";
 import { getAppwriteProviderAvailability, getAppwriteProviderCatalog, isAppwriteStoreConfigured, type AppwriteProviderCatalog, updateAppwriteProviderAvailability } from "./appwriteStore";
 import { getActiveProviderPackageIds, getAdminSyncedProviderPackages, getPublicSyncedProviderPackages } from "./db";
-import { applyShopPriceLadder, keepCheapestEquivalentPackages } from "@shared/packagePriceLadder";
+import { keepCheapestEquivalentPackages } from "@shared/packagePriceLadder";
 import { isMobileLegendsAdventureGame, isRegularMobileLegendsVariant, withoutMlbbAdventurePackages } from "@shared/mlbbAdventure";
 
 export const providerFieldSchema = z.object({
@@ -338,13 +338,13 @@ async function telegramProviderPackages(game: TelegramSnapshotGame) {
         if (item.isActive && String(item.providerSource ?? "").startsWith(`fzr_cards:${game.providerGameId}:`)) rows.set(item.id, { amountLabel: item.amountLabel, priceUsd: item.priceUsd });
       });
     });
-    if (!rows.size) return applyShopPriceLadder(livePackages);
-    return applyShopPriceLadder(livePackages.map((item) => {
+    if (!rows.size) return keepCheapestEquivalentPackages(livePackages);
+    return keepCheapestEquivalentPackages(livePackages.map((item) => {
       const row = rows.get(item.id);
       return row ? { ...item, label: row.amountLabel, amountLabel: row.amountLabel, priceLabel: `$${Number(row.priceUsd).toFixed(2)}` } : item;
     }));
   } catch {
-    return applyShopPriceLadder(livePackages);
+    return keepCheapestEquivalentPackages(livePackages);
   }
 }
 
@@ -746,18 +746,18 @@ async function providerPackages(categoryId: string, offers: z.infer<typeof fzrOf
     const adminCatalog = await adminCatalogForStorefront();
     const productId = `fzr-game-${createHash("sha256").update(categoryId).digest("hex").slice(0, 40)}`;
     const product = adminCatalog.games.find((item) => item.id === productId || item.packages.some((pkg: { providerSource?: string | null }) => String(pkg.providerSource ?? "").startsWith(`fzr_cards:${categoryId}:`)));
-    if (!product) return regularMobileLegendsPackages(categoryId, applyShopPriceLadder(livePackages));
+    if (!product) return regularMobileLegendsPackages(categoryId, livePackages);
     const activePackages = product.packages.filter((item: { isActive: boolean }) => item.isActive);
     const activeById = new Map<string, { id: string; amountLabel: string; priceUsd: string }>(activePackages.map((item: { id: string; amountLabel: string; priceUsd: string }) => [item.id, item]));
     const matchedLivePackages = livePackages.flatMap((item) => {
       const catalogItem = activeById.get(item.id);
       return catalogItem ? [{ ...item, label: catalogItem.amountLabel, amountLabel: catalogItem.amountLabel, priceLabel: `$${Number(catalogItem.priceUsd).toFixed(2)}` }] : [];
     });
-    if (matchedLivePackages.length) return regularMobileLegendsPackages(categoryId, applyShopPriceLadder(matchedLivePackages));
+    if (matchedLivePackages.length) return regularMobileLegendsPackages(categoryId, matchedLivePackages);
     // If the live offer response uses a temporarily different shape, expose the
     // already-synchronized active package IDs so checkout still receives rows
     // that the order validator can resolve.
-    return regularMobileLegendsPackages(categoryId, applyShopPriceLadder(activePackages.map((item: { id: string; amountLabel: string; priceUsd: string }) => ({ id: item.id, label: item.amountLabel, amountLabel: item.amountLabel, priceLabel: `$${Number(item.priceUsd).toFixed(2)}`, provider: "FZR Cards", paymentMethods: ["khqr", "bank"] as ("khqr" | "bank")[] }))));
+    return regularMobileLegendsPackages(categoryId, activePackages.map((item: { id: string; amountLabel: string; priceUsd: string }) => ({ id: item.id, label: item.amountLabel, amountLabel: item.amountLabel, priceLabel: `$${Number(item.priceUsd).toFixed(2)}`, provider: "FZR Cards", paymentMethods: ["khqr", "bank"] as ("khqr" | "bank")[] })));
   } catch {
     return [];
   }
@@ -1003,7 +1003,7 @@ async function cachedProviderGameDetails(gameId: string, includeInactive = false
     const catalog = await getGameCatalog();
     const product = catalog.find((game) => game.packages.some((item) => String(item.providerSource ?? "").startsWith(`fzr_cards:${gameId}:`)));
     if (!product) return null;
-    const packages = applyShopPriceLadder(product.packages.filter((item) => includeInactive || item.isActive).map((item) => ({ id: item.id, label: item.amountLabel, amountLabel: item.amountLabel, priceLabel: `$${Number(item.priceUsd).toFixed(2)}`, provider: "FZR Cards", paymentMethods: ["khqr", "bank"] as ("khqr" | "bank")[] })));
+    const packages = keepCheapestEquivalentPackages(product.packages.filter((item) => includeInactive || item.isActive).map((item) => ({ id: item.id, label: item.amountLabel, amountLabel: item.amountLabel, priceLabel: `$${Number(item.priceUsd).toFixed(2)}`, provider: "FZR Cards", paymentMethods: ["khqr", "bank"] as ("khqr" | "bank")[] })));
     if (!packages.length) return null;
     // A Telegram top-up asks for one @username and never for a server/zone.
     const telegramService = isTelegramProviderProduct(`${gameId} ${product.titleEn ?? ""} ${product.titleKh ?? ""}`);
@@ -1076,7 +1076,7 @@ export async function fetchProviderGameDetails(gameId: string, options: { includ
       return {
         status: "ready",
         game: { ...primary.game, id: mobileLegendsFamilyGameId, name: "Mobile Legends", requiredFields: mobileLegendsAccountFields(primary.game.requiredFields) },
-        packages: regularMobileLegendsPackages(mobileLegendsFamilyGameId, applyShopPriceLadder(readyVariants.flatMap((details) => details.packages))),
+        packages: regularMobileLegendsPackages(mobileLegendsFamilyGameId, readyVariants.flatMap((details) => details.packages)),
       };
     }
     if (isFreeFireFamilyGame(gameId)) {
@@ -1097,7 +1097,7 @@ export async function fetchProviderGameDetails(gameId: string, options: { includ
       return {
         status: "ready",
         game: { ...primary.game, id: freeFireFamilyGameId, name: "Free Fire", requiredFields: freeFireIdentityFields(primary.game.requiredFields) },
-        packages: applyShopPriceLadder(readyVariants.flatMap((details) => details.packages)),
+        packages: keepCheapestEquivalentPackages(readyVariants.flatMap((details) => details.packages)),
       };
     }
     if (isPubgMobileFamilyGame(gameId)) {
@@ -1115,7 +1115,7 @@ export async function fetchProviderGameDetails(gameId: string, options: { includ
       return {
         status: "ready",
         game: { ...primary.game, id: pubgMobileFamilyGameId, name: "PUBG Mobile" },
-        packages: applyShopPriceLadder(readyVariants.flatMap((details) => details.packages)),
+        packages: keepCheapestEquivalentPackages(readyVariants.flatMap((details) => details.packages)),
       };
     }
     if (!availableGames.games.some((game) => game.id === gameId)) return { status: "unavailable", game: null, packages: [] };
@@ -1137,7 +1137,7 @@ export async function fetchProviderGameDetails(gameId: string, options: { includ
       const cached = await cachedProviderGameDetails(gameId, options.includeInactive);
       if (cached && cached.status === "ready" && cached.packages.length) return cached;
     }
-    return { status: "ready", game: { id: gameId, name: resolvedName, region: providerGameRegion(resolvedName), logoUrl: payload.data.imageurl, provider: "FZR Cards", requiredFields: /^free_fire(?:_|$)/i.test(gameId) ? freeFireIdentityFields(fields) : isMobileLegendsGame(gameId) ? mobileLegendsAccountFields(fields) : fields }, packages: regularMobileLegendsPackages(gameId, livePackages) as z.infer<typeof providerPackageSchema>[] };
+    return { status: "ready", game: { id: gameId, name: resolvedName, region: providerGameRegion(resolvedName), logoUrl: payload.data.imageurl, provider: "FZR Cards", requiredFields: /^free_fire(?:_|$)/i.test(gameId) ? freeFireIdentityFields(fields) : isMobileLegendsGame(gameId) ? mobileLegendsAccountFields(fields) : fields }, packages: regularMobileLegendsPackages(gameId, livePackages as Array<z.infer<typeof providerPackageSchema>>) as z.infer<typeof providerPackageSchema>[] };
   } catch {
     return (await cachedProviderGameDetails(gameId, options.includeInactive)) ?? { status: "error", game: null, packages: [] };
   }
