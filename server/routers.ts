@@ -260,7 +260,18 @@ export const appRouter = router({
     previewGamePackages: scopedAdminProcedure("catalog").input(z.object({ gameId: z.string().trim().min(1).max(120) })).query(({ input }) => fetchProviderPreviewPackages(input.gameId)),
     providerAvailability: scopedAdminProcedure("catalog").query(() => getProviderAvailabilityCatalog()),
     setProviderAvailability: scopedAdminProcedure("catalog").input(z.object({ kind: z.literal("game"), providerId: z.string().trim().min(1).max(120), isActive: z.boolean() })).mutation(({ ctx, input }) => setProviderAvailability({ ...input, updatedByUserId: ctx.user.id })),
-    syncTopupCatalog: scopedAdminProcedure("catalog").mutation(async () => { const snapshot = await fetchFzrProviderSyncSnapshot(); if (snapshot.status !== "ready") throw new Error("FZR Cards catalog is currently unavailable"); return db.syncFzrCatalog(snapshot); }),
+    syncTopupCatalog: scopedAdminProcedure("catalog").mutation(async () => {
+      const snapshot = await fetchFzrProviderSyncSnapshot();
+      if (snapshot.status !== "ready") throw new Error("FZR Cards catalog is currently unavailable");
+      const result = await db.syncFzrCatalog(snapshot);
+      // Every game/offer in a ready snapshot is either inserted (counted in
+      // gamesImported/offersImported) or updated in place, because games whose
+      // offer fetch failed are excluded from the snapshot before it is built.
+      // So the refreshed (updated) counts are derived from the snapshot totals.
+      const gamesSeen = snapshot.games.length;
+      const offersSeen = snapshot.games.reduce((total, game) => total + game.offers.length, 0);
+      return { ...result, gamesSeen, offersSeen, gamesUpdated: gamesSeen - result.gamesImported, offersUpdated: offersSeen - result.offersImported };
+    }),
     updateGamePackage: scopedAdminProcedure("catalog").input(z.object({ packageId: z.string().min(4).max(64), priceUsd: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(), basePriceUsd: z.string().regex(/^\d+(\.\d{1,2})?$/).optional(), profitMarginPercent: z.string().regex(/^\d+(\.\d{1,2})?$/).refine((value) => Number(value) <= 1000).optional(), isActive: z.boolean(), featured: z.boolean() }).refine((input) => Boolean(input.priceUsd ?? input.basePriceUsd), "A base price is required")).mutation(({ input }) => db.updateGamePackage({ ...input, basePriceUsd: input.basePriceUsd ?? input.priceUsd!, profitMarginPercent: input.profitMarginPercent ?? "0.00" })),
     savePackageCategory: scopedAdminProcedure("catalog").input(z.object({ gameId: z.string().trim().min(1).max(120), offerId: z.string().trim().min(1).max(180), categoryLabel: z.string().trim().min(1).max(80) })).mutation(({ ctx, input }) => db.saveProviderPackageCategoryOverride({ ...input, updatedByUserId: ctx.user.id })),
     resetPackageCategory: scopedAdminProcedure("catalog").input(z.object({ gameId: z.string().trim().min(1).max(120), offerId: z.string().trim().min(1).max(180) })).mutation(({ ctx, input }) => db.resetProviderPackageCategoryOverride({ ...input, updatedByUserId: ctx.user.id })),
