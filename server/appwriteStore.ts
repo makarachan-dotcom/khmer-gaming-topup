@@ -230,9 +230,10 @@ export async function syncAppwriteFzrCatalog(snapshot: Extract<FzrProviderSyncSn
     const packagesWithSourceIds = packages.map((offer, index) => ({ ...offer, providerOfferSourceId: packageSourceIds[index]! }));
     await upsertProviderCatalogRecord("provider_catalog_game", game.providerGameId, { id: gameId, providerSourceId: game.providerGameId, titleKh: game.name, titleEn: game.name, packageSourceIds, packages: [] });
     await mapWithConcurrency(packagesWithSourceIds, 8, async (offer) => upsertProviderCatalogRecord("provider_catalog_game_offer", offer.providerOfferSourceId!, offer));
-    return { games: existing ? 0 : 1, offers: game.offers.filter((offer) => !existingPackages.has(providerCatalogId("fzr-offer", `${game.providerGameId}:${offer.providerOfferId}`))).length };
+    const newOfferCount = game.offers.filter((offer) => !existingPackages.has(providerCatalogId("fzr-offer", `${game.providerGameId}:${offer.providerOfferId}`))).length;
+    return { gamesImported: existing ? 0 : 1, gamesUpdated: existing ? 1 : 0, offersImported: newOfferCount, offersUpdated: game.offers.length - newOfferCount };
   });
-  return { gamesImported: imported.reduce((total, item) => total + item.games, 0), offersImported: imported.reduce((total, item) => total + item.offers, 0), provider: "FZR Cards" as const };
+  return { gamesImported: imported.reduce((total, item) => total + item.gamesImported, 0), gamesUpdated: imported.reduce((total, item) => total + item.gamesUpdated, 0), offersImported: imported.reduce((total, item) => total + item.offersImported, 0), offersUpdated: imported.reduce((total, item) => total + item.offersUpdated, 0), provider: "FZR Cards" as const };
 }
 
 export async function syncAppwriteSmmCatalog(snapshot: Extract<SmmProviderCatalogResponse, { status: "ready" }>) {
