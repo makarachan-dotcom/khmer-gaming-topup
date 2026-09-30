@@ -401,6 +401,25 @@ describe("provider catalog", () => {
     }
   });
 
+  it("lists every Free Fire package without cheapest-equivalent collapsing (owner request 2026-09-30)", async () => {
+    process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
+    process.env.FZR_CARDS_API_KEY = "server-only-key";
+    const variants = ["free_fire_my_sg", "free_fire_bd"];
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      // "(78+8) Diamonds" and "86 Diamonds" share one package identity (86);
+      // Free Fire must still list both rows instead of collapsing to cheapest.
+      if (url.includes("/offers?category_id=free_fire_my_sg")) return { ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "free_fire_my_sg", name: "Free Fire (MY/SG)", fields: [{ key: "player_id", label: "Player ID", type: "text" }], offers: [{ offer_id: "my-sg", name: "(78+8) Diamonds", price_usd: "1.00" }] }) };
+      if (url.includes("/offers?category_id=free_fire_bd")) return { ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "free_fire_bd", name: "Free Fire (BD)", fields: [{ key: "player_id", label: "Player ID", type: "text" }], offers: [{ offer_id: "bd", name: "86 Diamonds", price_usd: "0.90" }] }) };
+      return { ok: true, json: async () => ({ ok: true, kind: "topup", items: variants.map((category_id) => ({ category_id, name: "Free Fire" })), meta: { next_cursor: null, has_more: false } }) };
+    }));
+
+    const result = await fetchProviderGameDetails("free_fire", { includeInactive: true });
+    expect(result).toMatchObject({ status: "ready", game: { id: "free_fire", name: "Free Fire" } });
+    if (result.status === "ready") {
+      expect(result.packages.map((item) => item.label).sort()).toEqual(["(78+8) Diamonds", "86 Diamonds"]);
+    }
+  });
+
   it("merges every owner-enabled PUBG Mobile family variant, including dynamic region IDs", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "server-only-key";
