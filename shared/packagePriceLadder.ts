@@ -15,7 +15,18 @@ export function packageAmountAndUnit(label: string, amountLabel: string) {
   const text = `${amountLabel} ${label}`.toLowerCase().replace(/,/g, "").replace(/ពេជ្យ|ពេជ្រ/g, " diamond ");
   if (/\b(?:weekly|daily|monthly|membership|subscription|pass|promo|special|event|crate)\b/.test(text)) return null;
 
-  const bonus = text.match(/(\d+(?:\.\d+)?)(?:\s*[a-z]+)?\s*\+\s*(\d+(?:\.\d+)?)\s*([a-z]+)/);
+  // Drop emoji and stray symbols so "86💎 Diamonds" still parses as 86 diamonds.
+  const clean = text.replace(/[^\da-z+.()\s]/g, " ");
+
+  // Parenthesized sums such as "(78+8) Diamonds" mean the player receives 86 diamonds.
+  const parenBonus = clean.match(/\(\s*(\d+(?:\.\d+)?)\s*\+\s*(\d+(?:\.\d+)?)\s*\)\s*([a-z]+)/);
+  if (parenBonus) {
+    const amount = Number(parenBonus[1]) + Number(parenBonus[2]);
+    const unit = (parenBonus[3] ?? "").replace(/s$/, "");
+    if (Number.isFinite(amount) && amount > 0 && unit) return { amount, unit };
+  }
+
+  const bonus = clean.match(/(\d+(?:\.\d+)?)(?:\s*[a-z]+)?\s*\+\s*(\d+(?:\.\d+)?)\s*([a-z]+)/);
   if (bonus) {
     const amount = Number(bonus[1]) + Number(bonus[2]);
     const unit = (bonus[3] ?? "").replace(/s$/, "");
@@ -23,7 +34,7 @@ export function packageAmountAndUnit(label: string, amountLabel: string) {
   }
 
   let best: { amount: number; unit: string } | null = null;
-  for (const match of text.matchAll(/(\d+(?:\.\d+)?)\s*([a-z]+)/g)) {
+  for (const match of clean.matchAll(/(\d+(?:\.\d+)?)\s*([a-z]+)/g)) {
     const amount = Number(match[1]);
     const unit = (match[2] ?? "").replace(/s$/, "");
     if (!Number.isFinite(amount) || amount <= 0 || !unit) continue;
@@ -36,7 +47,9 @@ export function packageAmountAndUnit(label: string, amountLabel: string) {
 export function packageIdentityKey(label: string, amountLabel = "") {
   const measure = packageAmountAndUnit(label, amountLabel);
   if (measure) return `qty:${measure.amount}:${measure.unit}`;
-  const name = `${label} ${amountLabel}`.toLowerCase().replace(/ពេជ្យ|ពេជ្រ/g, "diamond").replace(/[^a-z0-9.]+/g, " ").replace(/\s+/g, " ").trim();
+  // Passes and other non-measured offers: ignore bracketed variant suffixes so
+  // "Weekly Diamond Pass (MLBB)" and "Weekly Diamond Pass" share one identity.
+  const name = `${label} ${amountLabel}`.toLowerCase().replace(/ពេជ្យ|ពេជ្រ/g, "diamond").replace(/\([^)]*\)/g, " ").replace(/[^a-z0-9.]+/g, " ").replace(/\s+/g, " ").trim();
   return `name:${name}`;
 }
 

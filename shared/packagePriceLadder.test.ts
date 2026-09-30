@@ -74,4 +74,23 @@ describe("shop price ladder", () => {
     expect(visible.map((item) => item.id)).toEqual(["cheap"]);
   });
 
+  it("recognizes parenthesized bonus sums and emoji-attached amounts as the same package", () => {
+    expect(packageAmountAndUnit("(78+8) Diamonds", "(78+8) Diamonds")).toEqual({ amount: 86, unit: "diamond" });
+    expect(packageAmountAndUnit("86💎 Diamonds", "86💎 Diamonds")).toEqual({ amount: 86, unit: "diamond" });
+    expect(packageIdentityKey("86 Diamonds", "86 Diamonds")).toBe(packageIdentityKey("(78+8) Diamonds", "(78+8) Diamonds"));
+    expect(packageIdentityKey("86 Diamonds", "86 Diamonds")).toBe(packageIdentityKey("86💎 Diamonds", "86💎 Diamonds"));
+    expect(packageIdentityKey("Weekly Diamond Pass", "Weekly Diamond Pass")).toBe(
+      packageIdentityKey("Weekly Diamond Pass (MLBB)", "Weekly Diamond Pass (MLBB)"),
+    );
+  });
+
+  it("shows only the cheapest package when the diamond sums match", () => {
+    const visible = keepCheapestEquivalentPackages([
+      { id: "expensive", label: "86 Diamonds", amountLabel: "86 Diamonds", priceLabel: "$1.50" },
+      { id: "cheap", label: "(78+8) Diamonds", amountLabel: "(78+8) Diamonds", priceLabel: "$1.10" },
+      { id: "other", label: "172 Diamonds", amountLabel: "172 Diamonds", priceLabel: "$2.90" },
+    ]);
+    expect(visible.map((item) => item.id).sort()).toEqual(["cheap", "other"]);
+  });
+
 });
