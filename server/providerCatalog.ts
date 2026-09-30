@@ -165,7 +165,8 @@ export function isThailandProviderProduct(text: string) {
  * (countryFlags + countryCodeFlags + trailing variant names) plus the
  * multi-country region groups the provider uses (CIS, LATAM, MENA, ...).
  * Products with no country marker (Global, promo/special variants, Telegram,
- * Roblox) are kept, as are Cambodia/KH products.
+ * Roblox) are kept, as are Cambodia/KH products. Free Fire is exempt entirely
+ * per owner request (2026-09-30) — see isNonCambodiaProviderProduct.
  */
 const NON_CAMBODIA_PROVIDER_PRODUCT_PATTERNS: RegExp[] = [
   /\bindonesia\b|\bindonesian\b/i,
@@ -195,6 +196,10 @@ const NON_CAMBODIA_PROVIDER_PRODUCT_PATTERNS: RegExp[] = [
 ];
 
 export function isNonCambodiaProviderProduct(text: string) {
+  // Free Fire is sold back on the storefront in all regions per owner request
+  // (2026-09-30): never treat a Free Fire product as a foreign product, even
+  // when its variant id carries another region code (free_fire_sg, ...).
+  if (/free[\s_-]*fire/i.test(text)) return false;
   return NON_CAMBODIA_PROVIDER_PRODUCT_PATTERNS.some((pattern) => pattern.test(text));
 }
 
@@ -1148,7 +1153,7 @@ export async function fetchProviderGameDetails(gameId: string, options: { includ
       const syncedPackages = options.includeInactive ? await getAdminSyncedProviderPackages(activeVariants) : await getPublicSyncedProviderPackages(activeVariants);
       if (syncedPackages?.length) {
         const primary = availableGames.games.find((game) => game.id === "free_fire_my_sg") ?? availableGames.games.find((game) => activeVariants.includes(game.id))!;
-        return { status: "ready", game: { ...primary, id: freeFireFamilyGameId, name: "Free Fire", requiredFields: freeFireIdentityFields(primary.requiredFields) }, packages: syncedPackages };
+        return { status: "ready", game: { ...primary, id: freeFireFamilyGameId, name: "Free Fire", requiredFields: freeFireIdentityFields(primary.requiredFields) }, packages: regularMobileLegendsPackages(freeFireFamilyGameId, syncedPackages) };
       }
       const variantDetails = await Promise.all(activeVariants.map((variantId) => fetchProviderGameDetails(variantId, options)));
       const readyVariants = variantDetails.filter((details): details is Extract<ProviderGameDetailsResponse, { status: "ready" }> => details.status === "ready");
@@ -1166,7 +1171,7 @@ export async function fetchProviderGameDetails(gameId: string, options: { includ
       const syncedPackages = options.includeInactive ? await getAdminSyncedProviderPackages(activeVariants) : await getPublicSyncedProviderPackages(activeVariants);
       if (syncedPackages?.length) {
         const primary = availableGames.games.find((game) => game.id === "pubg_mobile_auto") ?? availableGames.games.find((game) => activeVariants.includes(game.id))!;
-        return { status: "ready", game: { ...primary, id: pubgMobileFamilyGameId, name: "PUBG Mobile" }, packages: syncedPackages };
+        return { status: "ready", game: { ...primary, id: pubgMobileFamilyGameId, name: "PUBG Mobile" }, packages: regularMobileLegendsPackages(pubgMobileFamilyGameId, syncedPackages) };
       }
       const variantDetails = await Promise.all(activeVariants.map((variantId) => fetchProviderGameDetails(variantId, options)));
       const readyVariants = variantDetails.filter((details): details is Extract<ProviderGameDetailsResponse, { status: "ready" }> => details.status === "ready");
