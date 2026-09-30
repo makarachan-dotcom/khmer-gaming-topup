@@ -934,12 +934,16 @@ function regularMobileLegendsPackages<T extends { id?: string; label?: string; a
     : isMobileLegendsFamilyGame(gameId) || isRegularMobileLegendsVariant(gameId)
       ? withoutMlbbAdventurePackages(packages)
       : packages;
-  return keepCheapestEquivalentPackages(filtered.map((item) => ({
+  const normalized = filtered.map((item) => ({
     ...item,
     id: item.id ?? "",
     label: item.label ?? item.amountLabel ?? item.name ?? "",
     amountLabel: item.amountLabel ?? item.label ?? item.name ?? "",
-  }))) as T[];
+  }));
+  // Free Fire lists every package from every regional route (owner request
+  // 2026-09-30); cheapest-equivalent collapsing stays for other families.
+  if (/^free_fire(?:_|$)/i.test(gameId.trim())) return normalized as T[];
+  return keepCheapestEquivalentPackages(normalized) as T[];
 }
 
 function isRegularMobileLegendsFamilyVariant(game: { id: string; name?: string }) {
@@ -1140,7 +1144,7 @@ export async function fetchProviderGameDetails(gameId: string, options: { includ
       return {
         status: "ready",
         game: { ...primary.game, id: freeFireFamilyGameId, name: "Free Fire", requiredFields: freeFireIdentityFields(primary.game.requiredFields) },
-        packages: keepCheapestEquivalentPackages(readyVariants.flatMap((details) => details.packages)),
+        packages: regularMobileLegendsPackages(freeFireFamilyGameId, readyVariants.flatMap((details) => details.packages)),
       };
     }
     if (isPubgMobileFamilyGame(gameId)) {
