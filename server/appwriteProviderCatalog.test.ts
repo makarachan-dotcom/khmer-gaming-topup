@@ -37,7 +37,15 @@ describe("Appwrite provider catalog fallback", () => {
       games: [{ providerGameId: "mobile_legends_global", name: "Mobile Legends", requiredFields: [{ key: "player_id", label: "Player ID", required: true }], offers: [{ providerOfferId: "86", name: "86 Diamonds", priceUsd: "1.00" }] }],
     } as never);
 
-    expect(result).toMatchObject({ gamesImported: 1, offersImported: 1, provider: "FZR Cards" });
+    expect(result).toMatchObject({ gamesImported: 1, gamesUpdated: 0, offersImported: 1, offersUpdated: 0, provider: "FZR Cards" });
+
+    // A re-sync of the same snapshot refreshes rows in place: no new rows,
+    // but every existing game/offer counts as updated.
+    const resync = await syncAppwriteFzrCatalog({
+      status: "ready",
+      games: [{ providerGameId: "mobile_legends_global", name: "Mobile Legends", requiredFields: [{ key: "player_id", label: "Player ID", required: true }], offers: [{ providerOfferId: "86", name: "86 Diamonds", priceUsd: "1.00" }] }],
+    } as never);
+    expect(resync).toMatchObject({ gamesImported: 0, gamesUpdated: 1, offersImported: 0, offersUpdated: 1, provider: "FZR Cards" });
     const catalog = await getAppwriteProviderCatalog();
     const offer = catalog.games[0]?.packages[0];
     expect(offer).toMatchObject({ basePriceUsd: "1.00", profitMarginPercent: "0.00", priceUsd: "1.00", providerAuthorized: true, isActive: false });
