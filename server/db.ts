@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, gt, inArray, like, lt, or, sql } from "drizzle-orm";
+
 import { createHash, randomBytes } from "node:crypto";
 import { drizzle } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
@@ -15,6 +16,7 @@ import { buildEvidenceRetentionAuditReason, canApproveMarketplaceVerification, h
 import { getPublicPaymentReadiness } from "./paymentReadiness";
 import { checkBakongKhqrPayment, createBakongKhqrPayment, registerBakongKhqrWorkerWatch } from "./bakongKhqr";
 import { getKhqrReconciliationDisposition, getKhqrWalletReconciliationDisposition } from "./khqrReconciliation";
+import { isForeignCountryNamedProduct } from "@shared/countryNameFilter";
 import { assertOrderAmountIntegrity, assertPackagePriceIntegrity, assessOrderVelocity, moneyEquals } from "./paymentSecurity";
 import { applyShopPriceLadder, keepCheapestEquivalentPackages, packageAmountAndUnit, shopLadderUnitPrice } from "@shared/packagePriceLadder";
 import { parsePackageUi, parseStorefrontUi, type StorefrontUiSkin } from "@shared/storefrontUi";
@@ -337,7 +339,7 @@ export async function getAdminSyncedProviderPackages(providerGameIds: string[]) 
   const products = await db.select({ id: gameProducts.id }).from(gameProducts).where(inArray(gameProducts.id, productIds));
   if (!products.length) return [];
   const packages = await db.select({ id: gamePackages.id, amountLabel: gamePackages.amountLabel, priceUsd: gamePackages.priceUsd, providerSource: gamePackages.providerSource, sortOrder: gamePackages.sortOrder }).from(gamePackages).where(and(inArray(gamePackages.productId, products.map((product) => product.id)), eq(gamePackages.providerAuthorized, true))).orderBy(asc(gamePackages.sortOrder));
-  return applyShopPriceLadder(packages.map((item) => ({ id: item.id, label: item.amountLabel, amountLabel: item.amountLabel, priceLabel: `$${Number(item.priceUsd).toFixed(2)}`, provider: "FZR Cards", paymentMethods: ["khqr", "bank"] as ("khqr" | "bank")[] })));
+  /* Name-based country filter: skip packages whose synced label explicitly names another country (regional categories stay listed). */ const kept = packages.filter((item) => !isForeignCountryNamedProduct(item.amountLabel)); return applyShopPriceLadder(kept.map((item) => ({ id: item.id, label: item.amountLabel, amountLabel: item.amountLabel, priceLabel: `$${Number(item.priceUsd).toFixed(2)}`, provider: "FZR Cards", paymentMethods: ["khqr", "bank"] as ("khqr" | "bank")[] })));
 }
 
 /** Public fallback for an authorized synced catalog: inactive rows never reach the storefront. */
@@ -350,7 +352,7 @@ export async function getPublicSyncedProviderPackages(providerGameIds: string[])
   const products = await db.select({ id: gameProducts.id }).from(gameProducts).where(and(inArray(gameProducts.id, productIds), eq(gameProducts.isActive, true)));
   if (!products.length) return [];
   const packages = await db.select({ id: gamePackages.id, amountLabel: gamePackages.amountLabel, priceUsd: gamePackages.priceUsd, providerSource: gamePackages.providerSource, sortOrder: gamePackages.sortOrder }).from(gamePackages).where(and(inArray(gamePackages.productId, products.map((product) => product.id)), eq(gamePackages.isActive, true), eq(gamePackages.providerAuthorized, true))).orderBy(asc(gamePackages.sortOrder));
-  return keepCheapestEquivalentPackages(packages.map((item) => ({ id: item.id, label: item.amountLabel, amountLabel: item.amountLabel, priceLabel: `$${Number(item.priceUsd).toFixed(2)}`, provider: "FZR Cards", paymentMethods: ["khqr", "bank"] as ("khqr" | "bank")[] })));
+  /* Name-based country filter: skip packages whose synced label explicitly names another country (regional categories stay listed). */ const kept = packages.filter((item) => !isForeignCountryNamedProduct(item.amountLabel)); return keepCheapestEquivalentPackages(kept.map((item) => ({ id: item.id, label: item.amountLabel, amountLabel: item.amountLabel, priceLabel: `$${Number(item.priceUsd).toFixed(2)}`, provider: "FZR Cards", paymentMethods: ["khqr", "bank"] as ("khqr" | "bank")[] })));
 }
 
 type OrderStatus = "pending" | "awaiting_payment" | "paid" | "delivered" | "failed" | "expired" | "refunded";
