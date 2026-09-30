@@ -158,10 +158,50 @@ export function isThailandProviderProduct(text: string) {
   return /(?:\bthailand\b|\bthai\b|ไทย|ประเทศไทย|🇹🇭|(?:^|[_\s(])th(?:$|[_\s)]))/i.test(text);
 }
 
+/**
+ * Cambodia-only storefront (owner request, 2026-09-30): exclude every product
+ * explicitly marked for another country or a non-Cambodia region. This mirrors
+ * the country detection in `client/src/lib/providerPresentation.ts`
+ * (countryFlags + countryCodeFlags + trailing variant names) plus the
+ * multi-country region groups the provider uses (CIS, LATAM, MENA, ...).
+ * Products with no country marker (Global, promo/special variants, Telegram,
+ * Roblox) are kept, as are Cambodia/KH products.
+ */
+const NON_CAMBODIA_PROVIDER_PRODUCT_PATTERNS: RegExp[] = [
+  /\bindonesia\b|\bindonesian\b/i,
+  /\bthailand\b|\bthai\b|ไทย|ประเทศไทย/i,
+  /\bvietnam\b|\bvietnamese\b/i,
+  /\bmalaysia\b|\bmalaysian\b/i,
+  /\bphilippines\b|\bphilippine\b|\bfilipino\b/i,
+  /\bsingapore\b|\bsingaporean\b/i,
+  /\bbangladesh\b|\bbangladeshi\b/i,
+  /\bbrazil\b|\bbrasil\b/i,
+  /\bpakistan\b|\bpakistani\b/i,
+  /\btaiwan\b|\btaiwanese\b/i,
+  /\bturkey\b|\bturkish\b|\bturkiye\b/i,
+  /\brussia\b|\brussian\b/i,
+  /\bunited\s+states\b|\busa\b/i,
+  /\bcanada\b|\bcanadian\b/i,
+  /\beurope\b|\beuropean\b/i,
+  /🇮🇩|🇹🇭|🇻🇳|🇲🇾|🇵🇭|🇸🇬|🇧🇩|🇧🇷|🇵🇰|🇹🇼|🇹🇷|🇷🇺|🇺🇸|🇪🇺|🇨🇦/,
+  // Delimited short codes as used in provider category ids and bracketed names
+  // (free_fire_sg, "Free Fire (SG)", mobile_legends_id, ...). Delimiters keep
+  // this from matching inside unrelated words.
+  /(?:^|[_\s(\-/])(?:id|th|vn|my|ph|sg|bd|br|pk|tw|tr|ru|us|ca|eu)(?:$|[_\s)\-/])/i,
+  // "MY/SG" style combined routes.
+  /\bmy\s*\/\s*sg\b|\bsg\s*\/\s*my\b/i,
+  // Multi-country region groups that are not Cambodia-specific.
+  /(?:^|[_\s(\-/])(?:cis|latam|mena|naeu|sea|asia)(?:$|[_\s)\-/])/i,
+];
+
+export function isNonCambodiaProviderProduct(text: string) {
+  return NON_CAMBODIA_PROVIDER_PRODUCT_PATTERNS.some((pattern) => pattern.test(text));
+}
+
 // Owner curation: the storefront AND the admin sync only expose these game families. Matching is
-// by provider category_id OR display name, so every regional variant (mobile_legends_global,
-// mobile_legends_ph, pubg_mobile_auto, free_fire_sg, ...) is included automatically. Edit this
-// list to add or remove games.
+// by provider category_id OR display name, and the Cambodia-only filter below drops every
+// regional variant explicitly marked for another country (mobile_legends_ph, free_fire_sg, ...),
+// so only Cambodia/KH, Global, and unmarked products are listed. Edit this list to add or remove games.
 const WANTED_PROVIDER_GAME_PATTERNS: RegExp[] = [
   /mobile[\s_]*legends/i,
   /free[\s_]*fire/i,
@@ -965,7 +1005,7 @@ function publicProviderGameIds(availability: Awaited<ReturnType<typeof providerA
 function asProviderGames(items: FzrTopupItem[]) {
   return items.filter((item) => {
     const text = `${item.category_id} ${item.name} ${item.note ?? ""}`;
-    return isWantedProviderProduct(text) && !isThailandProviderProduct(text);
+    return isWantedProviderProduct(text) && !isNonCambodiaProviderProduct(text);
   }).map((item) => ({ id: item.category_id, name: item.name, region: providerGameRegion(item.name, item.note), provider: "FZR Cards", requiredFields: [] }));
 }
 
@@ -976,7 +1016,7 @@ export function cachedPublicProviderGames(catalog: AppwriteProviderCatalog, avai
   return catalog.games.flatMap((game) => {
     const providerId = game.providerSourceId?.trim();
     const name = game.titleEn?.trim() || game.titleKh?.trim();
-    if (!providerId || !name || !(isWantedProviderGameId(providerId) || (isBuiltInProviderGameId(providerId) || isTelegramProviderProduct(`${providerId} ${name}`))) || !(activeIds.has(providerId) || (isBuiltInProviderGameId(providerId) || isTelegramProviderProduct(`${providerId} ${name}`))) || hiddenIds.has(providerId) || isThailandProviderProduct(`${providerId} ${name}`)) return [];
+    if (!providerId || !name || !(isWantedProviderGameId(providerId) || (isBuiltInProviderGameId(providerId) || isTelegramProviderProduct(`${providerId} ${name}`))) || !(activeIds.has(providerId) || (isBuiltInProviderGameId(providerId) || isTelegramProviderProduct(`${providerId} ${name}`))) || hiddenIds.has(providerId) || isNonCambodiaProviderProduct(`${providerId} ${name}`)) return [];
     return [{ id: providerId, name, region: providerGameRegion(name), provider: "FZR Cards" as const, requiredFields: [] }];
   });
 }
@@ -992,7 +1032,7 @@ export function cachedProviderAvailabilityGames(catalog: AppwriteProviderCatalog
   return catalog.games.flatMap((game) => {
     const providerId = game.providerSourceId?.trim();
     const name = game.titleEn?.trim() || game.titleKh?.trim();
-    if (!providerId || !name || !isWantedProviderGameId(providerId) || isThailandProviderProduct(`${providerId} ${name}`)) return [];
+    if (!providerId || !name || !isWantedProviderGameId(providerId) || isNonCambodiaProviderProduct(`${providerId} ${name}`)) return [];
     return [{ id: providerId, name, isActive: activeIds.has(providerId) && !hiddenIds.has(providerId) }];
   });
 }
@@ -1011,7 +1051,7 @@ async function cachedPublicProviderGamesDuringOutage(availability: Awaited<Retur
     return catalog.flatMap((game) => {
       const providerId = game.packages.map((item) => String(item.providerSource ?? "").match(/^fzr_cards:([^:]+):/)?.[1]).find(Boolean);
       const name = game.titleEn?.trim() || game.titleKh?.trim();
-      if (!providerId || !name || !(isWantedProviderGameId(providerId) || (isBuiltInProviderGameId(providerId) || isTelegramProviderProduct(`${providerId} ${name}`))) || !(activeIds.has(providerId) || (isBuiltInProviderGameId(providerId) || isTelegramProviderProduct(`${providerId} ${name}`))) || hiddenIds.has(providerId) || isThailandProviderProduct(`${providerId} ${name}`)) return [];
+      if (!providerId || !name || !(isWantedProviderGameId(providerId) || (isBuiltInProviderGameId(providerId) || isTelegramProviderProduct(`${providerId} ${name}`))) || !(activeIds.has(providerId) || (isBuiltInProviderGameId(providerId) || isTelegramProviderProduct(`${providerId} ${name}`))) || hiddenIds.has(providerId) || isNonCambodiaProviderProduct(`${providerId} ${name}`)) return [];
       return [{ id: providerId, name, region: providerGameRegion(name), provider: "FZR Cards" as const, requiredFields: [] }];
     });
   } catch { return []; }
@@ -1147,7 +1187,7 @@ export async function fetchProviderGameDetails(gameId: string, options: { includ
     // exact match (which previously dropped valid packages on the storefront).
     if (!payload.success) return (await cachedProviderGameDetails(gameId, options.includeInactive)) ?? { status: "error", game: null, packages: [] };
     const resolvedName = payload.data.name ?? gameId;
-    if (isThailandProviderProduct(`${gameId} ${resolvedName}`)) return { status: "unavailable", game: null, packages: [] };
+    if (isNonCambodiaProviderProduct(`${gameId} ${resolvedName}`)) return { status: "unavailable", game: null, packages: [] };
     const fields = providerFields(payload.data.fields);
     const livePackages = await providerPackages(gameId, payload.data.offers);
     // If the live response parsed but produced no usable packages (e.g. an ID-verified game that
@@ -1557,7 +1597,7 @@ export async function fetchSmmProviderServices(options: { includeHidden?: boolea
     const payload = z.array(z.unknown()).max(20_000).safeParse(response);
     if (!payload.success) return { status: "error", services: [] };
     const hidden = new Set(availability?.hiddenSmmServiceIds ?? []);
-    const services = balanceSocialProviderServices(payload.data.map((item) => smmGlobServiceSchema.safeParse(item)).filter((item): item is z.ZodSafeParseSuccess<z.infer<typeof smmGlobServiceSchema>> => item.success).map((item) => item.data).filter((service) => /(facebook|instagram|tiktok|youtube|telegram)/i.test(`${service.category} ${service.name}`) && !isThailandProviderProduct(`${service.category} ${service.name}`) && !hidden.has(service.service)));
+    const services = balanceSocialProviderServices(payload.data.map((item) => smmGlobServiceSchema.safeParse(item)).filter((item): item is z.ZodSafeParseSuccess<z.infer<typeof smmGlobServiceSchema>> => item.success).map((item) => item.data).filter((service) => /(facebook|instagram|tiktok|youtube|telegram)/i.test(`${service.category} ${service.name}`) && !isNonCambodiaProviderProduct(`${service.category} ${service.name}`) && !hidden.has(service.service)));
     return { status: "ready", services: services.map((service) => ({ providerServiceId: service.service, name: service.name, category: service.category, serviceType: service.type, rateUsdPerThousand: Number(service.rate).toFixed(4), min: service.min, max: service.max, refill: Boolean(service.refill), cancel: Boolean(service.cancel), dripfeed: Boolean(service.dripfeed) })) };
   } catch { return { status: "error", services: [] }; }
 }
@@ -1575,7 +1615,7 @@ async function cachedProviderAvailabilityGamesDuringOutage(availability: Awaited
     return catalog.flatMap((game) => {
       const providerId = game.packages.map((item) => String(item.providerSource ?? "").match(/^fzr_cards:([^:]+):/)?.[1]).find(Boolean);
       const name = game.titleEn?.trim() || game.titleKh?.trim();
-      if (!providerId || !name || !isWantedProviderGameId(providerId) || isThailandProviderProduct(`${providerId} ${name}`)) return [];
+      if (!providerId || !name || !isWantedProviderGameId(providerId) || isNonCambodiaProviderProduct(`${providerId} ${name}`)) return [];
       return [{ id: providerId, name, isActive: activeIds.has(providerId) && !hiddenIds.has(providerId) }];
     });
   } catch { return []; }
@@ -1783,7 +1823,7 @@ export async function fetchFzrProviderSyncSnapshot(): Promise<FzrProviderSyncSna
     // rate-limiting that was silently emptying the catalog.
     const items = catalog.items.filter((item) => {
       const text = `${item.category_id} ${item.name} ${item.note ?? ""}`;
-      return isWantedProviderProduct(text) && !isThailandProviderProduct(text);
+      return isWantedProviderProduct(text) && !isNonCambodiaProviderProduct(text);
     });
     let skipped = 0;
     const details = await mapWithConcurrency(items, 6, async (item) => {
