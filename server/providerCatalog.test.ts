@@ -121,6 +121,7 @@ describe("provider catalog", () => {
   it("shows complete paginated FazerCards inventory only to admin and never automatically publicizes the first provider page", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "server-only-key";
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
       if (url.includes("smm")) return { ok: true, json: async () => [] };
       if (url.includes("cursor=page-2")) return { ok: true, json: async () => ({ ok: true, kind: "topup", items: [{ category_id: "new-pubg", name: "PUBG Mobile" }], meta: { next_cursor: null, has_more: false } }) };
       return { ok: true, json: async () => ({ ok: true, kind: "topup", items: [{ category_id: "8_ball_pool", name: "8 Ball Pool" }], meta: { next_cursor: "page-2", has_more: true } }) };
@@ -333,7 +334,7 @@ describe("provider catalog", () => {
     }
   });
 
-  it("merges every owner-enabled Mobile Legends family variant, including dynamic region IDs", async () => {
+  it("merges regional Mobile Legends variants by id while dropping only country-named games and offers", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "server-only-key";
     process.env.APPWRITE_ENDPOINT = "https://appwrite.example.test/v1";
@@ -342,14 +343,19 @@ describe("provider catalog", () => {
     const variants = ["mobile_legends_id", "mobile_legends_ph"];
     vi.stubGlobal("fetch", vi.fn(async (url: string) => {
       if (url.startsWith("https://provider.example.test") && url.includes("/offers?category_id=mobile_legends_id")) return { ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "mobile_legends_id", name: "Mobile Legends (Indonesia)", fields: [{ key: "player_id", label: "Player ID", type: "text" }, { key: "server_id", label: "Server ID", type: "text" }], offers: [{ offer_id: "id", name: "86 Diamonds", price_usd: "1.00" }] }) };
-      if (url.startsWith("https://provider.example.test") && url.includes("/offers?category_id=mobile_legends_ph")) return { ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "mobile_legends_ph", name: "Mobile Legends (Philippines)", fields: [{ key: "player_id", label: "Player ID", type: "text" }, { key: "server_id", label: "Server ID", type: "text" }], offers: [{ offer_id: "ph", name: "172 Diamonds", price_usd: "2.00" }] }) };
-      if (url.startsWith("https://provider.example.test")) return { ok: true, json: async () => ({ ok: true, kind: "topup", items: variants.map((category_id) => ({ category_id, name: category_id === "mobile_legends_id" ? "Mobile Legends (Indonesia)" : "Mobile Legends (Philippines)" })), meta: { next_cursor: null, has_more: false } }) };
+      if (url.startsWith("https://provider.example.test") && url.includes("/offers?category_id=mobile_legends_ph")) return { ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "mobile_legends_ph", name: "Mobile Legends", fields: [{ key: "player_id", label: "Player ID", type: "text" }, { key: "server_id", label: "Server ID", type: "text" }], offers: [{ offer_id: "ph", name: "172 Diamonds", price_usd: "2.00" }, { offer_id: "ph-foreign", name: "86 Diamonds (Philippines)", price_usd: "1.00" }] }) };
+      if (url.startsWith("https://provider.example.test")) return { ok: true, json: async () => ({ ok: true, kind: "topup", items: variants.map((category_id) => ({ category_id, name: category_id === "mobile_legends_id" ? "Mobile Legends (Indonesia)" : "Mobile Legends" })), meta: { next_cursor: null, has_more: false } }) };
       return { ok: true, json: async () => ({ sourceTable: "provider_availability", sourceId: "global", payload: JSON.stringify({ activeGameIds: variants, hiddenGameIds: [], hiddenSmmServiceIds: [], updatedAt: new Date().toISOString() }) }) };
     }));
 
     const result = await fetchProviderGameDetails("mobile_legends");
     expect(result).toMatchObject({ status: "ready", game: { id: "mobile_legends", name: "Mobile Legends" } });
-    if (result.status === "ready") expect(result.packages.map((item) => item.id)).toEqual([providerPackageRecordId("mobile_legends_id", "id"), providerPackageRecordId("mobile_legends_ph", "ph")]);
+    // mobile_legends_ph is kept: the region slug lives in the category id, and
+    // its display name carries no country marker. Its country-named offer is
+    // dropped while the neutral offer stays.
+    if (result.status === "ready") expect(result.packages.map((item) => item.id)).toEqual([providerPackageRecordId("mobile_legends_ph", "ph")]);
+    // The country-named variant is excluded from the family entirely.
+    await expect(fetchProviderGameDetails("mobile_legends_id")).resolves.toMatchObject({ status: "unavailable" });
   });
 
   it("keeps M-CASH and MLBB Adventure out of regular Mobile Legends", async () => {
@@ -774,22 +780,32 @@ describe("provider catalog", () => {
     expect(isThailandProviderProduct("Arena of Valor (ID) Region: Indonesia")).toBe(false);
   });
 
-  it("excludes other-country and non-Cambodia region products while keeping Cambodia, Global, and Free Fire products", () => {
+  it("removes only products whose display name explicitly names another country, keeping regional categories and Free Fire", () => {
+    // Name-based filter (owner request, 2026-09-30): category ids / region
+    // slugs never exclude. Callers pass the display NAME only.
+    expect(isNonCambodiaProviderProduct("Mobile Legends (Philippines)")).toBe(true);
+    expect(isNonCambodiaProviderProduct("86 Diamonds (Indonesia)")).toBe(true);
+    expect(isNonCambodiaProviderProduct("Arena of Valor (TH) Region: Thailand")).toBe(true);
+    expect(isNonCambodiaProviderProduct("Mobile Legends (PH)")).toBe(true);
+    expect(isNonCambodiaProviderProduct("Diamonds MY/SG")).toBe(true);
     // Free Fire is back on the storefront in all regions per owner request (2026-09-30).
+    expect(isNonCambodiaProviderProduct("Free Fire")).toBe(false);
     expect(isNonCambodiaProviderProduct("Free Fire (SG)")).toBe(false);
-    expect(isNonCambodiaProviderProduct("free_fire_my_sg Free Fire (MY/SG)")).toBe(false);
-    expect(isNonCambodiaProviderProduct("free_fire_bd Free Fire (BD)")).toBe(false);
+    expect(isNonCambodiaProviderProduct("Free Fire (MY/SG)")).toBe(false);
     expect(isNonCambodiaProviderProduct("Free Fire (CIS)")).toBe(false);
     expect(isNonCambodiaProviderProduct("Free Fire (LATAM)")).toBe(false);
     expect(isNonCambodiaProviderProduct("Free Fire (MENA)")).toBe(false);
-    expect(isNonCambodiaProviderProduct("mobile_legends_id Mobile Legends (Indonesia)")).toBe(true);
-    expect(isNonCambodiaProviderProduct("Arena of Valor (TH) Region: Thailand")).toBe(true);
-    expect(isNonCambodiaProviderProduct("eafc_mobile_kh EA FC Mobile (KH)")).toBe(false);
-    expect(isNonCambodiaProviderProduct("pubg_mobile_kh PUBG Mobile (Cambodia)")).toBe(false);
-    expect(isNonCambodiaProviderProduct("mobile_legends_global Mobile Legends Global")).toBe(false);
-    expect(isNonCambodiaProviderProduct("mobile_legends_promo Mobile Legends Promo")).toBe(false);
-    expect(isNonCambodiaProviderProduct("8_ball_pool 8 Ball Pool")).toBe(false);
-    expect(isNonCambodiaProviderProduct("telegram_stars Telegram Stars")).toBe(false);
+    expect(isNonCambodiaProviderProduct("Free Fire Philippines")).toBe(false);
+    // Regional categories stay listed: no name-based country marker.
+    expect(isNonCambodiaProviderProduct("Mobile Legends")).toBe(false);
+    expect(isNonCambodiaProviderProduct("Mobile Legends Global")).toBe(false);
+    expect(isNonCambodiaProviderProduct("Mobile Legends Promo")).toBe(false);
+    expect(isNonCambodiaProviderProduct("EA FC Mobile (KH)")).toBe(false);
+    expect(isNonCambodiaProviderProduct("PUBG Mobile (Cambodia)")).toBe(false);
+    expect(isNonCambodiaProviderProduct("86 Diamonds")).toBe(false);
+    expect(isNonCambodiaProviderProduct("Player ID")).toBe(false);
+    expect(isNonCambodiaProviderProduct("8 Ball Pool")).toBe(false);
+    expect(isNonCambodiaProviderProduct("Telegram Stars")).toBe(false);
   });
 
   it("submits a paid SMM fulfillment request only through the server-side SMMGlob add action", async () => {
