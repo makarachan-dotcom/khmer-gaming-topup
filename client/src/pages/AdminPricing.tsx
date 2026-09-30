@@ -344,7 +344,7 @@ function PricingWorkspace() {
     },
     onSuccess: result => {
       setSyncNotice(
-        `បាន Sync ហ្គេម ${result.gamesImported} និងកញ្ចប់ ${result.offersImported} រួចរាល់។ ឥឡូវអ្នកអាចកំណត់ Base USD និង Margin សម្រាប់កញ្ចប់នីមួយៗបាន។`
+        `បាន Sync រួចរាល់៖ refresh តម្លៃ ${result.offersUpdated} កញ្ចប់, កញ្ចប់ថ្មី ${result.offersImported}, ហ្គេមថ្មី ${result.gamesImported}។ ឥឡូវអ្នកអាចកំណត់ Base USD និង Margin សម្រាប់កញ្ចប់នីមួយៗបាន។`
       );
       utils.admin.fullCatalog.invalidate();
       utils.admin.providerCatalogStatus.invalidate();
