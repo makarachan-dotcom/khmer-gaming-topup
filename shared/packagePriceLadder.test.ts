@@ -93,4 +93,57 @@ describe("shop price ladder", () => {
     expect(visible.map((item) => item.id).sort()).toEqual(["cheap", "other"]);
   });
 
+  it("treats every equivalent diamond expression as one package no matter how it is written", () => {
+    // All of these mean 86 diamonds received.
+    const eightySix = [
+      "86 Diamonds",
+      "(78+8) Diamonds",
+      "(78 + 8) Diamonds",
+      "(78+8)Diamonds",
+      "78+8 Diamonds",
+      "78 + 8 Diamonds",
+      "86 Diamonds (78+8)",
+      "86 (78+8) Diamonds",
+      "(78+8) Bonus Diamonds",
+      "86💎",
+      "💎 86 Diamonds",
+    ];
+    for (const label of eightySix) {
+      expect(packageAmountAndUnit(label, label)).toEqual({ amount: 86, unit: "diamond" });
+      expect(packageIdentityKey("86 Diamonds", "86 Diamonds")).toBe(packageIdentityKey(label, label));
+    }
+    // Bonus-word sums are real totals: 86 + 8 means 94, not 86.
+    expect(packageAmountAndUnit("86 Diamonds + 8 Bonus", "86 Diamonds + 8 Bonus")).toEqual({ amount: 94, unit: "diamond" });
+    expect(packageIdentityKey("94 Diamonds", "94 Diamonds")).toBe(
+      packageIdentityKey("86 Diamonds + 8 Bonus", "86 Diamonds + 8 Bonus"),
+    );
+    expect(packageIdentityKey("86 Diamonds", "86 Diamonds")).not.toBe(
+      packageIdentityKey("86 Diamonds + 8 Bonus", "86 Diamonds + 8 Bonus"),
+    );
+    // Multipliers multiply: 2x 86 means 172.
+    expect(packageAmountAndUnit("2x 86 Diamonds", "2x 86 Diamonds")).toEqual({ amount: 172, unit: "diamond" });
+    expect(packageAmountAndUnit("86 Diamonds x2", "86 Diamonds x2")).toEqual({ amount: 172, unit: "diamond" });
+    expect(packageIdentityKey("172 Diamonds", "172 Diamonds")).toBe(
+      packageIdentityKey("2x 86 Diamonds", "2x 86 Diamonds"),
+    );
+    expect(packageIdentityKey("172 Diamonds", "172 Diamonds")).toBe(
+      packageIdentityKey("(86+86) Diamonds", "(86+86) Diamonds"),
+    );
+    // Different totals never merge.
+    expect(packageIdentityKey("86 Diamonds", "86 Diamonds")).not.toBe(
+      packageIdentityKey("172 Diamonds", "172 Diamonds"),
+    );
+  });
+
+  it("publishes only the cheapest row when several labels describe the same diamond total", () => {
+    const visible = keepCheapestEquivalentPackages([
+      { id: "a", label: "86 Diamonds", amountLabel: "86 Diamonds", priceLabel: "$1.50" },
+      { id: "b", label: "(78+8) Diamonds", amountLabel: "(78+8) Diamonds", priceLabel: "$1.10" },
+      { id: "c", label: "2x 43 Diamonds", amountLabel: "2x 43 Diamonds", priceLabel: "$1.05" },
+      { id: "d", label: "78+8 Diamonds", amountLabel: "78+8 Diamonds", priceLabel: "$1.20" },
+      { id: "e", label: "172 Diamonds", amountLabel: "172 Diamonds", priceLabel: "$2.90" },
+    ]);
+    expect(visible.map((item) => item.id).sort()).toEqual(["c", "e"]);
+  });
+
 });

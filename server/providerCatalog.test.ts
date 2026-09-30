@@ -104,12 +104,12 @@ describe("provider catalog", () => {
     const games = cachedProviderAvailabilityGames({
       games: [
         { id: "cached-cambodia", providerSourceId: "eafc_mobile_kh", titleKh: "EA FC Mobile (KH)", titleEn: "EA FC Mobile (KH)", packages: [] },
-        { id: "cached-other-country", providerSourceId: "free_fire_bd", titleKh: "Free Fire (BD)", titleEn: "Free Fire (BD)", packages: [] },
+        { id: "cached-other-country", providerSourceId: "mobile_legends_id", titleKh: "Mobile Legends (ID)", titleEn: "Mobile Legends (ID)", packages: [] },
         { id: "cached-thai", providerSourceId: "thai-game", titleKh: "Thai Game", titleEn: "Thai Game", packages: [] },
       ],
       smm: [],
     }, {
-      activeGameIds: ["eafc_mobile_kh", "free_fire_bd"],
+      activeGameIds: ["eafc_mobile_kh", "mobile_legends_id"],
       hiddenGameIds: [],
       hiddenSmmServiceIds: [],
       updatedAt: new Date(),
@@ -121,7 +121,6 @@ describe("provider catalog", () => {
   it("shows complete paginated FazerCards inventory only to admin and never automatically publicizes the first provider page", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "server-only-key";
-    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
       if (url.includes("smm")) return { ok: true, json: async () => [] };
       if (url.includes("cursor=page-2")) return { ok: true, json: async () => ({ ok: true, kind: "topup", items: [{ category_id: "new-pubg", name: "PUBG Mobile" }], meta: { next_cursor: null, has_more: false } }) };
       return { ok: true, json: async () => ({ ok: true, kind: "topup", items: [{ category_id: "8_ball_pool", name: "8 Ball Pool" }], meta: { next_cursor: "page-2", has_more: true } }) };
@@ -209,7 +208,7 @@ describe("provider catalog", () => {
     const snapshot = await fetchFzrProviderSyncSnapshot();
     expect(snapshot).toMatchObject({ status: "ready" });
     if (snapshot.status === "ready") {
-      expect(snapshot.games.map((game) => game.providerGameId)).toEqual(["mobile_legends_global", "pubg_mobile_auto"]);
+      expect(snapshot.games.map((game) => game.providerGameId)).toEqual(["mobile_legends_global", "pubg_mobile_auto", "free_fire_bd"]);
       expect(snapshot.games[0]).toEqual({
         providerGameId: "mobile_legends_global",
         name: "First Game",
@@ -271,7 +270,7 @@ describe("provider catalog", () => {
     const result = await fetchProviderGames({ includeInactive: true });
     expect(result.status).toBe("ready");
     if (result.status === "ready") expect(result.games.map((game) => game.id)).toEqual([
-      "mobile_legends_global", "honor_of_kings_global", "call_of_duty_mobile",
+      "mobile_legends_global", "free_fire_sg", "honor_of_kings_global", "call_of_duty_mobile",
       "magic_chess_gogo_global", "pubg_mobile_auto", "8_ball_pool", "eafc_mobile_kh", "frag_pro_shooter",
     ]);
     await expect(fetchProviderGameDetails("acecraft", { includeInactive: true })).resolves.toEqual({ status: "unavailable", game: null, packages: [] });
@@ -374,19 +373,26 @@ describe("provider catalog", () => {
     if (adventure.status === "ready") expect(adventure.packages.map((item) => item.label)).toEqual(["120 M-CASH"]);
   });
 
-  it("hides the Free Fire family page when every regional variant targets another country", async () => {
+  it("shows the Free Fire family page with every regional variant back on the storefront", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "server-only-key";
+    const variants = ["free_fire_my_sg", "free_fire_bd"];
     vi.stubGlobal("fetch", vi.fn(async (url: string) => {
       if (url.includes("/offers?category_id=free_fire_my_sg")) return { ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "free_fire_my_sg", name: "Free Fire (MY/SG)", fields: [{ key: "player_id", label: "Player ID", type: "text" }], offers: [{ offer_id: "my-sg", name: "100 Diamonds", price_usd: "1.00" }] }) };
       if (url.includes("/offers?category_id=free_fire_bd")) return { ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "free_fire_bd", name: "Free Fire (BD)", fields: [{ key: "player_id", label: "Player ID", type: "text" }], offers: [{ offer_id: "bd", name: "310 Diamonds", price_usd: "2.00" }] }) };
-      return { ok: true, json: async () => ({ ok: true, kind: "topup", items: [{ category_id: "free_fire_my_sg", name: "Free Fire (MY/SG)" }, { category_id: "free_fire_bd", name: "Free Fire (BD)" }], meta: { next_cursor: null, has_more: false } }) };
+      return { ok: true, json: async () => ({ ok: true, kind: "topup", items: variants.map((category_id) => ({ category_id, name: "Free Fire" })), meta: { next_cursor: null, has_more: false } }) };
     }));
 
-    // Cambodia-only storefront: every Free Fire fulfillment route is marked for
-    // another country/region, so the family page has no variants left to show.
+    // Free Fire is back on the storefront in all regions per owner request
+    // (2026-09-30): every regional variant merges into one family page.
     const result = await fetchProviderGameDetails("free_fire", { includeInactive: true });
-    expect(result).toEqual({ status: "unavailable", game: null, packages: [] });
+    expect(result).toMatchObject({ status: "ready", game: { id: "free_fire", name: "Free Fire" } });
+    if (result.status === "ready") {
+      expect(result.packages.map((item) => item.id)).toEqual([
+        providerPackageRecordId("free_fire_my_sg", "my-sg"),
+        providerPackageRecordId("free_fire_bd", "bd"),
+      ]);
+    }
   });
 
   it("merges every owner-enabled PUBG Mobile family variant, including dynamic region IDs", async () => {
@@ -768,13 +774,14 @@ describe("provider catalog", () => {
     expect(isThailandProviderProduct("Arena of Valor (ID) Region: Indonesia")).toBe(false);
   });
 
-  it("excludes other-country and non-Cambodia region products while keeping Cambodia and Global products", () => {
-    expect(isNonCambodiaProviderProduct("Free Fire (SG)")).toBe(true);
-    expect(isNonCambodiaProviderProduct("free_fire_my_sg Free Fire (MY/SG)")).toBe(true);
-    expect(isNonCambodiaProviderProduct("free_fire_bd Free Fire (BD)")).toBe(true);
-    expect(isNonCambodiaProviderProduct("Free Fire (CIS)")).toBe(true);
-    expect(isNonCambodiaProviderProduct("Free Fire (LATAM)")).toBe(true);
-    expect(isNonCambodiaProviderProduct("Free Fire (MENA)")).toBe(true);
+  it("excludes other-country and non-Cambodia region products while keeping Cambodia, Global, and Free Fire products", () => {
+    // Free Fire is back on the storefront in all regions per owner request (2026-09-30).
+    expect(isNonCambodiaProviderProduct("Free Fire (SG)")).toBe(false);
+    expect(isNonCambodiaProviderProduct("free_fire_my_sg Free Fire (MY/SG)")).toBe(false);
+    expect(isNonCambodiaProviderProduct("free_fire_bd Free Fire (BD)")).toBe(false);
+    expect(isNonCambodiaProviderProduct("Free Fire (CIS)")).toBe(false);
+    expect(isNonCambodiaProviderProduct("Free Fire (LATAM)")).toBe(false);
+    expect(isNonCambodiaProviderProduct("Free Fire (MENA)")).toBe(false);
     expect(isNonCambodiaProviderProduct("mobile_legends_id Mobile Legends (Indonesia)")).toBe(true);
     expect(isNonCambodiaProviderProduct("Arena of Valor (TH) Region: Thailand")).toBe(true);
     expect(isNonCambodiaProviderProduct("eafc_mobile_kh EA FC Mobile (KH)")).toBe(false);

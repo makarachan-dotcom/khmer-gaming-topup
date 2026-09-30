@@ -11,33 +11,75 @@ export type LadderPackage = {
   priceUsd?: string;
 };
 
+/** Words that describe extra currency but are not the currency itself (singularized form). */
+const BONUS_FILLER_WORDS = new Set(["bonu", "extra", "free", "gift"]);
+
+function singularUnit(raw: string | undefined): string {
+  return (raw ?? "").replace(/s$/, "");
+}
+
+/** The unit word most numbers in the label agree on, ignoring filler words. */
+function dominantUnit(clean: string): string | null {
+  const counts = new Map<string, number>();
+  for (const match of clean.matchAll(/(\d+(?:\.\d+)?)\s*([a-z]+)/g)) {
+    const unit = singularUnit(match[2]);
+    if (!unit || BONUS_FILLER_WORDS.has(unit)) continue;
+    counts.set(unit, (counts.get(unit) ?? 0) + 1);
+  }
+  let best: string | null = null;
+  let bestCount = 0;
+  for (const [unit, count] of counts) {
+    if (count > bestCount) { best = unit; bestCount = count; }
+  }
+  return best;
+}
+
+function unitAfterSum(clean: string, endIndex: number): string | null {
+  // The word right after the sum can be filler ("Bonus"); scan forward for the
+  // first real unit word instead of giving up.
+  const words = clean.slice(endIndex).match(/[a-z]+/g) ?? [];
+  for (const word of words) {
+    const unit = singularUnit(word);
+    if (unit && !BONUS_FILLER_WORDS.has(unit)) return unit;
+  }
+  return dominantUnit(clean);
+}
+
 export function packageAmountAndUnit(label: string, amountLabel: string) {
-  const text = `${amountLabel} ${label}`.toLowerCase().replace(/,/g, "").replace(/ពេជ្យ|ពេជ្រ/g, " diamond ");
+  const text = `${amountLabel} ${label}`.toLowerCase().replace(/,/g, "").replace(/ពេជ្យ|ពេជ្រ/g, " diamond ").replace(/💎/g, " diamond ");
   if (/\b(?:weekly|daily|monthly|membership|subscription|pass|promo|special|event|crate)\b/.test(text)) return null;
 
-  // Drop emoji and stray symbols so "86💎 Diamonds" still parses as 86 diamonds.
-  const clean = text.replace(/[^\da-z+.()\s]/g, " ");
+  // Drop emoji and stray symbols so "86 Diamonds" variants still parse.
+  const clean = text.replace(/[^\da-z+.()\s×x]/g, " ");
 
-  // Parenthesized sums such as "(78+8) Diamonds" mean the player receives 86 diamonds.
-  const parenBonus = clean.match(/\(\s*(\d+(?:\.\d+)?)\s*\+\s*(\d+(?:\.\d+)?)\s*\)\s*([a-z]+)/);
-  if (parenBonus) {
-    const amount = Number(parenBonus[1]) + Number(parenBonus[2]);
-    const unit = (parenBonus[3] ?? "").replace(/s$/, "");
+  // Explicit sums are what the player receives: "(78+8) Diamonds" and
+  // "78 + 8 Diamonds" both mean 86 diamonds, never a separate package.
+  const sum = clean.match(/\(\s*(\d+(?:\.\d+)?)\s*\+\s*(\d+(?:\.\d+)?)\s*\)|(\d+(?:\.\d+)?)(?:\s*[a-z]+)?\s*\+\s*(\d+(?:\.\d+)?)/);
+  if (sum) {
+    const amount = Number(sum[1] ?? sum[3]) + Number(sum[2] ?? sum[4]);
+    const unit = unitAfterSum(clean, (sum.index ?? 0) + sum[0].length);
     if (Number.isFinite(amount) && amount > 0 && unit) return { amount, unit };
   }
 
-  const bonus = clean.match(/(\d+(?:\.\d+)?)(?:\s*[a-z]+)?\s*\+\s*(\d+(?:\.\d+)?)\s*([a-z]+)/);
-  if (bonus) {
-    const amount = Number(bonus[1]) + Number(bonus[2]);
-    const unit = (bonus[3] ?? "").replace(/s$/, "");
-    if (Number.isFinite(amount) && amount > 0 && unit) return { amount, unit };
+  // Multipliers: "2x 86 Diamonds" and "86 Diamonds x2" both mean 172 diamonds.
+  const multPrefix = clean.match(/(?:^|\s)(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)\s*([a-z]+)/);
+  if (multPrefix) {
+    const amount = Number(multPrefix[1]) * Number(multPrefix[2]);
+    const unit = singularUnit(multPrefix[3]) || dominantUnit(clean);
+    if (Number.isFinite(amount) && amount > 0 && unit && !BONUS_FILLER_WORDS.has(unit)) return { amount, unit };
+  }
+  const multSuffix = clean.match(/(\d+(?:\.\d+)?)\s*([a-z]+)\s*[x×]\s*(\d+)\s*$/);
+  if (multSuffix) {
+    const amount = Number(multSuffix[1]) * Number(multSuffix[3]);
+    const unit = singularUnit(multSuffix[2]) || dominantUnit(clean);
+    if (Number.isFinite(amount) && amount > 0 && unit && !BONUS_FILLER_WORDS.has(unit)) return { amount, unit };
   }
 
   let best: { amount: number; unit: string } | null = null;
   for (const match of clean.matchAll(/(\d+(?:\.\d+)?)\s*([a-z]+)/g)) {
     const amount = Number(match[1]);
-    const unit = (match[2] ?? "").replace(/s$/, "");
-    if (!Number.isFinite(amount) || amount <= 0 || !unit) continue;
+    const unit = singularUnit(match[2]);
+    if (!Number.isFinite(amount) || amount <= 0 || !unit || BONUS_FILLER_WORDS.has(unit)) continue;
     if (!best || amount > best.amount) best = { amount, unit };
   }
   return best;
