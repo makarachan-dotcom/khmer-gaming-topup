@@ -26,6 +26,10 @@
 :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice::before {
   display: none !important;
 }
+/* Kill the inherited desktop article min-height (12.6rem) that left a void inside cards */
+:is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card {
+  min-height: 0 !important;
+}
 @media (hover: hover) and (pointer: fine) {
   :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice:hover {
     transform: translateY(-4px) !important;
@@ -90,14 +94,10 @@
     filter: saturate(1.2) contrast(1.08);
   }
 }
-/* Glass game-logo chip */
+/* Game-logo chip: hidden — the banner artwork already identifies the game; keeps the card clean */
 :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .supplied-package-art__logo,
 :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .generated-package-art__logo {
-  background: rgb(255 255 255 / 0.18) !important;
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgb(255 255 255 / 0.5) !important;
-  box-shadow: 0 4px 10px rgb(2 6 18 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.35) !important;
+  display: none !important;
 }
 
 /* ——— Denomination: glass pill melted onto the banner's lower edge ——— */
@@ -108,7 +108,7 @@
   width: fit-content;
   max-width: 100%;
   margin: -1.9rem 0.45rem 0 !important;
-  padding: 0.3rem 0.62rem;
+  padding: 0.36rem 0.72rem;
   border-radius: 999px;
   background: rgb(9 13 25 / 0.62);
   -webkit-backdrop-filter: blur(10px);
@@ -116,11 +116,12 @@
   border: 1px solid rgb(255 255 255 / 0.26);
   box-shadow: 0 6px 14px rgb(2 6 18 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.2);
   color: #fff !important;
-  font-size: 0.72rem !important;
+  font-size: 0.8rem !important;
   font-weight: 800;
   letter-spacing: 0.015em;
   line-height: 1.35 !important;
   text-align: left !important;
+  white-space: nowrap;
   text-shadow: 0 1px 2px rgb(0 0 0 / 0.45);
 }
 
@@ -183,9 +184,9 @@
   border-color: #dd7d0a !important;
   background: linear-gradient(145deg, #dd7d0a, #f5b83d 50%, #dd7d0a) !important;
   box-shadow:
-    0 0 0 1px #dd7d0a,
-    0 18px 42px -10px rgb(217 119 6 / 0.55),
-    0 0 26px rgb(245 158 11 / 0.4) !important;
+    0 0 0 2px #dd7d0a,
+    0 0 0 6px rgb(245 158 11 / 0.28),
+    0 18px 42px -10px rgb(217 119 6 / 0.55) !important;
 }
 :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice--selected .package-choice-surface {
   background: linear-gradient(168deg, #fffdf4 0%, #fef6e0 55%, #fcecc4 100%) !important;
@@ -232,6 +233,27 @@
 :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .package-grid-skeleton__art {
   height: 5rem !important;
   border-radius: 0.72rem !important;
+}
+
+/* ——— Small phones: tighter metrics so 3-up cards stay balanced ——— */
+@media (max-width: 480px) {
+  :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice-surface {
+    padding: 0.35rem !important;
+  }
+  :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .pkg-art,
+  :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .supplied-package-art,
+  :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .generated-package-art {
+    flex-basis: 3.75rem !important;
+    height: 3.75rem !important;
+  }
+  :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice__header {
+    margin-top: -1.6rem !important;
+    font-size: 0.72rem !important;
+    padding: 0.3rem 0.6rem !important;
+  }
+  :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice__price {
+    font-size: 0.95rem !important;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
