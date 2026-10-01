@@ -26,7 +26,21 @@ type SelectedProductContextValue = {
   setSelectedProduct: (product: SelectedProduct | null) => void;
   setSelectedPaymentMethodId: (methodId: string | null) => void;
   clearSelectedProduct: () => void;
+  /** A package the buyer picked that cannot become an order yet (no player
+   *  ID). Transient UI signal only — never persisted. Lets the bottom action
+   *  bar prompt for the ID instead of staying silent. */
+  pendingPackageSelection: PendingPackageSelection;
+  setPendingPackageSelection: (selection: PendingPackageSelection) => void;
 };
+
+/** Minimal info about a picked-but-blocked package, for the ID prompt bar. */
+export type PendingPackageSelection = {
+  label: string;
+  amountLabel: string;
+  priceLabel: string;
+  gameName: string;
+  gameLogoUrl?: string;
+} | null;
 
 type PersistedCheckoutContext = {
   selectedProduct: SelectedProduct | null;
@@ -94,6 +108,7 @@ export function SelectedProductProvider({ children }: { children: ReactNode }) {
     if (restored.selectedPaymentMethodId) return restored;
     return { ...restored, selectedPaymentMethodId: readPaymentMethodPreference() };
   });
+  const [pendingPackageSelection, setPendingPackageSelection] = useState<PendingPackageSelection>(null);
   const setSelectedProduct = useCallback((product: SelectedProduct | null) => {
     setCheckoutContext((current) => {
       const next = { selectedProduct: product, selectedPaymentMethodId: current.selectedPaymentMethodId };
@@ -110,11 +125,12 @@ export function SelectedProductProvider({ children }: { children: ReactNode }) {
     });
   }, []);
   const clearSelectedProduct = useCallback(() => {
+    setPendingPackageSelection(null);
     const next = { selectedProduct: null, selectedPaymentMethodId: null };
     persistCheckoutContext(next);
     setCheckoutContext({ ...next, selectedPaymentMethodId: readPaymentMethodPreference() });
   }, []);
-  const value = useMemo(() => ({ selectedProduct: checkoutContext.selectedProduct, selectedPaymentMethodId: checkoutContext.selectedPaymentMethodId, setSelectedProduct, setSelectedPaymentMethodId, clearSelectedProduct }), [checkoutContext, clearSelectedProduct, setSelectedPaymentMethodId, setSelectedProduct]);
+  const value = useMemo(() => ({ selectedProduct: checkoutContext.selectedProduct, selectedPaymentMethodId: checkoutContext.selectedPaymentMethodId, setSelectedProduct, setSelectedPaymentMethodId, clearSelectedProduct, pendingPackageSelection, setPendingPackageSelection }), [checkoutContext, clearSelectedProduct, pendingPackageSelection, setSelectedPaymentMethodId, setSelectedProduct]);
   return <SelectedProductContext.Provider value={value}>{children}</SelectedProductContext.Provider>;
 }
 

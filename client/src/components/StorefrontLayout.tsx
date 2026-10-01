@@ -5,11 +5,11 @@ import { OutlineLoader } from "@/components/OutlineLoader";
 import { ProviderGameArtwork } from "@/components/ProviderGameIdentity";
 import SupportMascot from "@/components/SupportMascot";
 import { OverflowMarquee } from "@/components/OverflowMarquee";
-import { useSelectedProduct } from "@/contexts/SelectedProductContext";
+import { useSelectedProduct, type PendingPackageSelection } from "@/contexts/SelectedProductContext";
 import { useStorefrontHeader } from "@/contexts/StorefrontHeaderContext";
 import { trpc } from "@/lib/trpc";
 import { animate } from "animejs";
-import { ArrowUp, ChevronRight, LogIn, LogOut, Moon, Sun, WalletCards } from "lucide-react";
+import { ArrowUp, ChevronRight, IdCard, LogIn, LogOut, Moon, Sun, WalletCards } from "lucide-react";
 import { FontEmojiBrand } from "@/components/FontEmojiBrand";
 import { PackEmoji } from "@/components/PackEmoji";
 import { applyPackageUi, applyStorefrontUi, dismissStorefrontBoot, parsePackageUi, parseStorefrontUi, readStorefrontUi, type StorefrontUiSkin } from "@/lib/storefrontUi";
@@ -200,7 +200,7 @@ export default function StorefrontLayout({ children }: { children: ReactNode }) 
 function StorefrontShell({ children }: { children: ReactNode }) {
   const [location, setLocation] = useLocation();
   const { user, loading, logout } = useAuth();
-  const { selectedProduct, selectedPaymentMethodId } = useSelectedProduct();
+  const { selectedProduct, selectedPaymentMethodId, pendingPackageSelection } = useSelectedProduct();
   const { playerTitle } = useStorefrontHeader();
   const [storefrontUi, setStorefrontUi] = useState<StorefrontUiSkin>(() => readStorefrontUi());
   useEffect(() => {
@@ -227,7 +227,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const isTopupRoute = location.startsWith("/topup/");
   const [payAnchorVisible, setPayAnchorVisible] = useState(false);
-  const showPayDock = isTopupRoute && Boolean(selectedProduct) && payAnchorVisible;
+  const showPayDock = isTopupRoute && (Boolean(selectedProduct) || Boolean(pendingPackageSelection)) && payAnchorVisible;
   const scrollToPayment = () => {
     const el = document.getElementById("zurs-pay-anchor");
     if (!el) return;
@@ -488,7 +488,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
         * the button that actually creates the KHQR, so the shell never blocks
         * a selection behind a dialog. */}
       {showPayDock ? <SelectedProductActionBar
-        product={selectedProduct} paymentMethodName={selectedPaymentMethod?.name ?? null} isAuthenticated={Boolean(user)} isAuthenticationLoading={loading} signInHref={googleSignInHref} onContinue={() => setLocation("/checkout/preview")} onPickPayment={scrollToPayment} /> : (
+        product={selectedProduct} pendingPackage={pendingPackageSelection} paymentMethodName={selectedPaymentMethod?.name ?? null} isAuthenticated={Boolean(user)} isAuthenticationLoading={loading} signInHref={googleSignInHref} onContinue={() => setLocation("/checkout/preview")} onPickPayment={scrollToPayment} /> : (
         <nav
           ref={tabBarRef}
           className={cn("liquid-tabbar zurs-mobile-tabbar fixed bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-1/2 z-40 grid h-14 w-full -translate-x-1/2 grid-cols-2 gap-0.5 rounded-full p-1 sm:hidden", mobileTabColumns, scrubbing && "is-scrubbing")}
@@ -544,6 +544,8 @@ function ChristmasOverlay() {
 }
 type ActionBarProps = {
   product: { label: string; amountLabel: string; priceLabel: string; gameName: string; gameLogoUrl?: string } | null;
+  /** Picked package that cannot become an order yet (no player ID). */
+  pendingPackage: PendingPackageSelection;
   paymentMethodName: string | null;
   isAuthenticated: boolean;
   isAuthenticationLoading: boolean;
@@ -551,12 +553,31 @@ type ActionBarProps = {
   onContinue: () => void;
   onPickPayment: () => void;
 };
-function SelectedProductActionBar({ product, paymentMethodName, isAuthenticated, isAuthenticationLoading, signInHref, onContinue, onPickPayment }: ActionBarProps) {
+function SelectedProductActionBar({ product, pendingPackage, paymentMethodName, isAuthenticated, isAuthenticationLoading, signInHref, onContinue, onPickPayment }: ActionBarProps) {
   const expanded = Boolean(product);
+  const showIdPrompt = !product && Boolean(pendingPackage);
   const pill = "inline-flex h-10 shrink-0 items-center gap-1 rounded-xl px-3 text-xs font-bold";
+  const scrollToIdentity = () => {
+    const el = document.getElementById("zurs-identity-anchor");
+    if (!el) return;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
+    window.setTimeout(() => {
+      el.querySelector<HTMLInputElement>("input")?.focus({ preventScroll: true });
+    }, reducedMotion ? 0 : 500);
+  };
   return (
-    <aside className={cn("selected-product-action-bar fixed bottom-2 left-1/2 z-40 flex h-[3.75rem] -translate-x-1/2 items-center gap-2 rounded-2xl p-2", expanded ? "selected-product-action-bar--expanded" : "selected-product-action-bar--compact")} aria-label="Selected package action bar" aria-live="polite">
+    <aside className={cn("selected-product-action-bar fixed bottom-2 left-1/2 z-40 flex h-[3.75rem] -translate-x-1/2 items-center gap-2 rounded-2xl p-2", expanded ? "selected-product-action-bar--expanded" : showIdPrompt ? "selected-product-action-bar--pending" : "selected-product-action-bar--compact")} aria-label="Selected package action bar" aria-live="polite">
       <span className="selected-product-action-bar__compact-content text-ink-muted"><PackEmoji name="shopping-bag" size={18} /><span>ជ្រើសកញ្ចប់</span><ChevronRight className="h-4 w-4" /></span>
+      {showIdPrompt ? (
+        <div className="selected-product-action-bar__pending-content">
+          <button type="button" onClick={scrollToIdentity} className="pk-id-prompt__btn" aria-label="សូមដាក់ ID សិន មុននឹងបន្តការបញ្ជាទិញរបស់អ្នក">
+            <span className="pk-id-prompt__icon" aria-hidden="true"><IdCard className="h-5 w-5" /></span>
+            <span className="pk-id-prompt__text">សូមដាក់ ID សិន មុននឹងបន្តការបញ្ជាទិញរបស់អ្នក</span>
+            <ChevronRight className="h-4 w-4 shrink-0 text-amber-700" aria-hidden="true" />
+          </button>
+        </div>
+      ) : null}
       <div className="selected-product-action-bar__expanded-content">
         {product ? (
           <>
