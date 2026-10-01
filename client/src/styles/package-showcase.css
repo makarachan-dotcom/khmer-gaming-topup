@@ -254,6 +254,20 @@
   :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice__price {
     font-size: 0.95rem !important;
   }
+  /* Stack price above badges: one fixed order on narrow cards, so the price
+     never jumps between top and bottom when a badge wraps onto its own line */
+  :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .pk-price-row {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+    flex-wrap: nowrap !important;
+    gap: 0.3rem !important;
+  }
+  :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice-badges {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    margin-top: 0 !important;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
