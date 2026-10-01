@@ -377,7 +377,7 @@ async function appendOrderStatusEvent(input: { orderId: string; eventType: strin
   if (!db) throw new Error("Database unavailable");
   await db.insert(orderStatusEvents).values({ id: nanoid(), orderId: input.orderId, eventType: input.eventType, status: input.status, actorType: input.actorType, messageKh: input.messageKh, providerReference: input.providerReference ?? null });
 }
-{
+
 export async function syncFzrCatalog(snapshot: Extract<FzrProviderSyncSnapshot, { status: "ready" }>) {
   const db = await getDb();
   if (!db) {
