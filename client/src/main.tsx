@@ -22,6 +22,9 @@ import "./styles/zurs-login-refined.css";
 import "./styles/zurs-gamer.css";
 import "./styles/zurs-skins.css";
 import "./styles/zurs-global-polish.css";
+// ZURS LUXE — midnight-gold premium storefront system. Loaded last so it wins
+// the cascade over every earlier sheet. Visual-only layer.
+import "./styles/zurs-luxe.css";
 
 function loadOptionalAnalytics() {
   const endpoint = import.meta.env.VITE_ANALYTICS_ENDPOINT?.trim();
