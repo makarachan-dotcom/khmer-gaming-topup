@@ -86,15 +86,14 @@
 }
 :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .supplied-package-art__image,
 :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .generated-package-art__scene {
-  transform: scale(1.35);
-  object-position: center 22%;
+  transform: scale(1.7);
   filter: saturate(1.18) contrast(1.08) brightness(1.04);
   transition: transform 560ms cubic-bezier(0.22, 1, 0.36, 1), filter 560ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 @media (hover: hover) and (pointer: fine) {
   :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .pk-choice:hover .supplied-package-art__image,
   :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .pk-choice:hover .generated-package-art__scene {
-    transform: scale(1.48);
+    transform: scale(1.88);
     filter: saturate(1.26) contrast(1.1) brightness(1.06);
   }
 }
@@ -284,7 +283,7 @@
 @media (prefers-reduced-motion: reduce) and (hover: hover) and (pointer: fine) {
   :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .pk-choice:hover .supplied-package-art__image,
   :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .pk-choice:hover .generated-package-art__scene {
-    transform: scale(1.35);
+    transform: scale(1.7);
     filter: saturate(1.18) contrast(1.08) brightness(1.04);
   }
 }
