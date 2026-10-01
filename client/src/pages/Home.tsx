@@ -16,6 +16,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
 import { gameTopupPath } from "./GameTopup";
 import { PackEmoji } from "@/components/PackEmoji";
+import "@/styles/home-showcase.css";
 // The owner's own storefront artwork, served from client/public so it ships
 // inside the build and cannot 404 behind an upload-CDN link.
 //
@@ -53,7 +54,7 @@ function HomeStickers() {
 }
 function SectionHeading({ eyebrow, title, description, aside }: { eyebrow: string; title: string; description?: string; aside?: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-3">
+    <div className="hg-heading flex items-center justify-between gap-3">
       <div className="min-w-0 flex-1 max-w-2xl">
         <p className="zurs-eyebrow font-bold uppercase">{eyebrow}</p>
         <h2 className="zp-heading mt-1.5 font-display text-xl font-bold leading-tight text-ink text-balance sm:text-2xl">{title}</h2>
@@ -71,7 +72,8 @@ function HomeBanner() {
         * blue edge, so nothing is painted behind it: no conic beam, no panel
         * fill, no gradient. Only the PNG itself is visible. A slow left-to-right
         * pan keeps a single image feeling alive. */}
-      <div className="zurs-banner-frame zurs-banner-frame--bare zurs-banner-frame--pan relative isolate aspect-[16/5.5] overflow-hidden rounded-2xl sm:aspect-[16/6]">
+      <div className="hg-hero">
+      <div className="hg-hero-frame zurs-banner-frame zurs-banner-frame--bare zurs-banner-frame--pan relative isolate aspect-[16/5.5] overflow-hidden rounded-2xl sm:aspect-[16/6]">
         <img
           src={heroBanners[0]!.src}
           alt={heroBanners[0]!.alt}
@@ -82,6 +84,7 @@ function HomeBanner() {
           decoding="async"
           sizes="100vw"
         />
+      </div>
       </div>
     </section>
   );
@@ -99,22 +102,22 @@ function HomepageMedia() {
           const media = item.mediaUrl?.trim() ?? "";
           const video = /\.(mp4|webm|ogg)(?:$|[?#])/i.test(media);
           return (
-            <article key={item.id} className="group overflow-hidden rounded-2xl border border-line bg-panel transition hover:border-neon/50">
+            <article key={item.id} className="hg-promo group">
               {media ? (
-                <div className="relative aspect-[16/8] overflow-hidden bg-panel-2">
+                <div className="hg-promo-media">
                   {video ? (
                     <video className="h-full w-full object-cover" src={media} autoPlay={!prefersReducedMotion} loop muted playsInline controls preload="metadata" />
                   ) : (
-                    <img className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]" src={media} alt={item.titleKh ?? "ZURS STORE media"} loading="lazy" decoding="async" sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 33vw" />
+                    <img className="h-full w-full object-cover" src={media} alt={item.titleKh ?? "ZURS STORE media"} loading="lazy" decoding="async" sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 33vw" />
                   )}
-                  <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-canvas/80 px-2 py-1 text-xs font-bold text-ink backdrop-blur">
+                  <span className="hg-promo-tag">
                     {video ? <><Video className="h-3 w-3" />VIDEO</> : <><ImageIcon className="h-3 w-3" />PROMO</>}
                   </span>
                 </div>
               ) : null}
-              <div className="p-4">
-                <p className="text-sm font-bold text-ink">{item.titleKh ?? "ZURS STORE"}</p>
-                {item.bodyKh ? <p className="khmer-body mt-1 text-xs leading-5 text-ink-muted">{item.bodyKh}</p> : null}
+              <div className="hg-promo-body">
+                <p className="hg-promo-title">{item.titleKh ?? "ZURS STORE"}</p>
+                {item.bodyKh ? <p className="hg-promo-text">{item.bodyKh}</p> : null}
               </div>
             </article>
           );
@@ -157,20 +160,21 @@ function HomeGameCard({ game, displayName, imageOverrides }: { game: CatalogGame
     <div ref={cardRef}>
       <Link
         href={gameTopupPath(game.id)}
-        className={`zurs-mobile-glass group block rounded-2xl zurs-game-card h-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon ${popular ? "zurs-game-card--popular" : ""}`}
+        className={`hg-tile group block text-left focus-visible:outline-none ${popular ? "hg-tile--popular" : ""}`}
+        aria-label={`${gameLabel} · top-up`}
       >
-        <div className="zurs-game-card-media relative aspect-[16/10] overflow-hidden rounded-xl" style={{ "--game-accent": originalArtwork?.accent ?? "#38bdf8" } as React.CSSProperties}>
-          {originalArtwork ? (
-            <img src={originalArtwork.src} alt="" className="zurs-game-card-art" style={{ objectPosition: originalArtwork.position ?? "center" }} loading={visible ? "eager" : "lazy"} fetchPriority={popular && visible ? "high" : "auto"} decoding="async" sizes="(max-width: 639px) 50vw, (max-width: 1023px) 33vw, 25vw" />
-          ) : (
+        {originalArtwork ? (
+          <img src={originalArtwork.src} alt="" className="hg-tile-art" style={{ objectPosition: originalArtwork.position ?? "center" }} loading={visible ? "eager" : "lazy"} fetchPriority={popular && visible ? "high" : "auto"} decoding="async" sizes="(max-width: 639px) 50vw, (max-width: 1023px) 33vw, 25vw" />
+        ) : (
+          <span className="hg-tile-fallback" aria-hidden="true">
             <ProviderGameArtwork name={game.name} region={game.region} logoUrl={logoUrl} className="h-11 w-11 rounded-xl" showCountryFlag={false} />
-          )}
-          <span className="zurs-game-card-overlay" aria-hidden="true" />
-          {popular ? <span className="zurs-game-card-popular"><PackEmoji name="fire" size={13} />ពេញនិយម</span> : null}
-        </div>
-        <span className="block min-w-0 px-1 pb-1 pt-2.5">
-          <OverflowMarquee text={gameLabel} className="block text-sm font-bold leading-5 text-ink" />
-          <ProviderGameRegion name={game.name} region={game.region} className="mt-0.5 text-xs text-ink-muted" showFlag={false} />
+          </span>
+        )}
+        <span className="hg-tile-scrim" aria-hidden="true" />
+        {popular ? <span className="hg-tile-popular"><PackEmoji name="fire" size={13} />ពេញនិយម</span> : null}
+        <span className="hg-tile-caption">
+          <OverflowMarquee text={gameLabel} className="hg-tile-name" />
+          <ProviderGameRegion name={game.name} region={game.region} className="hg-tile-region" showFlag={false} />
         </span>
       </Link>
     </div>
@@ -185,7 +189,7 @@ function ProviderGameCatalogGroup({ baseName, games, imageOverrides }: { baseNam
   if (normalized === "pubg mobile" || games.some((g) => g.id === "pubg_mobile_auto" || g.id === "pubg_mobile_fast")) return <HomeGameCard game={{ ...primary, id: "pubg_mobile", name: "PUBG Mobile" }} displayName="PUBG Mobile" imageOverrides={imageOverrides} />;
   const primaryOverride = imageOverrides.get(providerGameImageKey(primary.id, primary.name));
   return (
-    <section className="zurs-game-group col-span-full rounded-2xl border border-line bg-panel p-3 sm:p-4">
+    <section className="hg-group zurs-game-group col-span-full p-3 sm:p-4">
       <div className="flex items-center gap-3">
         <ProviderGameArtwork name={primary.name} region={primary.region} logoUrl={primaryOverride?.logoUrl ?? primary.logoUrl} className="h-10 w-10 rounded-xl" showCountryFlag={false} />
         <div className="min-w-0">
@@ -236,7 +240,7 @@ function HomeTopupExperience() {
         aside={
           <div className="flex shrink-0 items-center gap-2">
             <HomeStickers />
-            <div className="hidden items-center gap-3 rounded-2xl border border-line bg-panel px-4 py-2.5 sm:flex" aria-labelledby="accept-payment-title">
+            <div className="hg-paychip hidden items-center gap-3 px-4 py-2.5 sm:flex" aria-labelledby="accept-payment-title">
               <p id="accept-payment-title" className="text-xs font-bold tracking-[0.14em] text-ink-muted">ACCEPT PAYMENT</p>
               <span className="rounded-lg bg-ink p-1.5"><img src={khqrLogoUrl} alt="KHQR" className="h-6 w-auto max-w-24 object-contain" loading="eager" decoding="async" /></span>
             </div>
@@ -251,14 +255,14 @@ function HomeTopupExperience() {
       ) : games.length ? (
         <>
           <div className="zurs-desktop-toolbar mt-5">
-            <label className="relative block zurs-desktop-toolbar__search">
+            <label className="hg-search relative block">
               <span className="sr-only">ស្វែងរកហ្គេម</span>
-              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" aria-hidden="true" />
+              <Search className="hg-search-icon h-4 w-4" aria-hidden="true" />
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="ស្វែងរកហ្គេម…"
-                className="zurs-mobile-glass h-11 w-full zurs-search-field rounded-xl py-2 pl-10 pr-10 text-sm text-ink outline-none placeholder:text-ink-muted focus-visible:ring-2 focus-visible:ring-neon"
+                className="zurs-search-field w-full py-2 pl-10 pr-10 text-sm text-ink outline-none placeholder:text-ink-muted"
               />
               {query ? (
                 <button type="button" onClick={() => setQuery("")} aria-label="សម្អាតការស្វែងរក" className="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-lg text-ink-muted transition hover:bg-panel-2 hover:text-ink">

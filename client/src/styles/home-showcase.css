@@ -1,0 +1,310 @@
+/* ═══════════════════════════════════════════════════════════════════
+   HOME SHOWCASE — "Aurum Arcade" cinematic home page
+   ───────────────────────────────────────────────────────────────────
+   Design language: the game art IS the interface. Full-bleed cinematic
+   tiles, ambient glows, generous radii — nothing nested in boxes.
+
+   Scope: home page only (imported by client/src/pages/Home.tsx).
+   Does not touch the shared stylesheets, the header/footer chrome,
+   the GameTopup page, checkout, or admin.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ——— 1 · Hero: ambient glow stage for the owner's banner ——— */
+.hg-hero {
+  position: relative;
+}
+.hg-hero::before {
+  content: "";
+  position: absolute;
+  inset: -8% -6% -18% -6%;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(42% 62% at 18% 30%, rgb(56 130 246 / 0.28), transparent 70%),
+    radial-gradient(40% 60% at 82% 70%, rgb(201 151 18 / 0.20), transparent 70%),
+    radial-gradient(60% 80% at 50% 110%, rgb(56 130 246 / 0.14), transparent 70%);
+  filter: blur(28px);
+}
+.hg-hero-frame {
+  border-radius: 1.35rem !important;
+  box-shadow:
+    0 30px 60px -28px rgb(2 8 30 / 0.85),
+    0 0 0 1px rgb(150 190 255 / 0.14),
+    0 0 44px -12px rgb(56 130 246 / 0.35) !important;
+}
+/* Slow shine sweep across the banner — life without motion sickness */
+@keyframes hg-sheen {
+  0% { transform: translateX(-130%) skewX(-12deg); }
+  55%, 100% { transform: translateX(230%) skewX(-12deg); }
+}
+.hg-hero-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent 42%, rgb(255 255 255 / 0.14) 50%, transparent 58%);
+  transform: translateX(-130%) skewX(-12deg);
+  animation: hg-sheen 7s ease-in-out infinite;
+}
+
+/* ——— 2 · Game tiles: the art is the card ——— */
+.hg-tile {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: 1.15rem;
+  aspect-ratio: 16 / 10.5;
+  background: #101a30;
+  box-shadow:
+    0 18px 36px -20px rgb(2 8 26 / 0.8),
+    inset 0 0 0 1px rgb(255 255 255 / 0.07);
+  transition:
+    transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 320ms cubic-bezier(0.22, 1, 0.36, 1);
+  -webkit-tap-highlight-color: transparent;
+}
+.hg-tile-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.01);
+  transition: transform 600ms cubic-bezier(0.22, 1, 0.36, 1), filter 600ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* Cinematic scrim: melts the art into the caption */
+.hg-tile-scrim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgb(4 8 20 / 0.18) 0%, transparent 34%, transparent 52%, rgb(4 8 20 / 0.92) 100%);
+}
+.hg-tile-caption {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  padding: 0.65rem 0.8rem 0.7rem;
+}
+.hg-tile-name {
+  display: block;
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.86rem;
+  line-height: 1.25;
+  letter-spacing: 0.01em;
+  text-shadow: 0 2px 10px rgb(2 6 18 / 0.9);
+}
+.hg-tile-region {
+  display: block;
+  margin-top: 0.1rem;
+  color: rgb(226 232 255 / 0.72);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-shadow: 0 1px 8px rgb(2 6 18 / 0.9);
+}
+/* Popular badge: floating gold-glass pill on the art */
+.hg-tile-popular {
+  position: absolute;
+  top: 0.6rem;
+  left: 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.28rem 0.62rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgb(255 214 110 / 0.92), rgb(201 151 18 / 0.92));
+  color: #241a05;
+  font-size: 0.66rem;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  box-shadow:
+    0 6px 18px -6px rgb(201 151 18 / 0.8),
+    inset 0 1px 0 rgb(255 255 255 / 0.55);
+  backdrop-filter: blur(6px);
+}
+/* Hover / focus: lift, zoom, golden ring */
+@media (hover: hover) and (pointer: fine) {
+  .hg-tile:hover {
+    transform: translateY(-4px);
+    box-shadow:
+      0 26px 48px -20px rgb(2 8 26 / 0.85),
+      0 0 0 2px rgb(232 186 74 / 0.85),
+      0 0 32px -6px rgb(201 151 18 / 0.55),
+      inset 0 0 0 1px rgb(255 255 255 / 0.1);
+  }
+  .hg-tile:hover .hg-tile-art {
+    transform: scale(1.07);
+    filter: saturate(1.12);
+  }
+}
+.hg-tile:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 3px rgb(232 186 74 / 0.9),
+    0 0 36px -6px rgb(201 151 18 / 0.6);
+}
+/* Fallback tile (no artwork): soft gradient monogram */
+.hg-tile-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(80% 90% at 50% 10%, rgb(70 110 220 / 0.35), transparent 70%),
+    linear-gradient(160deg, #1b2745, #0d1528);
+}
+
+/* ——— 3 · Search: floating pill ——— */
+.hg-search {
+  position: relative;
+  display: block;
+}
+.hg-search input {
+  height: 3.1rem !important;
+  border-radius: 999px !important;
+  border: 1px solid rgb(255 255 255 / 0.1) !important;
+  background: rgb(20 30 55 / 0.85) !important;
+  backdrop-filter: blur(12px);
+  box-shadow:
+    0 14px 30px -16px rgb(2 8 26 / 0.8),
+    inset 0 1px 0 rgb(255 255 255 / 0.08) !important;
+  font-size: 0.92rem !important;
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+.hg-search input::placeholder { color: rgb(141 151 178 / 0.85); }
+.hg-search input:focus {
+  border-color: rgb(232 186 74 / 0.7) !important;
+  box-shadow:
+    0 14px 30px -16px rgb(2 8 26 / 0.8),
+    0 0 0 3px rgb(201 151 18 / 0.22),
+    inset 0 1px 0 rgb(255 255 255 / 0.08) !important;
+  outline: none;
+}
+.hg-search .hg-search-icon {
+  position: absolute;
+  left: 1.05rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #c99712;
+  pointer-events: none;
+}
+.hg-search input { padding-left: 2.9rem !important; }
+
+/* ——— 4 · Section headings: quiet editorial polish ——— */
+.hg-heading .zurs-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #e8ba4a;
+}
+.hg-heading .zurs-eyebrow::before {
+  content: "";
+  width: 1.4rem;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgb(232 186 74 / 0.15), #e8ba4a);
+}
+.hg-heading .zp-heading {
+  font-size: 1.35rem;
+  letter-spacing: 0.005em;
+}
+@media (min-width: 640px) {
+  .hg-heading .zp-heading { font-size: 1.6rem; }
+}
+
+/* ——— 5 · Promo cards: seamless, media-led ——— */
+.hg-promo {
+  overflow: hidden;
+  border-radius: 1.15rem;
+  background: linear-gradient(170deg, #141e38, #0e1628);
+  box-shadow:
+    0 18px 36px -22px rgb(2 8 26 / 0.85),
+    inset 0 0 0 1px rgb(255 255 255 / 0.06);
+  transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.hg-promo-media {
+  position: relative;
+  aspect-ratio: 16 / 8;
+  overflow: hidden;
+}
+.hg-promo-media img,
+.hg-promo-media video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.hg-promo-tag {
+  position: absolute;
+  top: 0.7rem;
+  left: 0.7rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.26rem 0.6rem;
+  border-radius: 999px;
+  background: rgb(6 12 26 / 0.72);
+  backdrop-filter: blur(8px);
+  color: #f3d27a;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  box-shadow: inset 0 0 0 1px rgb(232 186 74 / 0.35);
+}
+.hg-promo-body { padding: 0.9rem 1rem 1rem; }
+.hg-promo-title {
+  color: #f2f5ff;
+  font-weight: 800;
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+.hg-promo-text {
+  margin-top: 0.3rem;
+  color: rgb(141 151 178);
+  font-size: 0.76rem;
+  line-height: 1.55;
+}
+@media (hover: hover) and (pointer: fine) {
+  .hg-promo:hover {
+    transform: translateY(-3px);
+    box-shadow:
+      0 26px 48px -22px rgb(2 8 26 / 0.9),
+      0 0 0 1px rgb(232 186 74 / 0.35),
+      inset 0 0 0 1px rgb(255 255 255 / 0.06);
+  }
+  .hg-promo:hover .hg-promo-media img { transform: scale(1.04); }
+  .hg-promo-media img { transition: transform 500ms cubic-bezier(0.22, 1, 0.36, 1); }
+}
+
+/* ——— 6 · Multi-variant group panel: soft, not boxy ——— */
+.hg-group {
+  border-radius: 1.25rem;
+  border: 0 !important;
+  background:
+    radial-gradient(90% 120% at 50% 0%, rgb(70 110 220 / 0.10), transparent 60%),
+    linear-gradient(170deg, rgb(22 33 62 / 0.9), rgb(13 20 38 / 0.9)) !important;
+  box-shadow:
+    0 18px 40px -24px rgb(2 8 26 / 0.9),
+    inset 0 0 0 1px rgb(255 255 255 / 0.06) !important;
+}
+
+/* ——— 7 · KHQR accept chip: glass pill ——— */
+.hg-paychip {
+  border-radius: 999px !important;
+  border: 1px solid rgb(255 255 255 / 0.09) !important;
+  background: rgb(20 30 55 / 0.7) !important;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 24px -14px rgb(2 8 26 / 0.8) !important;
+}
+
+/* ——— 8 · Reduced motion: everything renders statically ——— */
+@media (prefers-reduced-motion: reduce) {
+  .hg-hero-frame::after { animation: none; display: none; }
+  .hg-tile, .hg-tile-art, .hg-promo, .hg-promo-media img, .hg-search input {
+    transition: none;
+  }
+  .hg-tile:hover, .hg-promo:hover { transform: none; }
+  .hg-tile:hover .hg-tile-art { transform: scale(1.01); }
+}
