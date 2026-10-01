@@ -377,7 +377,7 @@ async function appendOrderStatusEvent(input: { orderId: string; eventType: strin
   if (!db) throw new Error("Database unavailable");
   await db.insert(orderStatusEvents).values({ id: nanoid(), orderId: input.orderId, eventType: input.eventType, status: input.status, actorType: input.actorType, messageKh: input.messageKh, providerReference: input.providerReference ?? null });
 }
-
+{
 export async function syncFzrCatalog(snapshot: Extract<FzrProviderSyncSnapshot, { status: "ready" }>) {
   const db = await getDb();
   if (!db) {
@@ -393,10 +393,8 @@ export async function syncFzrCatalog(snapshot: Extract<FzrProviderSyncSnapshot, 
     const gameId = providerRecordId("fzr-game", game.providerGameId);
     const requiresZone = game.requiredFields.some((field: { key: string }) => /zone|server|region/i.test(field.key));
     const existingGame = await db.select({ id: gameProducts.id }).from(gameProducts).where(eq(gameProducts.id, gameId)).limit(1);
-    if (existingGame[0]) 
-      gamesUpdated +=
-      await db.update (gameProducts).set({ titleKh: game.name, titleEn: game.name, currencyLabel: "Top-up", requiresZone, sortOrder }).where(eq(gameProducts.id, gameId));
-      gamesUpdated +=
+    if (existingGame[0]) {
+      await db.update(gameProducts).set({ titleKh: game.name, titleEn: game.name, currencyLabel: "Top-up", requiresZone, sortOrder }).where(eq(gameProducts.id, gameId));
     } else {
       await db.insert(gameProducts).values({ id: gameId, slug: `fzr-${createHash("sha256").update(game.providerGameId).digest("hex").slice(0, 32)}`, titleKh: game.name, titleEn: game.name, currencyLabel: "Top-up", iconLabel: "G", accent: "#4f46e5", requiresZone, isActive: true, sortOrder });
       gamesImported += 1;
