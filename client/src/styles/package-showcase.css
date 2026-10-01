@@ -86,17 +86,29 @@
 }
 :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .supplied-package-art__image,
 :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .generated-package-art__scene {
-  transform: scale(1.3);
-  object-position: center 25%;
+  /* Default: centered item/diamond art — moderate fill, no empty edges */
+  transform: scale(1.45);
+  object-position: center 50%;
   filter: saturate(1.18) contrast(1.08) brightness(1.04);
   transition: transform 560ms cubic-bezier(0.22, 1, 0.36, 1), filter 560ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* Character art (Pass/Skin): faces sit at the top — favor the upper portion */
+:is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .pkg-art--faces .supplied-package-art__image,
+:is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .pkg-art--faces .generated-package-art__scene {
+  transform: scale(1.3);
+  object-position: center 22%;
 }
 @media (hover: hover) and (pointer: fine) {
   :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .pk-choice:hover .supplied-package-art__image,
   :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .pk-choice:hover .generated-package-art__scene {
-    transform: scale(1.42);
-    object-position: center 25%;
+    transform: scale(1.58);
+    object-position: center 50%;
     filter: saturate(1.26) contrast(1.1) brightness(1.06);
+  }
+  :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .pk-choice:hover .pkg-art--faces .supplied-package-art__image,
+  :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .pk-choice:hover .pkg-art--faces .generated-package-art__scene {
+    transform: scale(1.42);
+    object-position: center 22%;
   }
 }
 /* Game-logo chip: hidden — the banner artwork already identifies the game; keeps the card clean */
@@ -285,9 +297,14 @@
 @media (prefers-reduced-motion: reduce) and (hover: hover) and (pointer: fine) {
   :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .pk-choice:hover .supplied-package-art__image,
   :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .pk-choice:hover .generated-package-art__scene {
-    transform: scale(1.3);
-  object-position: center 25%;
+    transform: scale(1.45);
+    object-position: center 50%;
     filter: saturate(1.18) contrast(1.08) brightness(1.04);
+  }
+  :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .pk-choice:hover .pkg-art--faces .supplied-package-art__image,
+  :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .pk-choice:hover .pkg-art--faces .generated-package-art__scene {
+    transform: scale(1.3);
+    object-position: center 22%;
   }
 }
 
