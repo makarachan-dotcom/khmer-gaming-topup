@@ -1,0 +1,244 @@
+/* Package showcase — "Aurum" card redesign (classic skin only).
+ *
+ * The inherited "Shop look" base (flat white cards, thin gray border) is
+ * deliberately overridden here for the package picker: a 1px gold frame,
+ * warm porcelain surface, taller cinematic banner artwork with a glass
+ * denomination pill melted onto it, a big gradient-gold price pinned to the
+ * card bottom, and badges riding alongside the price. Selected cards get an
+ * unmistakable golden ring + glow.
+ *
+ * Scoped to the classic skin so the optional soft/luxe/neon skins keep their
+ * own curated layouts. All motion stays in package-motion.css.
+ */
+
+:root { --pk-showcase-scope: 1; }
+
+/* ——— Card frame: 1px gold gradient frame, deep layered shadow ——— */
+:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice {
+  padding: 1px !important;
+  border: 1px solid rgb(201 151 18 / 0.5) !important;
+  border-radius: 1.05rem !important;
+  background: linear-gradient(145deg, #a87c14, #f0cd6e 42%, #d9a83c 72%, #a87c14) !important;
+  box-shadow:
+    0 16px 34px -14px rgb(146 106 12 / 0.38),
+    0 4px 10px -4px rgb(146 106 12 / 0.2) !important;
+}
+:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice::before {
+  display: none !important;
+}
+@media (hover: hover) and (pointer: fine) {
+  :is(html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice:hover {
+    transform: translateY(-4px) !important;
+    border-color: rgb(201 151 18 / 0.75) !important;
+    box-shadow:
+      0 24px 44px -14px rgb(146 106 12 / 0.42),
+      0 0 22px rgb(245 158 11 / 0.28) !important;
+  }
+}
+
+/* ——— Surface: warm porcelain, flex column, price pinned to the bottom ——— */
+:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice-surface {
+  position: relative;
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0.5rem !important;
+  border-radius: calc(1.05rem - 1px) !important;
+  background: linear-gradient(168deg, #fffefb 0%, #fffaf0 52%, #fdf1d9 100%) !important;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.95) !important;
+}
+
+/* ——— Banner artwork: taller, cinematic, softly glowing ——— */
+:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .pkg-art,
+:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .supplied-package-art,
+:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .generated-package-art {
+  flex: 0 0 5rem !important;
+  height: 5rem !important;
+  margin-top: 0.15rem !important;
+  border-radius: 0.72rem !important;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.35),
+    inset 0 0 0 1px rgb(255 255 255 / 0.12),
+    0 12px 24px -14px rgb(23 37 84 / 0.6) !important;
+}
+:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .supplied-package-art::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgb(6 10 22 / 0) 44%, rgb(6 10 22 / 0.58) 100%);
+}
+:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .generated-package-art::after {
+  background:
+    linear-gradient(90deg, oklch(0.1 0.035 266 / 0.46), transparent 68%),
+    linear-gradient(0deg, oklch(0.08 0.025 266 / 0.88), transparent 60%);
+}
+:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .supplied-package-art__image,
+:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .generated-package-art__scene {
+  transform: scale(1.06);
+  filter: saturate(1.12) contrast(1.06);
+  transition: transform 560ms cubic-bezier(0.22, 1, 0.36, 1), filter 560ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (hover: hover) and (pointer: fine) {
+  :is(html[data-ui="classic"], html:not([data-ui])) .pk-card .pk-choice:hover .supplied-package-art__image,
+  :is(html[data-ui="classic"], html:not([data-ui])) .pk-card .pk-choice:hover .generated-package-art__scene {
+    transform: scale(1.15);
+    filter: saturate(1.2) contrast(1.08);
+  }
+}
+/* Glass game-logo chip */
+:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .supplied-package-art__logo,
+:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .generated-package-art__logo {
+  background: rgb(255 255 255 / 0.18) !important;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgb(255 255 255 / 0.5) !important;
+  box-shadow: 0 4px 10px rgb(2 6 18 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.35) !important;
+}
+
+/* ——— Denomination: glass pill melted onto the banner's lower edge ——— */
+:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice__header {
+  position: relative;
+  z-index: 3;
+  align-self: flex-start;
+  width: fit-content;
+  max-width: 100%;
+  margin: -1.9rem 0.45rem 0 !important;
+  padding: 0.3rem 0.62rem;
+  border-radius: 999px;
+  background: rgb(9 13 25 / 0.62);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgb(255 255 255 / 0.26);
+  box-shadow: 0 6px 14px rgb(2 6 18 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.2);
+  color: #fff !important;
+  font-size: 0.72rem !important;
+  font-weight: 800;
+  letter-spacing: 0.015em;
+  line-height: 1.35 !important;
+  text-align: left !important;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.45);
+}
+
+/* ——— Amount line (only rendered when it adds information) ——— */
+:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice__amount {
+  margin: 0.5rem 0.15rem 0 !important;
+  font-size: 0.66rem !important;
+  line-height: 1rem !important;
+  color: #64748b !important;
+}
+
+/* ——— Price row: big gradient-gold price, badges riding alongside ——— */
+:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .pk-price-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem 0.5rem;
+  flex-wrap: wrap;
+  margin-top: auto;
+  padding-top: 0.6rem;
+}
+:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice__price {
+  margin: 0 !important;
+  min-width: 0;
+  font-size: 1.06rem !important;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  line-height: 1.15 !important;
+  background: linear-gradient(115deg, #92400e 0%, #d97706 42%, #f5a623 78%, #b45309 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 1px 0 rgb(255 255 255 / 0.55));
+}
+:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice-badges {
+  flex: 0 0 auto;
+  margin-top: 0 !important;
+  gap: 0.3rem;
+}
+:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .package-badge {
+  min-height: 1.35rem;
+  margin-top: 0 !important;
+  padding: 0.2rem 0.58rem;
+  font-size: 0.6rem !important;
+  letter-spacing: 0.045em;
+  border: 1px solid rgb(180 120 20 / 0.35);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.5), 0 3px 8px -2px rgb(180 120 20 / 0.4);
+}
+:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .package-badge--recommended {
+  background: linear-gradient(135deg, #fbbf24, #f97316) !important;
+  border-color: rgb(255 255 255 / 0.45) !important;
+  color: #fff !important;
+  text-shadow: 0 1px 1px rgb(0 0 0 / 0.22);
+  box-shadow: 0 4px 12px -2px rgb(249 115 22 / 0.6), inset 0 1px 0 rgb(255 255 255 / 0.45) !important;
+}
+
+/* ——— Selected: golden ring + warm glow + tinted surface ——— */
+:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice--selected {
+  border-color: #dd7d0a !important;
+  background: linear-gradient(145deg, #dd7d0a, #f5b83d 50%, #dd7d0a) !important;
+  box-shadow:
+    0 0 0 1px #dd7d0a,
+    0 18px 42px -10px rgb(217 119 6 / 0.55),
+    0 0 26px rgb(245 158 11 / 0.4) !important;
+}
+:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice--selected .package-choice-surface {
+  background: linear-gradient(168deg, #fffdf4 0%, #fef6e0 55%, #fcecc4 100%) !important;
+}
+:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice-check {
+  top: 0.45rem !important;
+  right: 0.45rem !important;
+  filter: drop-shadow(0 3px 6px rgb(217 119 6 / 0.5));
+}
+
+/* ——— Recommended: warm edge + tinted surface ——— */
+:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice--recommended {
+  border-color: rgb(217 119 6 / 0.65) !important;
+  box-shadow:
+    0 14px 30px -12px rgb(217 119 6 / 0.4),
+    0 0 0 1px rgb(217 119 6 / 0.22) !important;
+}
+:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice--recommended .package-choice-surface {
+  background: linear-gradient(160deg, #fffdf4, #fff3d4) !important;
+}
+
+/* ——— Group headers: a touch more presence ——— */
+:is(html[data-ui="classic"], html:not([data-ui])) .package-group__head {
+  margin: 0 0.05rem 0.8rem !important;
+}
+:is(html[data-ui="classic"], html:not([data-ui])) .package-group__title {
+  font-size: 0.92rem !important;
+  letter-spacing: 0.005em;
+}
+:is(html[data-ui="classic"], html:not([data-ui])) .package-group__mark {
+  box-shadow: 0 4px 10px rgb(233 155 0 / 0.42), inset 0 1px 0 rgb(255 255 255 / 0.55) !important;
+}
+:is(html[data-ui="classic"], html:not([data-ui])) .package-group__count {
+  background: linear-gradient(135deg, #fff8e2, #fbe6b6) !important;
+  border: 1px solid rgb(180 120 20 / 0.28) !important;
+  color: #8a5a0b !important;
+}
+
+/* ——— Loading skeletons follow the new card proportions ——— */
+:is(html[data-ui="classic"], html:not([data-ui])) .package-grid-skeleton__card {
+  min-height: 11rem !important;
+  border-radius: 1.05rem !important;
+}
+:is(html[data-ui="classic"], html:not([data-ui])) .package-grid-skeleton__art {
+  height: 5rem !important;
+  border-radius: 0.72rem !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(html[data-ui="classic"], html:not([data-ui])) .pk-card .supplied-package-art__image,
+  :is(html[data-ui="classic"], html:not([data-ui])) .pk-card .generated-package-art__scene {
+    transition: none;
+    transform: none;
+    filter: none;
+  }
+}
