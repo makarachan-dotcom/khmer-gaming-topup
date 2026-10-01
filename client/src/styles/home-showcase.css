@@ -272,3 +272,30 @@
   .hg-tile:hover, .hg-promo:hover { transform: none; }
   .hg-tile:hover .hg-tile-art { transform: scale(1.01); }
 }
+
+/* ——— Soften the banner's baked-in angular frame: gentle edge vignette ———
+ * The owner's banner art carries a harsh geometric blue frame. A soft inset
+ * vignette mutes the angular lines so the banner melts into the page instead
+ * of reading as a hard "Minecraft" box. Content (photo, headline) sits clear
+ * of the faded zone. */
+.hg-hero-frame {
+  position: relative;
+}
+.hg-hero-frame .zurs-banner-slide {
+  border-radius: inherit;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .hg-hero-frame::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    border-radius: inherit;
+    pointer-events: none;
+    box-shadow:
+      inset 0 18px 34px -18px rgb(8 14 30 / 0.55),
+      inset 0 -18px 34px -18px rgb(8 14 30 / 0.55),
+      inset 18px 0 34px -18px rgb(8 14 30 / 0.45),
+      inset -18px 0 34px -18px rgb(8 14 30 / 0.45);
+  }
+}
