@@ -86,14 +86,15 @@
 }
 :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .supplied-package-art__image,
 :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .generated-package-art__scene {
-  transform: scale(1.7);
+  transform: scale(1.35);
+  object-position: center 22%;
   filter: saturate(1.18) contrast(1.08) brightness(1.04);
   transition: transform 560ms cubic-bezier(0.22, 1, 0.36, 1), filter 560ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 @media (hover: hover) and (pointer: fine) {
   :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .pk-choice:hover .supplied-package-art__image,
   :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .pk-choice:hover .generated-package-art__scene {
-    transform: scale(1.88);
+    transform: scale(1.48);
     filter: saturate(1.26) contrast(1.1) brightness(1.06);
   }
 }
@@ -283,7 +284,7 @@
 @media (prefers-reduced-motion: reduce) and (hover: hover) and (pointer: fine) {
   :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .pk-choice:hover .supplied-package-art__image,
   :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .pk-choice:hover .generated-package-art__scene {
-    transform: scale(1.7);
+    transform: scale(1.35);
     filter: saturate(1.18) contrast(1.08) brightness(1.04);
   }
 }
@@ -295,28 +296,29 @@
  * same state, same options, far less vertical space.
  */
 .pkf {
-  padding: 0.6rem 0.7rem !important;
-  border-radius: 1rem !important;
+  padding: 0.45rem 0.6rem !important;
+  border-radius: 0.9rem !important;
 }
 .pkf-head {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.4rem;
   min-width: 0;
 }
 .pkf-gem {
   display: grid;
   place-items: center;
   flex: none;
-  width: 1.5rem;
-  height: 1.5rem;
-  border-radius: 0.55rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 0.45rem;
   background: linear-gradient(145deg, #f0cd6e, #c99712);
   color: #1a1403;
   box-shadow: 0 3px 8px -3px rgb(146 106 12 / 0.55);
 }
+.pkf-gem svg { width: 0.8rem; height: 0.8rem; }
 .pkf-title {
-  font-size: 0.85rem !important;
+  font-size: 0.78rem !important;
   font-weight: 800;
   letter-spacing: 0.01em;
   color: var(--z-ink);
@@ -338,36 +340,36 @@
 }
 .pkf-tabs {
   display: flex;
-  gap: 0.38rem;
+  gap: 0.32rem;
   overflow-x: auto;
-  margin-top: 0.5rem !important;
-  padding-bottom: 0.15rem;
+  margin-top: 0.35rem !important;
+  padding-bottom: 0.12rem;
   scrollbar-width: none;
 }
 .pkf-tabs::-webkit-scrollbar { display: none; }
 .pkf-tab {
   flex: none;
-  padding: 0.3rem 0.68rem !important;
-  font-size: 0.72rem !important;
+  padding: 0.22rem 0.55rem !important;
+  font-size: 0.68rem !important;
 }
 .pkf-tab b {
-  font-size: 0.66rem !important;
+  font-size: 0.62rem !important;
 }
 .pkf-tools {
   display: flex;
   align-items: stretch;
-  gap: 0.45rem;
-  margin-top: 0.5rem;
+  gap: 0.4rem;
+  margin-top: 0.35rem;
 }
 .pkf-search {
   flex: 1 1 auto;
   display: flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.4rem;
   min-width: 0;
-  height: 2.15rem;
-  padding: 0 0.7rem;
-  border-radius: 0.75rem;
+  height: 1.85rem;
+  padding: 0 0.6rem;
+  border-radius: 0.65rem;
   border: 1px solid rgb(15 23 42 / 0.12);
   background: rgb(255 255 255 / 0.7);
   color: var(--z-ink);
@@ -382,7 +384,7 @@ html[data-theme="dark"] .pkf-search {
   background: transparent;
   border: 0;
   outline: 0;
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   color: inherit;
   padding: 0;
 }
@@ -391,10 +393,10 @@ html[data-theme="dark"] .pkf-search {
   flex: none;
   display: flex;
   align-items: center;
-  gap: 0.3rem;
-  height: 2.15rem;
-  padding: 0 0.5rem 0 0.6rem;
-  border-radius: 0.75rem;
+  gap: 0.28rem;
+  height: 1.85rem;
+  padding: 0 0.45rem 0 0.55rem;
+  border-radius: 0.65rem;
   border: 1px solid rgb(201 151 18 / 0.4);
   background: linear-gradient(145deg, rgb(201 151 18 / 0.16), rgb(201 151 18 / 0.07));
   color: var(--z-ink);
