@@ -1,0 +1,625 @@
+/* ==========================================================================
+   ZURS LUXE — "Midnight Gold" premium storefront design system.
+   Loaded LAST in main.tsx so it wins the cascade over earlier sheets.
+   Visual-only layer: no logic, no layout contracts, no pinned strings here.
+   Works in both themes: hero/dark elements use explicit colors on purpose.
+   ========================================================================== */
+
+:root {
+  --zl-gold: #d9a416;
+  --zl-gold-hi: #f6dd8a;
+  --zl-gold-soft: #e8c55a;
+  --zl-gold-deep: #8a6410;
+  --zl-ink-0: #070b16;
+  --zl-ink-1: #0b1122;
+  --zl-ink-2: #111a33;
+  --zl-ink-line: rgba(217, 164, 22, 0.22);
+  --zl-text: #f4f1e6;
+  --zl-text-dim: rgba(244, 241, 230, 0.66);
+  --zl-text-faint: rgba(244, 241, 230, 0.42);
+  --zl-shadow-gold: 0 10px 30px rgba(217, 164, 22, 0.28);
+  --zl-shadow-lift: 0 18px 44px rgba(2, 6, 18, 0.55);
+  --zl-radius: 1.25rem;
+}
+
+/* --------------------------------------------------------------------------
+   Motion
+   -------------------------------------------------------------------------- */
+@keyframes zl-fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes zl-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+@keyframes zl-glow-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(217, 164, 22, 0.45), 0 10px 30px rgba(217, 164, 22, 0.22); }
+  50% { box-shadow: 0 0 0 7px rgba(217, 164, 22, 0), 0 10px 34px rgba(217, 164, 22, 0.34); }
+}
+@keyframes zl-shine-sweep {
+  from { transform: translateX(-120%) skewX(-18deg); }
+  to { transform: translateX(240%) skewX(-18deg); }
+}
+@keyframes zl-spin-slow {
+  to { transform: rotate(360deg); }
+}
+@keyframes zl-marquee-x {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.zl-anim-fade-up { animation: zl-fade-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.zl-anim-float { animation: zl-float 5.5s ease-in-out infinite; }
+
+/* --------------------------------------------------------------------------
+   Hero — the signature dark-gold panel used for every page header
+   -------------------------------------------------------------------------- */
+.zl-hero {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  border-radius: var(--zl-radius);
+  border: 1px solid rgba(217, 164, 22, 0.28);
+  background:
+    radial-gradient(120% 90% at 50% -30%, rgba(217, 164, 22, 0.34), transparent 55%),
+    radial-gradient(90% 70% at 88% 115%, rgba(64, 48, 160, 0.35), transparent 60%),
+    linear-gradient(165deg, #151d38 0%, var(--zl-ink-1) 46%, var(--zl-ink-0) 100%);
+  color: var(--zl-text);
+  box-shadow: var(--zl-shadow-lift), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.zl-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  z-index: 1;
+  background: linear-gradient(90deg, transparent, var(--zl-gold-hi) 30%, var(--zl-gold) 50%, var(--zl-gold-hi) 70%, transparent);
+  opacity: 0.9;
+}
+.zl-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: radial-gradient(circle, rgba(246, 221, 138, 0.16) 0 1px, transparent 1.4px);
+  background-size: 26px 26px;
+  mask-image: radial-gradient(80% 90% at 50% 0%, black 30%, transparent 100%);
+}
+.zl-hero > * { position: relative; z-index: 1; }
+
+.zl-hero__orb {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(46px);
+  pointer-events: none;
+  z-index: 0;
+}
+.zl-hero__orb--gold {
+  width: 15rem; height: 15rem; right: -4rem; top: -5rem;
+  background: rgba(217, 164, 22, 0.30);
+}
+.zl-hero__orb--violet {
+  width: 12rem; height: 12rem; left: -3.5rem; bottom: -4.5rem;
+  background: rgba(88, 72, 220, 0.28);
+}
+
+.zl-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--zl-gold-soft);
+}
+.zl-kicker::before {
+  content: "";
+  width: 1.4rem;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--zl-gold-deep), var(--zl-gold-hi));
+}
+
+.zl-display {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: #fff;
+  text-wrap: balance;
+}
+.zl-lead {
+  color: var(--zl-text-dim);
+  text-wrap: pretty;
+}
+.zl-gold-text {
+  background: linear-gradient(100deg, var(--zl-gold-hi) 10%, var(--zl-gold) 45%, #fff3c4 60%, var(--zl-gold) 75%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* --------------------------------------------------------------------------
+   Buttons
+   -------------------------------------------------------------------------- */
+.zl-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 3rem;
+  padding: 0.8rem 1.6rem;
+  border-radius: 1rem;
+  font-weight: 800;
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 0.16s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.zl-btn:active:not(:disabled) { transform: scale(0.97); }
+.zl-btn:disabled { cursor: not-allowed; opacity: 0.5; }
+
+.zl-btn-gold {
+  background: linear-gradient(115deg, #a97e0d 0%, var(--zl-gold) 38%, #f0c93e 50%, var(--zl-gold) 62%, #a97e0d 100%);
+  background-size: 220% 100%;
+  background-position: 0% 0%;
+  color: #241a02;
+  box-shadow: var(--zl-shadow-gold), inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+.zl-btn-gold:hover:not(:disabled) {
+  background-position: 100% 0%;
+  box-shadow: 0 14px 38px rgba(217, 164, 22, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+.zl-btn-gold .zl-btn__shine {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 45%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  transform: translateX(-120%) skewX(-18deg);
+  pointer-events: none;
+}
+.zl-btn-gold:hover:not(:disabled) .zl-btn__shine { animation: zl-shine-sweep 0.9s ease; }
+
+.zl-btn-ghost {
+  border: 1px solid rgba(255, 255, 255, 0.20);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  backdrop-filter: blur(8px);
+}
+.zl-btn-ghost:hover:not(:disabled) { border-color: rgba(246, 221, 138, 0.55); background: rgba(255, 255, 255, 0.10); }
+
+.zl-btn-dark {
+  background: linear-gradient(180deg, #1b2547, #0d1430);
+  border: 1px solid rgba(217, 164, 22, 0.30);
+  color: var(--zl-text);
+  box-shadow: 0 8px 22px rgba(2, 6, 18, 0.5);
+}
+.zl-btn-dark:hover:not(:disabled) { border-color: rgba(217, 164, 22, 0.55); }
+
+.zl-btn-row { display: flex; gap: 0.65rem; }
+.zl-btn-row .zl-btn { flex: 1; }
+
+/* --------------------------------------------------------------------------
+   Cards & panels
+   -------------------------------------------------------------------------- */
+.zl-card {
+  position: relative;
+  border-radius: var(--zl-radius);
+  border: 1px solid var(--z-line);
+  background: linear-gradient(180deg, var(--z-panel), var(--z-panel-2));
+  box-shadow: 0 12px 30px rgba(2, 6, 18, 0.28);
+}
+.zl-card--dark {
+  border-color: rgba(217, 164, 22, 0.22);
+  background:
+    radial-gradient(110% 80% at 50% -20%, rgba(217, 164, 22, 0.14), transparent 55%),
+    linear-gradient(170deg, #141b36, var(--zl-ink-0) 70%);
+  color: var(--zl-text);
+  box-shadow: var(--zl-shadow-lift), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+.zl-card--gold {
+  border-color: rgba(217, 164, 22, 0.45);
+  background:
+    radial-gradient(110% 80% at 50% -20%, rgba(217, 164, 22, 0.20), transparent 60%),
+    linear-gradient(180deg, #fffdf4, #fdf6dd);
+  box-shadow: var(--zl-shadow-gold);
+}
+
+.zl-icon-tile {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 1rem;
+  background: linear-gradient(140deg, var(--zl-gold-hi), var(--zl-gold) 55%, var(--zl-gold-deep));
+  color: #241a02;
+  box-shadow: 0 8px 20px rgba(217, 164, 22, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+.zl-icon-tile--dark {
+  background: linear-gradient(140deg, #232f5e, #0d1430);
+  color: var(--zl-gold-hi);
+  border: 1px solid rgba(217, 164, 22, 0.35);
+  box-shadow: 0 8px 20px rgba(2, 6, 18, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* Numbered section step (mirrors the approved admin StepHead language) */
+.zl-step { display: flex; align-items: center; gap: 0.8rem; }
+.zl-step__n {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 2rem; height: 2rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  background: linear-gradient(140deg, var(--zl-gold-hi), var(--zl-gold) 60%, var(--zl-gold-deep));
+  color: #241a02;
+  box-shadow: 0 6px 16px rgba(217, 164, 22, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+/* --------------------------------------------------------------------------
+   Package cards — the money interaction
+   -------------------------------------------------------------------------- */
+.zl-pack {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+  text-align: left;
+  border-radius: 1.1rem;
+  border: 1px solid var(--z-line);
+  background: linear-gradient(180deg, var(--z-panel), var(--z-panel-2));
+  padding: 0.9rem 0.95rem;
+  cursor: pointer;
+  transition: transform 0.16s ease, border-color 0.18s ease, box-shadow 0.22s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.zl-pack:hover { transform: translateY(-2px); border-color: rgba(217, 164, 22, 0.45); }
+.zl-pack:active { transform: scale(0.98); }
+.zl-pack:focus-visible { outline: 2px solid var(--zl-gold); outline-offset: 2px; }
+.zl-pack--selected {
+  border-color: var(--zl-gold);
+  background:
+    radial-gradient(120% 90% at 50% -30%, rgba(217, 164, 22, 0.22), transparent 60%),
+    linear-gradient(180deg, #fffdf2, #fdf3d3);
+  box-shadow: 0 0 0 2px rgba(217, 164, 22, 0.55), 0 14px 32px rgba(217, 164, 22, 0.30);
+}
+.zl-pack__check {
+  position: absolute;
+  top: 0.55rem; right: 0.55rem;
+  display: grid;
+  place-items: center;
+  width: 1.35rem; height: 1.35rem;
+  border-radius: 999px;
+  background: linear-gradient(140deg, var(--zl-gold-hi), var(--zl-gold-deep));
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(217, 164, 22, 0.5);
+  transform: scale(0);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.zl-pack--selected .zl-pack__check { transform: scale(1); }
+.zl-pack__price {
+  font-family: var(--font-display);
+  font-weight: 800;
+  color: var(--zl-gold-deep);
+}
+[data-theme="dark"] .zl-pack__price { color: var(--zl-gold-soft); }
+.zl-pack--selected .zl-pack__price { color: #8a5c00; }
+
+/* --------------------------------------------------------------------------
+   Forms
+   -------------------------------------------------------------------------- */
+.zl-field label, .zl-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--z-ink-muted);
+  margin-bottom: 0.4rem;
+}
+.zl-input {
+  width: 100%;
+  min-height: 3rem;
+  border-radius: 0.9rem;
+  border: 1px solid var(--z-line);
+  background: var(--z-panel);
+  color: var(--z-ink);
+  padding: 0.7rem 1rem;
+  font-size: 0.95rem;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.zl-input::placeholder { color: var(--z-ink-muted); opacity: 0.75; }
+.zl-input:focus {
+  outline: none;
+  border-color: var(--zl-gold);
+  box-shadow: 0 0 0 3px rgba(217, 164, 22, 0.22);
+}
+.zl-input--dark {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+.zl-input--dark::placeholder { color: rgba(244, 241, 230, 0.45); }
+.zl-input--dark:focus { border-color: var(--zl-gold); box-shadow: 0 0 0 3px rgba(217, 164, 22, 0.30); }
+
+/* --------------------------------------------------------------------------
+   Chips, badges, dividers
+   -------------------------------------------------------------------------- */
+.zl-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  border: 1px solid var(--z-line);
+  background: var(--z-panel-2);
+  color: var(--z-ink-muted);
+  white-space: nowrap;
+}
+.zl-chip--gold {
+  border-color: rgba(217, 164, 22, 0.5);
+  background: linear-gradient(120deg, rgba(217, 164, 22, 0.18), rgba(217, 164, 22, 0.08));
+  color: var(--zl-gold-deep);
+}
+[data-theme="dark"] .zl-chip--gold { color: var(--zl-gold-soft); }
+.zl-chip--live {
+  border-color: rgba(52, 211, 153, 0.45);
+  background: rgba(52, 211, 153, 0.12);
+  color: #047857;
+}
+[data-theme="dark"] .zl-chip--live { color: #6ee7b7; }
+
+.zl-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--zl-ink-line) 20%, var(--zl-ink-line) 80%, transparent);
+  border: 0;
+}
+
+/* Gold progress bar */
+.zl-progress { height: 0.5rem; border-radius: 999px; background: rgba(255, 255, 255, 0.12); overflow: hidden; }
+.zl-progress > i {
+  display: block; height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--zl-gold-deep), var(--zl-gold) 50%, var(--zl-gold-hi));
+  transition: width 0.5s ease;
+}
+
+/* --------------------------------------------------------------------------
+   Game catalog cards (layered over existing zurs-game-card hooks)
+   -------------------------------------------------------------------------- */
+.zl-game {
+  position: relative;
+  display: block;
+  height: 100%;
+  border-radius: 1.15rem;
+  border: 1px solid var(--z-line);
+  background: linear-gradient(180deg, var(--z-panel), var(--z-panel-2));
+  overflow: hidden;
+  transition: transform 0.18s ease, border-color 0.2s ease, box-shadow 0.25s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.zl-game:hover {
+  transform: translateY(-3px);
+  border-color: rgba(217, 164, 22, 0.5);
+  box-shadow: 0 16px 36px rgba(2, 6, 18, 0.35), 0 0 0 1px rgba(217, 164, 22, 0.25);
+}
+.zl-game:active { transform: scale(0.98); }
+.zl-game:focus-visible { outline: 2px solid var(--zl-gold); outline-offset: 2px; }
+.zl-game__media {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: linear-gradient(140deg, #1a2450, #0a0e1f);
+}
+.zl-game__media img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.35s ease; }
+.zl-game:hover .zl-game__media img { transform: scale(1.05); }
+.zl-game__media::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, transparent 45%, rgba(4, 7, 18, 0.55) 100%);
+}
+.zl-game__badge {
+  position: absolute;
+  left: 0.6rem; top: 0.6rem;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.28rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  background: linear-gradient(120deg, var(--zl-gold-hi), var(--zl-gold));
+  color: #241a02;
+  box-shadow: 0 6px 14px rgba(217, 164, 22, 0.45);
+}
+.zl-game__cta {
+  position: absolute;
+  right: 0.6rem; bottom: 0.6rem;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 2rem; height: 2rem;
+  border-radius: 999px;
+  background: rgba(10, 14, 26, 0.72);
+  border: 1px solid rgba(246, 221, 138, 0.5);
+  color: var(--zl-gold-hi);
+  backdrop-filter: blur(6px);
+  opacity: 0;
+  transform: translateX(6px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.zl-game:hover .zl-game__cta, .zl-game:focus-visible .zl-game__cta { opacity: 1; transform: none; }
+@media (hover: none) { .zl-game__cta { opacity: 1; transform: none; } }
+
+/* --------------------------------------------------------------------------
+   QR / payment framing
+   -------------------------------------------------------------------------- */
+.zl-qr-frame {
+  position: relative;
+  border-radius: 1.25rem;
+  padding: 1.1rem;
+  background: #fff;
+  box-shadow: var(--zl-shadow-lift);
+}
+.zl-qr-frame::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 1.35rem;
+  z-index: -1;
+  background: conic-gradient(from var(--zl-a, 0deg), var(--zl-gold-hi), var(--zl-gold-deep), #4f46e5, var(--zl-gold-hi));
+  animation: zl-spin-slow 7s linear infinite;
+  opacity: 0.85;
+}
+@property --zl-a { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+.zl-qr-frame { --zl-a: 0deg; }
+
+/* Receipt rows */
+.zl-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem 0;
+}
+.zl-row + .zl-row { border-top: 1px dashed var(--z-line); }
+
+/* Status timeline dot */
+.zl-timeline-dot {
+  display: grid;
+  place-items: center;
+  width: 2.25rem; height: 2.25rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+  border: 1px solid var(--z-line);
+  background: var(--z-panel-2);
+  color: var(--z-ink-muted);
+}
+.zl-timeline-dot--done {
+  border-color: rgba(217, 164, 22, 0.55);
+  background: linear-gradient(140deg, var(--zl-gold-hi), var(--zl-gold-deep));
+  color: #241a02;
+  box-shadow: 0 6px 14px rgba(217, 164, 22, 0.35);
+}
+
+/* ==========================================================================
+   Storefront chrome — header / tab bar / pay dock / footer / scroll-top
+   (overrides keyed on the existing class hooks; pinned strings untouched)
+   ========================================================================== */
+
+/* Header: deeper glass, gold hairline, refined controls */
+.zurs-compact-header {
+  border-color: rgba(217, 164, 22, 0.20) !important;
+  background: linear-gradient(180deg, rgba(16, 22, 44, 0.88), rgba(10, 14, 28, 0.82)) !important;
+  box-shadow: 0 12px 32px rgba(2, 6, 18, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.07) !important;
+}
+[data-theme="light"] .zurs-compact-header {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(250, 247, 238, 0.86)) !important;
+  border-color: rgba(160, 120, 20, 0.25) !important;
+  box-shadow: 0 12px 32px rgba(120, 90, 10, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+}
+.zurs-compact-header::after {
+  content: "";
+  position: absolute;
+  left: 1.25rem; right: 1.25rem; bottom: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(217, 164, 22, 0.65) 30%, rgba(246, 221, 138, 0.9) 50%, rgba(217, 164, 22, 0.65) 70%, transparent);
+  pointer-events: none;
+}
+
+/* Mobile tab bar: gold active pill */
+.zurs-mobile-tabbar {
+  border-color: rgba(217, 164, 22, 0.25) !important;
+  background: linear-gradient(180deg, rgba(20, 27, 54, 0.94), rgba(9, 13, 26, 0.94)) !important;
+  box-shadow: 0 18px 44px rgba(2, 6, 18, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+.zurs-mobile-tabbar .liquid-tab-thumb {
+  background: linear-gradient(120deg, var(--zl-gold-hi), var(--zl-gold) 55%, var(--zl-gold-deep)) !important;
+  box-shadow: 0 6px 18px rgba(217, 164, 22, 0.45) !important;
+}
+.zurs-mobile-tab--active { color: #241a02 !important; }
+
+/* Pay dock: premium gold action bar */
+.selected-product-action-bar {
+  border: 1px solid rgba(217, 164, 22, 0.35) !important;
+  background: linear-gradient(180deg, rgba(22, 30, 60, 0.96), rgba(9, 13, 26, 0.96)) !important;
+  box-shadow: 0 20px 48px rgba(2, 6, 18, 0.6), 0 0 0 1px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(18px);
+}
+.selected-product-action-bar .bg-neon {
+  background: linear-gradient(115deg, #a97e0d, var(--zl-gold) 45%, #f0c93e 55%, #a97e0d) !important;
+  color: #241a02 !important;
+  box-shadow: 0 8px 22px rgba(217, 164, 22, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Footer: richer glass with gold accents */
+.zurs-footer-glass {
+  background:
+    radial-gradient(90% 120% at 50% 0%, rgba(217, 164, 22, 0.10), transparent 55%),
+    linear-gradient(180deg, rgba(18, 25, 50, 0.72), rgba(8, 11, 24, 0.86)) !important;
+  border-top: 1px solid rgba(217, 164, 22, 0.18) !important;
+}
+[data-theme="light"] .zurs-footer-glass {
+  background: linear-gradient(180deg, rgba(255, 253, 244, 0.9), rgba(250, 244, 226, 0.94)) !important;
+}
+.zurs-footer-link {
+  position: relative;
+  transition: color 0.18s ease;
+}
+.zurs-footer-link:hover { color: var(--zl-gold-soft); }
+[data-theme="light"] .zurs-footer-link:hover { color: var(--zl-gold-deep); }
+
+/* Scroll-to-top */
+.storefront-scroll-top {
+  border-color: rgba(217, 164, 22, 0.35) !important;
+  background: linear-gradient(180deg, rgba(24, 32, 64, 0.95), rgba(10, 14, 28, 0.95)) !important;
+  color: var(--zl-gold-hi) !important;
+}
+.storefront-scroll-top:hover { border-color: rgba(217, 164, 22, 0.7) !important; }
+
+/* Catalog switch active pill goes gold */
+.zurs-catalog-switch__item.is-active {
+  background: linear-gradient(120deg, var(--zl-gold-hi), var(--zl-gold) 60%, var(--zl-gold-deep)) !important;
+  color: #241a02 !important;
+  box-shadow: 0 6px 16px rgba(217, 164, 22, 0.35) !important;
+}
+
+/* Search field focus ring goes gold */
+.zurs-search-field:focus {
+  border-color: rgba(217, 164, 22, 0.6) !important;
+  box-shadow: 0 0 0 3px rgba(217, 164, 22, 0.18) !important;
+}
+
+/* Game card popular badge goes gold */
+.zurs-game-card-popular {
+  background: linear-gradient(120deg, var(--zl-gold-hi), var(--zl-gold)) !important;
+  color: #241a02 !important;
+  box-shadow: 0 6px 14px rgba(217, 164, 22, 0.45) !important;
+}
+
+/* Primary buttons across the storefront pick up the gold sheen */
+.zbtn--primary {
+  background: linear-gradient(115deg, #a97e0d, var(--zl-gold) 45%, #f0c93e 55%, #a97e0d) !important;
+  color: #241a02 !important;
+  box-shadow: 0 8px 22px rgba(217, 164, 22, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.45) !important;
+}
+.zbtn--primary:hover:not(:disabled) { filter: brightness(1.06); }
+
+/* Banner frame: soft gold halo */
+.zurs-banner-frame {
+  box-shadow: 0 18px 44px rgba(2, 6, 18, 0.45), 0 0 0 1px rgba(217, 164, 22, 0.18) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zl-anim-fade-up, .zl-anim-float { animation: none; }
+  .zl-qr-frame::before { animation: none; }
+  .zl-btn-gold:hover:not(:disabled) .zl-btn__shine { animation: none; }
+}
