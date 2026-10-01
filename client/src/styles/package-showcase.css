@@ -54,14 +54,17 @@
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.95) !important;
 }
 
-/* ——— Banner artwork: taller, cinematic, softly glowing ——— */
+/* ——— Banner artwork: full-bleed cinematic, zoomed into the diamonds ———
+   The banner bleeds to the card's edges (no more box-in-a-box = less "Minecraft"),
+   and the art is scaled up so the diamond cluster fills the frame instead of
+   showing the source image's empty dark surroundings. */
 :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .pkg-art,
 :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .supplied-package-art,
 :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .generated-package-art {
   flex: 0 0 5rem !important;
   height: 5rem !important;
-  margin-top: 0.15rem !important;
-  border-radius: 0.72rem !important;
+  margin: -0.5rem -0.5rem 0 !important;
+  border-radius: calc(1.05rem - 1px) calc(1.05rem - 1px) 0.4rem 0.4rem !important;
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 0.35),
     inset 0 0 0 1px rgb(255 255 255 / 0.12),
@@ -83,15 +86,15 @@
 }
 :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .supplied-package-art__image,
 :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .generated-package-art__scene {
-  transform: scale(1.06);
-  filter: saturate(1.12) contrast(1.06);
+  transform: scale(1.7);
+  filter: saturate(1.18) contrast(1.08) brightness(1.04);
   transition: transform 560ms cubic-bezier(0.22, 1, 0.36, 1), filter 560ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 @media (hover: hover) and (pointer: fine) {
   :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .pk-choice:hover .supplied-package-art__image,
   :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .pk-choice:hover .generated-package-art__scene {
-    transform: scale(1.15);
-    filter: saturate(1.2) contrast(1.08);
+    transform: scale(1.88);
+    filter: saturate(1.26) contrast(1.1) brightness(1.06);
   }
 }
 /* Game-logo chip: hidden — the banner artwork already identifies the game; keeps the card clean */
@@ -243,8 +246,9 @@
   :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .pkg-art,
   :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .supplied-package-art,
   :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .generated-package-art {
-    flex-basis: 3.75rem !important;
-    height: 3.75rem !important;
+    flex-basis: 3.9rem !important;
+    height: 3.9rem !important;
+    margin: -0.35rem -0.35rem 0 !important;
   }
   :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice__header {
     margin-top: -1.6rem !important;
@@ -274,7 +278,12 @@
   :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .supplied-package-art__image,
   :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .generated-package-art__scene {
     transition: none;
-    transform: none;
-    filter: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) and (hover: hover) and (pointer: fine) {
+  :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .pk-choice:hover .supplied-package-art__image,
+  :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .pk-choice:hover .generated-package-art__scene {
+    transform: scale(1.7);
+    filter: saturate(1.18) contrast(1.08) brightness(1.04);
   }
 }
