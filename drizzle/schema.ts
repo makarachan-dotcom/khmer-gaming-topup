@@ -638,6 +638,19 @@ export const supportChatAdminKeys = mysqlTable("support_chat_admin_keys", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
+/** Audit trail for admin $0.01 test purchases. One row per test order; also
+ * backs the per-admin rolling-24h rate limit. */
+export const adminTestOrderAudits = mysqlTable("admin_test_order_audits", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  orderId: varchar("orderId", { length: 64 }).notNull(),
+  adminUserId: int("adminUserId").notNull(),
+  packageId: varchar("packageId", { length: 64 }).notNull(),
+  packageName: varchar("packageName", { length: 180 }).notNull(),
+  playerId: varchar("playerId", { length: 128 }).notNull(),
+  priceUsd: decimal("priceUsd", { precision: 10, scale: 2 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [index("admin_test_order_audits_order_idx").on(table.orderId), index("admin_test_order_audits_admin_idx").on(table.adminUserId, table.createdAt)]);
+
 export type SupportChatSessionRecord = typeof supportChatSessions.$inferSelect;
 export type SupportChatMessageRecord = typeof supportChatMessages.$inferSelect;
 export type TelegramAdminChatRecord = typeof telegramAdminChats.$inferSelect;
