@@ -126,7 +126,7 @@
 
 /* ——— Amount line (only rendered when it adds information) ——— */
 :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice__amount {
-  margin: 0.5rem 0.15rem 0 !important;
+  margin: 0.35rem 0.15rem 0 !important;
   font-size: 0.66rem !important;
   line-height: 1rem !important;
   color: #64748b !important;
@@ -140,7 +140,7 @@
   gap: 0.4rem 0.5rem;
   flex-wrap: wrap;
   margin-top: auto;
-  padding-top: 0.6rem;
+  padding-top: 0.35rem;
 }
 :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice__price {
   margin: 0 !important;
