@@ -14,7 +14,7 @@
 :root { --pk-showcase-scope: 1; }
 
 /* ——— Card frame: 1px gold gradient frame, deep layered shadow ——— */
-:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice {
+:is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice {
   padding: 1px !important;
   border: 1px solid rgb(201 151 18 / 0.5) !important;
   border-radius: 1.05rem !important;
@@ -23,11 +23,11 @@
     0 16px 34px -14px rgb(146 106 12 / 0.38),
     0 4px 10px -4px rgb(146 106 12 / 0.2) !important;
 }
-:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice::before {
+:is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice::before {
   display: none !important;
 }
 @media (hover: hover) and (pointer: fine) {
-  :is(html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice:hover {
+  :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice:hover {
     transform: translateY(-4px) !important;
     border-color: rgb(201 151 18 / 0.75) !important;
     box-shadow:
@@ -37,7 +37,7 @@
 }
 
 /* ——— Surface: warm porcelain, flex column, price pinned to the bottom ——— */
-:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice-surface {
+:is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice-surface {
   position: relative;
   display: flex !important;
   flex-direction: column !important;
@@ -51,9 +51,9 @@
 }
 
 /* ——— Banner artwork: taller, cinematic, softly glowing ——— */
-:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .pkg-art,
-:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .supplied-package-art,
-:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .generated-package-art {
+:is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .pkg-art,
+:is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .supplied-package-art,
+:is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .generated-package-art {
   flex: 0 0 5rem !important;
   height: 5rem !important;
   margin-top: 0.15rem !important;
@@ -63,7 +63,7 @@
     inset 0 0 0 1px rgb(255 255 255 / 0.12),
     0 12px 24px -14px rgb(23 37 84 / 0.6) !important;
 }
-:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .supplied-package-art::after {
+:is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .supplied-package-art::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -72,27 +72,27 @@
   pointer-events: none;
   background: linear-gradient(180deg, rgb(6 10 22 / 0) 44%, rgb(6 10 22 / 0.58) 100%);
 }
-:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .generated-package-art::after {
+:is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .generated-package-art::after {
   background:
     linear-gradient(90deg, oklch(0.1 0.035 266 / 0.46), transparent 68%),
     linear-gradient(0deg, oklch(0.08 0.025 266 / 0.88), transparent 60%);
 }
-:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .supplied-package-art__image,
-:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .generated-package-art__scene {
+:is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .supplied-package-art__image,
+:is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .generated-package-art__scene {
   transform: scale(1.06);
   filter: saturate(1.12) contrast(1.06);
   transition: transform 560ms cubic-bezier(0.22, 1, 0.36, 1), filter 560ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 @media (hover: hover) and (pointer: fine) {
-  :is(html[data-ui="classic"], html:not([data-ui])) .pk-card .pk-choice:hover .supplied-package-art__image,
-  :is(html[data-ui="classic"], html:not([data-ui])) .pk-card .pk-choice:hover .generated-package-art__scene {
+  :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .pk-choice:hover .supplied-package-art__image,
+  :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .pk-choice:hover .generated-package-art__scene {
     transform: scale(1.15);
     filter: saturate(1.2) contrast(1.08);
   }
 }
 /* Glass game-logo chip */
-:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .supplied-package-art__logo,
-:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .generated-package-art__logo {
+:is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .supplied-package-art__logo,
+:is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .generated-package-art__logo {
   background: rgb(255 255 255 / 0.18) !important;
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
@@ -101,7 +101,7 @@
 }
 
 /* ——— Denomination: glass pill melted onto the banner's lower edge ——— */
-:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice__header {
+:is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice__header {
   position: relative;
   z-index: 3;
   align-self: flex-start;
@@ -125,7 +125,7 @@
 }
 
 /* ——— Amount line (only rendered when it adds information) ——— */
-:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice__amount {
+:is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice__amount {
   margin: 0.5rem 0.15rem 0 !important;
   font-size: 0.66rem !important;
   line-height: 1rem !important;
@@ -133,7 +133,7 @@
 }
 
 /* ——— Price row: big gradient-gold price, badges riding alongside ——— */
-:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .pk-price-row {
+:is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .pk-price-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -142,7 +142,7 @@
   margin-top: auto;
   padding-top: 0.6rem;
 }
-:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice__price {
+:is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice__price {
   margin: 0 !important;
   min-width: 0;
   font-size: 1.06rem !important;
@@ -156,12 +156,12 @@
   -webkit-text-fill-color: transparent;
   filter: drop-shadow(0 1px 0 rgb(255 255 255 / 0.55));
 }
-:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice-badges {
+:is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice-badges {
   flex: 0 0 auto;
   margin-top: 0 !important;
   gap: 0.3rem;
 }
-:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .package-badge {
+:is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .package-badge {
   min-height: 1.35rem;
   margin-top: 0 !important;
   padding: 0.2rem 0.58rem;
@@ -170,7 +170,7 @@
   border: 1px solid rgb(180 120 20 / 0.35);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.5), 0 3px 8px -2px rgb(180 120 20 / 0.4);
 }
-:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .package-badge--recommended {
+:is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .package-badge--recommended {
   background: linear-gradient(135deg, #fbbf24, #f97316) !important;
   border-color: rgb(255 255 255 / 0.45) !important;
   color: #fff !important;
@@ -179,7 +179,7 @@
 }
 
 /* ——— Selected: golden ring + warm glow + tinted surface ——— */
-:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice--selected {
+:is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice--selected {
   border-color: #dd7d0a !important;
   background: linear-gradient(145deg, #dd7d0a, #f5b83d 50%, #dd7d0a) !important;
   box-shadow:
@@ -187,56 +187,56 @@
     0 18px 42px -10px rgb(217 119 6 / 0.55),
     0 0 26px rgb(245 158 11 / 0.4) !important;
 }
-:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice--selected .package-choice-surface {
+:is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice--selected .package-choice-surface {
   background: linear-gradient(168deg, #fffdf4 0%, #fef6e0 55%, #fcecc4 100%) !important;
 }
-:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice-check {
+:is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice-check {
   top: 0.45rem !important;
   right: 0.45rem !important;
   filter: drop-shadow(0 3px 6px rgb(217 119 6 / 0.5));
 }
 
 /* ——— Recommended: warm edge + tinted surface ——— */
-:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice--recommended {
+:is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice--recommended {
   border-color: rgb(217 119 6 / 0.65) !important;
   box-shadow:
     0 14px 30px -12px rgb(217 119 6 / 0.4),
     0 0 0 1px rgb(217 119 6 / 0.22) !important;
 }
-:is(html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice--recommended .package-choice-surface {
+:is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .package-choice--recommended .package-choice-surface {
   background: linear-gradient(160deg, #fffdf4, #fff3d4) !important;
 }
 
 /* ——— Group headers: a touch more presence ——— */
-:is(html[data-ui="classic"], html:not([data-ui])) .package-group__head {
+:is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .package-group__head {
   margin: 0 0.05rem 0.8rem !important;
 }
-:is(html[data-ui="classic"], html:not([data-ui])) .package-group__title {
+:is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .package-group__title {
   font-size: 0.92rem !important;
   letter-spacing: 0.005em;
 }
-:is(html[data-ui="classic"], html:not([data-ui])) .package-group__mark {
+:is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .package-group__mark {
   box-shadow: 0 4px 10px rgb(233 155 0 / 0.42), inset 0 1px 0 rgb(255 255 255 / 0.55) !important;
 }
-:is(html[data-ui="classic"], html:not([data-ui])) .package-group__count {
+:is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .package-group__count {
   background: linear-gradient(135deg, #fff8e2, #fbe6b6) !important;
   border: 1px solid rgb(180 120 20 / 0.28) !important;
   color: #8a5a0b !important;
 }
 
 /* ——— Loading skeletons follow the new card proportions ——— */
-:is(html[data-ui="classic"], html:not([data-ui])) .package-grid-skeleton__card {
+:is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .package-grid-skeleton__card {
   min-height: 11rem !important;
   border-radius: 1.05rem !important;
 }
-:is(html[data-ui="classic"], html:not([data-ui])) .package-grid-skeleton__art {
+:is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .package-grid-skeleton__art {
   height: 5rem !important;
   border-radius: 0.72rem !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :is(html[data-ui="classic"], html:not([data-ui])) .pk-card .supplied-package-art__image,
-  :is(html[data-ui="classic"], html:not([data-ui])) .pk-card .generated-package-art__scene {
+  :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .supplied-package-art__image,
+  :is(html[data-ui="classic"][data-theme], html[data-ui="classic"], html:not([data-ui])) .pk-card .generated-package-art__scene {
     transition: none;
     transform: none;
     filter: none;
