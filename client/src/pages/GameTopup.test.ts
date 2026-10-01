@@ -182,7 +182,7 @@ describe("dedicated game top-up routes", () => {
 
   it("renders a customer-friendly category tab browser with an all-package search", () => {
     const source = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
-    expect(source).toContain("package-category-tabs");
+    expect(source).toContain("pkf-tabs");
     expect(source).toContain("packageCategories.useQuery");
     expect(source).toContain("buildPackageCategories(gamePackages, categoryOverrides)");
     expect(source).toContain("filterPackagesByCategory(gamePackages, selectedCategoryId, categoryOverrides)");
@@ -343,10 +343,10 @@ describe("dedicated game top-up routes", () => {
 
   it("renders the new package-picking experience with a lazy price refresh", () => {
     const source = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
-    expect(source).toContain("package-category-browser__note");
-    expect(source).toContain("តម្លៃផ្លូវការពី Admin");
-    expect(source).toContain('className="package-toolbar mt-3"');
-    expect(source).toContain("package-sort__option");
+    expect(source).toContain("pkf-title");
+    expect(source).toContain("ជ្រើសរើសកញ្ចប់");
+    expect(source).toContain("pkf-tools");
+    expect(source).toContain("pkf-sort");
     expect(source).toContain("sortProviderPackagesForDisplay(");
     expect(source).toContain("package-choice--recommended");
     expect(source).toContain("package-choice-recommendation");

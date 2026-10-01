@@ -813,34 +813,29 @@ function DiamondPackages({ packages, status, selectedPackageId, onSelect, gameId
     <PackageBadgeOverridesContext.Provider value={badgeOverrides}><PackageArtworkOverridesContext.Provider value={artworkOverrides}>
       <div className="mt-4 space-y-3 border-t border-slate-100 pt-4">
         {status === "ready" && packages.length ? <>
-          <section className="package-category-browser package-filter-compact" aria-labelledby="package-category-heading">
-            <header className="package-category-browser__header">
-              <span className="package-category-browser__gem"><Gem className="h-4 w-4" /></span>
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold tracking-[0.18em] text-amber-300/80">GAME PACKAGES</p>
-                <h2 id="package-category-heading" className="package-category-browser__title">ជ្រើសរើសកញ្ចប់</h2>
-                <p className="package-category-browser__note">តម្លៃផ្លូវការពី Admin · ធ្វើបច្ចុប្បន្នភាពស្វ័យប្រវត្តិ</p>
-              </div>
-              <span className="package-category-browser__total">{gamePackages.length}</span>
-            </header>
-            <nav className="package-category-tabs mt-4" aria-label="ប្រភេទកញ្ចប់">
-              <button ref={(element) => { categoryTabRefs.current.all = element; }} type="button" onClick={() => setSelectedCategoryId("all")} aria-pressed={selectedCategoryId === "all"} className={`package-category-tab ${selectedCategoryId === "all" ? "package-category-tab--active" : ""}`}><span>ទាំងអស់</span><b>{gamePackages.length}</b></button>
-              {categoryTabs.map((category) => <button key={category.id} ref={(element) => { categoryTabRefs.current[category.id] = element; }} type="button" onClick={() => setSelectedCategoryId(category.id)} aria-pressed={selectedCategoryId === category.id} className={`package-category-tab ${selectedCategoryId === category.id ? "package-category-tab--active" : ""}`}><span>{category.label}</span><b>{category.count}</b></button>)}
-            </nav>
-            <div className="package-toolbar mt-3">
-              <label className="package-category-search">
-                <Search className="h-4 w-4" />
-                <span className="sr-only">ស្វែងរកគ្រប់កញ្ចប់</span>
-                <input value={packageSearch} onChange={(event) => setPackageSearch(event.target.value)} placeholder="ស្វែងរកគ្រប់កញ្ចប់…" />
-              </label>
-              <div className="package-sort" role="group" aria-label="តម្រៀបកញ្ចប់">
-                <span className="package-sort__icon" aria-hidden="true"><ArrowDownUp className="h-3.5 w-3.5" /></span>
-                {packageSortOptions.map((option) => <button key={option.key} type="button" onClick={() => setPackageSort(option.key)} aria-pressed={packageSort === option.key} className={`package-sort__option ${packageSort === option.key ? "package-sort__option--active" : ""}`}>{option.label}</button>)}
-              </div>
+          <section className="package-category-browser pkf" aria-labelledby="package-category-heading">
+            <div className="pkf-head">
+              <span className="pkf-gem" aria-hidden="true"><Gem className="h-3.5 w-3.5" /></span>
+              <h2 id="package-category-heading" className="pkf-title">ជ្រើសរើសកញ្ចប់</h2>
+              <span className="pkf-count">{gamePackages.length}</span>
             </div>
-            <div className="package-filter-meta mt-3 flex items-center justify-between gap-3 text-[10px] font-semibold text-slate-300">
-              <span>{searchValue ? "លទ្ធផលស្វែងរកគ្រប់កញ្ចប់" : `ប្រភេទ៖ ${selectedCategoryId === "all" ? "ទាំងអស់" : categoryTabs.find((category) => category.id === selectedCategoryId)?.label ?? "ទាំងអស់"}`}</span>
-              <span>{visiblePackages.length} កញ្ចប់</span>
+            <nav className="pkf-tabs" aria-label="ប្រភេទកញ្ចប់">
+              <button ref={(element) => { categoryTabRefs.current.all = element; }} type="button" onClick={() => setSelectedCategoryId("all")} aria-pressed={selectedCategoryId === "all"} className={`package-category-tab pkf-tab ${selectedCategoryId === "all" ? "package-category-tab--active" : ""}`}><span>ទាំងអស់</span><b>{gamePackages.length}</b></button>
+              {categoryTabs.map((category) => <button key={category.id} ref={(element) => { categoryTabRefs.current[category.id] = element; }} type="button" onClick={() => setSelectedCategoryId(category.id)} aria-pressed={selectedCategoryId === category.id} className={`package-category-tab pkf-tab ${selectedCategoryId === category.id ? "package-category-tab--active" : ""}`}><span>{category.label}</span><b>{category.count}</b></button>)}
+            </nav>
+            <div className="pkf-tools">
+              <label className="pkf-search">
+                <Search className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                <span className="sr-only">ស្វែងរកគ្រប់កញ្ចប់</span>
+                <input value={packageSearch} onChange={(event) => setPackageSearch(event.target.value)} placeholder="ស្វែងរកកញ្ចប់…" />
+              </label>
+              <label className="pkf-sort">
+                <ArrowDownUp className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                <span className="sr-only">តម្រៀបកញ្ចប់</span>
+                <select value={packageSort} onChange={(event) => setPackageSort(event.target.value as PackageSortKey)} aria-label="តម្រៀបកញ្ចប់">
+                  {packageSortOptions.map((option) => <option key={option.key} value={option.key}>{option.label}</option>)}
+                </select>
+              </label>
             </div>
           </section>
           <div key={searchValue ? `search:${searchValue}` : `${selectedCategoryId}:${packageSort}`} className="package-groups">
