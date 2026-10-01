@@ -638,9 +638,10 @@ export const supportChatAdminKeys = mysqlTable("support_chat_admin_keys", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
-/** Audit trail for admin $0.01 test purchases. One row per test order; also
- * backs the per-admin rolling-24h rate limit. */
-export const adminTestOrderAudits = mysqlTable("admin_test_order_audits", {
+/** Audit trail for admin $0.01 purchases. One row per admin purchase; also
+ * backs the per-admin rolling-24h rate limit. priceUsd is always the $0.01
+ * admin price; realPriceUsd is the package's catalog price at purchase time. */
+export const adminPurchaseAudits = mysqlTable("admin_purchase_audits", {
   id: varchar("id", { length: 64 }).primaryKey(),
   orderId: varchar("orderId", { length: 64 }).notNull(),
   adminUserId: int("adminUserId").notNull(),
@@ -648,8 +649,9 @@ export const adminTestOrderAudits = mysqlTable("admin_test_order_audits", {
   packageName: varchar("packageName", { length: 180 }).notNull(),
   playerId: varchar("playerId", { length: 128 }).notNull(),
   priceUsd: decimal("priceUsd", { precision: 10, scale: 2 }).notNull(),
+  realPriceUsd: decimal("realPriceUsd", { precision: 10, scale: 2 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-}, (table) => [index("admin_test_order_audits_order_idx").on(table.orderId), index("admin_test_order_audits_admin_idx").on(table.adminUserId, table.createdAt)]);
+}, (table) => [index("admin_purchase_audits_order_idx").on(table.orderId), index("admin_purchase_audits_admin_idx").on(table.adminUserId, table.createdAt)]);
 
 export type SupportChatSessionRecord = typeof supportChatSessions.$inferSelect;
 export type SupportChatMessageRecord = typeof supportChatMessages.$inferSelect;
