@@ -1,0 +1,28 @@
+/* ZURS wordmark — smooth premium brand type, replaces the old per-letter
+   animated tiles. One flowing word, no boxes. */
+
+.zurs-wordmark {
+  display: inline-flex;
+  align-items: baseline;
+  white-space: nowrap;
+  font-family: "Chakra Petch", "Kantumruy Pro", "Noto Sans Khmer", sans-serif;
+  font-size: 1.05rem;
+  font-weight: 800;
+  font-style: italic;
+  letter-spacing: 0.015em;
+  line-height: 1;
+  color: var(--z-ink);
+  user-select: none;
+}
+
+.zurs-wordmark__tld {
+  background: linear-gradient(115deg, #f4d47c 0%, #d9a92c 45%, #a87b0e 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+@media (min-width: 640px) {
+  .zurs-wordmark { font-size: 1.15rem; }
+}

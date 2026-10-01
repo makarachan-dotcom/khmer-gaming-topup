@@ -157,43 +157,7 @@
     linear-gradient(160deg, #1b2745, #0d1528);
 }
 
-/* ——— 3 · Search: floating pill ——— */
-.hg-search {
-  position: relative;
-  display: block;
-}
-.hg-search input {
-  height: 3.1rem !important;
-  border-radius: 999px !important;
-  border: 1px solid rgb(255 255 255 / 0.1) !important;
-  background: rgb(20 30 55 / 0.85) !important;
-  backdrop-filter: blur(12px);
-  box-shadow:
-    0 14px 30px -16px rgb(2 8 26 / 0.8),
-    inset 0 1px 0 rgb(255 255 255 / 0.08) !important;
-  font-size: 0.92rem !important;
-  transition: border-color 200ms ease, box-shadow 200ms ease;
-}
-.hg-search input::placeholder { color: rgb(141 151 178 / 0.85); }
-.hg-search input:focus {
-  border-color: rgb(232 186 74 / 0.7) !important;
-  box-shadow:
-    0 14px 30px -16px rgb(2 8 26 / 0.8),
-    0 0 0 3px rgb(201 151 18 / 0.22),
-    inset 0 1px 0 rgb(255 255 255 / 0.08) !important;
-  outline: none;
-}
-.hg-search .hg-search-icon {
-  position: absolute;
-  left: 1.05rem;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #c99712;
-  pointer-events: none;
-}
-.hg-search input { padding-left: 2.9rem !important; }
-
-/* ——— 4 · Section headings: quiet editorial polish ——— */
+/* ——— 3 · Section headings: quiet editorial polish ——— */
 .hg-heading .zurs-eyebrow {
   display: inline-flex;
   align-items: center;
@@ -215,7 +179,7 @@
   .hg-heading .zp-heading { font-size: 1.6rem; }
 }
 
-/* ——— 5 · Promo cards: seamless, media-led ——— */
+/* ——— 4 · Promo cards: seamless, media-led ——— */
 .hg-promo {
   overflow: hidden;
   border-radius: 1.15rem;
@@ -278,7 +242,7 @@
   .hg-promo-media img { transition: transform 500ms cubic-bezier(0.22, 1, 0.36, 1); }
 }
 
-/* ——— 6 · Multi-variant group panel: soft, not boxy ——— */
+/* ——— 5 · Multi-variant group panel: soft, not boxy ——— */
 .hg-group {
   border-radius: 1.25rem;
   border: 0 !important;
@@ -290,7 +254,7 @@
     inset 0 0 0 1px rgb(255 255 255 / 0.06) !important;
 }
 
-/* ——— 7 · KHQR accept chip: glass pill ——— */
+/* ——— 6 · KHQR accept chip: glass pill ——— */
 .hg-paychip {
   border-radius: 999px !important;
   border: 1px solid rgb(255 255 255 / 0.09) !important;
@@ -299,10 +263,10 @@
   box-shadow: 0 10px 24px -14px rgb(2 8 26 / 0.8) !important;
 }
 
-/* ——— 8 · Reduced motion: everything renders statically ——— */
+/* ——— 7 · Reduced motion: everything renders statically ——— */
 @media (prefers-reduced-motion: reduce) {
   .hg-hero-frame::after { animation: none; display: none; }
-  .hg-tile, .hg-tile-art, .hg-promo, .hg-promo-media img, .hg-search input {
+  .hg-tile, .hg-tile-art, .hg-promo, .hg-promo-media img {
     transition: none;
   }
   .hg-tile:hover, .hg-promo:hover { transform: none; }

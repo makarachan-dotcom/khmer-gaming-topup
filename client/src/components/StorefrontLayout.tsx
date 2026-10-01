@@ -10,7 +10,7 @@ import { useStorefrontHeader } from "@/contexts/StorefrontHeaderContext";
 import { trpc } from "@/lib/trpc";
 import { animate } from "animejs";
 import { ArrowUp, ChevronRight, IdCard, LogIn, LogOut, Moon, Sun, WalletCards } from "lucide-react";
-import { FontEmojiBrand } from "@/components/FontEmojiBrand";
+import "@/styles/zurs-wordmark.css";
 import { PackEmoji } from "@/components/PackEmoji";
 import { applyPackageUi, applyStorefrontUi, dismissStorefrontBoot, parsePackageUi, parseStorefrontUi, readStorefrontUi, type StorefrontUiSkin } from "@/lib/storefrontUi";
 import { khmerDiamondCopy } from "@/lib/khmerDiamondCopy";
@@ -410,7 +410,10 @@ function StorefrontShell({ children }: { children: ReactNode }) {
             <img src={logoUrl} alt="ZURS logo" className="h-7 w-7 shrink-0 rounded-full object-cover ring-1 ring-line sm:h-8 sm:w-8" />
             <div className={cn("storefront-header-title", playerTitle && "storefront-header-title--player")} aria-label={playerTitle || "ZURS.me"}>
               <span className="storefront-header-title__default" aria-label="ZURS.me">
-                <FontEmojiBrand text="ZURS.me" size={13} className="font-emoji-brand--header" />
+                <span className="zurs-wordmark" aria-hidden="true">
+                  <span className="zurs-wordmark__main">ZURS</span>
+                  <span className="zurs-wordmark__tld">.me</span>
+                </span>
               </span>
               <span className="storefront-header-title__player" title={playerTitle || undefined}>{playerTitle || "ZURS.me"}</span>
             </div>

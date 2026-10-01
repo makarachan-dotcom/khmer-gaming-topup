@@ -6,12 +6,12 @@ import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { OutlineLoader } from "@/components/OutlineLoader";
 import { OverflowMarquee } from "@/components/OverflowMarquee";
 import { ProviderGameArtwork, ProviderGameRegion } from "@/components/ProviderGameIdentity";
-import { filterProviderGames, groupProviderGamesByBaseName, orderProviderGames, providerGameBaseName, providerGameVariantLabel } from "@/lib/providerPresentation";
+import { groupProviderGamesByBaseName, orderProviderGames, providerGameBaseName, providerGameVariantLabel } from "@/lib/providerPresentation";
 import { trpc } from "@/lib/trpc";
 import { subscribeToPublicAssetChanges } from "@/lib/publicAssetBroadcast";
 import { khqrLogoUrl } from "@/lib/mobileLegendsAssets";
 import { isPopularStorefrontGame, providerGameImageKey, resolvedGameArtworkFor, type ProviderGameImageOverride } from "@/lib/originalGameArtwork";
-import { Image as ImageIcon, Search, Video, X } from "lucide-react";
+import { Image as ImageIcon, Video } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
 import { gameTopupPath } from "./GameTopup";
@@ -207,7 +207,6 @@ function HomeTopupExperience() {
   const utils = trpc.useUtils();
   const gamesQuery = trpc.provider.games.useQuery(undefined, { staleTime: 60_000, placeholderData: readCachedGames });
   const gameImages = trpc.provider.gameImages.useQuery(undefined, { staleTime: 0, refetchInterval: 5_000 });
-  const [query, setQuery] = useState("");
   useEffect(() => subscribeToPublicAssetChanges((area) => { if (area === "game-images") void utils.provider.gameImages.invalidate(); }), [utils]);
   useEffect(() => {
     if (!gamesQuery.data?.games) return;
@@ -218,10 +217,8 @@ function HomeTopupExperience() {
     }
   }, [gamesQuery.data]);
   const games = orderProviderGames(gamesQuery.data?.games ?? []);
-  const visibleGames = useMemo(() => filterProviderGames(games, query, "all"), [games, query]);
-  const hasFilters = Boolean(query.trim());
   const imageOverrides = useMemo(() => new Map((gameImages.data ?? []).map((item) => [item.gameId, item])), [gameImages.data]);
-  const catalogGroups = useMemo(() => groupProviderGamesByBaseName(visibleGames), [visibleGames]);
+  const catalogGroups = useMemo(() => groupProviderGamesByBaseName(games), [games]);
   // Round 9: the marquee used to print every raw provider variant, so shoppers
   // saw rows like "Free Fire CIS" that do not exist as a store card. Grouping by
   // base name means the strip shows exactly the public store names, and it stays
@@ -254,44 +251,16 @@ function HomeTopupExperience() {
         </div>
       ) : games.length ? (
         <>
-          <div className="zurs-desktop-toolbar mt-5">
-            <label className="hg-search relative block">
-              <span className="sr-only">ស្វែងរកហ្គេម</span>
-              <Search className="hg-search-icon h-4 w-4" aria-hidden="true" />
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="ស្វែងរកហ្គេម…"
-                className="zurs-search-field w-full py-2 pl-10 pr-10 text-sm text-ink outline-none placeholder:text-ink-muted"
-              />
-              {query ? (
-                <button type="button" onClick={() => setQuery("")} aria-label="សម្អាតការស្វែងរក" className="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-lg text-ink-muted transition hover:bg-panel-2 hover:text-ink">
-                  <X className="h-4 w-4" />
-                </button>
-              ) : null}
-            </label>
-          </div>
           <div className="mt-4 hidden overflow-hidden sm:block">
             <GameLogoTicker logos={storeTickerLogos} />
           </div>
-          {visibleGames.length ? (
-            <div className="zp-game-grid mt-5 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-              {catalogGroups.map((group) =>
-                group.games.length > 1
-                  ? <ProviderGameCatalogGroup key={group.baseName} baseName={group.baseName} games={group.games} imageOverrides={imageOverrides} />
-                  : <HomeGameCard key={group.games[0]!.id} game={group.games[0]!} imageOverrides={imageOverrides} />
-              )}
-            </div>
-          ) : (
-            <div className="mt-5 rounded-2xl border border-dashed border-line bg-panel p-8 text-center">
-              <Search className="mx-auto h-6 w-6 text-neon" aria-hidden="true" />
-              <p className="mt-3 text-sm font-bold text-ink">មិនមានហ្គេមត្រូវនឹងការស្វែងរកទេ</p>
-              <p className="mt-1 text-xs leading-5 text-ink-muted">សូមពិនិត្យអក្ខរាវិរុទ្ធ ឬសាកល្បងឈ្មោះហ្គេមផ្សេង។</p>
-              {hasFilters ? (
-                <button type="button" onClick={() => setQuery("")} className="mt-4 inline-flex h-9 items-center rounded-full bg-neon px-4 text-xs font-bold text-neon-ink">បង្ហាញហ្គេមទាំងអស់</button>
-              ) : null}
-            </div>
-          )}
+          <div className="zp-game-grid mt-5 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            {catalogGroups.map((group) =>
+              group.games.length > 1
+                ? <ProviderGameCatalogGroup key={group.baseName} baseName={group.baseName} games={group.games} imageOverrides={imageOverrides} />
+                : <HomeGameCard key={group.games[0]!.id} game={group.games[0]!} imageOverrides={imageOverrides} />
+            )}
+          </div>
         </>
       ) : (
         <div className="mt-5 rounded-2xl border border-dashed border-line bg-panel p-8 text-center text-xs leading-6 text-ink-muted">
