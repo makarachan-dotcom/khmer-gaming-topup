@@ -11,7 +11,7 @@ import { trpc } from "@/lib/trpc";
 import { subscribeToPublicAssetChanges } from "@/lib/publicAssetBroadcast";
 import { khqrLogoUrl } from "@/lib/mobileLegendsAssets";
 import { isPopularStorefrontGame, providerGameImageKey, resolvedGameArtworkFor, type ProviderGameImageOverride } from "@/lib/originalGameArtwork";
-import { Image as ImageIcon, Search, Video, X, ChevronRight, BadgeCheck, Zap, Headphones } from "lucide-react";
+import { Image as ImageIcon, Search, Video, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
 import { gameTopupPath } from "./GameTopup";
@@ -36,9 +36,8 @@ export default function Home() {
     <StorefrontLayout>
       <main className="zp-page">
         <Reveal as="section" index={0}><HomeBanner /></Reveal>
-        <Reveal as="section" index={1}><HomeTrustStrip /></Reveal>
-        <Reveal as="section" index={2}><HomepageMedia /></Reveal>
-        <Reveal as="section" index={3}><HomeTopupExperience /></Reveal>
+        <Reveal as="section" index={1}><HomepageMedia /></Reveal>
+        <Reveal as="section" index={2}><HomeTopupExperience /></Reveal>
       </main>
     </StorefrontLayout>
   );
@@ -56,34 +55,11 @@ function SectionHeading({ eyebrow, title, description, aside }: { eyebrow: strin
   return (
     <div className="flex items-center justify-between gap-3">
       <div className="min-w-0 flex-1 max-w-2xl">
-        <p className="zurs-eyebrow inline-flex items-center gap-2 font-extrabold uppercase tracking-[0.18em] text-neon">
-          <span className="h-[2px] w-6 rounded-full bg-gradient-to-r from-neon/20 to-neon" aria-hidden="true" />
-          {eyebrow}
-        </p>
-        <h2 className="zp-heading mt-1.5 font-display text-xl font-extrabold leading-tight text-ink text-balance sm:text-2xl">{title}</h2>
+        <p className="zurs-eyebrow font-bold uppercase">{eyebrow}</p>
+        <h2 className="zp-heading mt-1.5 font-display text-xl font-bold leading-tight text-ink text-balance sm:text-2xl">{title}</h2>
         {description ? <p className="mt-2 hidden text-sm leading-6 text-ink-muted text-pretty sm:block">{description}</p> : null}
       </div>
       {aside}
-    </div>
-  );
-}
-function HomeTrustStrip() {
-  const items = [
-    { icon: BadgeCheck, label: "KHQR ផ្លូវការ" },
-    { icon: Zap, label: "ដឹកជញ្ជូនអូតូ 24/7" },
-    { icon: Headphones, label: "ជំនួយផ្ទាល់" },
-  ];
-  return (
-    <div className="container mt-4 sm:mt-5" aria-label="Why ZURS">
-      <div className="zl-card flex items-center justify-between gap-2 overflow-hidden px-4 py-3 sm:justify-center sm:gap-10">
-        <span className="pointer-events-none absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-neon/70 via-neon/30 to-transparent" aria-hidden="true" />
-        {items.map(({ icon: Icon, label }) => (
-          <span key={label} className="inline-flex min-w-0 items-center gap-1.5 text-[11px] font-bold text-ink sm:text-xs">
-            <Icon className="h-4 w-4 shrink-0 text-neon" aria-hidden="true" />
-            <span className="khmer-tight truncate">{label}</span>
-          </span>
-        ))}
-      </div>
     </div>
   );
 }
@@ -123,7 +99,7 @@ function HomepageMedia() {
           const media = item.mediaUrl?.trim() ?? "";
           const video = /\.(mp4|webm|ogg)(?:$|[?#])/i.test(media);
           return (
-            <article key={item.id} className="group zl-card overflow-hidden transition hover:border-neon/50 hover:shadow-lg">
+            <article key={item.id} className="group overflow-hidden rounded-2xl border border-line bg-panel transition hover:border-neon/50">
               {media ? (
                 <div className="relative aspect-[16/8] overflow-hidden bg-panel-2">
                   {video ? (
@@ -181,7 +157,7 @@ function HomeGameCard({ game, displayName, imageOverrides }: { game: CatalogGame
     <div ref={cardRef}>
       <Link
         href={gameTopupPath(game.id)}
-        className={`zurs-mobile-glass group block rounded-2xl zl-game zurs-game-card h-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon ${popular ? "zurs-game-card--popular" : ""}`}
+        className={`zurs-mobile-glass group block rounded-2xl zurs-game-card h-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon ${popular ? "zurs-game-card--popular" : ""}`}
       >
         <div className="zurs-game-card-media relative aspect-[16/10] overflow-hidden rounded-xl" style={{ "--game-accent": originalArtwork?.accent ?? "#38bdf8" } as React.CSSProperties}>
           {originalArtwork ? (
@@ -191,7 +167,6 @@ function HomeGameCard({ game, displayName, imageOverrides }: { game: CatalogGame
           )}
           <span className="zurs-game-card-overlay" aria-hidden="true" />
           {popular ? <span className="zurs-game-card-popular"><PackEmoji name="fire" size={13} />ពេញនិយម</span> : null}
-          <span className="zl-game__cta" aria-hidden="true"><ChevronRight className="h-4 w-4" /></span>
         </div>
         <span className="block min-w-0 px-1 pb-1 pt-2.5">
           <OverflowMarquee text={gameLabel} className="block text-sm font-bold leading-5 text-ink" />
@@ -292,11 +267,6 @@ function HomeTopupExperience() {
               ) : null}
             </label>
           </div>
-          {query ? (
-            <p className="mt-2 text-xs text-ink-muted" aria-live="polite">
-              រកឃើញ <strong className="font-extrabold text-neon">{visibleGames.length}</strong> ហ្គេម
-            </p>
-          ) : null}
           <div className="mt-4 hidden overflow-hidden sm:block">
             <GameLogoTicker logos={storeTickerLogos} />
           </div>
