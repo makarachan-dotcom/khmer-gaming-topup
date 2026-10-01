@@ -25,6 +25,7 @@ import { cachedValidateProviderPlayerIdentity } from "./playerIdentityCache";
 import { getPartnerCatalog, getPartnerProduct, getPartnerUsage, toPublicPartnerPreview, toPublicPartnerProduct, PartnerServiceError, getAdminPartnerCatalog, applyPartnerPriceOverride } from "./partnerCatalog";
 import { createPartnerServiceOrder, deliverPartnerService, submitCdkToken, confirmCdkUpgrade } from "./partnerOrders";
 import { getPartnerOverride, listPartnerOverrides, savePartnerOverride } from "./partnerOverrides";
+import { createAdminTestTopupOrder, getAdminTestOrders } from "./adminTestOrders";
 
 const marketplaceType = z.enum(["sale", "swap", "wanted"]);
 
@@ -194,6 +195,9 @@ export const appRouter = router({
     overview: scopedAdminProcedure("dashboard").query(() => db.getAdminOverview()),
     orders: scopedAdminProcedure("orders").query(() => db.getAdminOrders()),
     updateOrderStatus: scopedAdminProcedure("orders").input(z.object({ orderId: z.string().min(4).max(64), status: z.enum(["pending", "awaiting_payment", "paid", "delivered", "failed", "expired", "refunded"]) })).mutation(({ ctx, input }) => db.updateOrderStatus({ ...input, actorUserId: ctx.user.id })),
+    createTestOrder: scopedAdminProcedure("orders").input(z.object({ packageId: z.string().min(4).max(64), playerId: z.string().trim().min(2).max(128), zoneId: z.string().trim().min(1).max(128).optional(), purchaseCode: z.string().trim().min(1).max(128) })).mutation(({ ctx, input }) => createAdminTestTopupOrder({ adminUserId: ctx.user.id, packageId: input.packageId, playerId: input.playerId, zoneId: input.zoneId, purchaseCode: input.purchaseCode })),
+    testOrders: scopedAdminProcedure("orders").input(z.object({ limit: z.number().int().min(1).max(50).optional() }).optional()).query(({ ctx, input }) => getAdminTestOrders({ adminUserId: ctx.user.id, limit: input?.limit })),
+    testOrderCatalog: scopedAdminProcedure("orders").query(() => db.getAdminCatalog()),
     deliverPartnerService: scopedAdminProcedure("orders").input(z.object({
       orderId: z.string().min(4).max(64),
       method: z.enum(["CDK", "COUPON", "LINK", "READY_ACCOUNT", "NOTE"]),
