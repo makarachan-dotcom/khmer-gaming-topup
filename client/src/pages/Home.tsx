@@ -198,7 +198,7 @@ function ProviderGameCatalogGroup({ baseName, games, imageOverrides }: { baseNam
         </div>
       </div>
       <div className={games.length === 1 ? "mx-auto mt-3 grid w-full max-w-[12rem] grid-cols-1 gap-3" : "mt-3 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4"}>
-        {games.map((game) => <HomeGameCard key={game.id} game={game} displayName={providerGameVariantLabel(game)} imageOverrides={imageOverrides} />)}
+        {games.map((game, index) => <Reveal key={game.id} index={Math.min(index + 1, 8)} threshold={0.05}><HomeGameCard game={game} displayName={providerGameVariantLabel(game)} imageOverrides={imageOverrides} /></Reveal>)}
       </div>
     </section>
   );

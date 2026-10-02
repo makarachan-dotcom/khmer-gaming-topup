@@ -83,9 +83,14 @@ body {
 @media (prefers-reduced-motion: no-preference) {
   .zp-reveal {
     opacity: 0;
-    transform: translateY(8px);
-    transition: opacity 220ms var(--zp-ease-out), transform 220ms var(--zp-ease-out);
-    transition-delay: calc(var(--zp-i, 0) * 40ms);
+    transform: translateY(28px) scale(0.97);
+    filter: blur(3px);
+    transition:
+      opacity 750ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 750ms cubic-bezier(0.22, 1, 0.36, 1),
+      filter 750ms cubic-bezier(0.22, 1, 0.36, 1);
+    transition-delay: calc(var(--zp-i, 0) * 65ms);
+    will-change: opacity, transform, filter;
   }
   .zp-reveal--in { opacity: 1; transform: none; filter: none; }
   .zp-page { animation: zp-page-in 180ms var(--zp-ease-out) both; }
