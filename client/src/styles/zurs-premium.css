@@ -604,26 +604,28 @@ html, body { overflow-x: clip; }
 /* ——— Scroll-to-top: delightful arrow effect ——— */
 @media (prefers-reduced-motion: no-preference) {
   .storefront-scroll-top.scroll-top--visible {
-    animation: scroll-top-spring 600ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    animation: scroll-top-spring 700ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
   }
   .storefront-scroll-top.scroll-top--visible .scroll-top__arrow {
-    animation: scroll-top-float 2.2s ease-in-out infinite;
+    animation: scroll-top-float 1.8s ease-in-out infinite;
+    filter: drop-shadow(0 0 6px rgb(240 205 110 / 0.8));
   }
   .storefront-scroll-top:hover .scroll-top__arrow {
     animation: scroll-top-nudge 500ms cubic-bezier(0.22, 1, 0.36, 1);
   }
   @keyframes scroll-top-spring {
-    0% { opacity: 0; transform: scale(0.6) translateY(16px); }
-    60% { opacity: 1; transform: scale(1.08) translateY(-2px); }
-    100% { opacity: 1; transform: scale(1) translateY(0); }
+    0% { opacity: 0; transform: scale(0.4) translateY(24px) rotate(-12deg); }
+    55% { opacity: 1; transform: scale(1.15) translateY(-4px) rotate(3deg); }
+    75% { transform: scale(0.96) translateY(1px) rotate(-1deg); }
+    100% { opacity: 1; transform: scale(1) translateY(0) rotate(0); }
   }
   @keyframes scroll-top-float {
     0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-3px); }
+    50% { transform: translateY(-4px); }
   }
   @keyframes scroll-top-nudge {
     0% { transform: translateY(0); }
-    40% { transform: translateY(-5px); }
+    40% { transform: translateY(-6px); }
     100% { transform: translateY(0); }
   }
 }

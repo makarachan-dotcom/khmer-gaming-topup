@@ -249,7 +249,7 @@ function StorefrontShell({ children }: { children: ReactNode }) {
     animate(target, { opacity: [0.72, 1], translateX: [dir * 56, 0], duration: 380, ease: "outExpo" });
   }, [location]);
   useEffect(() => {
-    const update = () => setShowScrollTop(window.scrollY > 360);
+    const update = () => setShowScrollTop(window.scrollY > 200);
     update();
     window.addEventListener("scroll", update, { passive: true });
     return () => window.removeEventListener("scroll", update);
@@ -522,8 +522,8 @@ function StorefrontShell({ children }: { children: ReactNode }) {
         </nav>
       )}
       <button type="button" onClick={navigateToTop} aria-label="ត្រឡប់ទៅខាងលើ"
-        className={cn("storefront-scroll-top fixed z-[270] grid h-11 w-11 place-items-center rounded-2xl border border-line bg-panel text-ink shadow-lg transition-[opacity,border-color] duration-300 hover:border-neon/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-neon", showScrollTop ? "scroll-top--visible opacity-100" : "pointer-events-none opacity-0")}>
-        <ArrowUp className="scroll-top__arrow h-5 w-5" strokeWidth={2.25} />
+        className={cn("storefront-scroll-top fixed bottom-24 right-4 z-[270] grid h-14 w-14 place-items-center rounded-2xl border-2 border-amber-400/70 bg-gradient-to-b from-slate-900 to-slate-800 text-amber-300 shadow-[0_8px_24px_-6px_rgb(201_151_18/0.6)] transition-[opacity,border-color] duration-300 hover:border-amber-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400", showScrollTop ? "scroll-top--visible opacity-100" : "pointer-events-none opacity-0")}>
+        <ArrowUp className="scroll-top__arrow h-6 w-6" strokeWidth={2.5} />
       </button>
     </div>
   );
