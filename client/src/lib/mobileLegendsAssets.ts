@@ -17,6 +17,16 @@ export function mobileLegendsDiamondAmount(label: string, amountLabel: string) {
 }
 
 export function mobileLegendsDiamondLabel(label: string, amountLabel: string) {
+  // Preserve bonus format: if the API says "86+8", show "86+8 ពេជ្យ" — never sum it.
+  const raw = `${label} ${amountLabel}`;
+  const bonusMatch = raw.match(/(\d[\d,]*)\s*\+\s*(\d[\d,]*)/);
+  if (bonusMatch) {
+    const base = bonusMatch[1].replace(/,/g, "");
+    const bonus = bonusMatch[2].replace(/,/g, "");
+    if (Number.isFinite(Number(base)) && Number.isFinite(Number(bonus))) {
+      return `${Number(base).toLocaleString("en-US")}+${Number(bonus).toLocaleString("en-US")} ពេជ្យ`;
+    }
+  }
   const amount = mobileLegendsDiamondAmount(label, amountLabel);
   return amount ? `${amount.toLocaleString("en-US")} ពេជ្យ` : amountLabel || label;
 }
