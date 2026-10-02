@@ -100,6 +100,11 @@ function catalogAvailabilityErrorMessage(error: { message: string }) {
     )
   )
     return "មិនអាចភ្ជាប់ database ពិត (primary) បានទេ ឬវានៅទទេ។ សូមពិនិត្យ DATABASE_URL របស់ deployment ហើយចុច «Sync catalog» ដើម្បីបញ្ចូលកញ្ចប់ជាមុនសិន។";
+  // Show the actual error for sync failures so the real cause is visible.
+  const detail = error.message?.trim();
+  if (detail) {
+    return `មិនអាចរក្សាទុកការកែប្រែបានទេ។ ការកំណត់ចាស់មិនត្រូវបានប្តូរ។ កំហុស: ${detail}`;
+  }
   return "មិនអាចរក្សាទុកការកែប្រែបានទេ។ ការកំណត់ចាស់មិនត្រូវបានប្តូរ។ សូមព្យាយាមម្ដងទៀត បន្ទាប់ពីពិនិត្យការភ្ជាប់ Admin storage។";
 }
 
