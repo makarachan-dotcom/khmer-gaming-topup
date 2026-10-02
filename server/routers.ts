@@ -266,7 +266,12 @@ export const appRouter = router({
     setProviderAvailability: scopedAdminProcedure("catalog").input(z.object({ kind: z.literal("game"), providerId: z.string().trim().min(1).max(120), isActive: z.boolean() })).mutation(({ ctx, input }) => setProviderAvailability({ ...input, updatedByUserId: ctx.user.id })),
     syncTopupCatalog: scopedAdminProcedure("catalog").mutation(async () => {
       const snapshot = await fetchFzrProviderSyncSnapshot();
-      if (snapshot.status !== "ready") throw new Error("FZR Cards catalog is currently unavailable");
+      if (snapshot.status !== "ready") {
+        if (snapshot.status === "unavailable") {
+          throw new Error("FazerCards API credentials are not configured. Set FZR_CARDS_API_BASE_URL and FZR_CARDS_API_KEY in the deployment environment, or save the key via Admin → Provider credentials.");
+        }
+        throw new Error("FazerCards API request failed. The key may be invalid, expired, or lack permission — verify it in the FazerCards portal, then re-save it via Admin → Provider credentials.");
+      }
       const result = await db.syncFzrCatalog(snapshot);
       // Every game/offer in a ready snapshot is either inserted (counted in
       // gamesImported/offersImported) or updated in place, because games whose
