@@ -522,8 +522,8 @@ function StorefrontShell({ children }: { children: ReactNode }) {
         </nav>
       )}
       <button type="button" onClick={navigateToTop} aria-label="ត្រឡប់ទៅខាងលើ"
-        className={cn("storefront-scroll-top fixed z-[270] grid h-11 w-11 place-items-center rounded-2xl border border-line bg-panel text-ink shadow-lg transition-opacity duration-200 hover:border-neon/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-neon", showScrollTop ? "opacity-100" : "pointer-events-none opacity-0")}>
-        <ArrowUp className="h-5 w-5" strokeWidth={2.25} />
+        className={cn("storefront-scroll-top fixed z-[270] grid h-11 w-11 place-items-center rounded-2xl border border-line bg-panel text-ink shadow-lg transition-[opacity,border-color] duration-300 hover:border-neon/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-neon", showScrollTop ? "scroll-top--visible opacity-100" : "pointer-events-none opacity-0")}>
+        <ArrowUp className="scroll-top__arrow h-5 w-5" strokeWidth={2.25} />
       </button>
     </div>
   );
