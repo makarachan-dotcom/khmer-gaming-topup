@@ -83,6 +83,8 @@ export function categoryLabelForPackage(item: CategoryPackage, overrides: Readon
   const override = normalizePackageCategoryLabel(candidate ?? "");
   const automatic = automaticPackageCategoryLabel(item);
   if (!override) return automatic;
+  // Token and diamonds are the same — force any Token override into ពេជ្យ.
+  if (override.toLocaleLowerCase() === "token") return "ពេជ្យ";
   if (override.toLocaleLowerCase() === "diamond" && !isDiamondPackage(item)) return automatic;
   if (override === "ពេជ្យ" && !isDiamondPackage(item)) return automatic;
   return override;
