@@ -162,7 +162,7 @@ export default function GameTopup() {
   // Admin Pricing broadcasts a change in the same browser. Cross-device edits
   // are covered by the poll because the admin is normally on a different device,
   // and a BroadcastChannel only reaches other tabs in the SAME browser.
-  const publicPackagePreview = trpc.provider.packagePreview.useQuery({ gameId }, { enabled: Boolean(gameId) && showPackages && !adminPreviewActive, staleTime: 10_000, refetchInterval: 15_000, refetchIntervalInBackground: true, refetchOnWindowFocus: true });
+  const publicPackagePreview = trpc.provider.packagePreview.useQuery({ gameId }, { enabled: Boolean(gameId) && showPackages && !adminPreviewActive, staleTime: 60_000, refetchInterval: 60_000, refetchOnWindowFocus: false });
   const adminPreview = trpc.admin.previewGamePackages.useQuery({ gameId }, { enabled: Boolean(gameId) && adminPreviewActive, staleTime: 15_000, refetchOnWindowFocus: true });
   const customerPackages = useMemo(() => {
     if (!showPackages) return [];
@@ -289,12 +289,12 @@ export default function GameTopup() {
   }, [game?.id]);
 
   // Once the account is verified the real (priced) packages are fetched without
-  // making the buyer press anything.
+  // making the buyer press anything. Fires in parallel — no waiting on preview.
   useEffect(() => {
     if (!game || adminPreviewActive || !canBrowsePackages) return;
-    if ((publicPackagePreview.data?.packages?.length ?? 0) > 0) return;
+    if (providerPackages.data || providerPackages.isPending) return;
     providerPackages.mutate({ gameId: game.id, fields: providerFields ?? {}, idAccuracyConfirmed });
-  }, [adminPreviewActive, canBrowsePackages, game?.id, idAccuracyConfirmed, publicPackagePreview.data?.packages?.length]);
+  }, [adminPreviewActive, canBrowsePackages, game?.id, idAccuracyConfirmed]);
 
   useEffect(() => {
     if (!game || identity?.status !== "verified" || !providerFields) return;
