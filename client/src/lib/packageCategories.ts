@@ -10,7 +10,7 @@ export type PackageCategory = {
   count: number;
 };
 
-const automaticCategoryOrder = ["ពេជ្យ", "Token", "Weekly Pass", "Twilight Pass", "Bundle", "Monthly Pack", "Elite Pack", "Super Offer", "កញ្ចប់ពិសេស"];
+const automaticCategoryOrder = ["ពេជ្យ", "Weekly Pass", "Twilight Pass", "Bundle", "Monthly Pack", "Elite Pack", "Super Offer", "កញ្ចប់ពិសេស"];
 
 function packageWords(item: Pick<CategoryPackage, "label" | "amountLabel">) {
   return `${item.label} ${item.amountLabel}`.toLowerCase();
@@ -55,7 +55,7 @@ export function isDiamondPackage(item: Pick<CategoryPackage, "label" | "amountLa
   return /\bdiamonds?\b/.test(copy);
 }
 
-function isTokenCurrencyPackage(item: Pick<CategoryPackage, "label" | "amountLabel">) {
+export function isTokenCurrencyPackage(item: Pick<CategoryPackage, "label" | "amountLabel">) {
   const copy = packageWords(item);
   if (isDiamondPackage(item) || isWeeklyPackage(item) || isMonthlyPackage(item) || isTwilightPackage(item) || isElitePackage(item) || isBundlePackage(item)) return false;
   return /\b(?:uc|robux|stars?|tokens?|coins?)\b/.test(copy);
@@ -72,7 +72,8 @@ export function automaticPackageCategoryLabel(item: Pick<CategoryPackage, "label
   if (isDiamondPackage(item)) return "ពេជ្យ";
   if (/\b(?:bonus|first\s*top[\s-]*up|extra|limited|value\s*pack)\b/.test(copy) || /\+\s*\d[\d,]*(?:\s*[a-z]+)?\b/.test(copy)) return "Super Offer";
   if (/\b(?:promo|special|discount|sale|event|exclusive|full\s*ticket)\b/.test(copy)) return "កញ្ចប់ពិសេស";
-  if (isTokenCurrencyPackage(item)) return "Token";
+  // Token and diamonds are the same — merge into ពេជ្យ.
+  if (isTokenCurrencyPackage(item)) return "ពេជ្យ";
   return "Super Offer";
 }
 
@@ -107,7 +108,7 @@ export function filterPackagesByCategory<T extends CategoryPackage>(items: T[], 
   if (!categoryId || categoryId === "all") return items;
   const selected = categoryId.trim().toLocaleLowerCase() === "weekly card" ? "weekly pass" : categoryId.trim().toLocaleLowerCase();
   return items.filter((item) => {
-    if (selected === "diamond" || selected === "ពេជ្យ") return isDiamondPackage(item);
+    if (selected === "diamond" || selected === "ពេជ្យ") return isDiamondPackage(item) || isTokenCurrencyPackage(item);
     const label = categoryLabelForPackage(item, overrides).toLocaleLowerCase();
     if (label !== selected) return false;
     if (selected === "weekly pass") return isWeeklyPackage(item);

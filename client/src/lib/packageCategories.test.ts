@@ -39,13 +39,14 @@ describe("package category presentation", () => {
     expect(packages.map((item) => item.id)).toEqual(["token", "weekly", "bonus", "special"]);
   });
 
-  it("shows only diamond packs when the Diamond filter is selected", () => {
+  it("shows diamond and token packs when the Diamond filter is selected (merged)", () => {
     const mixed = [
       ...packages,
       { id: "weekly-named-diamond", label: "Weekly Diamond Pass", amountLabel: "Weekly Diamond Pass" },
     ];
     expect(isDiamondPackage(packages[0]!)).toBe(true);
-    expect(filterPackagesByCategory(mixed, "diamond").map((item) => item.id)).toEqual(["token"]);
+    // Token (UC) and diamonds are merged into ពេជ្យ
+    expect(filterPackagesByCategory(mixed, "diamond").map((item) => item.id)).toEqual(["token", "bonus"]);
   });
 
   it("keeps Mobile Legends filters exclusive to the selected pack type", () => {
@@ -67,15 +68,16 @@ describe("package category presentation", () => {
     expect(filterPackagesByCategory(mlbb, "super offer").map((item) => item.id)).toEqual(["limited"]);
   });
 
-  it("keeps Token filter on currency packs that are not diamonds", () => {
+  it("merges Token into ពេជ្យ — they are the same currency", () => {
     const items = [
       { id: "uc", label: "60 UC", amountLabel: "60 UC" },
       { id: "robux", label: "800 Robux", amountLabel: "800 Robux" },
       { id: "stars", label: "500 Stars", amountLabel: "500 Stars" },
       { id: "diamonds", label: "100 Diamonds", amountLabel: "100 Diamonds" },
     ];
-    expect(filterPackagesByCategory(items, "token").map((item) => item.id)).toEqual(["uc", "robux", "stars"]);
-    expect(filterPackagesByCategory(items, "diamond").map((item) => item.id)).toEqual(["diamonds"]);
+    // Token filter no longer exists — all merge into ពេជ្យ
+    expect(filterPackagesByCategory(items, "ពេជ្យ").map((item) => item.id)).toEqual(["uc", "robux", "stars", "diamonds"]);
+    expect(filterPackagesByCategory(items, "diamond").map((item) => item.id)).toEqual(["uc", "robux", "stars", "diamonds"]);
   });
 
   it("groups packages under category headers without mixing types", () => {
@@ -86,8 +88,7 @@ describe("package category presentation", () => {
       { id: "uc", label: "60 UC", amountLabel: "60 UC" },
     ]);
     expect(grouped.map((group) => [group.label, group.items.map((item) => item.id)])).toEqual([
-      ["ពេជ្យ", ["d86"]],
-      ["Token", ["uc"]],
+      ["ពេជ្យ", ["d86", "uc"]],
       ["Weekly Pass", ["weekly"]],
       ["Bundle", ["elite"]],
     ]);

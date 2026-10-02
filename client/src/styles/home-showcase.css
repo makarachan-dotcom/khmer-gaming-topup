@@ -53,7 +53,7 @@
   position: relative;
   display: block;
   overflow: hidden;
-  border-radius: 0.35rem;
+  border-radius: 0.7rem;
   aspect-ratio: 16 / 10.5;
   background: #101a30;
   box-shadow:
@@ -183,7 +183,7 @@
 /* ——— 4 · Promo cards: seamless, media-led ——— */
 .hg-promo {
   overflow: hidden;
-  border-radius: 0.35rem;
+  border-radius: 0.7rem;
   background: linear-gradient(170deg, #141e38, #0e1628);
   box-shadow:
     0 18px 36px -22px rgb(2 8 26 / 0.85),
@@ -278,8 +278,8 @@
  * No soft vignette — the geometric frame stays crisp. */
 .hg-hero-frame {
   position: relative;
-  border-radius: 0.35rem;
+  border-radius: 0.7rem;
 }
 .hg-hero-frame .zurs-banner-slide {
-  border-radius: 0.35rem;
+  border-radius: 0.7rem;
 }
