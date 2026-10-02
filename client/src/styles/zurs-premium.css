@@ -629,3 +629,14 @@ html, body { overflow-x: clip; }
     100% { transform: translateY(0); }
   }
 }
+
+/* ——— Tactile tap feedback (visual haptic for iOS) ——— */
+@media (prefers-reduced-motion: no-preference) {
+  .package-card:active,
+  .package-category-tab:active,
+  .storefront-scroll-top:active,
+  .zbtn:active {
+    transform: scale(0.96);
+    transition: transform 100ms ease-out;
+  }
+}
