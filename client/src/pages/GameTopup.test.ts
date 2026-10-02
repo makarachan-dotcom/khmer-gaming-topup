@@ -90,7 +90,8 @@ describe("dedicated game top-up routes", () => {
     expect(source).toContain("package-choice package-choice--clean package-choice--gold");
     expect(source).toContain('className="package-choice-surface block rounded-[0.7rem] p-2.5"');
     expect(source).toContain('className="package-category-grid grid grid-cols-2 gap-2.5 sm:grid-cols-3"');
-    expect(source).toContain('<PackageCard key={item.id} item={item}');
+    expect(source).toContain('<Reveal key={item.id}');
+    expect(source).toContain('<PackageCard item={item}');
     expect(source).toContain("OverflowMarquee text={header}");
     expect(source).toContain("packageCardHeader");
     expect(source).toContain("groupPackagesByCategory");
