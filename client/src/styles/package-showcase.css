@@ -314,16 +314,21 @@
  * search + sort-select row. Sort pills became a compact native select —
  * same state, same options, far less vertical space.
  */
-/* ——— Ultra-compact refined filter (ប្រណិត): minimal toolbar, no card chrome ———
- * Stripped the card background/border/shadow — the filter floats as a delicate
- * toolbar. Every row is tightened: slim header, slim tabs, slim search+sort.
+/* ——— Ultra-compact refined filter (ប្រណិត): merged with packages, no separation ———
+ * The filter is NOT a separate card — it flows directly into the package grid.
+ * Override .package-category-browser (which forces a dark card via !important).
  */
-.pkf {
-  padding: 0.3rem 0.15rem !important;
+.package-category-browser.pkf {
+  padding: 0.25rem 0.1rem 0.15rem !important;
   border-radius: 0 !important;
   background: transparent !important;
   border: 0 !important;
   box-shadow: none !important;
+  margin-bottom: 0 !important;
+}
+/* Pull the package sections up tight against the filter — one unified block */
+.package-category-browser.pkf + * {
+  margin-top: 0.15rem !important;
 }
 .pkf-head {
   display: flex;
