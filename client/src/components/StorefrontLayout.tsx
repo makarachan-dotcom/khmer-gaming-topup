@@ -10,6 +10,7 @@ import { useStorefrontHeader } from "@/contexts/StorefrontHeaderContext";
 import { trpc } from "@/lib/trpc";
 import { animate } from "animejs";
 import { ArrowUp, ChevronRight, IdCard, LogIn, LogOut, Moon, Sun, WalletCards } from "lucide-react";
+import { hapticTap } from "@/lib/haptics";
 import "@/styles/zurs-wordmark.css";
 import { PackEmoji } from "@/components/PackEmoji";
 import { applyPackageUi, applyStorefrontUi, dismissStorefrontBoot, parsePackageUi, parseStorefrontUi, readStorefrontUi, type StorefrontUiSkin } from "@/lib/storefrontUi";
@@ -394,7 +395,10 @@ function StorefrontShell({ children }: { children: ReactNode }) {
     event.stopPropagation();
     suppressClickRef.current = false;
   };
-  const navigateToTop = () => window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  const navigateToTop = () => {
+    hapticTap();
+    window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  };
   return (
     <div ref={shellRef} className="zurs-dotted-shell min-h-screen bg-canvas text-ink pb-[calc(5rem+env(safe-area-inset-bottom))] sm:pb-0">
       <div className="zurs-particle-field" aria-hidden="true">

@@ -1,4 +1,5 @@
 import { Reveal } from "@/components/Reveal";
+import { hapticSelect, hapticTap } from "@/lib/haptics";
 import StorefrontLayout from "@/components/StorefrontLayout";
 import { AnimatedGlyph } from "@/components/AnimatedGlyph";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
@@ -184,8 +185,10 @@ export default function GameTopup() {
       setAccountCheckAlert(false);
       setPackageAlertItem(null);
       clearSelectedProduct();
+      hapticTap();
       return;
     }
+    hapticSelect();
     setSelectedPackageIdState(id);
     setPackageAlertItem(item ?? null);
     setAccountCheckAlert(Boolean(item && packageHasClickAlert(item)));
@@ -823,8 +826,8 @@ function DiamondPackages({ packages, status, selectedPackageId, onSelect, gameId
               <span className="pkf-count">{gamePackages.length}</span>
             </div>
             <nav className="pkf-tabs" aria-label="ប្រភេទកញ្ចប់">
-              <button ref={(element) => { categoryTabRefs.current.all = element; }} type="button" onClick={() => setSelectedCategoryId("all")} aria-pressed={selectedCategoryId === "all"} className={`package-category-tab pkf-tab ${selectedCategoryId === "all" ? "package-category-tab--active" : ""}`}><span>ទាំងអស់</span><b>{gamePackages.length}</b></button>
-              {categoryTabs.map((category) => <button key={category.id} ref={(element) => { categoryTabRefs.current[category.id] = element; }} type="button" onClick={() => setSelectedCategoryId(category.id)} aria-pressed={selectedCategoryId === category.id} className={`package-category-tab pkf-tab ${selectedCategoryId === category.id ? "package-category-tab--active" : ""}`}><span>{category.label}</span><b>{category.count}</b></button>)}
+              <button ref={(element) => { categoryTabRefs.current.all = element; }} type="button" onClick={() => { hapticTap(); setSelectedCategoryId("all"); }} aria-pressed={selectedCategoryId === "all"} className={`package-category-tab pkf-tab ${selectedCategoryId === "all" ? "package-category-tab--active" : ""}`}><span>ទាំងអស់</span><b>{gamePackages.length}</b></button>
+              {categoryTabs.map((category) => <button key={category.id} ref={(element) => { categoryTabRefs.current[category.id] = element; }} type="button" onClick={() => { hapticTap(); setSelectedCategoryId(category.id); }} aria-pressed={selectedCategoryId === category.id} className={`package-category-tab pkf-tab ${selectedCategoryId === category.id ? "package-category-tab--active" : ""}`}><span>{category.label}</span><b>{category.count}</b></button>)}
             </nav>
             <div className="pkf-tools">
               <label className="pkf-search">
