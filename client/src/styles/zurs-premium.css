@@ -640,3 +640,47 @@ html, body { overflow-x: clip; }
     transition: transform 100ms ease-out;
   }
 }
+
+/* ——— Robot mascot: slide back + turn around ——— */
+.robot-mascot {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  filter: drop-shadow(0 4px 12px rgb(0 0 0 / 0.25));
+  transition: transform 200ms ease;
+}
+.robot-mascot:hover { transform: scale(1.1); }
+.robot-mascot:active { transform: scale(0.92); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .robot-mascot__body {
+    animation: robot-float 3s ease-in-out infinite;
+    transform-origin: center;
+  }
+  .robot-mascot--trick .robot-mascot__body {
+    animation: robot-trick 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .robot-eye { animation: robot-blink 4s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
+  .robot-core { animation: robot-pulse 2s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
+
+  @keyframes robot-float {
+    0%, 100% { transform: translateY(0) rotate(-2deg); }
+    50% { transform: translateY(-5px) rotate(2deg); }
+  }
+  /* Slide back, spin around (turn), slide forward — cool! */
+  @keyframes robot-trick {
+    0% { transform: translateX(0) rotate(0deg) scale(1); }
+    30% { transform: translateX(22px) rotate(0deg) scale(0.92); }
+    65% { transform: translateX(22px) rotate(360deg) scale(0.92); }
+    85% { transform: translateX(0) rotate(360deg) scale(1.06); }
+    100% { transform: translateX(0) rotate(360deg) scale(1); }
+  }
+  @keyframes robot-blink {
+    0%, 92%, 100% { transform: scaleY(1); }
+    95% { transform: scaleY(0.1); }
+  }
+  @keyframes robot-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.35); opacity: 0.75; }
+  }
+}
