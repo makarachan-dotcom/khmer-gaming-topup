@@ -314,21 +314,144 @@
  * search + sort-select row. Sort pills became a compact native select —
  * same state, same options, far less vertical space.
  */
-/* ——— Ultra-compact refined filter (ប្រណិត): merged with packages, no separation ———
- * The filter is NOT a separate card — it flows directly into the package grid.
- * Override .package-category-browser (which forces a dark card via !important).
+/* ——— Filter: thoughtful minimal design — 2 functional rows, zero waste ———
+ * The header row ("choose packages" + count) was redundant — the tabs already
+ * communicate everything. Now: Row 1 = category tabs (the filter). Row 2 =
+ * search + sort. Clean, refined, Minecraft-angular. Flows into the packages.
  */
 .package-category-browser.pkf {
-  padding: 0.25rem 0.1rem 0.15rem !important;
+  padding: 0.2rem 0.1rem 0.1rem !important;
   border-radius: 0 !important;
   background: transparent !important;
   border: 0 !important;
   box-shadow: none !important;
   margin-bottom: 0 !important;
 }
-/* Pull the package sections up tight against the filter — one unified block */
+/* Header is redundant — keep in DOM for a11y/tests, but take no visual space */
+.package-category-browser.pkf .pkf-head {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  margin: -1px !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+/* Tabs: the hero — refined, angular, clear active state */
+.package-category-browser.pkf .pkf-tabs {
+  display: flex;
+  gap: 0.3rem;
+  overflow-x: auto;
+  margin: 0 !important;
+  padding: 0.15rem 0.1rem 0.25rem;
+  scrollbar-width: none;
+}
+.package-category-browser.pkf .pkf-tabs::-webkit-scrollbar { display: none; }
+.package-category-browser.pkf .pkf-tab {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.32rem 0.65rem !important;
+  font-size: 0.68rem !important;
+  font-weight: 700;
+  border-radius: 0.3rem !important;
+  border: 1px solid rgb(15 23 42 / 0.1);
+  background: rgb(255 255 255 / 0.65);
+  color: var(--z-ink-muted, #64748b);
+  transition: all 0.18s ease;
+}
+html[data-theme="dark"] .package-category-browser.pkf .pkf-tab {
+  border-color: rgb(255 255 255 / 0.1);
+  background: rgb(255 255 255 / 0.05);
+}
+.package-category-browser.pkf .pkf-tab b {
+  font-size: 0.62rem !important;
+  font-weight: 800;
+  background: rgb(15 23 42 / 0.07);
+  border-radius: 0.2rem;
+  padding: 0.08rem 0.32rem;
+  line-height: 1.2;
+}
+.package-category-browser.pkf .pkf-tab[aria-pressed="true"] {
+  background: #0f172a;
+  border-color: #0f172a;
+  color: #fff;
+  box-shadow: 0 4px 12px -4px rgb(15 23 42 / 0.5);
+}
+.package-category-browser.pkf .pkf-tab[aria-pressed="true"] b {
+  background: rgb(201 151 18 / 0.9);
+  color: #1a1403;
+}
+/* Tools: slim search + compact sort on one row */
+.package-category-browser.pkf .pkf-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.05rem;
+  padding: 0 0.1rem;
+}
+.package-category-browser.pkf .pkf-search {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  height: 1.7rem;
+  padding: 0 0.6rem;
+  border-radius: 0.3rem;
+  border: 1px solid rgb(15 23 42 / 0.1);
+  background: rgb(255 255 255 / 0.65);
+  color: var(--z-ink);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.package-category-browser.pkf .pkf-search:focus-within {
+  border-color: rgb(201 151 18 / 0.55);
+  box-shadow: 0 0 0 3px rgb(201 151 18 / 0.12);
+  outline: none;
+}
+html[data-theme="dark"] .package-category-browser.pkf .pkf-search {
+  border-color: rgb(255 255 255 / 0.1);
+  background: rgb(255 255 255 / 0.05);
+}
+.package-category-browser.pkf .pkf-search input {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  font-size: 0.7rem;
+  color: inherit;
+  padding: 0;
+}
+.package-category-browser.pkf .pkf-search input::placeholder {
+  color: var(--z-ink-muted, #94a3b8);
+  opacity: 0.85;
+}
+.package-category-browser.pkf .pkf-sort {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  height: 1.7rem;
+  padding: 0 0.45rem 0 0.55rem;
+  border-radius: 0.3rem;
+  border: 1px solid rgb(201 151 18 / 0.35);
+  background: linear-gradient(145deg, rgb(201 151 18 / 0.12), rgb(201 151 18 / 0.05));
+  color: var(--z-ink);
+  cursor: pointer;
+  font-size: 0.68rem;
+  font-weight: 700;
+  transition: border-color 0.18s ease;
+}
+.package-category-browser.pkf .pkf-sort:hover {
+  border-color: rgb(201 151 18 / 0.6);
+}
+/* Pull the package sections up tight — one unified block */
 .package-category-browser.pkf + * {
-  margin-top: 0.15rem !important;
+  margin-top: 0.2rem !important;
 }
 .pkf-head {
   display: flex;
