@@ -11,7 +11,6 @@ import { trpc } from "@/lib/trpc";
 import { animate } from "animejs";
 import { ArrowUp, ChevronRight, IdCard, LogIn, LogOut, Moon, Sun, WalletCards } from "lucide-react";
 import { hapticTap } from "@/lib/haptics";
-import { RobotMascot } from "./RobotMascot";
 import "@/styles/zurs-wordmark.css";
 import { PackEmoji } from "@/components/PackEmoji";
 import { applyPackageUi, applyStorefrontUi, dismissStorefrontBoot, parsePackageUi, parseStorefrontUi, readStorefrontUi, type StorefrontUiSkin } from "@/lib/storefrontUi";
@@ -530,7 +529,6 @@ function StorefrontShell({ children }: { children: ReactNode }) {
         className={cn("storefront-scroll-top fixed bottom-24 right-4 z-[270] grid h-14 w-14 place-items-center rounded-2xl border-2 border-amber-400/70 bg-gradient-to-b from-slate-900 to-slate-800 text-amber-300 shadow-[0_8px_24px_-6px_rgb(201_151_18/0.6)] transition-[opacity,border-color] duration-300 hover:border-amber-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400", showScrollTop ? "scroll-top--visible opacity-100" : "pointer-events-none opacity-0")}>
         <ArrowUp className="scroll-top__arrow h-6 w-6" strokeWidth={2.5} />
       </button>
-      <RobotMascot />
     </div>
   );
 }
