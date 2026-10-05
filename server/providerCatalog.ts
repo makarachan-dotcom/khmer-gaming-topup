@@ -985,7 +985,11 @@ function isPubgMobileFamilyGame(gameId: string) {
 
 function publicProviderGameIds(availability: Awaited<ReturnType<typeof providerAvailability>>) {
   const approvedIds = availability.activeGameIds?.length ? availability.activeGameIds : initialApprovedPublicGameIds;
-  return new Set(approvedIds.filter((id) => isWantedProviderGameId(id) && !availability.hiddenGameIds.includes(id)));
+  const ids = new Set(approvedIds.filter((id) => isWantedProviderGameId(id) && !availability.hiddenGameIds.includes(id)));
+  // Free Fire base ID must always be public (Makara's directive: Free Fire always shows all packages).
+  // The DB activeGameIds can be missing it (removed or never added) — the fallback list alone isn't enough.
+  if (!availability.hiddenGameIds.includes(freeFireFamilyGameId)) ids.add(freeFireFamilyGameId);
+  return ids;
 }
 
 function asProviderGames(items: FzrTopupItem[]) {
