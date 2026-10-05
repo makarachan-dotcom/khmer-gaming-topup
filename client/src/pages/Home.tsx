@@ -1,6 +1,6 @@
 import StorefrontLayout from "@/components/StorefrontLayout";
 import { Reveal } from "@/components/Reveal";
-import { PchumBenBanner, usePchumBenTheme } from "@/components/PchumBen";
+import { PchumBenAtmosphere, PchumBenBanner, usePchumBenTheme } from "@/components/PchumBen";
 import { AnimatedGlyph } from "@/components/AnimatedGlyph";
 import { GameLogoTicker } from "@/components/GameLogoTicker";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
@@ -18,25 +18,17 @@ import { Link } from "wouter";
 import { gameTopupPath } from "./GameTopup";
 import { PackEmoji } from "@/components/PackEmoji";
 import "@/styles/home-showcase.css";
-// The owner's own storefront artwork, served from client/public so it ships
-// inside the build and cannot 404 behind an upload-CDN link.
-//
-// Retired: the two upload-CDN slides below were stock suit-photo
-// compositions, not the owner's artwork, so neither one renders any more.
-// The deployment-safe asset check in client/src/aiEntrySurface.test.ts still
-// asserts both filenames, so they are recorded here instead of deleted:
-//   https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/mMwkxBRkmMXfalck.png
-//   https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/xftKPqLVBztUvpUZ.png
 const heroBanners = [
   {
     src: "/zurs-banner.png",
-    alt: "ZURS.me · បញ្ចូលពេជ្យ និងសេវាឌីជីថល",
+    alt: "ZURS.me · បញ្ចូលពេជ្យ និងសេវាឌីជីថាល",
   },
 ];
 export default function Home() {
   usePchumBenTheme();
   return (
     <StorefrontLayout>
+      <PchumBenAtmosphere />
       <main className="zp-page">
         <PchumBenBanner />
         <Reveal as="section" index={0}><HomeBanner /></Reveal>
@@ -71,10 +63,6 @@ function HomeBanner() {
   const [loaded, setLoaded] = useState(false);
   return (
     <section className="container pt-4 sm:pt-6" aria-label="ZURS banner">
-      {/* The artwork ships with its own transparent background and its own
-        * blue edge, so nothing is painted behind it: no conic beam, no panel
-        * fill, no gradient. Only the PNG itself is visible. A slow left-to-right
-        * pan keeps a single image feeling alive. */}
       <div className="hg-hero">
       <div className="hg-hero-frame zurs-banner-frame zurs-banner-frame--bare zurs-banner-frame--pan relative isolate aspect-[16/5.5] overflow-hidden rounded-2xl sm:aspect-[16/6]">
         <img
@@ -99,7 +87,7 @@ function HomepageMedia() {
   if (!items.length) return null;
   return (
     <section className="container mt-8 sm:mt-10">
-      <SectionHeading eyebrow="ZURS UPDATE" title="ព័ត៌មាន និង Promotion" aside={<span className="hidden text-xs font-semibold text-ink-muted sm:inline">{items.length} ធាតុ</span>} />
+      <SectionHeading eyebrow="ZURS UPDATE" title="ព័ត៌រមាន និង Promotion" aside={<span className="hidden text-xs font-semibold text-ink-muted sm:inline">{items.length} ធាតុ</span>} />
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((item) => {
           const media = item.mediaUrl?.trim() ?? "";
@@ -222,10 +210,6 @@ function HomeTopupExperience() {
   const games = orderProviderGames(gamesQuery.data?.games ?? []);
   const imageOverrides = useMemo(() => new Map((gameImages.data ?? []).map((item) => [item.gameId, item])), [gameImages.data]);
   const catalogGroups = useMemo(() => groupProviderGamesByBaseName(games), [games]);
-  // Round 9: the marquee used to print every raw provider variant, so shoppers
-  // saw rows like "Free Fire CIS" that do not exist as a store card. Grouping by
-  // base name means the strip shows exactly the public store names, and it stays
-  // built from the FULL catalogue so searching does not empty it out.
   const storeTickerLogos = useMemo(
     () => groupProviderGamesByBaseName(games).map((group) => ({ name: group.baseName, logoUrl: group.games[0]?.logoUrl ?? undefined })),
     [games],
@@ -236,7 +220,7 @@ function HomeTopupExperience() {
       <SectionHeading
         eyebrow="GAME TOP-UP"
         title="ជ្រើសរើសហ្គេមរបស់អ្នក"
-        description="ស្វែងរកតាមឈ្មោះហ្គេម ដើម្បីចូលទៅកាន់ទំព័រ Top-up។"
+        description="ស្វែងរកតាមឨ្មោះហ្គេម ដើម្បីចូលទៅកាន់ទំព័រ Top-up។"
         aside={
           <div className="flex shrink-0 items-center gap-2">
             <HomeStickers />
@@ -268,7 +252,7 @@ function HomeTopupExperience() {
       ) : (
         <div className="mt-5 rounded-2xl border border-dashed border-line bg-panel p-8 text-center text-xs leading-6 text-ink-muted">
           <AnimatedGlyph name="settings" size={30} color="#c99712" className="mx-auto" />
-          <p className="mt-3">បច្ចុប្បន្នមិនទាន់មានបញ្ជីហ្គេមសម្រាប់បង្ហាញទេ។ ព័ត៌មានហ្គេមនឹងបង្ហាញនៅទីនេះនៅពេលសេវារបស់ហាងបានដំណើរការ។</p>
+          <p className="mt-3">បច្ចុប្បន្នមិនទាន់មានបញ្ជីហ្គេមសម្រាប់បង្ហាញទេ។ ព័ត៌រមានហ្គេមនិងបង្ហាញនឹទីនេះពេលសេវារបស់ហាងបានដំណើរការ។</p>
         </div>
       )}
     </section>
