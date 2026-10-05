@@ -135,26 +135,10 @@ export function PchumBenBanner() {
   };
 
   return (
-    <section className="pchum-banner container pt-4 sm:pt-6" aria-label="ពិធីភ្ជុំបិណ្ឌ">
-      <div className="pchum-banner__frame relative isolate overflow-hidden rounded-2xl">
+    <section className="pchum-banner container pt-3 sm:pt-5" aria-label="ពិធីភ្ជុំបិណ្ឌ">
+      <div className="pchum-banner__frame relative isolate overflow-hidden">
         <div className="pchum-banner__bg" aria-hidden="true" />
         <div className="pchum-banner__shine" aria-hidden="true" />
-        <div className="pchum-banner__ring" aria-hidden="true" />
-        <div className="pchum-banner__ornament pchum-banner__ornament--l" aria-hidden="true" />
-        <div className="pchum-banner__ornament pchum-banner__ornament--r" aria-hidden="true" />
-        <div className="pchum-banner__particles" aria-hidden="true">
-          {Array.from({ length: 16 }).map((_, i) => (
-            <span key={i} className="pchum-banner__particle" style={{ "--p-i": i } as CSSProperties} />
-          ))}
-        </div>
-        <svg className="pchum-banner__lotus" viewBox="0 0 100 60" aria-hidden="true">
-          <g fill="none" stroke="currentColor" strokeWidth="1.6" opacity="0.55">
-            <path d="M50 55 C50 35 42 25 50 8 C58 25 50 35 50 55" />
-            <path d="M50 55 C40 45 30 42 22 30 C35 32 45 40 50 55" />
-            <path d="M50 55 C60 45 70 42 78 30 C65 32 55 40 50 55" />
-            <path d="M20 55 Q50 48 80 55" />
-          </g>
-        </svg>
 
         <button type="button" className="pchum-banner__close" onClick={dismiss} aria-label="បិទ">
           ×
@@ -163,10 +147,11 @@ export function PchumBenBanner() {
         <div className="pchum-banner__content relative z-10">
           <span className="pchum-banner__badge">−10%</span>
           <p className="pchum-banner__kicker">ពិធីបុណ្យប្រពៃណីខ្មែរ · ១០–១២ តុលា ២០២៦</p>
-          <h2 className="pchum-banner__title zp-khmer-display">សួស្តី​ពិធី​ភ្ជុំ​បិណ្ឌ</h2>
+          <h2 className="pchum-banner__title zp-khmer-display">សួស្តីពិធីភ្ជុំបិណ្ឌ</h2>
           <p className="pchum-banner__sub">
-            បញ្ចុះតម្លៃ <strong>10%</strong> គ្រុប់កញ្ចប់ — សម្រាប់អតិហិជនជាទីស្រឱាញ់
+            បញ្ចុះតម្លៃ <strong>10%</strong> គ្រុប់កញ្ចប់
           </p>
+          <p className="pchum-banner__note">សម្រាប់អតិហិជនជាទីស្រឱាញ់</p>
         </div>
       </div>
     </section>
