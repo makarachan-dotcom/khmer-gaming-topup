@@ -640,3 +640,107 @@ html, body { overflow-x: clip; }
     transition: transform 100ms ease-out;
   }
 }
+
+/* ——— Pchum Ben festival theme (auto-expires Oct 13, 2026) ——— */
+.pchum-banner__frame {
+  border-radius: 0.7rem;
+  border: 1px solid rgb(212 160 23 / 0.4);
+  box-shadow: 0 8px 32px -8px rgb(212 160 23 / 0.35);
+}
+.pchum-banner__bg {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 100%, rgb(224 123 42 / 0.35), transparent 60%),
+    radial-gradient(ellipse 60% 50% at 80% 20%, rgb(240 205 110 / 0.25), transparent 60%),
+    linear-gradient(160deg, #2a1408 0%, #1a0f0a 50%, #0f0a06 100%);
+}
+.pchum-banner__content {
+  padding: 1.5rem 1.25rem;
+  text-align: center;
+  color: #f5e6c8;
+}
+.pchum-banner__kicker {
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #f0cd6e;
+  opacity: 0.9;
+}
+.pchum-banner__title {
+  margin-top: 0.5rem;
+  font-size: 1.75rem;
+  font-weight: 800;
+  line-height: 1.2;
+  background: linear-gradient(120deg, #f0cd6e, #fff3d6 50%, #d4a017);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 2px 20px rgb(212 160 23 / 0.3);
+}
+.pchum-banner__sub {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: #e8d5a8;
+}
+.pchum-banner__sub strong {
+  color: #f0cd6e;
+  font-size: 1.1em;
+}
+.pchum-banner__lotus {
+  position: absolute;
+  right: 1rem; bottom: 0.5rem;
+  width: 90px; height: 54px;
+  color: #d4a017;
+  opacity: 0.6;
+}
+.pchum-banner__particles {
+  position: absolute; inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.pchum-banner__particle {
+  position: absolute;
+  bottom: -8px;
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: #f0cd6e;
+  opacity: 0;
+  left: calc(var(--p-i, 0) * 8.33%);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .pchum-banner__particle {
+    animation: pchum-float 6s ease-in infinite;
+    animation-delay: calc(var(--p-i, 0) * 0.5s);
+  }
+  @keyframes pchum-float {
+    0% { transform: translateY(0) scale(1); opacity: 0; }
+    15% { opacity: 0.9; }
+    100% { transform: translateY(-120px) scale(0.4); opacity: 0; }
+  }
+}
+
+/* Festival site-wide theme: warm candlelight palette */
+html.pchum-ben {
+  --pb-gold: #d4a017;
+  --pb-gold-light: #f0cd6e;
+  --pb-amber: #e07b2a;
+  --pb-dusk: #1a0f0a;
+}
+html.pchum-ben body {
+  background-image:
+    radial-gradient(ellipse 100% 40% at 50% 0%, rgb(212 160 23 / 0.06), transparent 60%);
+}
+html.pchum-ben .zbtn--primary {
+  background: linear-gradient(135deg, #d4a017, #b8860b);
+  border-color: #f0cd6e;
+  box-shadow: 0 4px 20px -4px rgb(212 160 23 / 0.5);
+}
+html.pchum-ben .package-category-tab--active {
+  background: linear-gradient(135deg, #2a1a0c, #1a0f0a);
+  border-color: #d4a017;
+  color: #f0cd6e;
+}
+html.pchum-ben .storefront-scroll-top {
+  border-color: rgb(212 160 23 / 0.7);
+  box-shadow: 0 8px 24px -6px rgb(212 160 23 / 0.6);
+}
