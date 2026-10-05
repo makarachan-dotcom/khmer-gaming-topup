@@ -744,3 +744,161 @@ html.pchum-ben .storefront-scroll-top {
   border-color: rgb(212 160 23 / 0.7);
   box-shadow: 0 8px 24px -6px rgb(212 160 23 / 0.6);
 }
+
+/* ═══════════════════════════════════════════════════════════
+   ពិធីភ្ជុំបិណ្ឌ — Full Khmer Traditional UI (ប្រពៃណីខ្មែរ)
+   Royal temple aesthetic: deep dusk, royal gold, crimson
+   Auto-expires Oct 13, 2026
+   ═══════════════════════════════════════════════════════════ */
+
+html.pchum-ben {
+  /* Khmer royal palette */
+  --pb-gold: #d4a017;
+  --pb-gold-light: #f0cd6e;
+  --pb-gold-deep: #9c7410;
+  --pb-crimson: #8b1a1a;
+  --pb-maroon: #5c1212;
+  --pb-dusk: #150d08;
+  --pb-dusk-2: #1f140c;
+  --pb-ivory: #f5e6c8;
+  --pb-bronze: #8c6a3c;
+}
+
+/* ——— Page background: temple dusk with subtle pattern ——— */
+html.pchum-ben body {
+  background-color: #f8f3e8;
+  background-image:
+    radial-gradient(ellipse 120% 50% at 50% -10%, rgb(212 160 23 / 0.08), transparent 60%),
+    radial-gradient(ellipse 80% 30% at 50% 110%, rgb(139 26 26 / 0.05), transparent 60%);
+}
+
+/* ——— Headings: Khmer royal style ——— */
+html.pchum-ben .font-display,
+html.pchum-ben h1, html.pchum-ben h2, html.pchum-ben h3 {
+  font-family: var(--font-khmer-display);
+}
+html.pchum-ben .zp-heading,
+html.pchum-ben .zurs-step-head__title,
+html.pchum-ben .package-group__title {
+  background: linear-gradient(120deg, #9c7410, #d4a017 40%, #f0cd6e 50%, #d4a017 60%, #9c7410);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ——— Ornamental divider (kbach-inspired) ——— */
+html.pchum-ben .zurs-step-head::after {
+  content: "";
+  display: block;
+  height: 3px;
+  margin-top: 0.5rem;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    var(--pb-gold-deep) 15%,
+    var(--pb-gold-light) 30%,
+    var(--pb-gold) 50%,
+    var(--pb-gold-light) 70%,
+    var(--pb-gold-deep) 85%,
+    transparent 100%);
+  border-radius: 2px;
+  opacity: 0.7;
+}
+
+/* ——— Header: temple dark with gold trim ——— */
+html.pchum-ben .storefront-header,
+html.pchum-ben header[class*="header"] {
+  background: linear-gradient(180deg, #1f140c 0%, #150d08 100%);
+  border-bottom: 2px solid;
+  border-image: linear-gradient(90deg, transparent, var(--pb-gold) 20%, var(--pb-gold-light) 50%, var(--pb-gold) 80%, transparent) 1;
+}
+
+/* ——— Game tiles: golden temple frames ——— */
+html.pchum-ben .hg-tile,
+html.pchum-ben .zurs-game-card {
+  border: 2px solid rgb(212 160 23 / 0.35);
+  border-radius: 0.7rem;
+  background: linear-gradient(160deg, #fffdf7 0%, #faf5e8 100%);
+  box-shadow:
+    0 2px 8px rgb(21 13 8 / 0.08),
+    0 12px 28px -12px rgb(212 160 23 / 0.25),
+    inset 0 1px 0 rgb(240 205 110 / 0.3);
+  position: relative;
+}
+html.pchum-ben .hg-tile::before,
+html.pchum-ben .zurs-game-card::before {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border: 1px solid rgb(212 160 23 / 0.25);
+  border-radius: 0.5rem;
+  pointer-events: none;
+}
+
+/* ——— Package cards: royal gold ——— */
+html.pchum-ben .package-choice-surface,
+html.pchum-ben .pk-card .package-choice-surface {
+  background: linear-gradient(165deg, #fffef9 0%, #faf6e9 60%, #f5edd8 100%);
+  border: 1.5px solid rgb(212 160 23 / 0.4);
+  box-shadow:
+    0 2px 6px rgb(21 13 8 / 0.06),
+    0 10px 24px -10px rgb(212 160 23 / 0.3);
+}
+html.pchum-ben .package-choice--selected .package-choice-surface {
+  border-color: var(--pb-gold);
+  border-width: 2px;
+  box-shadow:
+    0 0 0 2px rgb(212 160 23 / 0.2),
+    0 12px 32px -8px rgb(212 160 23 / 0.45);
+}
+html.pchum-ben .package-choice__price {
+  color: var(--pb-crimson) !important;
+  font-family: var(--font-khmer-display);
+}
+
+/* ——— Buttons: royal gold ——— */
+html.pchum-ben .zbtn--primary {
+  background: linear-gradient(135deg, #e8b91e 0%, #d4a017 40%, #b8860b 100%);
+  border: 1px solid #f0cd6e;
+  color: #2a1a08;
+  font-weight: 800;
+  box-shadow:
+    0 4px 16px -4px rgb(212 160 23 / 0.5),
+    inset 0 1px 0 rgb(255 255 255 / 0.3);
+  text-shadow: 0 1px 0 rgb(255 255 255 / 0.2);
+}
+html.pchum-ben .zbtn--primary:hover {
+  background: linear-gradient(135deg, #f0cd6e 0%, #e8b91e 50%, #d4a017 100%);
+  box-shadow:
+    0 6px 24px -4px rgb(212 160 23 / 0.65),
+    inset 0 1px 0 rgb(255 255 255 / 0.4);
+}
+
+/* ——— Filter tabs: temple style ——— */
+html.pchum-ben .package-category-tab {
+  border: 1px solid rgb(212 160 23 / 0.25);
+  background: linear-gradient(180deg, #fffdf7, #faf5e8);
+  color: #5c4a1f;
+}
+html.pchum-ben .package-category-tab--active,
+html.pchum-ben .pkf-tab.package-category-tab--active {
+  background: linear-gradient(135deg, #2a1a0c 0%, #1a0f0a 100%);
+  border-color: var(--pb-gold);
+  border-width: 1.5px;
+  color: var(--pb-gold-light);
+  box-shadow: 0 4px 16px -4px rgb(212 160 23 / 0.4);
+}
+
+/* ——— Scroll-top: royal ——— */
+html.pchum-ben .storefront-scroll-top {
+  background: linear-gradient(180deg, #2a1a0c, #150d08);
+  border: 2px solid var(--pb-gold);
+  color: var(--pb-gold-light);
+  box-shadow: 0 8px 28px -6px rgb(212 160 23 / 0.6);
+}
+
+/* ——— Badges: crimson & gold ——— */
+html.pchum-ben .package-badge--recommended {
+  background: linear-gradient(135deg, var(--pb-crimson), var(--pb-maroon));
+  border: 1px solid var(--pb-gold-light);
+  color: #fff3d6;
+}
