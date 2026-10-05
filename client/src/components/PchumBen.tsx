@@ -2,8 +2,8 @@ import { useEffect, useState, type CSSProperties } from "react";
 
 /**
  * ភ្ជុំបិណ្ឌ ២០២៦ — UI + theme
- * Active: 2026-10-05 00:00 +07 → 2026-10-13 00:00 +07 (exclusive end)
- * After end: class `pchum-ben` removed, banner null — no manual cleanup.
+ * Active: 2026-10-05 00:00 +07 → 2026-10-13 00:00 +07
+ * After end: class removed automatically (no user-facing expiry copy).
  */
 
 export const PCHUM_BEN_START = new Date("2026-10-05T00:00:00+07:00").getTime();
@@ -17,7 +17,6 @@ function msUntilPchumBenEnd(now: number = Date.now()): number {
   return Math.max(0, PCHUM_BEN_END - now);
 }
 
-/** Applies/removes festival theme on <html>. Schedules auto-clear at END. */
 export function usePchumBenTheme() {
   const [active, setActive] = useState(() => isPchumBenActive());
 
@@ -59,10 +58,6 @@ export function usePchumBenTheme() {
   return active;
 }
 
-/**
- * Banner ភ្ជុំបិណ្ឌ — បង្ហាញតែក្នុង window។
- * បិទ session (sessionStorage) មិនប៉ះពាល់ theme ទេ។
- */
 export function PchumBenBanner() {
   const [visible, setVisible] = useState(() => {
     if (!isPchumBenActive()) return false;
@@ -102,13 +97,15 @@ export function PchumBenBanner() {
     <section className="pchum-banner container pt-4 sm:pt-6" aria-label="ពិធីភ្ជុំបិណ្ឌ">
       <div className="pchum-banner__frame relative isolate overflow-hidden rounded-2xl">
         <div className="pchum-banner__bg" aria-hidden="true" />
+        <div className="pchum-banner__ornament pchum-banner__ornament--l" aria-hidden="true" />
+        <div className="pchum-banner__ornament pchum-banner__ornament--r" aria-hidden="true" />
         <div className="pchum-banner__particles" aria-hidden="true">
-          {Array.from({ length: 12 }).map((_, i) => (
+          {Array.from({ length: 14 }).map((_, i) => (
             <span key={i} className="pchum-banner__particle" style={{ "--p-i": i } as CSSProperties} />
           ))}
         </div>
         <svg className="pchum-banner__lotus" viewBox="0 0 100 60" aria-hidden="true">
-          <g fill="none" stroke="currentColor" strokeWidth="2" opacity="0.5">
+          <g fill="none" stroke="currentColor" strokeWidth="1.75" opacity="0.55">
             <path d="M50 55 C50 35 42 25 50 8 C58 25 50 35 50 55" />
             <path d="M50 55 C40 45 30 42 22 30 C35 32 45 40 50 55" />
             <path d="M50 55 C60 45 70 42 78 30 C65 32 55 40 50 55" />
@@ -116,12 +113,7 @@ export function PchumBenBanner() {
           </g>
         </svg>
 
-        <button
-          type="button"
-          className="pchum-banner__close"
-          onClick={dismiss}
-          aria-label="បិទ"
-        >
+        <button type="button" className="pchum-banner__close" onClick={dismiss} aria-label="បិទ">
           ×
         </button>
 
@@ -131,14 +123,12 @@ export function PchumBenBanner() {
           <p className="pchum-banner__sub">
             បញ្ចុះតម្លៃ <strong>10%</strong> គ្រប់កញ្ចប់ — សម្រាប់អតិថិជនជាទីស្រឡាញ់
           </p>
-          <p className="pchum-banner__meta">បញ្ចប់ដោយស្វ័យប្រវត្តិ ១៣ តុលា · theme នឹងបាត់ខ្លួនឯង</p>
         </div>
       </div>
     </section>
   );
 }
 
-/** Chip តូចសម្រាប់ package / header — null ក្រៅ festival */
 export function PchumBenChip({ className = "" }: { className?: string }) {
   if (!isPchumBenActive()) return null;
   return (
