@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { usePchumBenTheme } from "@/components/PchumBen";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { AnimatedGlyph } from "@/components/AnimatedGlyph";
 import { OutlineLoader } from "@/components/OutlineLoader";
@@ -199,6 +200,7 @@ export default function StorefrontLayout({ children }: { children: ReactNode }) 
   return <StorefrontShell>{children}</StorefrontShell>;
 }
 function StorefrontShell({ children }: { children: ReactNode }) {
+  usePchumBenTheme();
   const [location, setLocation] = useLocation();
   const { user, loading, logout } = useAuth();
   const { selectedProduct, selectedPaymentMethodId, pendingPackageSelection } = useSelectedProduct();
