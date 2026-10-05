@@ -902,3 +902,108 @@ html.pchum-ben .package-badge--recommended {
   border: 1px solid var(--pb-gold-light);
   color: #fff3d6;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   ពិធីភ្ជុំបិណ្ឌ — Extended festival coverage (everywhere)
+   ═══════════════════════════════════════════════════════════ */
+
+/* ——— Gold shimmer animation on key elements ——— */
+@media (prefers-reduced-motion: no-preference) {
+  html.pchum-ben .pchum-banner__title {
+    background-size: 200% auto;
+    animation: pchum-shimmer 4s linear infinite;
+  }
+  @keyframes pchum-shimmer {
+    to { background-position: 200% center; }
+  }
+}
+
+/* ——— Footer: temple style ——— */
+html.pchum-ben footer,
+html.pchum-ben .storefront-footer {
+  background: linear-gradient(180deg, #1a0f0a 0%, #0f0a06 100%);
+  border-top: 2px solid;
+  border-image: linear-gradient(90deg, transparent, var(--pb-gold) 20%, var(--pb-gold-light) 50%, var(--pb-gold) 80%, transparent) 1;
+  color: #e8d5a8;
+}
+html.pchum-ben footer a,
+html.pchum-ben .storefront-footer a {
+  color: var(--pb-gold-light);
+}
+
+/* ——— Checkout / payment card: royal ——— */
+html.pchum-ben .zurs-pay-card,
+html.pchum-ben .checkout-order-summary {
+  background: linear-gradient(165deg, #fffef9 0%, #faf6e9 100%);
+  border: 2px solid rgb(212 160 23 / 0.45);
+  border-radius: 0.7rem;
+  box-shadow: 0 12px 32px -12px rgb(212 160 23 / 0.35);
+}
+html.pchum-ben .zurs-pay-card .zurs-step-head__title {
+  font-family: var(--font-khmer-display);
+}
+
+/* ——— KHQR section highlight ——— */
+html.pchum-ben [class*="khqr"],
+html.pchum-ben .khqr-card {
+  border-color: rgb(212 160 23 / 0.5);
+}
+
+/* ——— Search / inputs: gold focus ——— */
+html.pchum-ben input:focus,
+html.pchum-ben select:focus,
+html.pchum-ben .pkf-search input:focus {
+  border-color: var(--pb-gold);
+  box-shadow: 0 0 0 3px rgb(212 160 23 / 0.2);
+  outline: none;
+}
+
+/* ——— Loading states: gold ——— */
+html.pchum-ben .OutlineLoader,
+html.pchum-ben [class*="loader"] {
+  color: var(--pb-gold);
+}
+
+/* ——— Modal / dialog: temple frame ——— */
+html.pchum-ben [role="dialog"],
+html.pchum-ben .modal-content {
+  border: 2px solid rgb(212 160 23 / 0.5);
+  border-radius: 0.7rem;
+  box-shadow: 0 24px 64px -16px rgb(21 13 8 / 0.4);
+}
+
+/* ——— Sticky bottom bar (checkout): royal ——— */
+html.pchum-ben .zurs-sticky-bar,
+html.pchum-ben [class*="sticky"][class*="bottom"] {
+  background: linear-gradient(180deg, rgb(26 15 10 / 0.95), rgb(15 10 6 / 0.98));
+  border-top: 2px solid;
+  border-image: linear-gradient(90deg, transparent, var(--pb-gold) 30%, var(--pb-gold-light) 50%, var(--pb-gold) 70%, transparent) 1;
+  backdrop-filter: blur(12px);
+}
+html.pchum-ben .zurs-sticky-bar .zbtn--primary {
+  box-shadow: 0 4px 20px -2px rgb(212 160 23 / 0.6);
+}
+
+/* ——— Identity / account cards ——— */
+html.pchum-ben .identity-flow,
+html.pchum-ben .game-topup-workspace {
+  border: 1px solid rgb(212 160 23 / 0.2);
+  border-radius: 0.7rem;
+}
+
+/* ——— Verified badge: gold ——— */
+html.pchum-ben .identity-verified--gold {
+  border-color: var(--pb-gold);
+  background: linear-gradient(135deg, rgb(212 160 23 / 0.12), rgb(240 205 110 / 0.08));
+}
+
+/* ——— Section spacing with ornamental touch ——— */
+html.pchum-ben .package-group__head {
+  border-bottom: 1px solid rgb(212 160 23 / 0.2);
+  padding-bottom: 0.5rem;
+}
+html.pchum-ben .package-group__count {
+  background: linear-gradient(135deg, var(--pb-gold), var(--pb-gold-deep));
+  color: #fff8e6;
+  border: 1px solid var(--pb-gold-light);
+}
