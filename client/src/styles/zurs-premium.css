@@ -1007,3 +1007,172 @@ html.pchum-ben .package-group__count {
   color: #fff8e6;
   border: 1px solid var(--pb-gold-light);
 }
+
+/* ═══════════════════════════════════════════════════════════
+   ពិធីភ្ជុំបិណ្ឌ — LUXURY REFINEMENT (ប្រណិតបំផុត)
+   Refined: softer golds, silk textures, graceful depth
+   ═══════════════════════════════════════════════════════════ */
+
+/* ——— Refined palette: champagne gold, warm ivory ——— */
+html.pchum-ben {
+  --pb-champagne: #f7e7c3;
+  --pb-gold-soft: #e6c86a;
+  --pb-gold-rich: #c9a227;
+  --pb-bronze-soft: #a67c3d;
+}
+
+/* ——— Banner: luxury redesign ——— */
+html.pchum-ben .pchum-banner__frame {
+  border: 1px solid rgb(201 162 39 / 0.5);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.4) inset,
+    0 20px 50px -20px rgb(21 13 8 / 0.35),
+    0 8px 24px -8px rgb(201 162 39 / 0.3);
+}
+html.pchum-ben .pchum-banner__bg {
+  background:
+    radial-gradient(ellipse 90% 70% at 15% 110%, rgb(201 162 39 / 0.22), transparent 60%),
+    radial-gradient(ellipse 50% 40% at 85% 15%, rgb(247 231 195 / 0.18), transparent 60%),
+    linear-gradient(165deg, #241610 0%, #150d08 55%, #0d0805 100%);
+}
+html.pchum-ben .pchum-banner__content {
+  padding: 2rem 1.5rem;
+}
+html.pchum-ben .pchum-banner__kicker {
+  font-size: 0.65rem;
+  letter-spacing: 0.28em;
+  color: var(--pb-gold-soft);
+  font-weight: 600;
+}
+html.pchum-ben .pchum-banner__title {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: linear-gradient(105deg,
+    #a67c3d 0%, #d4a017 25%, #f7e7c3 50%, #d4a017 75%, #a67c3d 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  filter: drop-shadow(0 2px 12px rgb(201 162 39 / 0.35));
+}
+html.pchum-ben .pchum-banner__sub {
+  font-size: 0.95rem;
+  color: #d9c9a3;
+  letter-spacing: 0.02em;
+  margin-top: 0.75rem;
+}
+html.pchum-ben .pchum-banner__sub strong {
+  background: linear-gradient(120deg, #f0cd6e, #fff3d6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-size: 1.25em;
+  font-weight: 800;
+}
+
+/* ——— Game tiles: luxury ——— */
+html.pchum-ben .hg-tile,
+html.pchum-ben .zurs-game-card {
+  border: 1px solid rgb(201 162 39 / 0.45);
+  background:
+    linear-gradient(170deg, rgb(255 255 255 / 0.9), rgb(250 245 232 / 0.95)),
+    linear-gradient(170deg, #fffdf7, #faf5e8);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.8) inset,
+    0 2px 6px rgb(21 13 8 / 0.06),
+    0 16px 36px -16px rgb(201 162 39 / 0.28);
+  transition: transform 300ms var(--zp-ease-out), box-shadow 300ms var(--zp-ease-out);
+}
+html.pchum-ben .hg-tile:hover,
+html.pchum-ben .zurs-game-card:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.8) inset,
+    0 4px 12px rgb(21 13 8 / 0.08),
+    0 24px 48px -16px rgb(201 162 39 / 0.4);
+  border-color: rgb(201 162 39 / 0.7);
+}
+html.pchum-ben .hg-tile::before,
+html.pchum-ben .zurs-game-card::before {
+  border: 1px solid rgb(201 162 39 / 0.18);
+}
+
+/* ——— Package cards: luxury ——— */
+html.pchum-ben .package-choice-surface,
+html.pchum-ben .pk-card .package-choice-surface {
+  border: 1px solid rgb(201 162 39 / 0.35);
+  background:
+    linear-gradient(175deg, rgb(255 255 255 / 0.7), transparent 40%),
+    linear-gradient(165deg, #fffef9, #faf6e9 70%, #f3ead3);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.7) inset,
+    0 2px 8px rgb(21 13 8 / 0.05),
+    0 14px 30px -14px rgb(201 162 39 / 0.25);
+  transition: all 280ms var(--zp-ease-out);
+}
+html.pchum-ben .package-choice-surface:hover {
+  border-color: rgb(201 162 39 / 0.6);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.7) inset,
+    0 4px 14px rgb(21 13 8 / 0.07),
+    0 20px 40px -14px rgb(201 162 39 / 0.38);
+  transform: translateY(-2px);
+}
+html.pchum-ben .package-choice--selected .package-choice-surface {
+  border: 1.5px solid var(--pb-gold-rich);
+  background:
+    linear-gradient(175deg, rgb(247 231 195 / 0.4), transparent 50%),
+    linear-gradient(165deg, #fffef9, #faf3df);
+  box-shadow:
+    0 0 0 3px rgb(201 162 39 / 0.15),
+    0 16px 40px -12px rgb(201 162 39 / 0.45);
+}
+
+/* ——— Typography refinement ——— */
+html.pchum-ben .package-choice__header {
+  letter-spacing: 0.01em;
+  color: #2c1f0e;
+}
+html.pchum-ben .package-choice__price {
+  font-size: 1rem;
+  letter-spacing: 0.01em;
+}
+html.pchum-ben .package-choice__price s {
+  color: #a89b7d;
+  font-weight: 400;
+}
+
+/* ——— Buttons: luxury gold ——— */
+html.pchum-ben .zbtn--primary {
+  background: linear-gradient(180deg, #f0d97a 0%, #e0b83c 30%, #c9a227 70%, #b08d1f 100%);
+  border: 1px solid #f7e7c3;
+  color: #2a1c08;
+  letter-spacing: 0.03em;
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.5) inset,
+    0 2px 4px rgb(21 13 8 / 0.15),
+    0 10px 28px -8px rgb(201 162 39 / 0.55);
+}
+html.pchum-ben .zbtn--primary:hover {
+  background: linear-gradient(180deg, #f7e7c3 0%, #f0d97a 35%, #e0b83c 75%, #c9a227 100%);
+  transform: translateY(-1px);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.6) inset,
+    0 4px 8px rgb(21 13 8 / 0.12),
+    0 16px 36px -8px rgb(201 162 39 / 0.65);
+}
+html.pchum-ben .zbtn--primary:active {
+  transform: translateY(0);
+}
+
+/* ——— Filter tabs: refined ——— */
+html.pchum-ben .package-category-tab {
+  letter-spacing: 0.02em;
+  font-weight: 600;
+  border: 1px solid rgb(201 162 39 / 0.22);
+  transition: all 250ms var(--zp-ease-out);
+}
+html.pchum-ben .package-category-tab:hover {
+  border-color: rgb(201 162 39 / 0.45);
+  background: linear-gradient(180deg, #fffef9, #f7f0dc);
+}
