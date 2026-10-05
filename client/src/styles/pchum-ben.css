@@ -1,0 +1,45 @@
+/* Pchum Ben overlay polish — auto-hidden with html.pchum-ben removal after Oct 12 2026 */
+
+.pchum-banner__close {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.65rem;
+  z-index: 20;
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 999px;
+  border: 1px solid rgb(240 205 110 / 0.35);
+  background: rgb(26 15 10 / 0.55);
+  color: #f0cd6e;
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+.pchum-banner__close:hover {
+  background: rgb(212 160 23 / 0.25);
+  border-color: rgb(240 205 110 / 0.65);
+}
+.pchum-banner__meta {
+  margin-top: 0.55rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  color: rgb(232 213 168 / 0.72);
+}
+.pchum-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #1a1403;
+  background: linear-gradient(135deg, #f0cd6e, #d4a017);
+  border: 1px solid rgb(255 243 214 / 0.55);
+  box-shadow: 0 4px 12px -4px rgb(212 160 23 / 0.55);
+  white-space: nowrap;
+}
