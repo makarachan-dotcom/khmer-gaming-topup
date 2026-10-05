@@ -902,6 +902,7 @@ export const initialApprovedPublicGameIds = [
   "8_ball_pool",
   "eafc_mobile_kh",
   "frag_pro_shooter",
+  "free_fire",
   "free_fire_bd",
   "free_fire_cis",
   "free_fire_latam",
