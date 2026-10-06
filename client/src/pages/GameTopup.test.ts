@@ -165,7 +165,8 @@ describe("dedicated game top-up routes", () => {
 
   it("does not block the identity form behind a full-page package overlay", () => {
     const source = readFileSync(join(process.cwd(), "client/src/pages/GameTopup.tsx"), "utf8");
-    expect(source).toContain('LoadingOverlay open={gameQuery.isLoading}');
+    expect(source).toContain('LoadingOverlay open={gameLoading}');
+    expect(source).toContain('const gameLoading = gameQuery.isLoading && !gameLoadTimedOut');
     expect(source).toContain("packagesLoading");
     expect(source).not.toContain("providerPackages.isPending || adminPreview.isLoading || (showPackages && publicPackagePreview.isLoading)");
   });

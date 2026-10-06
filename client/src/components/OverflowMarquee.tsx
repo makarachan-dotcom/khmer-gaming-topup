@@ -20,8 +20,16 @@ export function OverflowMarquee({ text, className = "", trackClassName = "" }: O
     };
     measure();
     const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
-    if (viewportRef.current && observer) observer.observe(viewportRef.current);
-    return () => observer?.disconnect();
+    if (observer) {
+      if (viewportRef.current) observer.observe(viewportRef.current);
+      if (textRef.current) observer.observe(textRef.current);
+    }
+    // Webfont loads change text width after first paint; re-measure then.
+    let cancelled = false;
+    if (typeof document !== "undefined" && document.fonts?.ready) {
+      document.fonts.ready.then(() => { if (!cancelled) measure(); }).catch(() => {});
+    }
+    return () => { cancelled = true; observer?.disconnect(); };
   }, [text]);
 
   return (
