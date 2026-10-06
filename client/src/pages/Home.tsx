@@ -1,6 +1,5 @@
 import StorefrontLayout from "@/components/StorefrontLayout";
 import { Reveal } from "@/components/Reveal";
-import { PchumBenAtmosphere, PchumBenBanner, usePchumBenTheme } from "@/components/PchumBen";
 import { AnimatedGlyph } from "@/components/AnimatedGlyph";
 import { GameLogoTicker } from "@/components/GameLogoTicker";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
@@ -25,12 +24,9 @@ const heroBanners = [
   },
 ];
 export default function Home() {
-  usePchumBenTheme();
   return (
     <StorefrontLayout>
-      <PchumBenAtmosphere />
       <main className="zp-page">
-        <PchumBenBanner />
         <Reveal as="section" index={0}><HomeBanner /></Reveal>
         <Reveal as="section" index={1}><HomepageMedia /></Reveal>
         <Reveal as="section" index={2}><HomeTopupExperience /></Reveal>
