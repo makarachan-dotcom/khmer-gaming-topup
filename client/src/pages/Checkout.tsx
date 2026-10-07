@@ -253,19 +253,32 @@ function KhqrPaymentExperience({ payment, order, selectedMethod, waiting, refres
 /**
  * Asks which bank app to open before redirecting, so the user lands in their
  * own bank for a faster payment instead of always being pushed to Bakong.
+ * Each bank tries its native app scheme first; Bakong uses the payment deeplink.
  */
 const KHQR_BANKS = [
-  { id: "aba", name: "ABA", kh: "ABA", color: "#004b8d" },
-  { id: "bakong", name: "Bakong", kh: "បាគង", color: "#c99712" },
-  { id: "wing", name: "Wing", kh: "វីង", color: "#00a651" },
-  { id: "acleda", name: "ACLEDA", kh: "អេស៊ីលីដា", color: "#e31e24" },
+  { id: "aba", name: "ABA", kh: "ABA", color: "#005cab", scheme: "ababank://" },
+  { id: "bakong", name: "Bakong", kh: "បាគង", color: "#d4a017", scheme: null },
+  { id: "wing", name: "Wing", kh: "វីង", color: "#00a651", scheme: "wingbank://" },
+  { id: "acleda", name: "ACLEDA", kh: "អេស៊ីលីដា", color: "#e31e24", scheme: "acleda://" },
 ];
 
 function BankPickerDialog({ open, deeplink, onClose }: { open: boolean; deeplink: string | null; onClose: () => void }) {
   if (!open) return null;
   const pick = (bankId: string) => {
     try { localStorage.setItem("zurs-preferred-bank", bankId); } catch { /* private mode */ }
-    if (deeplink) window.open(deeplink, "_blank", "noopener,noreferrer");
+    const bank = KHQR_BANKS.find((b) => b.id === bankId);
+    if (!bank || !deeplink) { onClose(); return; }
+    if (!bank.scheme) {
+      // Bakong: the deeplink carries the payment data
+      window.open(deeplink, "_blank", "noopener,noreferrer");
+    } else {
+      // Other banks: try native app scheme first, fall back to deeplink
+      const started = Date.now();
+      window.location.href = bank.scheme;
+      window.setTimeout(() => {
+        if (Date.now() - started < 2000) window.open(deeplink, "_blank", "noopener,noreferrer");
+      }, 1200);
+    }
     onClose();
   };
   return <div className="bank-picker" role="dialog" aria-modal="true" aria-labelledby="bank-picker-title">
@@ -280,7 +293,9 @@ function BankPickerDialog({ open, deeplink, onClose }: { open: boolean; deeplink
       <div className="bank-picker__grid">
         {KHQR_BANKS.map((bank) => (
           <button key={bank.id} type="button" className="bank-picker__bank" onClick={() => pick(bank.id)}>
-            <span className="bank-picker__bank-mark" style={{ background: bank.color }}>{bank.name.charAt(0)}</span>
+            <span className="bank-picker__bank-logo" style={{ "--bank-color": bank.color } as React.CSSProperties}>
+              <span className="bank-picker__bank-logo-text">{bank.id === "acleda" ? "AC" : bank.name.charAt(0)}</span>
+            </span>
             <span className="bank-picker__bank-name">{bank.name}<small>{bank.kh}</small></span>
           </button>
         ))}

@@ -1208,3 +1208,26 @@ html:not(.dark) .bank-picker__close {
 @media (prefers-reduced-motion: reduce) {
   .bank-picker__backdrop, .bank-picker__panel { animation: none !important; }
 }
+
+/* --- Bank logo badges --- */
+.bank-picker__bank-logo {
+  display: grid;
+  height: 2.75rem;
+  width: 2.75rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 0.85rem;
+  background: linear-gradient(135deg, var(--bank-color), color-mix(in srgb, var(--bank-color) 70%, black));
+  box-shadow:
+    0 6px 16px -4px color-mix(in srgb, var(--bank-color) 50%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+.bank-picker__bank-logo-text {
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
