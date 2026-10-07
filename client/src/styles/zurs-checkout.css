@@ -305,3 +305,369 @@ body.refund-dialog-open .zurs-mobile-tabbar {
   body.refund-dialog-open .zurs-mobile-tabbar { animation: none !important; opacity: 0 !important; }
   .saved-id-chip:hover, .refund-dialog__decline:hover, .refund-dialog__agree:hover { transform: none; }
 }
+
+/* ==========================================================================
+   LIQUID GLASS — Checkout Preview Redesign (ប្រណិតបំផុត)
+   Frosted glass surfaces, specular highlights, fluid depth.
+   ========================================================================== */
+
+/* --- Ambient: soft light wells behind the checkout --- */
+.checkout-page {
+  position: relative;
+}
+.checkout-page::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 60% 35% at 15% 0%, rgba(201, 151, 18, 0.10), transparent 65%),
+    radial-gradient(ellipse 55% 30% at 88% 22%, rgba(56, 189, 248, 0.08), transparent 65%),
+    radial-gradient(ellipse 70% 40% at 50% 110%, rgba(99, 102, 241, 0.07), transparent 65%);
+}
+.checkout-page > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* --- Hero: floating glass panel --- */
+.checkout-preview-hero {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  border-radius: 1.25rem !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.03)) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(1.5);
+  backdrop-filter: blur(22px) saturate(1.5);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.06),
+    0 12px 40px -12px rgba(0, 0, 0, 0.45) !important;
+  padding: 1.4rem 1.5rem !important;
+  animation: lg-hero-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.checkout-preview-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.09) 48%, transparent 62%);
+  animation: lg-sheen 5s ease-in-out infinite;
+}
+.checkout-preview-hero > p {
+  color: #e8c85a !important;
+  font-size: 0.68rem !important;
+  font-weight: 800;
+  letter-spacing: 0.22em !important;
+  text-transform: uppercase;
+}
+.checkout-preview-hero h1 {
+  font-weight: 800 !important;
+  font-size: 1.35rem !important;
+  letter-spacing: -0.01em;
+  margin-top: 0.35rem;
+  background: linear-gradient(120deg, #ffffff 30%, #e8efff 60%, #ffffff 90%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent !important;
+}
+.checkout-preview-hero > span {
+  display: inline-block;
+  margin-top: 0.6rem;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: rgba(230, 236, 255, 0.75) !important;
+  font-size: 0.74rem !important;
+  border-radius: 0.8rem !important;
+  padding: 0.5rem 0.8rem !important;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+/* --- Order summary: the hero glass card --- */
+.checkout-order-summary {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  border-radius: 1.4rem !important;
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.04) 55%, rgba(255, 255, 255, 0.07)) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  backdrop-filter: blur(24px) saturate(1.5);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.30),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 20px 60px -18px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(201, 151, 18, 0.08) !important;
+  padding: 1.4rem !important;
+  animation: lg-card-in 0.75s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
+}
+.checkout-order-summary::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  pointer-events: none;
+}
+.checkout-order-summary__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: #e8c85a !important;
+  font-size: 0.66rem !important;
+  font-weight: 800;
+  letter-spacing: 0.2em !important;
+  text-transform: uppercase;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid rgba(232, 200, 90, 0.25);
+  background: rgba(232, 200, 90, 0.08);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+/* --- Product hero row --- */
+.checkout-order-summary__main {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.1rem;
+  padding: 1rem;
+  border-radius: 1.1rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.02));
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+.checkout-order-summary__main .rounded-2xl {
+  border-radius: 1rem !important;
+  box-shadow:
+    0 8px 24px -8px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+}
+.checkout-order-summary__title {
+  color: #fff !important;
+  font-size: 1.05rem !important;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.checkout-order-summary__order {
+  color: rgba(220, 228, 255, 0.65) !important;
+  font-size: 0.8rem !important;
+  margin-top: 0.2rem;
+}
+.checkout-order-summary__amount {
+  color: #ffd84d !important;
+  font-size: 1.3rem !important;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  text-shadow: 0 2px 16px rgba(255, 216, 77, 0.35);
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* --- Detail rows: individual glass pills --- */
+.checkout-order-summary__details {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 1.1rem;
+}
+.checkout-order-summary__details > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem 0.9rem;
+  border: 1px solid rgba(255, 255, 255, 0.09) !important;
+  border-radius: 0.9rem !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.015)) !important;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  transition: border-color 0.25s ease, background 0.25s ease;
+}
+.checkout-order-summary__details > div:hover {
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03)) !important;
+}
+.checkout-order-summary__details span {
+  color: rgba(210, 220, 245, 0.6) !important;
+  font-size: 0.76rem !important;
+  font-weight: 600;
+}
+.checkout-order-summary__details strong {
+  color: #fff !important;
+  font-size: 0.82rem !important;
+  font-weight: 700;
+  text-align: right;
+}
+.checkout-order-summary__note {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.9rem;
+  border: 1px solid rgba(56, 189, 248, 0.18);
+  background: rgba(56, 189, 248, 0.06);
+  color: rgba(200, 220, 250, 0.8) !important;
+  font-size: 0.76rem !important;
+  line-height: 1.6;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+/* --- Confirm: glass action card --- */
+.checkout-preview-confirm {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  border-radius: 1.4rem !important;
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.03)) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  backdrop-filter: blur(24px) saturate(1.5);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 20px 60px -18px rgba(0, 0, 0, 0.55) !important;
+  padding: 1.4rem !important;
+  margin-top: 1rem;
+  animation: lg-card-in 0.75s cubic-bezier(0.22, 1, 0.36, 1) 0.16s both;
+}
+.checkout-preview-confirm > div:first-child {
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
+  padding: 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.04);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.checkout-preview-confirm > div:first-child svg {
+  color: #e8c85a;
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+  filter: drop-shadow(0 0 8px rgba(232, 200, 90, 0.5));
+}
+.checkout-preview-confirm strong {
+  color: #fff !important;
+  font-size: 0.92rem;
+  display: block;
+  margin-bottom: 0.25rem;
+}
+.checkout-preview-confirm span {
+  color: rgba(210, 220, 245, 0.65) !important;
+  font-size: 0.78rem !important;
+  line-height: 1.6;
+}
+
+/* --- Liquid glass buttons --- */
+.checkout-confirm-actions {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 1.1rem;
+}
+.checkout-primary-action {
+  position: relative !important;
+  overflow: hidden !important;
+  min-height: 3.2rem !important;
+  border-radius: 1.1rem !important;
+  font-size: 0.95rem !important;
+  font-weight: 800 !important;
+  border: 1px solid rgba(255, 216, 77, 0.45) !important;
+  background: linear-gradient(135deg, rgba(255, 216, 77, 0.22), rgba(201, 151, 18, 0.16)) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(1.4) !important;
+  backdrop-filter: blur(16px) saturate(1.4) !important;
+  color: #ffe9a8 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.15),
+    0 12px 32px -10px rgba(201, 151, 18, 0.45) !important;
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s ease, filter 0.25s ease !important;
+}
+.checkout-primary-action::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.25) 50%, transparent 65%);
+  transform: translateX(-120%);
+  transition: transform 0.7s ease;
+  pointer-events: none;
+}
+.checkout-primary-action:not(:disabled):hover {
+  transform: translateY(-2px) !important;
+  background: linear-gradient(135deg, rgba(255, 216, 77, 0.30), rgba(201, 151, 18, 0.22)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    0 18px 44px -10px rgba(201, 151, 18, 0.55) !important;
+  filter: brightness(1.08) !important;
+}
+.checkout-primary-action:not(:disabled):hover::before {
+  transform: translateX(120%);
+}
+.checkout-primary-action:not(:disabled):active {
+  transform: translateY(0) scale(0.98) !important;
+}
+.checkout-secondary-action {
+  min-height: 3rem !important;
+  border-radius: 1.1rem !important;
+  font-size: 0.88rem !important;
+  font-weight: 700 !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+  backdrop-filter: blur(14px) !important;
+  color: rgba(230, 236, 255, 0.9) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16) !important;
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.25s ease !important;
+}
+.checkout-secondary-action:not(:disabled):hover {
+  transform: translateY(-1px) !important;
+  border-color: rgba(255, 255, 255, 0.28) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04)) !important;
+}
+
+/* --- Error states in glass --- */
+.checkout-preview-confirm__error, .checkout-pending-block {
+  border: 1px solid rgba(248, 113, 113, 0.30) !important;
+  background: rgba(248, 113, 113, 0.08) !important;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  color: #fca5a5 !important;
+  border-radius: 0.9rem !important;
+  box-shadow: inset 0 1px 0 rgba(248, 113, 113, 0.15);
+}
+
+/* --- Partner info glass --- */
+.checkout-page .rounded-2xl.border.border-line.bg-panel {
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border-radius: 1.2rem !important;
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03)) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(1.4) !important;
+  backdrop-filter: blur(20px) saturate(1.4) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 16px 48px -16px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* --- Liquid glass keyframes --- */
+@keyframes lg-hero-in {
+  from { opacity: 0; transform: translateY(-14px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes lg-card-in {
+  from { opacity: 0; transform: translateY(22px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes lg-sheen {
+  0%, 100% { transform: translateX(-30%); opacity: 0.5; }
+  50% { transform: translateX(30%); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .checkout-preview-hero, .checkout-order-summary, .checkout-preview-confirm,
+  .checkout-preview-hero::before {
+    animation: none !important;
+  }
+  .checkout-primary-action::before { display: none; }
+}
