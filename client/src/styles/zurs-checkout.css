@@ -876,3 +876,142 @@ html[data-theme="light"] .checkout-page__secure-copy,
 html:not(.dark) .checkout-page__secure-copy {
   color: #b3860e;
 }
+
+/* ==========================================================================
+   CLEAN REDESIGN — Minimal, elegant checkout preview
+   Removes clutter: no hero card, single focus, generous whitespace.
+   ========================================================================== */
+
+/* --- Remove the redundant hero card, use clean typography instead --- */
+.checkout-preview-hero {
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  border-radius: 0 !important;
+  padding: 0.5rem 0.25rem 1rem !important;
+  overflow: visible !important;
+  animation: lg-hero-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.checkout-preview-hero::before,
+.checkout-preview-hero::after {
+  display: none !important;
+}
+.checkout-preview-hero > p {
+  font-size: 0.65rem !important;
+  letter-spacing: 0.24em !important;
+  margin-bottom: 0.3rem;
+}
+.checkout-preview-hero h1 {
+  font-size: 1.5rem !important;
+  margin-top: 0 !important;
+  background: none !important;
+  -webkit-background-clip: unset !important;
+  background-clip: unset !important;
+  color: var(--z-ink) !important;
+}
+.checkout-preview-hero > span {
+  background: none !important;
+  border: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  padding: 0 !important;
+  margin-top: 0.4rem !important;
+  border-radius: 0 !important;
+  font-size: 0.78rem !important;
+  display: block !important;
+}
+
+/* --- Order summary: the single hero card, cleaner --- */
+.checkout-order-summary {
+  border-radius: 1.25rem !important;
+  padding: 1.25rem !important;
+}
+/* Remove the duplicate eyebrow since hero already says it */
+.checkout-order-summary__eyebrow {
+  display: none !important;
+}
+.checkout-order-summary__main {
+  margin-top: 0 !important;
+  border: none !important;
+  background: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  box-shadow: none !important;
+  padding: 0.25rem 0 1rem !important;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.15) !important;
+  border-radius: 0 !important;
+}
+/* Cleaner detail rows: minimal dividers, no pills */
+.checkout-order-summary__details {
+  gap: 0 !important;
+  margin-top: 0.5rem !important;
+}
+.checkout-order-summary__details > div {
+  border: none !important;
+  border-radius: 0 !important;
+  background: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  box-shadow: none !important;
+  padding: 0.6rem 0.1rem !important;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.1) !important;
+}
+.checkout-order-summary__details > div:last-child {
+  border-bottom: none !important;
+}
+.checkout-order-summary__details > div:hover {
+  background: none !important;
+  border-color: rgba(128, 128, 128, 0.1) !important;
+}
+.checkout-order-summary__note {
+  border: none !important;
+  background: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  padding: 0.75rem 0.1rem 0 !important;
+  font-size: 0.72rem !important;
+  opacity: 0.75;
+}
+
+/* --- Confirm: minimal, no nested card --- */
+.checkout-preview-confirm {
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  border-radius: 0 !important;
+  padding: 0.5rem 0 0 !important;
+  overflow: visible !important;
+}
+/* Remove the lock icon info box, keep it text-only */
+.checkout-preview-confirm > div:first-child {
+  background: none !important;
+  border: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  padding: 0 0.1rem 0.9rem !important;
+  border-radius: 0 !important;
+}
+.checkout-preview-confirm > div:first-child svg {
+  display: none !important;
+}
+.checkout-preview-confirm strong {
+  font-size: 0.85rem !important;
+  margin-bottom: 0.15rem !important;
+}
+.checkout-preview-confirm span {
+  font-size: 0.75rem !important;
+}
+
+/* --- Header: slimmer --- */
+.checkout-page__header {
+  padding: 0.45rem 0.6rem !important;
+  margin-bottom: 0.75rem !important;
+  border-radius: 0.95rem !important;
+}
+.checkout-page__secure-copy {
+  display: none !important;
+}
