@@ -12,6 +12,10 @@
  * (word-boundaried), flag emoji, and parenthesized 2-letter codes such as
  * "(PH)". Bare short codes are NOT matched — "ID" also means "identifier"
  * and "US" also means "us" — so "Player ID" style labels never get filtered.
+ *
+ * Mobile Legends follow-up (2026-10-08): country *slugs* such as
+ * mobile_legends_ph / mobile_legends_indonesia are also excluded, even when
+ * the display name is a plain "Mobile Legends". Free Fire regional slugs stay.
  */
 
 const FOREIGN_COUNTRY_NAME_PATTERNS: RegExp[] = [
@@ -57,6 +61,9 @@ const FOREIGN_COUNTRY_NAME_PATTERNS: RegExp[] = [
 
 const CAMBODIA_KEEP_PATTERN = /cambodia|khmer|កម្ពុជា|ខ្មែរ|🇰🇭/i;
 const FREE_FIRE_KEEP_PATTERN = /free[\s_-]*fire/i;
+const MOBILE_LEGENDS_PATTERN = /mobile[_-]?legends|\bmlbb\b/i;
+const ML_FOREIGN_SLUG_PATTERN =
+  /(?:^|[:_\s/])mobile[_-]?legends[_-](?:indonesia|philippines|malaysia|singapore|brazil|turkey|russia|thailand|vietnam|myanmar|bangladesh|taiwan|united[_-]?states|usa|id|ph|my|sg|br|tr|ru|th|vn|mm|bd|tw|us)(?:[_:\s/-]|$)/i;
 
 export function isForeignCountryNamedProduct(name: string | null | undefined): boolean {
   if (!name) return false;
@@ -65,4 +72,24 @@ export function isForeignCountryNamedProduct(name: string | null | undefined): b
   // Cambodia/Khmer products are always kept.
   if (CAMBODIA_KEEP_PATTERN.test(name)) return false;
   return FOREIGN_COUNTRY_NAME_PATTERNS.some((pattern) => pattern.test(name));
+}
+
+/**
+ * Mobile Legends-only: drop a variant when either its display name or its
+ * provider category/source slug names another country (mobile_legends_ph,
+ * fzr_cards:mobile_legends_indonesia:5_diamonds, "Mobile Legends (Brazil)").
+ * Global / Promo / Special / Exclusive / Adventure / KH stay.
+ */
+export function isForeignCountryMobileLegendsVariant(
+  gameIdOrSource: string | null | undefined,
+  name: string | null | undefined = "",
+): boolean {
+  const id = gameIdOrSource ?? "";
+  const title = name ?? "";
+  const blob = `${id} ${title}`;
+  if (!MOBILE_LEGENDS_PATTERN.test(blob)) return false;
+  if (/adventure/i.test(blob)) return false;
+  if (CAMBODIA_KEEP_PATTERN.test(blob)) return false;
+  if (isForeignCountryNamedProduct(title)) return true;
+  return ML_FOREIGN_SLUG_PATTERN.test(id) || ML_FOREIGN_SLUG_PATTERN.test(blob);
 }

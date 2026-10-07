@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isForeignCountryNamedProduct } from "./countryNameFilter";
+import { isForeignCountryMobileLegendsVariant, isForeignCountryNamedProduct } from "./countryNameFilter";
 
 describe("name-based foreign-country filter", () => {
   it("removes only names that explicitly name another country", () => {
@@ -54,5 +54,39 @@ describe("name-based foreign-country filter", () => {
     expect(isForeignCountryNamedProduct("Free Fire (MENA)")).toBe(false);
     expect(isForeignCountryNamedProduct("Free Fire Philippines")).toBe(false);
     expect(isForeignCountryNamedProduct("100 Diamonds Free Fire")).toBe(false);
+  });
+});
+
+describe("Mobile Legends foreign-country variant filter", () => {
+  it("drops MLBB country slugs even when the display name has no country word", () => {
+    expect(isForeignCountryMobileLegendsVariant("mobile_legends_ph", "Mobile Legends")).toBe(true);
+    expect(isForeignCountryMobileLegendsVariant("mobile_legends_id", "Mobile Legends")).toBe(true);
+    expect(isForeignCountryMobileLegendsVariant("mobile_legends_indonesia", "Mobile Legends")).toBe(true);
+    expect(isForeignCountryMobileLegendsVariant("mobile_legends_united_states", "Mobile Legends")).toBe(true);
+    expect(isForeignCountryMobileLegendsVariant("fzr_cards:mobile_legends_brazil:78_8_diamonds", "78 + 8 Diamonds")).toBe(true);
+    expect(isForeignCountryMobileLegendsVariant("mobile_legends_malaysia", "")).toBe(true);
+  });
+
+  it("drops MLBB variants whose display name names another country", () => {
+    expect(isForeignCountryMobileLegendsVariant("mobile_legends_global", "Mobile Legends (Indonesia)")).toBe(true);
+    expect(isForeignCountryMobileLegendsVariant("some-hash", "Mobile Legends (Philippines)")).toBe(true);
+    expect(isForeignCountryMobileLegendsVariant("mobile_legends_ru", "Mobile Legends (RU)")).toBe(true);
+  });
+
+  it("keeps Global, Promo, Special, Exclusive, Adventure, and Cambodia MLBB", () => {
+    expect(isForeignCountryMobileLegendsVariant("mobile_legends", "Mobile Legends")).toBe(false);
+    expect(isForeignCountryMobileLegendsVariant("mobile_legends_global", "Mobile Legends (Global)")).toBe(false);
+    expect(isForeignCountryMobileLegendsVariant("mobile_legends_promo", "Mobile Legends (Promo)")).toBe(false);
+    expect(isForeignCountryMobileLegendsVariant("mobile_legends_special", "Mobile Legends (Special)")).toBe(false);
+    expect(isForeignCountryMobileLegendsVariant("mobile_legends_exclusive", "Mobile Legends (Exclusive)")).toBe(false);
+    expect(isForeignCountryMobileLegendsVariant("mobile_legends_adventure", "Mobile Legends: Adventure")).toBe(false);
+    expect(isForeignCountryMobileLegendsVariant("mobile_legends_kh", "Mobile Legends (KH)")).toBe(false);
+    expect(isForeignCountryMobileLegendsVariant("mobile_legends", "Mobile Legends Khmer")).toBe(false);
+    expect(isForeignCountryMobileLegendsVariant("fzr_cards:mobile_legends_global:86_diamonds", "86 Diamonds")).toBe(false);
+  });
+
+  it("does not treat Free Fire regional slugs as Mobile Legends country variants", () => {
+    expect(isForeignCountryMobileLegendsVariant("free_fire_sg", "Free Fire (SG)")).toBe(false);
+    expect(isForeignCountryMobileLegendsVariant("free_fire_ph", "Free Fire")).toBe(false);
   });
 });

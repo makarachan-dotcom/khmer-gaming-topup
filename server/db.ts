@@ -16,7 +16,7 @@ import { buildEvidenceRetentionAuditReason, canApproveMarketplaceVerification, h
 import { getPublicPaymentReadiness } from "./paymentReadiness";
 import { checkBakongKhqrPayment, createBakongKhqrPayment, registerBakongKhqrWorkerWatch } from "./bakongKhqr";
 import { getKhqrReconciliationDisposition, getKhqrWalletReconciliationDisposition } from "./khqrReconciliation";
-import { isForeignCountryNamedProduct } from "@shared/countryNameFilter";
+import { isForeignCountryMobileLegendsVariant, isForeignCountryNamedProduct } from "@shared/countryNameFilter";
 import { assertOrderAmountIntegrity, assertPackagePriceIntegrity, assessOrderVelocity, moneyEquals } from "./paymentSecurity";
 import { applyShopPriceLadder, keepCheapestEquivalentPackages, packageAmountAndUnit, shopLadderUnitPrice } from "@shared/packagePriceLadder";
 import { parsePackageUi, parseStorefrontUi, type StorefrontUiSkin } from "@shared/storefrontUi";
@@ -303,7 +303,13 @@ export async function getGameCatalog() {
   if (!db) return [];
   const products = await db.select().from(gameProducts).where(eq(gameProducts.isActive, true)).orderBy(asc(gameProducts.sortOrder));
   const packages = await db.select().from(gamePackages).where(eq(gamePackages.isActive, true)).orderBy(asc(gamePackages.sortOrder));
-  return products.map((product) => ({ ...product, packages: packages.filter((item) => item.productId === product.id) }));
+  return products.flatMap((product) => {
+    const title = `${product.titleEn ?? ""} ${product.titleKh ?? ""}`;
+    const productPackages = packages.filter((item) => item.productId === product.id);
+    if (isForeignCountryNamedProduct(product.titleEn) || isForeignCountryNamedProduct(product.titleKh)) return [];
+    if (productPackages.some((item) => isForeignCountryMobileLegendsVariant(String(item.providerSource ?? ""), title))) return [];
+    return [{ ...product, packages: productPackages }];
+  });
 }
 
 export async function getSmmCatalog() {
@@ -352,7 +358,7 @@ export async function getPublicSyncedProviderPackages(providerGameIds: string[])
   const products = await db.select({ id: gameProducts.id }).from(gameProducts).where(and(inArray(gameProducts.id, productIds), eq(gameProducts.isActive, true)));
   if (!products.length) return [];
   const packages = await db.select({ id: gamePackages.id, amountLabel: gamePackages.amountLabel, priceUsd: gamePackages.priceUsd, providerSource: gamePackages.providerSource, sortOrder: gamePackages.sortOrder }).from(gamePackages).where(and(inArray(gamePackages.productId, products.map((product) => product.id)), eq(gamePackages.isActive, true), eq(gamePackages.providerAuthorized, true))).orderBy(asc(gamePackages.sortOrder));
-  /* Name-based country filter: skip packages whose synced label explicitly names another country (regional categories stay listed). */ const kept = packages.filter((item) => !isForeignCountryNamedProduct(item.amountLabel)); return keepCheapestEquivalentPackages(kept.map((item) => ({ id: item.id, label: item.amountLabel, amountLabel: item.amountLabel, priceLabel: `$${Number(item.priceUsd).toFixed(2)}`, provider: "FZR Cards", paymentMethods: ["khqr", "bank"] as ("khqr" | "bank")[] })));
+  /* Name-based country filter: skip packages whose synced label explicitly names another country, and skip Mobile Legends packages whose provider source is a foreign-country slug. */ const kept = packages.filter((item) => !isForeignCountryNamedProduct(item.amountLabel) && !isForeignCountryMobileLegendsVariant(item.providerSource ?? "", item.amountLabel)); return keepCheapestEquivalentPackages(kept.map((item) => ({ id: item.id, label: item.amountLabel, amountLabel: item.amountLabel, priceLabel: `$${Number(item.priceUsd).toFixed(2)}`, provider: "FZR Cards", paymentMethods: ["khqr", "bank"] as ("khqr" | "bank")[] })));
 }
 
 type OrderStatus = "pending" | "awaiting_payment" | "paid" | "delivered" | "failed" | "expired" | "refunded";

@@ -334,28 +334,28 @@ describe("provider catalog", () => {
     }
   });
 
-  it("merges regional Mobile Legends variants by id while dropping only country-named games and offers", async () => {
+  it("merges regional Mobile Legends variants by id while dropping country-named games, slugs, and offers", async () => {
     process.env.FZR_CARDS_API_BASE_URL = "https://provider.example.test";
     process.env.FZR_CARDS_API_KEY = "server-only-key";
     process.env.APPWRITE_ENDPOINT = "https://appwrite.example.test/v1";
     process.env.APPWRITE_PROJECT_ID = "zurs-project";
     process.env.APPWRITE_API_KEY = "appwrite-server-only-key";
-    const variants = ["mobile_legends_id", "mobile_legends_ph"];
+    const variants = ["mobile_legends_global", "mobile_legends_id", "mobile_legends_ph"];
     vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (url.startsWith("https://provider.example.test") && url.includes("/offers?category_id=mobile_legends_global")) return { ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "mobile_legends_global", name: "Mobile Legends (Global)", fields: [{ key: "player_id", label: "Player ID", type: "text" }, { key: "server_id", label: "Server ID", type: "text" }], offers: [{ offer_id: "global", name: "86 Diamonds", price_usd: "1.00" }] }) };
       if (url.startsWith("https://provider.example.test") && url.includes("/offers?category_id=mobile_legends_id")) return { ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "mobile_legends_id", name: "Mobile Legends (Indonesia)", fields: [{ key: "player_id", label: "Player ID", type: "text" }, { key: "server_id", label: "Server ID", type: "text" }], offers: [{ offer_id: "id", name: "86 Diamonds", price_usd: "1.00" }] }) };
       if (url.startsWith("https://provider.example.test") && url.includes("/offers?category_id=mobile_legends_ph")) return { ok: true, json: async () => ({ ok: true, kind: "topup", category_id: "mobile_legends_ph", name: "Mobile Legends", fields: [{ key: "player_id", label: "Player ID", type: "text" }, { key: "server_id", label: "Server ID", type: "text" }], offers: [{ offer_id: "ph", name: "172 Diamonds", price_usd: "2.00" }, { offer_id: "ph-foreign", name: "86 Diamonds (Philippines)", price_usd: "1.00" }] }) };
-      if (url.startsWith("https://provider.example.test")) return { ok: true, json: async () => ({ ok: true, kind: "topup", items: variants.map((category_id) => ({ category_id, name: category_id === "mobile_legends_id" ? "Mobile Legends (Indonesia)" : "Mobile Legends" })), meta: { next_cursor: null, has_more: false } }) };
+      if (url.startsWith("https://provider.example.test")) return { ok: true, json: async () => ({ ok: true, kind: "topup", items: variants.map((category_id) => ({ category_id, name: category_id === "mobile_legends_id" ? "Mobile Legends (Indonesia)" : category_id === "mobile_legends_global" ? "Mobile Legends (Global)" : "Mobile Legends" })), meta: { next_cursor: null, has_more: false } }) };
       return { ok: true, json: async () => ({ sourceTable: "provider_availability", sourceId: "global", payload: JSON.stringify({ activeGameIds: variants, hiddenGameIds: [], hiddenSmmServiceIds: [], updatedAt: new Date().toISOString() }) }) };
     }));
 
     const result = await fetchProviderGameDetails("mobile_legends");
     expect(result).toMatchObject({ status: "ready", game: { id: "mobile_legends", name: "Mobile Legends" } });
-    // mobile_legends_ph is kept: the region slug lives in the category id, and
-    // its display name carries no country marker. Its country-named offer is
-    // dropped while the neutral offer stays.
-    if (result.status === "ready") expect(result.packages.map((item) => item.id)).toEqual([providerPackageRecordId("mobile_legends_ph", "ph")]);
-    // The country-named variant is excluded from the family entirely.
+    // Country display names AND country slugs (mobile_legends_ph) stay off the
+    // family page. Only Global / Promo / Special / Exclusive remain.
+    if (result.status === "ready") expect(result.packages.map((item) => item.id)).toEqual([providerPackageRecordId("mobile_legends_global", "global")]);
     await expect(fetchProviderGameDetails("mobile_legends_id")).resolves.toMatchObject({ status: "unavailable" });
+    await expect(fetchProviderGameDetails("mobile_legends_ph")).resolves.toMatchObject({ status: "unavailable" });
   });
 
   it("keeps M-CASH and MLBB Adventure out of regular Mobile Legends", async () => {
