@@ -199,7 +199,8 @@ function PaymentPreview({ product }: { product: SelectedProduct | null }) {
 
 
 function CheckoutHeader() {
-  return <header className="checkout-page__header"><AnimatedBackButton href="/account" className="checkout-page__back"><ChevronRight className="h-4 w-4 rotate-180" />ត្រឡប់ក្រោយ</AnimatedBackButton><div className="checkout-page__secure"><span className="checkout-page__logo-mark">Z</span><span className="font-display text-sm font-extrabold text-ink">ZURS.me</span><span className="checkout-page__secure-copy"><LockKeyhole className="h-3.5 w-3.5" />ការទូទាត់មានសុវត្ថិភាព</span></div></header>;
+  const logoUrl = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663688034315/kBXeVXEnNVEuNZKS.jpg";
+  return <header className="checkout-page__header"><AnimatedBackButton href="/account" className="checkout-page__back"><ChevronRight className="h-4 w-4 rotate-180" />ត្រឡប់ក្រោយ</AnimatedBackButton><div className="checkout-page__secure"><img src={logoUrl} alt="ZURS logo" className="checkout-page__logo-img" /><span className="font-display text-sm font-extrabold text-ink">ZURS.me</span><span className="checkout-page__secure-copy"><LockKeyhole className="h-3.5 w-3.5" />ការទូទាត់មានសុវត្ថិភាព</span></div></header>;
 }
 
 function PaymentLoading() {
