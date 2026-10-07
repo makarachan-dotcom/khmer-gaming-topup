@@ -671,3 +671,126 @@ body.refund-dialog-open .zurs-mobile-tabbar {
   }
   .checkout-primary-action::before { display: none; }
 }
+
+/* ==========================================================================
+   LIQUID GLASS — Light theme adaptation
+   Frosted white glass for light mode; dark glass remains default.
+   ========================================================================== */
+
+html[data-theme="light"] .checkout-page::before {
+  background:
+    radial-gradient(ellipse 60% 35% at 15% 0%, rgba(201, 151, 18, 0.08), transparent 65%),
+    radial-gradient(ellipse 55% 30% at 88% 22%, rgba(56, 189, 248, 0.06), transparent 65%),
+    radial-gradient(ellipse 70% 40% at 50% 110%, rgba(99, 102, 241, 0.05), transparent 65%);
+}
+
+html[data-theme="light"] .checkout-preview-hero {
+  border-color: rgba(15, 23, 42, 0.08) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.55)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 12px 40px -12px rgba(15, 23, 42, 0.12) !important;
+}
+html[data-theme="light"] .checkout-preview-hero h1 {
+  background: linear-gradient(120deg, #0f172a 30%, #334155 60%, #0f172a 90%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+html[data-theme="light"] .checkout-preview-hero > p {
+  color: #b3860e !important;
+}
+html[data-theme="light"] .checkout-preview-hero > span {
+  border-color: rgba(15, 23, 42, 0.08) !important;
+  background: rgba(255, 255, 255, 0.6) !important;
+  color: rgba(71, 85, 105, 0.9) !important;
+}
+
+html[data-theme="light"] .checkout-order-summary {
+  border-color: rgba(15, 23, 42, 0.08) !important;
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.60) 55%, rgba(255, 255, 255, 0.75)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    0 20px 60px -18px rgba(15, 23, 42, 0.14),
+    0 0 0 1px rgba(201, 151, 18, 0.06) !important;
+}
+html[data-theme="light"] .checkout-order-summary::after {
+  background: linear-gradient(90deg, transparent, rgba(15, 23, 42, 0.12), transparent);
+}
+html[data-theme="light"] .checkout-order-summary__eyebrow {
+  color: #b3860e !important;
+  border-color: rgba(179, 134, 14, 0.25);
+  background: rgba(179, 134, 14, 0.07);
+}
+html[data-theme="light"] .checkout-order-summary__main {
+  border-color: rgba(15, 23, 42, 0.07);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.4));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+html[data-theme="light"] .checkout-order-summary__title {
+  color: #0f172a !important;
+}
+html[data-theme="light"] .checkout-order-summary__order {
+  color: rgba(71, 85, 105, 0.8) !important;
+}
+html[data-theme="light"] .checkout-order-summary__amount {
+  color: #b3860e !important;
+  text-shadow: 0 2px 12px rgba(179, 134, 14, 0.2);
+}
+html[data-theme="light"] .checkout-order-summary__details > div {
+  border-color: rgba(15, 23, 42, 0.06) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.35)) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+html[data-theme="light"] .checkout-order-summary__details > div:hover {
+  border-color: rgba(15, 23, 42, 0.12) !important;
+}
+html[data-theme="light"] .checkout-order-summary__details span {
+  color: rgba(100, 116, 139, 0.9) !important;
+}
+html[data-theme="light"] .checkout-order-summary__details strong {
+  color: #0f172a !important;
+}
+html[data-theme="light"] .checkout-order-summary__note {
+  border-color: rgba(56, 189, 248, 0.2);
+  background: rgba(56, 189, 248, 0.05);
+  color: rgba(51, 65, 85, 0.85) !important;
+}
+
+html[data-theme="light"] .checkout-preview-confirm {
+  border-color: rgba(15, 23, 42, 0.08) !important;
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.60)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    0 20px 60px -18px rgba(15, 23, 42, 0.14) !important;
+}
+html[data-theme="light"] .checkout-preview-confirm > div:first-child {
+  border-color: rgba(15, 23, 42, 0.07);
+  background: rgba(255, 255, 255, 0.5);
+}
+html[data-theme="light"] .checkout-preview-confirm > div:first-child svg {
+  color: #b3860e;
+  filter: drop-shadow(0 0 8px rgba(179, 134, 14, 0.3));
+}
+html[data-theme="light"] .checkout-preview-confirm strong {
+  color: #0f172a !important;
+}
+html[data-theme="light"] .checkout-preview-confirm span {
+  color: rgba(71, 85, 105, 0.85) !important;
+}
+html[data-theme="light"] .checkout-primary-action {
+  border-color: rgba(179, 134, 14, 0.4) !important;
+  background: linear-gradient(135deg, rgba(255, 216, 77, 0.35), rgba(201, 151, 18, 0.25)) !important;
+  color: #7a5c00 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 12px 32px -10px rgba(179, 134, 14, 0.35) !important;
+}
+html[data-theme="light"] .checkout-primary-action:not(:disabled):hover {
+  background: linear-gradient(135deg, rgba(255, 216, 77, 0.45), rgba(201, 151, 18, 0.32)) !important;
+}
+html[data-theme="light"] .checkout-secondary-action {
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.4)) !important;
+  color: rgba(15, 23, 42, 0.85) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+}
