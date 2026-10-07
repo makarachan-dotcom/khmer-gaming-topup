@@ -230,6 +230,7 @@ function KhqrPaymentExperience({ payment, order, selectedMethod, waiting, refres
   const secondsLeft = useCountdown(payment.expiresAt, waiting);
   const paid = payment.status === "paid";
   const money = splitMoney(payment.amount ?? order.subtotal, payment.currency ?? order.currency);
+  const [bankPickerOpen, setBankPickerOpen] = useState(false);
   return <section className={`checkout-khqr ${paid ? "checkout-khqr--paid" : ""}`} aria-live="polite">
     <div className="checkout-section-heading"><div><p>SECURE QR PAYMENT</p><h2>{paid ? "ការទូទាត់បានបញ្ជាក់" : expired ? "QR ផុតសុពលភាព" : "ស្កេនដើម្បីបង់ប្រាក់"}</h2></div>{paid ? <span className="checkout-status checkout-status--paid"><BadgeCheck className="h-4 w-4" />PAID</span> : expired ? <span className="checkout-status checkout-status--expired"><XCircle className="h-4 w-4" />EXPIRED</span> : <span className="checkout-status"><Clock3 className="h-4 w-4" />{formatCountdown(secondsLeft)}</span>}</div>
     <div className="checkout-khqr__body">
@@ -238,14 +239,55 @@ function KhqrPaymentExperience({ payment, order, selectedMethod, waiting, refres
     </div>
     {!paid ? (
       <div className="checkout-khqr__actions">
-        {payment.deeplink && !expired ? <a href={payment.deeplink} target="_blank" rel="noreferrer" className="checkout-primary-action"><ExternalLink className="h-4 w-4" />បើកកម្មវិធីធនាគារ</a> : null}
+        {payment.deeplink && !expired ? <button type="button" onClick={() => setBankPickerOpen(true)} className="checkout-primary-action"><ExternalLink className="h-4 w-4" />បើកកម្មវិធីធនាគារ</button> : null}
         <button type="button" disabled={!waiting || refreshing} onClick={onRefresh} className={payment.deeplink && !expired ? "checkout-secondary-action" : "checkout-primary-action"}>
           {refreshing ? <OutlineLoader size={18} color="currentColor" /> : <RefreshCw className="h-4 w-4" />}ខ្ញុំបានបង់រួចហើយ — ពិនិត្យ
         </button>
         <Link href="/account" className="checkout-cancel-action">បោះបង់ការទូទាត់</Link>
       </div>
     ) : <SuccessState order={order} onViewReceipt={onViewReceipt} onRefresh={onRefresh} />}
+    <BankPickerDialog open={bankPickerOpen} deeplink={payment.deeplink} onClose={() => setBankPickerOpen(false)} />
   </section>;
+}
+
+/**
+ * Asks which bank app to open before redirecting, so the user lands in their
+ * own bank for a faster payment instead of always being pushed to Bakong.
+ */
+const KHQR_BANKS = [
+  { id: "aba", name: "ABA", kh: "ABA", color: "#004b8d" },
+  { id: "bakong", name: "Bakong", kh: "បាគង", color: "#c99712" },
+  { id: "wing", name: "Wing", kh: "វីង", color: "#00a651" },
+  { id: "acleda", name: "ACLEDA", kh: "អេស៊ីលីដា", color: "#e31e24" },
+];
+
+function BankPickerDialog({ open, deeplink, onClose }: { open: boolean; deeplink: string | null; onClose: () => void }) {
+  if (!open) return null;
+  const pick = (bankId: string) => {
+    try { localStorage.setItem("zurs-preferred-bank", bankId); } catch { /* private mode */ }
+    if (deeplink) window.open(deeplink, "_blank", "noopener,noreferrer");
+    onClose();
+  };
+  return <div className="bank-picker" role="dialog" aria-modal="true" aria-labelledby="bank-picker-title">
+    <button type="button" className="bank-picker__backdrop" onClick={onClose} aria-label="បិទ" />
+    <section className="bank-picker__panel">
+      <div className="bank-picker__head">
+        <span className="bank-picker__mark"><ExternalLink className="h-5 w-5" /></span>
+        <div><p className="bank-picker__eyebrow">CHOOSE BANK</p><h2 id="bank-picker-title">ជ្រើសធនាគាររបស់អ្នក</h2></div>
+        <button type="button" onClick={onClose} className="bank-picker__close" aria-label="បិទ">×</button>
+      </div>
+      <p className="bank-picker__copy">ជ្រើសកម្មវិធីធនាគារដែលអ្នកប្រើ ដើម្បីបង់ប្រាក់បានលឿន។ QR នឹងបើកក្នុងកម្មវិធីនោះ។</p>
+      <div className="bank-picker__grid">
+        {KHQR_BANKS.map((bank) => (
+          <button key={bank.id} type="button" className="bank-picker__bank" onClick={() => pick(bank.id)}>
+            <span className="bank-picker__bank-mark" style={{ background: bank.color }}>{bank.name.charAt(0)}</span>
+            <span className="bank-picker__bank-name">{bank.name}<small>{bank.kh}</small></span>
+          </button>
+        ))}
+      </div>
+      <p className="bank-picker__hint">ស្កេន QR ខាងលើក៏បាន — ប្រើជាមួយ app KHQR ណាមួយ។</p>
+    </section>
+  </div>;
 }
 
 function SuccessState({ order, onViewReceipt, onRefresh }: { order: LedgerOrder; onViewReceipt: () => void; onRefresh?: () => void }) {

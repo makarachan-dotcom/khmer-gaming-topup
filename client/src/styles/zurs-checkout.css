@@ -1015,3 +1015,196 @@ html:not(.dark) .checkout-page__secure-copy {
 .checkout-page__secure-copy {
   display: none !important;
 }
+
+/* ==========================================================================
+   BANK PICKER — Choose bank before redirecting for faster payment
+   ========================================================================== */
+.bank-picker {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  display: grid;
+  place-items: end center;
+}
+.bank-picker__backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(6, 10, 22, 0.6);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  animation: zc-fade-in 0.25s var(--zc-ease) both;
+}
+.bank-picker__panel {
+  position: relative;
+  width: 100%;
+  max-width: 28rem;
+  padding: 1.25rem 1.25rem 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-bottom: none;
+  border-radius: 1.5rem 1.5rem 0 0;
+  background: linear-gradient(165deg, rgba(30, 38, 62, 0.92), rgba(16, 22, 40, 0.96));
+  -webkit-backdrop-filter: blur(28px) saturate(1.5);
+  backdrop-filter: blur(28px) saturate(1.5);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    0 -20px 60px rgba(0, 0, 0, 0.5);
+  color: #eef2ff;
+  animation: bank-picker-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.bank-picker__head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.bank-picker__mark {
+  display: grid;
+  height: 2.5rem;
+  width: 2.5rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 0.9rem;
+  background: linear-gradient(135deg, rgba(255, 216, 77, 0.25), rgba(201, 151, 18, 0.15));
+  border: 1px solid rgba(255, 216, 77, 0.35);
+  color: #ffd84d;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+.bank-picker__eyebrow {
+  color: #e8c85a;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+}
+.bank-picker__head h2 {
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 800;
+  margin-top: 0.15rem;
+}
+.bank-picker__close {
+  margin-left: auto;
+  display: grid;
+  height: 2rem;
+  width: 2rem;
+  place-items: center;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 1.2rem;
+  line-height: 1;
+}
+.bank-picker__copy {
+  margin-top: 0.75rem;
+  color: rgba(210, 220, 245, 0.7);
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+.bank-picker__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+.bank-picker__bank {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1rem;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transition: transform 0.2s var(--zc-ease), border-color 0.2s ease, background 0.2s ease;
+  text-align: left;
+}
+.bank-picker__bank:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.25);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05));
+}
+.bank-picker__bank:active {
+  transform: scale(0.97);
+}
+.bank-picker__bank-mark {
+  display: grid;
+  height: 2.5rem;
+  width: 2.5rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 0.8rem;
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 900;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+.bank-picker__bank-name {
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 800;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+.bank-picker__bank-name small {
+  color: rgba(210, 220, 245, 0.55);
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+.bank-picker__hint {
+  margin-top: 1rem;
+  text-align: center;
+  color: rgba(210, 220, 245, 0.45);
+  font-size: 0.7rem;
+}
+@keyframes bank-picker-up {
+  from { opacity: 0; transform: translateY(60px); }
+  to { opacity: 1; transform: none; }
+}
+/* Light theme */
+html[data-theme="light"] .bank-picker__panel,
+html:not(.dark) .bank-picker__panel {
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.92));
+  border-color: rgba(15, 23, 42, 0.1);
+  color: #0f172a;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    0 -20px 60px rgba(15, 23, 42, 0.15);
+}
+html[data-theme="light"] .bank-picker__head h2,
+html:not(.dark) .bank-picker__head h2 {
+  color: #0f172a;
+}
+html[data-theme="light"] .bank-picker__copy,
+html:not(.dark) .bank-picker__copy {
+  color: rgba(71, 85, 105, 0.85);
+}
+html[data-theme="light"] .bank-picker__bank,
+html:not(.dark) .bank-picker__bank {
+  border-color: rgba(15, 23, 42, 0.08);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.6));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 4px 16px rgba(15, 23, 42, 0.06);
+}
+html[data-theme="light"] .bank-picker__bank-name,
+html:not(.dark) .bank-picker__bank-name {
+  color: #0f172a;
+}
+html[data-theme="light"] .bank-picker__bank-name small,
+html:not(.dark) .bank-picker__bank-name small {
+  color: rgba(100, 116, 139, 0.8);
+}
+html[data-theme="light"] .bank-picker__hint,
+html:not(.dark) .bank-picker__hint {
+  color: rgba(100, 116, 139, 0.7);
+}
+html[data-theme="light"] .bank-picker__close,
+html:not(.dark) .bank-picker__close {
+  border-color: rgba(15, 23, 42, 0.1);
+  background: rgba(15, 23, 42, 0.04);
+  color: rgba(15, 23, 42, 0.6);
+}
+@media (prefers-reduced-motion: reduce) {
+  .bank-picker__backdrop, .bank-picker__panel { animation: none !important; }
+}
