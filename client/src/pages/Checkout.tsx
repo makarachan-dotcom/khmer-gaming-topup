@@ -256,10 +256,10 @@ function KhqrPaymentExperience({ payment, order, selectedMethod, waiting, refres
  * Each bank tries its native app scheme first; Bakong uses the payment deeplink.
  */
 const KHQR_BANKS = [
-  { id: "aba", name: "ABA", kh: "ABA", color: "#005cab", scheme: "ababank://" },
-  { id: "bakong", name: "Bakong", kh: "បាគង", color: "#d4a017", scheme: null },
-  { id: "wing", name: "Wing", kh: "វីង", color: "#00a651", scheme: "wingbank://" },
-  { id: "acleda", name: "ACLEDA", kh: "អេស៊ីលីដា", color: "#e31e24", scheme: "acleda://" },
+  { id: "aba", name: "ABA", kh: "ABA", color: "#005cab", scheme: "ababank://", logo: "/bank-logos/aba.png" },
+  { id: "bakong", name: "Bakong", kh: "បាគង", color: "#d4a017", scheme: null, logo: "/bank-logos/bakong.svg" },
+  { id: "wing", name: "Wing", kh: "វីង", color: "#00a651", scheme: "wingbank://", logo: "/bank-logos/wing.png" },
+  { id: "acleda", name: "ACLEDA", kh: "អេស៊ីលីដា", color: "#e31e24", scheme: "acleda://", logo: "/bank-logos/acleda.png" },
 ];
 
 function BankPickerDialog({ open, deeplink, onClose }: { open: boolean; deeplink: string | null; onClose: () => void }) {
@@ -293,9 +293,7 @@ function BankPickerDialog({ open, deeplink, onClose }: { open: boolean; deeplink
       <div className="bank-picker__grid">
         {KHQR_BANKS.map((bank) => (
           <button key={bank.id} type="button" className="bank-picker__bank" onClick={() => pick(bank.id)}>
-            <span className="bank-picker__bank-logo" style={{ "--bank-color": bank.color } as React.CSSProperties}>
-              <span className="bank-picker__bank-logo-text">{bank.id === "acleda" ? "AC" : bank.name.charAt(0)}</span>
-            </span>
+            <span className="bank-picker__bank-logo-img"><img src={bank.logo} alt={`${bank.name} logo`} /></span>
             <span className="bank-picker__bank-name">{bank.name}<small>{bank.kh}</small></span>
           </button>
         ))}

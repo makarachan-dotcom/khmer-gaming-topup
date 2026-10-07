@@ -1231,3 +1231,23 @@ html:not(.dark) .bank-picker__close {
   letter-spacing: 0.02em;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
+
+/* --- Real bank logo images --- */
+.bank-picker__bank-logo-img {
+  display: grid;
+  height: 2.75rem;
+  width: 2.75rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 0.85rem;
+  background: #fff;
+  border: 1px solid rgba(128, 128, 128, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  overflow: hidden;
+  padding: 0.3rem;
+}
+.bank-picker__bank-logo-img img {
+  max-height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+}
