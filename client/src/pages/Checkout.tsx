@@ -256,10 +256,10 @@ function KhqrPaymentExperience({ payment, order, selectedMethod, waiting, refres
  * Each bank tries its native app scheme first; Bakong uses the payment deeplink.
  */
 const KHQR_BANKS = [
-  { id: "aba", name: "ABA", kh: "ABA", color: "#005cab", scheme: "ababank://", logo: "/bank-logos/aba.png" },
+  { id: "aba", name: "ABA", kh: "ABA", color: "#005cab", scheme: "ababank://", logo: "https://www.ababank.com/typo3conf/ext/boxmodel/Resources/Private/Templates/ABA/images/aba-web-top-logo.png" },
   { id: "bakong", name: "Bakong", kh: "បាគង", color: "#d4a017", scheme: null, logo: "/bank-logos/bakong.svg" },
-  { id: "wing", name: "Wing", kh: "វីង", color: "#00a651", scheme: "wingbank://", logo: "/bank-logos/wing.png" },
-  { id: "acleda", name: "ACLEDA", kh: "អេស៊ីលីដា", color: "#e31e24", scheme: "acleda://", logo: "/bank-logos/acleda.png" },
+  { id: "wing", name: "Wing", kh: "វីង", color: "#00a651", scheme: "wingbank://", logo: "https://www.wingbank.com.kh/images/logo.png" },
+  { id: "acleda", name: "ACLEDA", kh: "អេស៊ីលីដា", color: "#e31e24", scheme: "acleda://", logo: "https://www.acledabank.com.kh/kh/assets/layout/logo3.png" },
 ];
 
 function BankPickerDialog({ open, deeplink, onClose }: { open: boolean; deeplink: string | null; onClose: () => void }) {
