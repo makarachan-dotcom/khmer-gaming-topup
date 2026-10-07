@@ -256,10 +256,10 @@ function KhqrPaymentExperience({ payment, order, selectedMethod, waiting, refres
  * Each bank tries its native app scheme first; Bakong uses the payment deeplink.
  */
 const KHQR_BANKS = [
-  { id: "aba", name: "ABA", kh: "ABA", color: "#005cab", scheme: "ababank://", logo: "https://www.ababank.com/typo3conf/ext/boxmodel/Resources/Private/Templates/ABA/images/aba-web-top-logo.png" },
-  { id: "bakong", name: "Bakong", kh: "បាគង", color: "#d4a017", scheme: null, logo: "/bank-logos/bakong.svg" },
-  { id: "wing", name: "Wing", kh: "វីង", color: "#00a651", scheme: "wingbank://", logo: "https://www.wingbank.com.kh/images/logo.png" },
-  { id: "acleda", name: "ACLEDA", kh: "អេស៊ីលីដា", color: "#e31e24", scheme: "acleda://", logo: "https://www.acledabank.com.kh/kh/assets/layout/logo3.png" },
+  { id: "aba", name: "ABA", kh: "ABA", color: "#005cab", scheme: null, url: "https://www.ababank.com/", logo: "https://www.ababank.com/typo3conf/ext/boxmodel/Resources/Private/Templates/ABA/images/aba-web-top-logo.png" },
+  { id: "bakong", name: "Bakong", kh: "បាគង", color: "#d4a017", scheme: null, url: null, logo: "/bank-logos/bakong.svg" },
+  { id: "wing", name: "Wing", kh: "វីង", color: "#00a651", scheme: null, url: "https://www.wingbank.com.kh/", logo: "https://www.wingbank.com.kh/images/logo.png" },
+  { id: "acleda", name: "ACLEDA", kh: "អេស៊ីលីដា", color: "#e31e24", scheme: null, url: "https://www.acledabank.com.kh/", logo: "https://www.acledabank.com.kh/kh/assets/layout/logo3.png" },
 ];
 
 function BankPickerDialog({ open, deeplink, onClose }: { open: boolean; deeplink: string | null; onClose: () => void }) {
@@ -267,17 +267,14 @@ function BankPickerDialog({ open, deeplink, onClose }: { open: boolean; deeplink
   const pick = (bankId: string) => {
     try { localStorage.setItem("zurs-preferred-bank", bankId); } catch { /* private mode */ }
     const bank = KHQR_BANKS.find((b) => b.id === bankId);
-    if (!bank || !deeplink) { onClose(); return; }
-    if (!bank.scheme) {
-      // Bakong: the deeplink carries the payment data
+    if (!bank) { onClose(); return; }
+    if (bank.id === "bakong" && deeplink) {
+      // Bakong: the deeplink carries the payment data, opens directly
       window.open(deeplink, "_blank", "noopener,noreferrer");
-    } else {
-      // Other banks: try native app scheme first, fall back to deeplink
-      const started = Date.now();
-      window.location.href = bank.scheme;
-      window.setTimeout(() => {
-        if (Date.now() - started < 2000) window.open(deeplink, "_blank", "noopener,noreferrer");
-      }, 1200);
+    } else if (bank.url) {
+      // Other banks: open official site (universal links may open the app if installed).
+      // The KHQR payment itself is completed by scanning the QR with their bank app.
+      window.open(bank.url, "_blank", "noopener,noreferrer");
     }
     onClose();
   };
@@ -289,7 +286,7 @@ function BankPickerDialog({ open, deeplink, onClose }: { open: boolean; deeplink
         <div><p className="bank-picker__eyebrow">CHOOSE BANK</p><h2 id="bank-picker-title">ជ្រើសធនាគាររបស់អ្នក</h2></div>
         <button type="button" onClick={onClose} className="bank-picker__close" aria-label="បិទ">×</button>
       </div>
-      <p className="bank-picker__copy">ជ្រើសកម្មវិធីធនាគារដែលអ្នកប្រើ ដើម្បីបង់ប្រាក់បានលឿន។ QR នឹងបើកក្នុងកម្មវិធីនោះ។</p>
+      <p className="bank-picker__copy">Bakong បើកការទូទាត់ផ្ទាល់។ ធនាគារដទៃ សូមបើក app ធនាគាររបស់អ្នកហើយស្កេន QR ខាងលើ។</p>
       <div className="bank-picker__grid">
         {KHQR_BANKS.map((bank) => (
           <button key={bank.id} type="button" className="bank-picker__bank" onClick={() => pick(bank.id)}>
