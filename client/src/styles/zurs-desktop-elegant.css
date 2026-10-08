@@ -1,0 +1,99 @@
+/* ==========================================================================
+   ZURS — Desktop Elegant Refinement
+   Narrower widths, refined package cards, beautiful ambient background.
+   Desktop only (min-width: 1024px). Light theme focused.
+   ========================================================================== */
+
+/* --- 1. Elegant constrained widths: no more overstretching -------------- */
+@media (min-width: 1024px) {
+  .container { max-width: 1080px; }
+  .game-topup-container { max-width: 1120px !important; }
+  /* Two-pane workspace breathes better in the narrower shell */
+  .game-topup-workspace {
+    grid-template-columns: minmax(18rem, 21rem) minmax(0, 1fr) !important;
+    gap: 1.5rem !important;
+  }
+  .game-topup-workspace .package-category-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 1.1rem !important;
+  }
+}
+@media (min-width: 1280px) {
+  .container { max-width: 1180px; }
+  .game-topup-container { max-width: 1160px !important; }
+  /* Keep 3 columns even on very wide screens — cards stay elegant, never tiny */
+  .game-topup-workspace .package-category-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+
+/* --- 2. Package cards: refined desktop hover and finish ------------------ */
+@media (min-width: 1024px) {
+  .package-choice {
+    border-radius: 1rem !important;
+    overflow: hidden;
+  }
+  .package-choice:hover {
+    transform: translateY(-4px) !important;
+    border-color: rgba(201, 151, 18, 0.5) !important;
+    box-shadow:
+      0 18px 44px -14px rgba(201, 151, 18, 0.28),
+      0 6px 18px -6px rgba(15, 23, 42, 0.10) !important;
+  }
+  .package-choice--selected {
+    border-color: rgba(201, 151, 18, 0.7) !important;
+    box-shadow:
+      0 0 0 2px rgba(201, 151, 18, 0.35),
+      0 14px 36px -12px rgba(201, 151, 18, 0.35) !important;
+  }
+  /* Price gets a touch more presence on desktop */
+  .package-choice__price {
+    font-size: 1.02rem !important;
+    letter-spacing: -0.01em;
+  }
+}
+
+/* --- 3. Ambient website background: soft light wells, premium warmth ---- */
+/* Light theme (default): warm canvas with gold + sky light wells */
+html:not(.dark) body,
+html:not(.dark) .zurs-dotted-shell,
+html:not(.dark) #root {
+  background-color: #faf8f4 !important;
+}
+html:not(.dark) .zurs-dotted-shell {
+  background-image:
+    radial-gradient(ellipse 55% 32% at 10% -4%, rgba(201, 151, 18, 0.13), transparent 62%),
+    radial-gradient(ellipse 48% 30% at 90% 6%, rgba(56, 189, 248, 0.10), transparent 62%),
+    radial-gradient(ellipse 70% 38% at 50% 112%, rgba(167, 139, 250, 0.08), transparent 62%) !important;
+  background-attachment: fixed !important;
+}
+/* Soft dot texture over the light wells — barely there, adds craft */
+html:not(.dark) .zurs-dotted-shell::before {
+  background-image:
+    radial-gradient(circle, rgba(120, 100, 60, 0.10) 0 0.7px, transparent 0.9px),
+    radial-gradient(circle, rgba(120, 100, 60, 0.06) 0 0.5px, transparent 0.75px) !important;
+  opacity: 0.55 !important;
+}
+
+/* Dark theme: deep premium ambience to match */
+html.dark .zurs-dotted-shell {
+  background-image:
+    radial-gradient(ellipse 55% 32% at 10% -4%, rgba(201, 151, 18, 0.14), transparent 62%),
+    radial-gradient(ellipse 48% 30% at 90% 6%, rgba(56, 189, 248, 0.10), transparent 62%),
+    radial-gradient(ellipse 70% 38% at 50% 112%, rgba(99, 102, 241, 0.10), transparent 62%) !important;
+  background-attachment: fixed !important;
+}
+
+/* --- 4. Header and footer sit beautifully on the new canvas -------------- */
+@media (min-width: 1024px) {
+  .zurs-compact-header {
+    border-radius: 1.25rem !important;
+  }
+  .zurs-footer-inner {
+    border-radius: 1.25rem !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .package-choice:hover { transform: none !important; }
+}

@@ -16,6 +16,7 @@ import "./styles/zurs-login.css";
 import "./styles/zurs-support.css";
 import "./styles/zurs-checkout.css";
 import "./styles/zurs-desktop.css";
+import "./styles/zurs-desktop-elegant.css";
 // Login polish LAST. Three sheets describe the same .zl-* card; this one
 // stops the mobile overlap of mascot + lock chip + step-dot glow.
 import "./styles/zurs-login-refined.css";
