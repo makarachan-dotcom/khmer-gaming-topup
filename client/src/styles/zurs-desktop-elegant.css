@@ -125,3 +125,135 @@ html[data-theme="dark"] .zurs-dotted-shell {
 @media (prefers-reduced-motion: reduce) {
   .zurs-game-card:hover { transform: none; }
 }
+
+/* --- 6. HOMEPAGE PREMIUM REDESIGN: "Aurum Royal" ---------------------------
+   Extremely elegant, luxurious. Gold framing, refined type, slow motion. */
+
+/* Hero: royal gold frame with deep ambient stage */
+.hg-hero::before {
+  background:
+    radial-gradient(44% 64% at 16% 28%, rgb(201 151 18 / 0.30), transparent 70%),
+    radial-gradient(42% 62% at 84% 72%, rgb(56 130 246 / 0.24), transparent 70%),
+    radial-gradient(62% 82% at 50% 112%, rgb(201 151 18 / 0.16), transparent 70%) !important;
+  filter: blur(32px) !important;
+}
+.hg-hero-frame {
+  border-radius: 0.7rem !important;
+  box-shadow:
+    0 34px 70px -30px rgb(2 8 30 / 0.9),
+    0 0 0 1px rgb(232 186 74 / 0.45),
+    0 0 60px -14px rgb(201 151 18 / 0.45) !important;
+}
+.hg-hero-frame::after {
+  background: linear-gradient(100deg, transparent 40%, rgb(255 236 190 / 0.20) 50%, transparent 60%) !important;
+}
+
+/* Section heading: editorial elegance */
+.hg-heading .zurs-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  letter-spacing: 0.28em !important;
+  font-size: 0.66rem !important;
+  color: #b08a1e !important;
+}
+.hg-heading .zurs-eyebrow::before {
+  content: "";
+  width: 2rem;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #e8ba4a, #c99712);
+  box-shadow: 0 1px 6px rgb(201 151 18 / 0.5);
+}
+.hg-heading .zp-heading {
+  font-size: 1.45rem !important;
+  letter-spacing: -0.015em !important;
+  margin-top: 0.4rem !important;
+}
+@media (min-width: 640px) {
+  .hg-heading .zp-heading { font-size: 1.7rem !important; }
+}
+
+/* Game tiles: royal gold-framed cinematic cards */
+.hg-tile {
+  border-radius: 0.7rem !important;
+  box-shadow:
+    0 20px 40px -22px rgb(2 8 26 / 0.85),
+    inset 0 0 0 1px rgb(232 186 74 / 0.28),
+    inset 0 1px 0 rgb(255 255 255 / 0.10) !important;
+}
+/* Delicate top light-line for a jewelry finish */
+.hg-tile::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  z-index: 3;
+  background: linear-gradient(90deg, transparent, rgb(255 226 150 / 0.65) 30%, rgb(255 226 150 / 0.65) 70%, transparent);
+  opacity: 0.7;
+  pointer-events: none;
+}
+.hg-tile-caption {
+  padding: 0.75rem 0.9rem 0.8rem !important;
+}
+.hg-tile-name {
+  font-size: 0.92rem !important;
+  letter-spacing: 0.015em !important;
+}
+/* Popular badge: richer gold, subtle pulse */
+.hg-tile-popular {
+  background: linear-gradient(135deg, #ffe9b0, #e8ba4a 45%, #c99712) !important;
+  box-shadow:
+    0 8px 22px -6px rgb(201 151 18 / 0.85),
+    inset 0 1px 0 rgb(255 255 255 / 0.65),
+    inset 0 -1px 0 rgb(120 80 10 / 0.25) !important;
+  animation: hg-popular-glow 3.2s ease-in-out infinite;
+}
+@keyframes hg-popular-glow {
+  0%, 100% { box-shadow: 0 8px 22px -6px rgb(201 151 18 / 0.85), inset 0 1px 0 rgb(255 255 255 / 0.65), inset 0 -1px 0 rgb(120 80 10 / 0.25); }
+  50% { box-shadow: 0 8px 30px -4px rgb(232 186 74 / 1), inset 0 1px 0 rgb(255 255 255 / 0.65), inset 0 -1px 0 rgb(120 80 10 / 0.25); }
+}
+/* Hover: slow luxurious lift with radiant gold ring */
+@media (hover: hover) and (pointer: fine) {
+  .hg-tile {
+    transition: transform 450ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 450ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+  }
+  .hg-tile:hover {
+    transform: translateY(-6px) !important;
+    box-shadow:
+      0 34px 60px -22px rgb(2 8 26 / 0.9),
+      0 0 0 2px rgb(232 186 74 / 0.95),
+      0 0 44px -8px rgb(201 151 18 / 0.65),
+      inset 0 0 0 1px rgb(255 255 255 / 0.12) !important;
+  }
+  .hg-tile:hover .hg-tile-art {
+    transform: scale(1.08) !important;
+    transition-duration: 800ms !important;
+  }
+}
+/* Grid: more breathing room */
+.zp-game-grid {
+  gap: 1rem !important;
+}
+@media (min-width: 640px) {
+  .zp-game-grid { gap: 1.25rem !important; }
+}
+
+/* Promo cards: matching royal finish */
+.hg-promo {
+  border-radius: 0.7rem !important;
+  overflow: hidden;
+  box-shadow:
+    0 18px 38px -20px rgb(2 8 26 / 0.7),
+    inset 0 0 0 1px rgb(232 186 74 / 0.22) !important;
+}
+.hg-promo-tag {
+  background: linear-gradient(135deg, #ffe9b0, #c99712) !important;
+  color: #241a05 !important;
+  font-weight: 800 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hg-tile-popular { animation: none; }
+  .hg-hero-frame::after { animation: none; }
+}
