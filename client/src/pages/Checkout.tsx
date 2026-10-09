@@ -12,6 +12,7 @@ import { CdkUpgradeCard } from "@/components/CdkUpgradeCard";
 import { publicCdkStatus } from "@shared/cdkToken";
 import { trpc } from "@/lib/trpc";
 import { khqrLogoUrl } from "@/lib/mobileLegendsAssets";
+import { ABA_LOGO_DATA_URI } from "@/lib/abaLogo";
 import { khmerDiamondCopy } from "@/lib/khmerDiamondCopy";
 import { checkoutPackageQuantity } from "@/lib/stackableWeeklyPackages";
 import { BakongKhqrCard } from "@/components/BakongKhqrCard";
@@ -255,7 +256,7 @@ function KhqrPaymentExperience({ payment, order, selectedMethod, waiting, refres
  * Each bank tries its native app scheme first; Bakong uses the payment deeplink.
  */
 const KHQR_BANKS = [
-  { id: "aba", name: "ABA", kh: "ABA", color: "#005cab", scheme: null, url: "https://www.ababank.com/", logo: "https://www.ababank.com/typo3conf/ext/boxmodel/Resources/Private/Templates/ABA/images/aba-web-top-logo.png" },
+  { id: "aba", name: "ABA", kh: "ABA", color: "#005cab", scheme: null, url: "https://www.ababank.com/", logo: ABA_LOGO_DATA_URI },
   { id: "bakong", name: "Bakong", kh: "បាគង", color: "#d4a017", scheme: null, url: null, logo: "/bank-logos/bakong.svg" },
   { id: "wing", name: "Wing", kh: "វីង", color: "#00a651", scheme: null, url: "https://www.wingbank.com.kh/", logo: "https://www.wingbank.com.kh/images/logo.png" },
   { id: "acleda", name: "ACLEDA", kh: "អេស៊ីលីដា", color: "#e31e24", scheme: null, url: "https://www.acledabank.com.kh/", logo: "https://www.acledabank.com.kh/kh/assets/layout/logo3.png" },
