@@ -139,10 +139,12 @@ html[data-theme="dark"] .zurs-dotted-shell {
 }
 .hg-hero-frame {
   border-radius: 0.7rem !important;
+  border: 1.5px solid rgb(232 186 74 / 0.65) !important;
   box-shadow:
     0 34px 70px -30px rgb(2 8 30 / 0.9),
-    0 0 0 1px rgb(232 186 74 / 0.45),
-    0 0 60px -14px rgb(201 151 18 / 0.45) !important;
+    0 0 0 1px rgb(120 80 10 / 0.35),
+    0 0 60px -14px rgb(201 151 18 / 0.55),
+    inset 0 1px 0 rgb(255 240 200 / 0.35) !important;
 }
 .hg-hero-frame::after {
   background: linear-gradient(100deg, transparent 40%, rgb(255 236 190 / 0.20) 50%, transparent 60%) !important;
