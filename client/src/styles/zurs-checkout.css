@@ -335,25 +335,17 @@ body.refund-dialog-open .zurs-mobile-tabbar {
 .checkout-preview-hero {
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.16) !important;
-  border-radius: 1.25rem !important;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.03)) !important;
-  -webkit-backdrop-filter: blur(22px) saturate(1.5);
-  backdrop-filter: blur(22px) saturate(1.5);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.28),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.06),
-    0 12px 40px -12px rgba(0, 0, 0, 0.45) !important;
-  padding: 1.4rem 1.5rem !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: none !important;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none !important;
+  padding: 0.5rem 0.1rem 1rem !important;
   animation: lg-hero-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 .checkout-preview-hero::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.09) 48%, transparent 62%);
-  animation: lg-sheen 5s ease-in-out infinite;
+  display: none;
 }
 .checkout-preview-hero > p {
   color: #e8c85a !important;
@@ -471,38 +463,37 @@ body.refund-dialog-open .zurs-mobile-tabbar {
   white-space: nowrap;
 }
 
-/* --- Detail rows: individual glass pills --- */
+/* --- Detail rows: clean minimal dividers, not pills --- */
 .checkout-order-summary__details {
-  display: grid;
-  gap: 0.5rem;
-  margin-top: 1.1rem;
+  display: block;
+  margin-top: 1rem;
+  border-top: 1px solid rgba(128, 128, 128, 0.14);
 }
 .checkout-order-summary__details > div {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.65rem 0.9rem;
-  border: 1px solid rgba(255, 255, 255, 0.09) !important;
-  border-radius: 0.9rem !important;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.015)) !important;
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10);
-  transition: border-color 0.25s ease, background 0.25s ease;
+  padding: 0.7rem 0.15rem;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.14);
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 .checkout-order-summary__details > div:hover {
-  border-color: rgba(255, 255, 255, 0.18) !important;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03)) !important;
+  border-color: inherit !important;
+  background: transparent !important;
 }
 .checkout-order-summary__details span {
   color: rgba(210, 220, 245, 0.6) !important;
-  font-size: 0.76rem !important;
-  font-weight: 600;
+  font-size: 0.78rem !important;
+  font-weight: 500;
 }
 .checkout-order-summary__details strong {
   color: #fff !important;
-  font-size: 0.82rem !important;
+  font-size: 0.84rem !important;
   font-weight: 700;
   text-align: right;
 }
@@ -537,14 +528,13 @@ body.refund-dialog-open .zurs-mobile-tabbar {
 }
 .checkout-preview-confirm > div:first-child {
   display: flex;
-  gap: 0.85rem;
-  align-items: flex-start;
-  padding: 1rem;
-  border-radius: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  background: rgba(255, 255, 255, 0.04);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
+  gap: 0.6rem;
+  align-items: center;
+  padding: 0 0 0.9rem;
+  border: none;
+  background: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 .checkout-preview-confirm > div:first-child svg {
   color: #e8c85a;
@@ -554,9 +544,8 @@ body.refund-dialog-open .zurs-mobile-tabbar {
 }
 .checkout-preview-confirm strong {
   color: #fff !important;
-  font-size: 0.92rem;
+  font-size: 1rem;
   display: block;
-  margin-bottom: 0.25rem;
 }
 .checkout-preview-confirm span {
   color: rgba(210, 220, 245, 0.65) !important;
@@ -685,24 +674,15 @@ html[data-theme="light"], html:not(.dark) .checkout-page::before {
 }
 
 html[data-theme="light"], html:not(.dark) .checkout-preview-hero {
-  border-color: rgba(15, 23, 42, 0.08) !important;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.55)) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    0 12px 40px -12px rgba(15, 23, 42, 0.12) !important;
+  border: none !important;
+  background: none !important;
+  box-shadow: none !important;
 }
 html[data-theme="light"], html:not(.dark) .checkout-preview-hero h1 {
-  background: linear-gradient(120deg, #0f172a 30%, #334155 60%, #0f172a 90%);
-  -webkit-background-clip: text;
-  background-clip: text;
-}
-html[data-theme="light"], html:not(.dark) .checkout-preview-hero > p {
-  color: #b3860e !important;
-}
-html[data-theme="light"], html:not(.dark) .checkout-preview-hero > span {
-  border-color: rgba(15, 23, 42, 0.08) !important;
-  background: rgba(255, 255, 255, 0.6) !important;
-  color: rgba(71, 85, 105, 0.9) !important;
+  background: none !important;
+  -webkit-background-clip: unset !important;
+  background-clip: unset !important;
+  color: #0f172a !important;
 }
 
 html[data-theme="light"], html:not(.dark) .checkout-order-summary {
@@ -737,12 +717,18 @@ html[data-theme="light"], html:not(.dark) .checkout-order-summary__amount {
   text-shadow: 0 2px 12px rgba(179, 134, 14, 0.2);
 }
 html[data-theme="light"], html:not(.dark) .checkout-order-summary__details > div {
-  border-color: rgba(15, 23, 42, 0.06) !important;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.35)) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  border: none !important;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08) !important;
+  border-radius: 0 !important;
+  background: none !important;
+  box-shadow: none !important;
+}
+html[data-theme="light"], html:not(.dark) .checkout-order-summary__details > div:last-child {
+  border-bottom: none !important;
 }
 html[data-theme="light"], html:not(.dark) .checkout-order-summary__details > div:hover {
-  border-color: rgba(15, 23, 42, 0.12) !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+  background: none !important;
 }
 html[data-theme="light"], html:not(.dark) .checkout-order-summary__details span {
   color: rgba(100, 116, 139, 0.9) !important;
