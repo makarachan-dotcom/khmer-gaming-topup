@@ -62,10 +62,9 @@ html:not(.dark) #root {
 }
 html:not(.dark) .zurs-dotted-shell {
   background-image:
-    radial-gradient(ellipse 55% 32% at 10% -4%, rgba(201, 151, 18, 0.13), transparent 62%),
-    radial-gradient(ellipse 48% 30% at 90% 6%, rgba(56, 189, 248, 0.10), transparent 62%),
-    radial-gradient(ellipse 70% 38% at 50% 112%, rgba(167, 139, 250, 0.08), transparent 62%) !important;
-  background-attachment: fixed !important;
+    radial-gradient(ellipse 60% 36% at 8% -4%, rgba(201, 151, 18, 0.22), transparent 62%),
+    radial-gradient(ellipse 52% 34% at 92% 6%, rgba(56, 189, 248, 0.16), transparent 62%),
+    radial-gradient(ellipse 75% 42% at 50% 112%, rgba(167, 139, 250, 0.13), transparent 62%) !important;
 }
 /* Soft dot texture over the light wells — barely there, adds craft */
 html:not(.dark) .zurs-dotted-shell::before {
@@ -78,10 +77,9 @@ html:not(.dark) .zurs-dotted-shell::before {
 /* Dark theme: deep premium ambience to match */
 html.dark .zurs-dotted-shell {
   background-image:
-    radial-gradient(ellipse 55% 32% at 10% -4%, rgba(201, 151, 18, 0.14), transparent 62%),
-    radial-gradient(ellipse 48% 30% at 90% 6%, rgba(56, 189, 248, 0.10), transparent 62%),
-    radial-gradient(ellipse 70% 38% at 50% 112%, rgba(99, 102, 241, 0.10), transparent 62%) !important;
-  background-attachment: fixed !important;
+    radial-gradient(ellipse 60% 36% at 8% -4%, rgba(201, 151, 18, 0.22), transparent 62%),
+    radial-gradient(ellipse 52% 34% at 92% 6%, rgba(56, 189, 248, 0.15), transparent 62%),
+    radial-gradient(ellipse 75% 42% at 50% 112%, rgba(99, 102, 241, 0.16), transparent 62%) !important;
 }
 
 /* --- 4. Header and footer sit beautifully on the new canvas -------------- */
