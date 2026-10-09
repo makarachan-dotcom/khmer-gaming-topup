@@ -259,3 +259,18 @@ html[data-theme="dark"] .zurs-dotted-shell {
   .hg-tile-popular { animation: none; }
   .hg-hero-frame::after { animation: none; }
 }
+
+/* --- 7. Disable iOS hold-to-preview / long-press callout on cards ---------
+   No more link preview popup or image actions when holding tiles/cards. */
+.hg-tile,
+.hg-tile *,
+.package-choice,
+.package-choice *,
+.zurs-game-card,
+.zurs-game-card *,
+.pk-card,
+.pk-card * {
+  -webkit-touch-callout: none !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}
